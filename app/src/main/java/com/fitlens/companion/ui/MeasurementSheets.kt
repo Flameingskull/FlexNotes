@@ -14,6 +14,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -31,7 +32,6 @@ import com.fitlens.companion.data.MRecord
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.data.fmtNum
-import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.FitSheet
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -41,9 +41,23 @@ private val HHMM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 /**
- * Logs a body measurement, or edits one logged by hand (#27, #88): the measurement, value, date, time and an optional
- * comment, as a sheet. [existing] opens a value to change or delete; a value imported from FitNotes is shown but not
- * edited, because the next import would bring the original back beside it. [onOpenDay] adds an Open day button.
+ * Deletes a body value at once, with Undo (#164, #166): any value, typed in or imported. Undo adds it back as the
+ * user's own; an imported original stays skipped by later imports.
+ */
+fun deleteBodyValue(res: Resources, r: MRecord) {
+    AppScope.scope.launch {
+        Store.deleteRecord(r.id)
+        UiEvents.show(res.getString(R.string.bm_deleted), res.getString(R.string.bm_undo)) {
+            AppScope.scope.launch { Store.addManualRecord(r.name, r.unit, r.date, r.time, r.value, r.comment) }
+        }
+    }
+}
+
+/**
+ * Logs a body measurement, or edits one (#27, #88): the measurement, value, date, time and an optional comment, as a
+ * sheet over the screen showing it (#164, #169). [existing] opens a value to change, move to another date or time, or
+ * delete, whatever its source: an imported value edited here stays as edited after the next import (#166).
+ * [onOpenDay] adds an Open day button.
  */
 @Composable
 fun MeasurementEntrySheet(
@@ -58,17 +72,15 @@ fun MeasurementEntrySheet(
     val names = remember(snap.bodyKey) {
         (snap.usedMeasurements.map { it.name } + snap.measurementDefs.filter { it.enabled }.map { it.name }).distinct()
     }
-    var name by remember { mutableStateOf(existing?.name ?: initialName ?: names.firstOrNull() ?: "Bodyweight") }
-    var value by remember { mutableStateOf(existing?.value?.let { fmtNum(it) } ?: "") }
-    var comment by remember { mutableStateOf(existing?.comment ?: "") }
-    var theDate by remember { mutableStateOf(existing?.date ?: date) }
-    var timeText by remember {
+    var name by remember(existing?.id) { mutableStateOf(existing?.name ?: initialName ?: names.firstOrNull() ?: "Bodyweight") }
+    var value by remember(existing?.id) { mutableStateOf(existing?.value?.let { fmtNum(it) } ?: "") }
+    var comment by remember(existing?.id) { mutableStateOf(existing?.comment ?: "") }
+    var theDate by remember(existing?.id) { mutableStateOf(existing?.date ?: date) }
+    var timeText by remember(existing?.id) {
         mutableStateOf(existing?.time?.take(5)?.takeIf { it.isNotBlank() } ?: LocalTime.now().format(HHMM))
     }
     var pickDate by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
     var calculating by remember { mutableStateOf(false) }
-    val editable = existing == null || existing.source == "manual"
     val unit = existing?.unit ?: snap.measurementDefs.firstOrNull { it.name == name }?.unit
         ?: snap.recordsByName[name]?.lastOrNull()?.unit ?: ""
 
@@ -91,13 +103,13 @@ fun MeasurementEntrySheet(
     }
 
     FitSheet(
-        title = if (existing == null) stringResource(R.string.mse_log) else if (editable) stringResource(R.string.mse_edit, existing.name) else existing.name,
+        title = if (existing == null) stringResource(R.string.mse_log) else stringResource(R.string.mse_edit, existing.name),
         onDismiss = onDismiss,
-        dismissLabel = stringResource(if (editable) R.string.cancel else R.string.mse_close),
-        confirmLabel = if (editable) stringResource(R.string.type_save) else null,
-        onConfirm = if (editable) ({ save() }) else null,
-        secondaryLabel = if (existing != null && editable) stringResource(R.string.lib_delete) else null,
-        onSecondary = if (existing != null && editable) ({ confirmDelete = true }) else null
+        dismissLabel = stringResource(R.string.cancel),
+        confirmLabel = stringResource(R.string.type_save),
+        onConfirm = { save() },
+        secondaryLabel = if (existing != null) stringResource(R.string.lib_delete) else null,
+        onSecondary = if (existing != null) ({ deleteBodyValue(res, existing); onDismiss() }) else null
     ) {
         if (existing == null) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
@@ -108,45 +120,32 @@ fun MeasurementEntrySheet(
                 label = { Text(stringResource(R.string.mse_measurement)) }, singleLine = true, modifier = Modifier.fillMaxWidth()
             )
         }
-        if (!editable && existing != null) {
-            Text(
-                stringResource(R.string.body_value_on, "${fmtNum(existing.value)} ${existing.unit}".trim(), Dates.long(existing.date)),
-                style = MaterialTheme.typography.headlineSmall
-            )
-            if (!existing.comment.isNullOrBlank()) Text("“${existing.comment}”", style = MaterialTheme.typography.bodyMedium)
-            Text(
-                stringResource(R.string.mse_from_fitnotes),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        } else {
-            OutlinedTextField(
-                value = value, onValueChange = { value = it },
-                label = { Text(if (unit.isNotBlank()) stringResource(R.string.mse_value_unit, unit) else stringResource(R.string.body_value)) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
-            // Body fat can be worked out from the tape measurements (#153).
-            if (existing == null && BodyFat.isBodyFat(name)) {
-                TextButton(onClick = { calculating = true }) { Text(stringResource(R.string.bm_calculate)) }
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                GlassOutlinedButton(onClick = { pickDate = true }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {
-                    Text(Dates.medium(theDate))
-                }
-                OutlinedTextField(
-                    value = timeText, onValueChange = { timeText = it },
-                    label = { Text(stringResource(R.string.bm_time)) }, singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f)
-                )
+        OutlinedTextField(
+            value = value, onValueChange = { value = it },
+            label = { Text(if (unit.isNotBlank()) stringResource(R.string.mse_value_unit, unit) else stringResource(R.string.body_value)) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth()
+        )
+        // Body fat can be worked out from the tape measurements (#153).
+        if (existing == null && BodyFat.isBodyFat(name)) {
+            TextButton(onClick = { calculating = true }) { Text(stringResource(R.string.bm_calculate)) }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+            GlassOutlinedButton(onClick = { pickDate = true }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {
+                Text(Dates.medium(theDate))
             }
             OutlinedTextField(
-                value = comment, onValueChange = { comment = it },
-                label = { Text(stringResource(R.string.mse_comment_optional)) }, modifier = Modifier.fillMaxWidth()
+                value = timeText, onValueChange = { timeText = it },
+                label = { Text(stringResource(R.string.bm_time)) }, singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f)
             )
         }
+        OutlinedTextField(
+            value = comment, onValueChange = { comment = it },
+            label = { Text(stringResource(R.string.mse_comment_optional)) }, modifier = Modifier.fillMaxWidth()
+        )
         if (existing != null && onOpenDay != null) {
             TextButton(onClick = { onDismiss(); onOpenDay(existing.date) }) { Text(stringResource(R.string.st_open_day, Dates.medium(existing.date))) }
         }
@@ -158,16 +157,4 @@ fun MeasurementEntrySheet(
         }
     }
     if (pickDate) PickDateDialog(theDate, onDismiss = { pickDate = false }) { theDate = it }
-    if (confirmDelete && existing != null) {
-        ConfirmSheet(
-            title = stringResource(R.string.bm_delete_title),
-            message = stringResource(R.string.bm_delete_body, existing.name, "${fmtNum(existing.value)} ${existing.unit}".trim(), Dates.long(existing.date)) + ".",
-            confirmLabel = stringResource(R.string.mse_delete_value),
-            onDismiss = { confirmDelete = false },
-            onConfirm = {
-                AppScope.scope.launch { Store.deleteRecord(existing.id) }
-                onDismiss()
-            }
-        )
-    }
 }

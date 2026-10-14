@@ -240,4 +240,52 @@ class FitNotesImporterTest {
         assertEquals(0 to 2, again)
         assertEquals(2, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight'"))
     }
+
+    /** The id of the imported Bodyweight value logged on [date]. */
+    private fun importedBodyweight(date: String): Long =
+        db.query("SELECT id FROM mrecord WHERE name='Bodyweight' AND date='$date' AND source='fitnotes'").use {
+            assertTrue(it.moveToFirst())
+            it.getLong(0)
+        }
+
+    @Test
+    fun anEditedImportedValueKeepsItsEditAfterTheNextImport() {
+        withMeasurements()
+        import()
+        // The user corrects the imported 82.0 kg to 81.8 kg on the day log (#166).
+        val id = importedBodyweight("2026-01-10")
+        runBlocking(Dispatchers.IO) { Store.editRecord(flexnotes, id, "2026-01-10", "07:00:00", null) { _, _ -> 81.8 } }
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE id=? AND value=81.8 AND source='manual'", id.toString()))
+
+        val again = import()
+        assertEquals(0, again.recordsAdded)
+        // One value on the day, the edited one: the original isn't brought back beside it.
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight' AND date='2026-01-10'"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight' AND date='2026-01-10' AND value=81.8"))
+        assertEquals(3, db.count("SELECT COUNT(*) FROM mrecord"))
+    }
+
+    @Test
+    fun aDeletedImportedValueStaysDeletedAfterTheNextImport() {
+        withMeasurements()
+        import()
+        val id = importedBodyweight("2026-01-11")
+        runBlocking(Dispatchers.IO) { Store.removeRecord(flexnotes, id) }
+        assertEquals(0, db.count("SELECT COUNT(*) FROM mrecord WHERE id=?", id.toString()))
+
+        val again = import()
+        assertEquals(0, again.recordsAdded)
+        assertEquals(0, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight' AND date='2026-01-11'"))
+        assertEquals(2, db.count("SELECT COUNT(*) FROM mrecord"))
+    }
+
+    @Test
+    fun aDeletedCsvValueStaysDeletedAfterTheSameCsvAgain() {
+        val lines = listOf("Date,Time,Measurement,Value,Unit,Comment", "2026-01-10,07:00:00,Bodyweight,82.0,kg,")
+        runBlocking(Dispatchers.IO) { FitNotesImporter.mergeBodyCsv(lines, flexnotes) }
+        val id = db.query("SELECT id FROM mrecord WHERE source='csv'").use { it.moveToFirst(); it.getLong(0) }
+        runBlocking(Dispatchers.IO) { Store.removeRecord(flexnotes, id) }
+        assertEquals(0 to 1, runBlocking(Dispatchers.IO) { FitNotesImporter.mergeBodyCsv(lines, flexnotes) })
+        assertEquals(0, db.count("SELECT COUNT(*) FROM mrecord"))
+    }
 }

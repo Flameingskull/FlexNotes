@@ -14,8 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -49,7 +47,6 @@ import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.GoldButton
 import com.fitlens.companion.ui.design.MenuAction
 import com.fitlens.companion.ui.design.StepperField
-import com.fitlens.companion.ui.design.TopBarAction
 import com.fitlens.companion.ui.design.SetRow as SetRowView
 import kotlinx.coroutines.launch
 import java.time.LocalDate
@@ -69,7 +66,8 @@ private fun shiftDay(date: String, days: Long): String =
 /**
  * One body measurement, as in FitNotes's body tracker: TRACK, HISTORY and GRAPH tabs laid out like the exercise screen.
  * Track has the day, a +/- value stepper, the time and a comment, Save / Clear (Update / Delete for a selected value),
- * and the values logged that day. History lists every day newest first; tapping a value opens it on Track.
+ * and the values logged that day. History lists every day newest first; tapping a value opens it in its sheet right
+ * there, and a long press deletes it with Undo (#169). Every value can be changed, whatever its source (#166).
  */
 @Composable
 fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0) {
@@ -84,8 +82,10 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
     var value by remember(name) { mutableStateOf("") }
     var timeText by remember(name) { mutableStateOf("") }
     var comment by remember(name) { mutableStateOf("") }
-    var deleting by remember { mutableStateOf<MRecord?>(null) }
     var editingGoal by remember { mutableStateOf(false) }
+    var editingMetric by remember { mutableStateOf(false) }
+    // The History value open in its sheet (#169).
+    var historyOpen by rememberSaveable(name) { mutableStateOf<Long?>(null) }
     // Body fat can be worked out from the tape measurements (#153).
     val isBodyFat = BodyFat.isBodyFat(name)
     var calculating by remember { mutableStateOf(false) }
@@ -143,8 +143,11 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
             title = name,
             subtitle = unit.takeIf { it.isNotBlank() },
             onBack = { nav.pop() },
-            actions = listOf(TopBarAction(Icons.Filled.Edit, stringResource(R.string.bm_manage)) { nav.push(Screen.Measurements) }),
-            overflow = listOf(MenuAction(stringResource(R.string.goal_generic), enabled = def != null) { editingGoal = true })
+            // The measurement itself is set up where it's shown (#167): its goal, and for one of your own, its details.
+            overflow = listOfNotNull(
+                MenuAction(stringResource(R.string.goal_generic), enabled = def != null) { editingGoal = true },
+                if (def?.custom == true) MenuAction(stringResource(R.string.bm_edit_metric)) { editingMetric = true } else null
+            )
         )
         FitTabRow(
             titles = bodyTabs(),
@@ -153,11 +156,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
         )
         HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { tab ->
             when (tab) {
-                1 -> BodyHistoryPane(snap, name) { r ->
-                    date = r.date.take(10)
-                    selected = r.id
-                    scope.launch { pager.animateScrollToPage(0) }
-                }
+                1 -> BodyHistoryPane(snap, name, onDelete = { deleteBodyValue(res, it) }) { r -> historyOpen = r.id }
                 2 -> BodyGraphPane(snap, nav, name)
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 32.dp)) {
                     item {
@@ -210,22 +209,12 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                                     GlassOutlinedButton(onClick = { clear() }, modifier = Modifier.weight(1f).height(52.dp)) { Text(stringResource(R.string.cal_clear)) }
                                 }
                             } else {
-                                // A value imported from FitNotes isn't edited: the next import would bring it back.
-                                val editable = chosen.source == "manual"
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    GoldButton(onClick = { save() }, enabled = editable, modifier = Modifier.weight(1f).height(52.dp)) { Text(stringResource(R.string.bm_update)) }
+                                    GoldButton(onClick = { save() }, modifier = Modifier.weight(1f).height(52.dp)) { Text(stringResource(R.string.bm_update)) }
                                     GlassOutlinedButton(
-                                        onClick = { deleting = chosen },
-                                        enabled = editable,
+                                        onClick = { selected = null; deleteBodyValue(res, chosen) },
                                         modifier = Modifier.weight(1f).height(52.dp)
                                     ) { Text(stringResource(R.string.lib_delete)) }
-                                }
-                                if (!editable) {
-                                    Text(
-                                        stringResource(R.string.bm_from_fitnotes),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
                                 }
                                 TextButton(onClick = { selected = null }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.bm_new_instead)) }
                             }
@@ -250,7 +239,9 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                                 comment = r.comment,
                                 selected = selected == r.id,
                                 noun = stringResource(R.string.body_value),
-                                onClick = { selected = if (selected == r.id) null else r.id }
+                                onClick = { selected = if (selected == r.id) null else r.id },
+                                onLongClick = { if (selected == r.id) selected = null; deleteBodyValue(res, r) },
+                                onLongClickLabel = stringResource(R.string.day_delete_value)
                             )
                         }
                     }
@@ -259,20 +250,8 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
         }
     }
 
-    deleting?.let { r ->
-        ConfirmDialog(
-            title = stringResource(R.string.bm_delete_title),
-            text = stringResource(R.string.bm_delete_body, name, "${fmtNum(r.value)} ${r.unit}".trim(), Dates.long(r.date)),
-            onDismiss = { deleting = null }
-        ) {
-            selected = null
-            AppScope.scope.launch {
-                Store.deleteRecord(r.id)
-                UiEvents.show(res.getString(R.string.bm_deleted), res.getString(R.string.bm_undo)) {
-                    AppScope.scope.launch { Store.addManualRecord(r.name, r.unit, r.date, r.time, r.value, r.comment) }
-                }
-            }
-        }
+    historyOpen?.let { id -> records.firstOrNull { it.id == id } }?.let { r ->
+        MeasurementEntrySheet(snap, r.date, existing = r) { historyOpen = null }
     }
     if (calculating) {
         BodyFatCalculatorSheet(snap, date, onDismiss = { calculating = false }) { p, c ->
@@ -282,4 +261,5 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
         }
     }
     if (editingGoal && def != null) MeasurementGoalSheet(def) { editingGoal = false }
+    if (editingMetric && def != null) CustomMetricEditor(snap, def) { editingMetric = false }
 }

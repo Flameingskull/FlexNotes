@@ -685,20 +685,53 @@ object Store {
         if (original != def.name) body.renameImportedRecords(def.name, original)
     }
 
-    /** Changes a value entered by hand (#27). Imported values aren't edited: the next import would restore them. */
+    /**
+     * Changes a body value, whatever its source (#27, #166). An imported value leaves an import rule for the original
+     * (`Workouts.RULE_RECORD`), so a later FitNotes or CSV import doesn't bring it back, and becomes the user's own.
+     */
     suspend fun updateRecord(id: Long, date: String, time: String, value: Double, comment: String?) = withContext(Dispatchers.IO) {
-        val body = db.bodyDao
-        // The value is edited in the display unit and kept in the record's own (#117).
-        val stored = body.unitOfRecord(id)
         val prefs = Settings.currentPortable()
-        val override = body.displayUnitOfRecord(id)
-        val stores = MeasureUnits.convert(value, MeasureUnits.display(stored, prefs.weightUnit, prefs.lengthUnit, override), stored)
-        body.updateManualRecord(id, date, time, stores, comment)
+        editRecord(db, id, date, time, comment) { old, override ->
+            // The value is edited in the display unit and kept in the record's own (#117).
+            MeasureUnits.convert(value, MeasureUnits.display(old.unit, prefs.weightUnit, prefs.lengthUnit, override), old.unit)
+        }
         refresh(Area.BODY)
     }
 
+    /** Deletes a body value, whatever its source (#166); an imported one isn't restored by the next import. */
     suspend fun deleteRecord(id: Long) = withContext(Dispatchers.IO) {
-        db.bodyDao.deleteManualRecord(id)
+        removeRecord(db, id)
         refresh(Area.BODY)
+    }
+
+    /**
+     * [updateRecord]'s write on [db], in one transaction (tests run it on their own database). [stored] gives the new
+     * value in the record's stored unit, from the original row and the measurement's display unit.
+     */
+    internal fun editRecord(
+        db: Db, id: Long, date: String, time: String, comment: String?,
+        stored: (MeasurementRecordRow, String?) -> Double
+    ) {
+        val body = db.bodyDao
+        db.transaction {
+            val old = body.record(id) ?: return@transaction
+            skipImported(db, old)
+            body.updateRecord(id, date, time, stored(old, body.displayUnitOfRecord(id)), comment)
+        }
+    }
+
+    /** [deleteRecord]'s write on [db], in one transaction. */
+    internal fun removeRecord(db: Db, id: Long) {
+        val body = db.bodyDao
+        db.transaction {
+            body.record(id)?.let { skipImported(db, it) }
+            body.deleteRecord(id)
+        }
+    }
+
+    /** An imported value leaves a skip rule for its original, so later imports don't bring it back (#166). */
+    private fun skipImported(db: Db, r: MeasurementRecordRow) {
+        if (r.source == "manual") return
+        db.workoutDao.addRule(Workouts.RULE_RECORD, Workouts.recordKey(r.name, r.date, r.time, r.value), null)
     }
 }

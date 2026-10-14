@@ -112,6 +112,14 @@ object FitIcons {
             "M19,3h-5v2h5v13l-5,-6v9h5c1.1,0 2,-0.9 2,-2V5c0,-1.1 -0.9,-2 -2,-2z"
     )
 
+    /** A body value (#167): Material's scale, for logging a measurement. */
+    val Scale: ImageVector = icon(
+        "FlexNotes.Scale",
+        "M20,3H4C2.9,3 2,3.9 2,5v14c0,1.1 0.9,2 2,2h16c1.1,0 2,-0.9 2,-2V5C22,3.9 21.1,3 20,3z" +
+            "M15.75,9.06c-0.52,0.52 -1.48,1.44 -2.5,1.44h-0.04L14,8.5l-1.23,-0.28l-0.71,2.25c-1.1,-0.15 -1.88,-0.99 -2.37,-1.41" +
+            "C8.68,8.06 9,6.5 9,6.5h7C16,6.5 16.75,8.06 15.75,9.06z"
+    )
+
     /** A photo's pose (#92): a standing figure. */
     val Pose: ImageVector = icon(
         "FlexNotes.Pose",

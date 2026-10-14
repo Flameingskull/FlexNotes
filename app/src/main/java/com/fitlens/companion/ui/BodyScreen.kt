@@ -13,6 +13,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.pager.HorizontalPager
 import com.fitlens.companion.ui.design.SectionLabel
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -31,6 +32,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.Card
@@ -84,32 +86,50 @@ fun <T> inRange(items: List<T>, range: Long, dateOf: (T) -> String): List<T> {
  * The Body Tracker, laid out as FitNotes's (its screenshots of 2026-09-23, #144): one screen with TRACK, HISTORY and
  * GRAPH tabs across every measurement. Track lists each enabled measurement with how long ago it was last logged and
  * its latest value and change ("Tap to record a value" when there's none); History lists every value, newest day
- * first, filtered to one measurement or All; Graph shows one measurement, chosen from a dropdown. The pencil opens
- * Measurements and ⋮ reorders. Tapping a measurement opens it to log or edit a value ([BodyMeasurementScreen]).
+ * first, filtered to one measurement or All; Graph shows one measurement, chosen from a dropdown. Tapping a measurement
+ * opens it ([BodyMeasurementScreen]).
+ *
+ * Everything is done here (#167, #169): + logs any measurement in a sheet, a History value opens in its sheet to edit,
+ * move or delete (a long press deletes with Undo), and the pencil switches the tracker to its edit mode
+ * ([MeasurementsEditor]: tracking, units, goals, custom measurements), so there's no separate Measurements screen.
+ * [startEditing] opens it in edit mode. ⋮ reorders.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BodyScreen(snap: Snapshot, nav: Nav) {
+fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
+    val res = LocalContext.current.resources
     // Every enabled measurement, logged or not, as FitNotes lists them.
     val measurements = snap.allMeasurements.filter { it.enabled }
     var ordering by remember { mutableStateOf(false) }
+    var editing by rememberSaveable { mutableStateOf(startEditing) }
+    var adding by rememberSaveable { mutableStateOf(false) }
+    var open by rememberSaveable { mutableStateOf<Long?>(null) }
     val pager = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxSize()) {
         FitTopBar(
-            title = stringResource(R.string.body_title),
-            onBack = LocalNavBack.current,
-            actions = listOf(TopBarAction(Icons.Filled.Edit, stringResource(R.string.body_measurements)) { nav.push(Screen.Measurements) }),
-            overflow = listOfNotNull(
+            title = stringResource(if (editing) R.string.body_measurements else R.string.body_title),
+            onBack = if (editing) ({ editing = false }) else LocalNavBack.current,
+            actions = if (editing) {
+                listOf(TopBarAction(Icons.Filled.Check, stringResource(R.string.body_edit_done)) { editing = false })
+            } else {
+                listOf(
+                    TopBarAction(Icons.Filled.Add, stringResource(R.string.day_log_value)) { adding = true },
+                    TopBarAction(Icons.Filled.Edit, stringResource(R.string.body_edit_measurements)) { editing = true }
+                )
+            },
+            overflow = if (editing) emptyList() else listOfNotNull(
                 if (measurements.size > 1) MenuAction(stringResource(R.string.body_reorder)) { ordering = true } else null,
-                MenuAction(stringResource(R.string.body_measurements)) { nav.push(Screen.Measurements) }
+                MenuAction(stringResource(R.string.body_edit_measurements)) { editing = true }
             )
         )
-        if (measurements.isEmpty()) {
+        if (editing) {
+            MeasurementsEditor(snap)
+        } else if (measurements.isEmpty()) {
             EmptyState(stringResource(R.string.body_empty_title), stringResource(R.string.body_empty_body)) {
                 Row {
-                    TextButton(onClick = { nav.push(Screen.Measurements) }) { Text(stringResource(R.string.body_measurements)) }
+                    TextButton(onClick = { editing = true }) { Text(stringResource(R.string.body_measurements)) }
                     TextButton(onClick = { nav.push(Screen.SettingsPage(SettingsSection.Import)) }) { Text(stringResource(R.string.body_import)) }
                 }
             }
@@ -127,7 +147,7 @@ fun BodyScreen(snap: Snapshot, nav: Nav) {
                             HorizontalDivider(color = Brand.Hairline)
                         }
                     }
-                    1 -> BodyHistoryAll(snap, measurements) { r -> nav.push(Screen.BodyMeasurement(r.name)) }
+                    1 -> BodyHistoryAll(snap, measurements, onDelete = { deleteBodyValue(res, it) }) { r -> open = r.id }
                     else -> {
                         var graphOf by rememberSaveable { mutableStateOf(measurements.first().name) }
                         val names = measurements.map { it.name }
@@ -141,6 +161,12 @@ fun BodyScreen(snap: Snapshot, nav: Nav) {
                 }
             }
         }
+    }
+    // Back leaves edit mode first.
+    androidx.activity.compose.BackHandler(enabled = editing) { editing = false }
+    if (adding) MeasurementEntrySheet(snap, Dates.today()) { adding = false }
+    open?.let { id -> snap.records.firstOrNull { it.id == id } }?.let { r ->
+        MeasurementEntrySheet(snap, r.date, existing = r) { open = null }
     }
     if (ordering) MeasurementOrderSheet(measurements) { ordering = false }
 }
@@ -215,10 +241,16 @@ private fun MeasurementListRow(snap: Snapshot, m: MeasurementDef, onOpen: () -> 
 /**
  * The History tab, as FitNotes's (#144): a "History" filter (All, or one measurement), then every value newest first
  * under a band for its day ("Wednesday, September 23"), each with its name and time on the left and its value and
- * change on the right. Tapping a value opens its measurement.
+ * change on the right. Tapping a value opens it in its sheet ([onOpen], #169); a long press deletes it ([onDelete]).
  */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun BodyHistoryAll(snap: Snapshot, measurements: List<MeasurementDef>, onOpen: (MRecord) -> Unit) {
+private fun BodyHistoryAll(
+    snap: Snapshot,
+    measurements: List<MeasurementDef>,
+    onDelete: (MRecord) -> Unit,
+    onOpen: (MRecord) -> Unit
+) {
     val res = LocalContext.current.resources
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     val names = measurements.map { it.name }
@@ -258,7 +290,11 @@ private fun BodyHistoryAll(snap: Snapshot, measurements: List<MeasurementDef>, o
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = Spacing.row)
-                        .clickable(onClickLabel = res.getString(R.string.day_open_named, r.name)) { onOpen(r) }
+                        .combinedClickable(
+                            onClickLabel = res.getString(R.string.day_open_named, r.name),
+                            onLongClickLabel = res.getString(R.string.day_delete_value),
+                            onLongClick = { onDelete(r) }
+                        ) { onOpen(r) }
                         .semantics(mergeDescendants = true) {}
                         .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                     verticalAlignment = Alignment.CenterVertically
@@ -438,10 +474,11 @@ private fun StatsBlock(list: List<MRecord>, unit: String) {
 
 /**
  * A measurement's History tab, as the exercise History: each day, newest first, under its date, with the change since
- * the value before and a dot for a day with photos. Tapping a value opens it on Track for Update or Delete.
+ * the value before and a dot for a day with photos. Tapping a value opens it ([onOpen], a sheet in place, #169); a long
+ * press deletes it ([onDelete], with Undo).
  */
 @Composable
-internal fun BodyHistoryPane(snap: Snapshot, name: String, onOpen: (MRecord) -> Unit) {
+internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -> Unit, onOpen: (MRecord) -> Unit) {
     val res = LocalContext.current.resources
     val records = snap.recordsByName[name].orEmpty()
     val def = snap.allMeasurements.firstOrNull { it.name == name }
@@ -469,7 +506,9 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onOpen: (MRecord) -> 
                             framed = false,
                             showIndex = false,
                             noun = stringResource(R.string.body_value),
-                            onClick = { onOpen(r) }
+                            onClick = { onOpen(r) },
+                            onLongClick = { onDelete(r) },
+                            onLongClickLabel = stringResource(R.string.day_delete_value)
                         )
                         // The change since the value before, coloured by the goal's direction (#27); the arrow and
                         // sign keep the meaning without colour.

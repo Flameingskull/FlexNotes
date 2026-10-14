@@ -171,11 +171,15 @@ interface BodyDao {
     )
     fun addManualRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?)
 
-    @Query("UPDATE mrecord SET date = :date, time = :time, value = :value, comment = :comment WHERE id = :id AND source = 'manual'")
-    fun updateManualRecord(id: Long, date: String, time: String, value: Double, comment: String?)
+    @Query("SELECT * FROM mrecord WHERE id = :id")
+    fun record(id: Long): MeasurementRecordRow?
 
-    @Query("DELETE FROM mrecord WHERE id = :id AND source = 'manual'")
-    fun deleteManualRecord(id: Long)
+    /** Edits any value, whatever its source (#166); an edited value becomes the user's own. */
+    @Query("UPDATE mrecord SET date = :date, time = :time, value = :value, comment = :comment, source = 'manual' WHERE id = :id")
+    fun updateRecord(id: Long, date: String, time: String, value: Double, comment: String?)
+
+    @Query("DELETE FROM mrecord WHERE id = :id")
+    fun deleteRecord(id: Long)
 
     @Query("DELETE FROM mrecord WHERE name = :name AND source = 'manual'")
     fun deleteManualRecords(name: String)

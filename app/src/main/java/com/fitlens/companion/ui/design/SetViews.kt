@@ -63,6 +63,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.onLongClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -280,6 +281,7 @@ private fun SetCellText(cell: SetCell, modifier: Modifier = Modifier) {
  *   button is a separate stop.
  * - [done] is null when the screen has no done state; otherwise a checkbox is shown and [onDoneChange] is called.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SetRow(
     index: Int,
@@ -303,7 +305,10 @@ fun SetRow(
     effort: String? = null,
     effortSpoken: String? = null,
     /** What TalkBack calls the row: "Set 2", or "Value 2" for a body measurement. */
-    noun: String = stringResource(R.string.sv_set)
+    noun: String = stringResource(R.string.sv_set),
+    /** Long-press, with what TalkBack calls it (a body value's Delete, #169). */
+    onLongClick: (() -> Unit)? = null,
+    onLongClickLabel: String? = null
 ) {
     val res = LocalContext.current.resources
     val shape = FitShapes.row
@@ -332,7 +337,12 @@ fun SetRow(
     val tap = onClick
     val isDone = done
     val toggleDone = onDoneChange
-    val click = if (tap != null) Modifier.clickable(onClick = tap) else Modifier
+    val hold = onLongClick
+    val click = when {
+        tap != null && hold != null -> Modifier.combinedClickable(onLongClickLabel = onLongClickLabel, onLongClick = hold, onClick = tap)
+        tap != null -> Modifier.clickable(onClick = tap)
+        else -> Modifier
+    }
     val columns = cells != null
     val hasComment = !comment.isNullOrBlank()
     val align = if (framed || columns) Alignment.CenterVertically else Alignment.Top
@@ -358,6 +368,12 @@ fun SetRow(
                         if (tap != null) {
                             this.onClick(label = null, action = {
                                 tap()
+                                true
+                            })
+                        }
+                        if (hold != null) {
+                            this.onLongClick(label = onLongClickLabel, action = {
+                                hold()
                                 true
                             })
                         }

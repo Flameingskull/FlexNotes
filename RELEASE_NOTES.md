@@ -1,29 +1,39 @@
 ## Overview
 
-FitLens is now **FlexNotes**. This update gives the app its new name everywhere: on your home screen, in every
-screen, notification and report, and on GitHub. Nothing else about how the app works has changed.
+This update lets you change your body values where you see them. Tap a value on the day log, on any date, and it
+opens right there to edit, move or delete. Values imported from FitNotes can now be changed too, and a later FitNotes
+import keeps your changes. Logging values and setting up measurements now happen in the Body tracker.
 
-Install it over the current app as usual. It's the same app, so it updates in place: everything you've logged, your
-photos, your settings and your automatic backups are kept. There's no database upgrade.
+Install it over the current app as usual. Everything you've logged is kept, and there's no database upgrade.
 
 ## What's new
 
-- **A new name: FlexNotes.** The app's name under its icon, the home screen title, About, Help, notifications,
-  share images and PDF reports now all say FlexNotes.
-- **New backups end in .flexnotes.** Backups you save, share or schedule from now on are named
-  `FlexNotes_backup_…flexnotes`.
-- **New file names for exports.** CSV files, PDF reports, share images and comparison photos are named `FlexNotes_…`,
-  and new progress videos and images are saved to a **FlexNotes** folder in Movies and Pictures.
+- **Edit a body value on the day log.** Tap a value on any day to open it on that day: change the value, the date,
+  the time or the comment, or delete it. A long press deletes it at once, with Undo.
+- **Log a value from the day you're on.** The body values card has a small **+** that logs a value for that day.
+  An empty day offers **Log body value** beside Add exercise.
+- **A + in the Body tracker.** It logs any measurement without leaving the tracker.
+- **Measurements are set up in the Body tracker.** The pencil switches the tracker to its edit mode, where you turn
+  measurements on or off, choose units, set goals, and create or edit your own measurements. The separate
+  Measurements screen is gone. Each of your own measurements can also be edited from its ⋮ menu.
 
 ## Improved
 
-- **Your older backups still work.** Backups made before the rename, ending in `.fitlens`, restore just as before.
-  Automatic backups in your backup folder are still counted and tidied with the new ones, so the number kept stays
-  as you set it.
-- **The project has moved on GitHub** to Flameingskull/FlexNotes. Old links redirect automatically, and Settings ›
-  About now opens the new address.
+- **Values imported from FitNotes can be changed and deleted.** An edited value stays as you left it after the
+  next FitNotes import, and a deleted one doesn't come back. A body tracker CSV imported again respects your
+  deletions in the same way.
+- **History edits in place.** In the Body tracker's History, and in each measurement's History, tapping a value
+  opens it to edit, and a long press deletes it with Undo.
+- **Add measurement has left the day log's ⋮ menu.** Values are logged from the day itself or from the Body tracker.
+
+## Fixed
+
+- Tapping a body value on the day log opened that measurement on today, with nothing selected. It now opens the
+  value you tapped, on its own date.
 
 ## Known limitations
 
-- Videos and images exported before this update stay in their old FitLens folders in Movies and Pictures. You can
-  move them by hand if you like.
+- A FitNotes value you edited counts as your own from then on: deleting one of your own measurements also deletes
+  the values you edited in it.
+- Reordering measurements still uses the Reorder sheet in the Body tracker's ⋮ menu. Drag-to-reorder in place is
+  coming in a later update.

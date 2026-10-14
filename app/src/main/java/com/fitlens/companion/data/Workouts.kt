@@ -66,6 +66,8 @@ object Workouts {
     internal const val RULE_SET = "set"
     internal const val RULE_COMMENT = "comment"
     internal const val RULE_TIME = "time"
+    /** An imported body value the user edited or deleted (#166): the next import skips the original. */
+    internal const val RULE_RECORD = "record"
 
     internal fun nameKey(name: String): String = name.trim().replace(Regex("\\s+"), " ").lowercase(Locale.ROOT)
 
@@ -73,6 +75,10 @@ object Workouts {
         String.format(Locale.US, "%d|%s|%.3f|%d|%.3f|%d", exerciseId, date.take(10), weight, reps, distance, duration)
 
     internal fun commentKey(date: String, comment: String): String = date.take(10) + "|" + comment.trim()
+
+    /** A body value's identity across imports (#166): name, date, time and value to three decimals. */
+    internal fun recordKey(name: String, date: String, time: String, value: Double): String =
+        name + "|" + date + "|" + time + "|" + fmtNum(value, 3)
 
     internal fun timeKey(date: String, start: String?, finish: String?): String =
         date.take(10) + "|" + (start ?: "") + "|" + (finish ?: "")

@@ -764,7 +764,6 @@
     <string name="day_share_workout">Share workout</string>
     <string name="day_delete_workout">Delete this workout</string>
     <string name="day_add_photos">Add photos to this day</string>
-    <string name="day_add_measurement">Add measurement</string>
     <string name="day_menu_analysis">Analysis</string>
     <string name="day_menu_body">Body tracker</string>
     <string name="day_menu_photos">Photos</string>
@@ -779,13 +778,13 @@
     <string name="day_workout_comment">Workout comment</string>
     <string name="day_edit_workout_comment">Edit workout comment</string>
     <string name="day_add_workout_comment">Add workout comment</string>
-    <string name="day_delete_measurement_title">Delete measurement?</string>
-    <string name="day_delete_measurement_body">%1$s %2$s %3$s (added in FlexNotes)</string>
     <string name="day_delete">Delete</string>
     <string name="day_open_photo">Open photo</string>
     <string name="day_add_photo_tile">ADD PHOTO</string>
     <string name="day_open_named">Open %1$s</string>
     <string name="day_delete_value">Delete this value</string>
+    <string name="day_body_values">Body values</string>
+    <string name="day_log_value">Log body value</string>
     <string name="day_copy_previous">Copy previous workout</string>
     <string name="day_log_empty">Workout log empty</string>
     <string name="day_exercise_fallback">Exercise #%1$d</string>
@@ -1485,6 +1484,8 @@
     <string name="body_title">Body Tracker</string>
     <string name="body_measurements">Measurements</string>
     <string name="body_reorder">Reorder measurements</string>
+    <string name="body_edit_measurements">Edit measurements</string>
+    <string name="body_edit_done">Done editing measurements</string>
     <string name="body_empty_title">No measurements yet</string>
     <string name="body_empty_body">Add the standard measurements and your own, or import a FitNotes backup.</string>
     <string name="body_import">Import from FitNotes</string>
@@ -1563,28 +1564,22 @@
     <!-- One measurement and the log sheet (#94) -->
     <string name="bm_enter_number">Enter a number to save.</string>
     <string name="bm_updated">Value updated</string>
-    <string name="bm_manage">Manage measurements</string>
     <string name="bm_calculate">Calculate from measurements</string>
     <string name="bm_time">Time (HH:mm)</string>
     <string name="bm_comment">Comment</string>
     <string name="bm_update">Update</string>
-    <string name="bm_from_fitnotes">This value came from FitNotes. Change it in FitNotes and import again.</string>
     <string name="bm_new_instead">New value instead</string>
+    <string name="bm_edit_metric">Edit measurement</string>
     <string name="bm_nothing_for">Nothing logged for %1$s yet.</string>
     <string name="bm_nothing_day">Nothing logged on this day.</string>
-    <string name="bm_delete_title">Delete this value?</string>
-    <string name="bm_delete_body">%1$s: %2$s on %3$s</string>
     <string name="bm_deleted">Value deleted</string>
     <string name="bm_undo">Undo</string>
     <string name="bm_calculated">Calculated: check it, then Save</string>
     <string name="mse_log">Log a measurement</string>
     <string name="mse_edit">Edit %1$s</string>
-    <string name="mse_close">Close</string>
     <string name="mse_measurement">Measurement</string>
-    <string name="mse_from_fitnotes">This value came from FitNotes. Change it in FitNotes and import again: a value edited here would come back beside the original on the next import.</string>
     <string name="mse_value_unit">Value (%1$s)</string>
     <string name="mse_comment_optional">Comment (optional)</string>
-    <string name="mse_delete_value">Delete value</string>
     <!-- Measurement goals and order (#94) -->
     <string name="mg_no_change">No change since %1$s</string>
     <string name="mg_change">%1$s %2$s since %3$s · was %4$s</string>

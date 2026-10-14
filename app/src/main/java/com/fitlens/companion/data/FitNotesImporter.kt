@@ -400,14 +400,17 @@ object FitNotesImporter {
         fun target(name: String) = aliases[name.trim().lowercase()] ?: name
         val recordKeys = HashSet<String>()
         val manualKeys = HashSet<String>()
-        fun rk(name: String, date: String, time: String, value: Double) = name + "|" + date + "|" + time + "|" + fmtNum(value, 3)
+        fun rk(name: String, date: String, time: String, value: Double) = Workouts.recordKey(name, date, time, value)
         fun mk(name: String, date: String, value: Double) = name + "|" + date + "|" + fmtNum(value, 3)
         for (r in all.records()) {
             recordKeys.add(rk(r.name, r.date, r.time, r.value))
             if (r.source == "manual") manualKeys.add(mk(r.name, r.date, r.value))
         }
         fun addRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?) {
-            if (rk(name, date, time, value) in recordKeys || mk(name, date, value) in manualKeys) {
+            // An imported value the user edited or deleted stays as they left it (#166).
+            if (rk(name, date, time, value) in recordKeys || mk(name, date, value) in manualKeys ||
+                consumeSkip(Workouts.RULE_RECORD, rk(name, date, time, value))
+            ) {
                 plan.recordsSkipped++
                 return
             }
@@ -496,6 +499,9 @@ object FitNotesImporter {
         var added = 0
         var skipped = 0
         val aliases = customAliases(w)
+        // Values the user edited or deleted after an earlier import (#166), counted like the backup import's skips.
+        val skips = HashMap<String, Int>()
+        w.rules().filter { it.kind == Workouts.RULE_RECORD }.forEach { skips[it.key] = (skips[it.key] ?: 0) + 1 }
         for (line in lines.drop(1)) {
             if (line.isBlank()) continue
             val f = parseCsvLine(line)
@@ -507,6 +513,9 @@ object FitNotesImporter {
             val unit = f.getOrElse(4) { "" }
             val comment = f.getOrElse(5) { "" }
             if (w.hasRecord(name, date, time, value)) { skipped++; continue }
+            val key = Workouts.recordKey(name, date, time, value)
+            val n = skips[key] ?: 0
+            if (n > 0) { skips[key] = n - 1; skipped++; continue }
             db.bodyDao.ensure(name, unit, 999)
             w.addRecord(name, unit, date, time, value, comment, "csv")
             added++

@@ -122,7 +122,9 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
     val sets = snap.setsByDate[date] ?: emptyList()
     // Open sheets and dialogs come back after rotation or a restart in the background (#37).
     val state = viewModel<DayState>()
-    var addMeasurement by state.saved("addMeasurement", false)
+    // A body value is logged and edited on the day itself (#164, #167, #168): the value open in its sheet, or a new one.
+    var openRecord by state.saved<Long?>("openRecord", null)
+    var addValue by state.saved("addValue", false)
     var editComment by state.saved("editComment", false)
     var copyPrevious by state.saved("copyPrevious", false)
     var copyToDay by state.saved("copyToDay", false)
@@ -177,7 +179,6 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                 MenuAction(stringResource(R.string.day_share_workout), enabled = sets.isNotEmpty()) { share = true },
                 MenuAction(stringResource(R.string.day_delete_workout), enabled = hasWorkout) { deleteWorkout = true },
                 MenuAction(stringResource(R.string.day_add_photos)) { importForDay() },
-                MenuAction(stringResource(R.string.day_add_measurement)) { addMeasurement = true },
                 MenuAction(stringResource(R.string.day_menu_analysis)) { nav.push(Screen.Analysis) },
                 MenuAction(stringResource(R.string.day_menu_body)) { nav.push(Screen.Body) },
                 MenuAction(stringResource(R.string.day_menu_photos)) { nav.push(Screen.Photos) },
@@ -229,13 +230,19 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                     onEditComment = { editComment = true },
                     onAddExercise = { nav.push(Screen.Library(date)) },
                     onAddWorkout = { addWorkout = true },
-                    onCopyPrevious = { copyPrevious = true }
+                    onCopyPrevious = { copyPrevious = true },
+                    onOpenRecord = { openRecord = it.id },
+                    onAddValue = { addValue = true }
                 )
             }
         }
     }
 
-    if (addMeasurement) AddMeasurementDialog(snap, date) { addMeasurement = false }
+    if (addValue) MeasurementEntrySheet(snap, date) { addValue = false }
+    // A value deleted or gone since (an import, a restore) simply closes its sheet.
+    openRecord?.let { id -> snap.records.firstOrNull { it.id == id } }?.let { r ->
+        MeasurementEntrySheet(snap, date, existing = r) { openRecord = null }
+    }
     if (editComment) WorkoutCommentSheet(snap, date) { editComment = false }
     if (copyChooser) {
         CopyWorkoutSheet(hasSets = sets.isNotEmpty(), hasWorkout = hasWorkout, onDismiss = { copyChooser = false }) { choice ->
@@ -271,13 +278,15 @@ private fun DayContent(
     onEditComment: () -> Unit,
     onAddExercise: () -> Unit,
     onAddWorkout: () -> Unit,
-    onCopyPrevious: () -> Unit
+    onCopyPrevious: () -> Unit,
+    onOpenRecord: (MRecord) -> Unit,
+    onAddValue: () -> Unit
 ) {
+    val res = LocalContext.current.resources
     val photos = snap.photosByDate[date] ?: emptyList()
     val records = snap.recordsByDate[date] ?: emptyList()
     val sets = snap.setsByDate[date] ?: emptyList()
     val comments = snap.workoutComments[date].orEmpty()
-    var deleteRecord by remember { mutableStateOf<MRecord?>(null) }
     // Exercises in the order they were first logged that day.
     // Exercises as shown: workout order, with each superset's exercises together (#18).
     val byExercise = remember(sets) {
@@ -293,8 +302,9 @@ private fun DayContent(
                 BodyValuesCard(
                     snap = snap,
                     records = records.sortedWith(compareBy({ defOrder(snap, it.name) }, { it.time })),
-                    onOpen = { r -> nav.push(Screen.BodyMeasurement(r.name)) },
-                    onDelete = { deleteRecord = it }
+                    onOpen = onOpenRecord,
+                    onDelete = { deleteBodyValue(res, it) },
+                    onAdd = onAddValue
                 )
             }
         }
@@ -311,7 +321,8 @@ private fun DayContent(
                     modifier = if (nothing) Modifier.fillParentMaxHeight(0.9f) else Modifier,
                     onAddWorkout = onAddWorkout,
                     onAddExercise = onAddExercise,
-                    onCopyPrevious = onCopyPrevious
+                    onCopyPrevious = onCopyPrevious,
+                    onAddValue = if (records.isEmpty()) onAddValue else null
                 )
             }
         }
@@ -377,16 +388,6 @@ private fun DayContent(
             }
         }
     }
-
-    deleteRecord?.let { r ->
-        ConfirmDialog(
-            stringResource(R.string.day_delete_measurement_title),
-            stringResource(R.string.day_delete_measurement_body, r.name, fmtNum(r.value), r.unit),
-            confirm = stringResource(R.string.day_delete),
-            onDismiss = { deleteRecord = null }) {
-            AppScope.scope.launch { Store.deleteRecord(r.id) }
-        }
-    }
 }
 
 /** The day's progress photos as a compact strip, with an Add photo tile at the end (FlexNotes extra, #81). */
@@ -428,12 +429,18 @@ private fun PhotoStrip(snap: Snapshot, nav: Nav, photos: List<Photo>, onAddPhoto
 /**
  * The body values logged on the day, as FitNotes shows them (owner, 2026-10-02): one card, a row per measurement with
  * its name on the left and its value and unit on the right, hairlines between. The change since the value before sits
- * small under the value (#120). Tapping a row opens that measurement; a value added in FlexNotes can be deleted with a
- * long press.
+ * small under the value (#120). Tapping a row opens the value in its sheet on this day, a long press deletes it with
+ * Undo, whatever its source, and the + in the card's header logs another value for the day (#164, #166, #167).
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BodyValuesCard(snap: Snapshot, records: List<MRecord>, onOpen: (MRecord) -> Unit, onDelete: (MRecord) -> Unit) {
+private fun BodyValuesCard(
+    snap: Snapshot,
+    records: List<MRecord>,
+    onOpen: (MRecord) -> Unit,
+    onDelete: (MRecord) -> Unit,
+    onAdd: () -> Unit
+) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -441,6 +448,21 @@ private fun BodyValuesCard(snap: Snapshot, records: List<MRecord>, onOpen: (MRec
             .background(Brand.Surface, FitShapes.card)
             .border(1.dp, Brand.Hairline, FitShapes.card)
     ) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = Spacing.lg),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                stringResource(R.string.day_body_values).uppercase(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onAdd) {
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.day_log_value), tint = Brand.Gold)
+            }
+        }
+        HorizontalDivider(color = Brand.Hairline)
         records.forEachIndexed { i, r ->
             val prev = remember(snap.bodyKey, r.id) { snap.recordsByName[r.name]?.lastOrNull { it.date < r.date } }
             val def = snap.allMeasurements.firstOrNull { it.name == r.name }
@@ -457,8 +479,8 @@ private fun BodyValuesCard(snap: Snapshot, records: List<MRecord>, onOpen: (MRec
                     .combinedClickable(
                         onClickLabel = openLabel,
                         onClick = { onOpen(r) },
-                        onLongClickLabel = if (r.source == "manual") deleteLabel else null,
-                        onLongClick = if (r.source == "manual") ({ onDelete(r) }) else null
+                        onLongClickLabel = deleteLabel,
+                        onLongClick = { onDelete(r) }
                     )
                     .semantics(mergeDescendants = true) {}
                     .padding(horizontal = Spacing.lg, vertical = Spacing.md),
@@ -517,8 +539,11 @@ private fun EmptyDay(
     modifier: Modifier = Modifier,
     onAddWorkout: () -> Unit,
     onAddExercise: () -> Unit,
-    onCopyPrevious: () -> Unit
+    onCopyPrevious: () -> Unit,
+    /** Logs a body value for the day (#167), offered while the day has none. */
+    onAddValue: (() -> Unit)? = null
 ) {
+    val logValue = stringResource(R.string.day_log_value)
     if (compact) {
         // Under the day's body values or photos (#128): the three actions in one row, in view without scrolling.
         Row(
@@ -528,6 +553,7 @@ private fun EmptyDay(
             EmptyDayAction(Icons.Filled.Add, stringResource(R.string.day_add_exercise), onAddExercise, Modifier.weight(1f))
             EmptyDayAction(Icons.Filled.List, stringResource(R.string.day_add_workout), onAddWorkout, Modifier.weight(1f))
             EmptyDayAction(FitIcons.Copy, stringResource(R.string.day_copy_previous), onCopyPrevious, Modifier.weight(1f))
+            if (onAddValue != null) EmptyDayAction(FitIcons.Scale, logValue, onAddValue, Modifier.weight(1f))
         }
         return
     }
@@ -543,6 +569,7 @@ private fun EmptyDay(
         EmptyDayAction(Icons.Filled.Add, stringResource(R.string.day_add_exercise), onAddExercise)
         EmptyDayAction(Icons.Filled.List, stringResource(R.string.day_add_workout), onAddWorkout)
         EmptyDayAction(FitIcons.Copy, stringResource(R.string.day_copy_previous), onCopyPrevious)
+        if (onAddValue != null) EmptyDayAction(FitIcons.Scale, logValue, onAddValue)
         Spacer(Modifier.height(Spacing.lg))
     }
 }
@@ -763,12 +790,5 @@ fun nearestPhoto(snap: Snapshot, date: String, windowDays: Int = 30): com.fitlen
     val d = Dates.epochDay(date)
     return snap.datedPhotos.minByOrNull { abs(Dates.epochDay(it.date!!) - d) }
         ?.takeIf { abs(Dates.epochDay(it.date!!) - d) <= windowDays }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AddMeasurementDialog(snap: Snapshot, date: String, initialName: String? = null, onDismiss: () -> Unit) {
-    // Now a sheet, shared with editing a value (#88).
-    MeasurementEntrySheet(snap, date, initialName = initialName, onDismiss = onDismiss)
 }
 

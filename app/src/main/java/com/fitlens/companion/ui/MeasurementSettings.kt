@@ -17,7 +17,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
@@ -49,12 +48,13 @@ import com.fitlens.companion.ui.design.OverflowMenu
 import kotlinx.coroutines.launch
 
 /**
- * Every body measurement in one place (#88, #27): turn each on or off (off hides it from the body tracker, the day log
- * and the pickers, and keeps its values), create, edit or delete custom measurements, and add the standard set for
+ * The Body tracker's edit mode (#88, #27, #167): every body measurement in one place, in the tracker itself rather than
+ * on a screen of its own. Turn each on or off (off hides it from the body tracker, the day log and the pickers, and
+ * keeps its values), set its unit and goal, create, edit or delete custom measurements, and add the standard set for
  * people who don't import from FitNotes. Choices made here survive FitNotes imports.
  */
 @Composable
-fun MeasurementsScreen(snap: Snapshot, nav: Nav) {
+internal fun MeasurementsEditor(snap: Snapshot) {
     val res = LocalContext.current.resources
     var creating by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<MeasurementDef?>(null) }
@@ -64,9 +64,6 @@ fun MeasurementsScreen(snap: Snapshot, nav: Nav) {
     val missing = remember(snap.bodyKey) { StandardMeasurements.missing(snap.measurementDefs.map { it.name }) }
 
     Column(Modifier.fillMaxSize()) {
-        PlainTopBar(stringResource(R.string.body_measurements)) {
-            IconButton(onClick = { creating = true }) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.ms_new)) }
-        }
         LazyColumn(contentPadding = PaddingValues(bottom = Spacing.xxl)) {
             item {
                 Column(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
@@ -75,6 +72,13 @@ fun MeasurementsScreen(snap: Snapshot, nav: Nav) {
                         stringResource(R.string.ms_intro),
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    GlassOutlinedButton(
+                        onClick = { creating = true },
+                        modifier = Modifier.padding(top = Spacing.sm).heightIn(min = Spacing.touch)
+                    ) {
+                        Icon(Icons.Filled.Add, contentDescription = null, tint = Brand.Gold)
+                        Text(stringResource(R.string.ms_new))
+                    }
                     if (missing.isNotEmpty()) {
                         GlassOutlinedButton(
                             onClick = { AppScope.scope.launch { Store.addStandardMeasurements() } },

@@ -97,7 +97,10 @@ sealed interface Screen {
     /** One body measurement (FitNotes's body tracker): Track, History and Graph; [page] is the tab it opens on. */
     @Serializable
     data class BodyMeasurement(val name: String, val page: Int = 0) : Screen
-    /** Every body measurement: on/off, custom ones, the standard set (#88). */
+    /**
+     * The old Measurements screen (#88), now the Body tracker's edit mode (#167). Kept so a back stack saved by an earlier
+     * build still opens: it shows [Body] in edit mode. Nothing pushes it any more.
+     */
     @Serializable
     data object Measurements : Screen
     /**
@@ -548,7 +551,7 @@ private fun ScreenContent(s: Snapshot, nav: Nav, screen: Screen) {
         Screen.Calendar -> CalendarScreen(s, nav)
         Screen.Body -> BodyScreen(s, nav)
         is Screen.BodyMeasurement -> BodyMeasurementScreen(s, nav, screen.name, screen.page)
-        Screen.Measurements -> MeasurementsScreen(s, nav)
+        Screen.Measurements -> BodyScreen(s, nav, startEditing = true)
         Screen.Analysis -> AnalysisScreen(s, nav)
         is Screen.WorkoutEditor -> WorkoutEditorScreen(s, nav, screen.id)
         Screen.Photos -> PhotosScreen(s, nav)
