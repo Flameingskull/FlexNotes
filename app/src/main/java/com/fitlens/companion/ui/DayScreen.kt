@@ -132,6 +132,8 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
     var addValue by state.saved("addValue", false)
     // Reorder in place (#170): the exercises as a compact list with drag handles, until the toggle is switched off.
     var reordering by state.saved("reordering", false)
+    // The day's calories breakdown (#174).
+    var caloriesSheet by state.saved("caloriesSheet", false)
     var editComment by state.saved("editComment", false)
     var copyPrevious by state.saved("copyPrevious", false)
     var copyToDay by state.saved("copyToDay", false)
@@ -247,6 +249,8 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                     onOpenRecord = { openRecord = it.id },
                     onAddValue = { addValue = true },
                     onEditTime = { editTime = true },
+                    showCalories = prefs.homeShowCalories,
+                    onCalories = { caloriesSheet = true },
                     reordering = reordering && shown == date
                 )
             }
@@ -260,6 +264,7 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
         MeasurementEntrySheet(snap, date, existing = r) { openRecord = null }
     }
     if (editComment) WorkoutCommentSheet(snap, date) { editComment = false }
+    if (caloriesSheet) CaloriesSheet(snap, nav, date) { caloriesSheet = false }
     if (copyChooser) {
         CopyWorkoutSheet(hasSets = sets.isNotEmpty(), hasWorkout = hasWorkout, onDismiss = { copyChooser = false }) { choice ->
             copyChooser = false
@@ -298,6 +303,8 @@ private fun DayContent(
     onOpenRecord: (MRecord) -> Unit,
     onAddValue: () -> Unit,
     onEditTime: () -> Unit,
+    showCalories: Boolean,
+    onCalories: () -> Unit,
     reordering: Boolean
 ) {
     val res = LocalContext.current.resources
@@ -327,6 +334,12 @@ private fun DayContent(
                     onDelete = { deleteBodyValue(res, it) },
                     onAdd = onAddValue
                 )
+            }
+        }
+        // The day's calories, burned and needed (#174), after the body values; Home Screen Settings can hide it.
+        if (showCalories) {
+            item(key = "calories") {
+                CaloriesCard(snap, date, onOpen = onCalories, onSetUp = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) })
             }
         }
         // The day's progress photos (a FlexNotes extra).

@@ -137,7 +137,9 @@ data class Exercise(
     /** The unit this exercise's distances are logged in ([DistanceUnits]), or null for the global one (#7). */
     val distanceUnit: String? = null,
     /** The unit this exercise's weights are shown and typed in ("kg" or "lbs"), or null for the global one (#7). */
-    val weightUnit: String? = null
+    val weightUnit: String? = null,
+    /** Its own activity for its calories, an [Energy.Activity] key (#174), or null for automatic. */
+    val activity: String? = null
 ) {
     val imported: Boolean get() = source == Sources.FITNOTES
 }

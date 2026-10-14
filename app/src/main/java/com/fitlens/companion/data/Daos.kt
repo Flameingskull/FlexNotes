@@ -369,6 +369,10 @@ interface WorkoutDao {
         id: Long, weightStep: Double?, defaultGraph: Int, restSeconds: Int?, distanceUnit: String?, weightUnit: String?
     )
 
+    /** An exercise's own activity (#174), an `Energy.Activity` key, or null for automatic. */
+    @Query("UPDATE exercise SET activity = :activity WHERE id = :id")
+    fun setExerciseActivity(id: Long, activity: String?)
+
     @Query("UPDATE exercise SET notes = :notes, favourite = :favourite, source = :source WHERE id = :id")
     fun setMergedExercise(id: Long, notes: String?, favourite: Int, source: String)
 
@@ -832,7 +836,7 @@ internal fun CategoryRow.toModel() = Category(id, name, colour.toInt(), sort_ord
 
 internal fun ExerciseRow.toModel() = Exercise(
     id, name, category_id, type, notes, source, favourite != 0, weight_step, default_graph, rest_seconds,
-    DistanceUnits.of(distance_unit), WeightUnits.of(weight_unit)
+    DistanceUnits.of(distance_unit), WeightUnits.of(weight_unit), Energy.Activity.of(activity)?.key
 )
 
 internal fun ExerciseTypeRow.toModel() = CustomType(

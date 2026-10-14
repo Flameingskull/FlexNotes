@@ -799,6 +799,8 @@ fun ExerciseEditorSheet(
     var distUnit by remember { mutableStateOf(existing?.distanceUnit) }
     // Its own weight unit (#7), or null for the global one.
     var weightUnit by remember { mutableStateOf(existing?.weightUnit) }
+    // Its own activity for its calories (#174), or null for automatic.
+    var activity by remember { mutableStateOf(existing?.activity) }
     val res = LocalContext.current.resources
 
     fun save(keepOpen: Boolean) {
@@ -815,6 +817,7 @@ fun ExerciseEditorSheet(
         val rest = restSec
         val dUnit = distUnit
         val wUnit = weightUnit
+        val act = activity
         if (!keepOpen) onDismiss()
         AppScope.scope.launch {
             try {
@@ -824,6 +827,7 @@ fun ExerciseEditorSheet(
                     Workouts.updateExercise(existing.id, n, c, t, note)
                     existing.id
                 }
+                if (act != existing?.activity) Workouts.setExerciseActivity(id, act)
                 if (step != existing?.weightStepKg || graph != (existing?.defaultGraph ?: -1) || rest != existing?.restSeconds ||
                     dUnit != existing?.distanceUnit || wUnit != existing?.weightUnit
                 ) {
@@ -947,6 +951,19 @@ fun ExerciseEditorSheet(
                             color = Brand.GoldLight
                         )
                     }
+                    // Its own activity for its calories (#174): Automatic works them out from effort, distance and time.
+                    SectionLabel(stringResource(R.string.lib_activity))
+                    val activities = com.fitlens.companion.data.Energy.Activity.entries
+                    DropdownPill(
+                        stringResource(R.string.lib_activity),
+                        listOf(stringResource(R.string.lib_activity_auto)) + activities.map { activityText(res, it) },
+                        activities.indexOfFirst { it.key == activity } + 1
+                    ) { i -> activity = if (i == 0) null else activities[i - 1].key }
+                    Text(
+                        stringResource(R.string.lib_activity_note),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     if (ExerciseTypes.usesWeight(type)) {
                         // Its own weight unit (#7): weights are stored in kg, so a change only converts how they're shown.
                         SectionLabel(stringResource(R.string.lib_weight_unit))

@@ -1,10 +1,11 @@
 # In-place editing and grouped screens: plan across builds (2026-10-14)
 
-> **Status (2026-10-14): in progress.** Step 0 done: issues #164–#176 filed and imported; tracker plan item
-> "In-place editing and grouped screens: plan across builds (2026-10-14)". Build 1 done (1.0.125: #164, #166, #167,
-> #168, #169). Build 2 done (1.0.126: #165, #170). Build 3 done (1.0.127: #171, the audit; no large findings).
-> Build 4 done (1.0.128: #172, #173). Left: Build 5 (#174). Filed under rule 5, not in this plan: #175 (step count),
-> #176 (intake logging). Next: Build 5, `/safe-build 174`.
+> **Status (2026-10-14): Done.** Step 0: issues #164–#176 filed and imported; tracker plan item "In-place editing
+> and grouped screens: plan across builds (2026-10-14)", completed. Build 1 (1.0.125: #164, #166, #167, #168, #169).
+> Build 2 (1.0.126: #165, #170). Build 3 (1.0.127: #171, the audit; no large findings). Build 4 (1.0.129: #172,
+> #173; its first run, 1.0.128, failed CI and published nothing). Build 5 (1.0.130: #174, with the README refresh).
+> Nothing remains. Filed under rule 5, not in this plan: #175 (step count), #176 (intake logging), both
+> `needs-triage`.
 >
 > Issue map: (1) #167 · (2) #164 · (3) #165 · (4) #170 · (5) #168 · (6) #166 · (7) #169 · audit #171 ·
 > (8) #172 · (9) #173 · (10) #174.

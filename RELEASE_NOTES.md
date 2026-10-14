@@ -1,39 +1,36 @@
 ## Overview
 
-This update adds your **Profile** and a **TDEE calculator**. The profile keeps your sex, date of birth, height and
-daily activity in one place, for every calculation that needs them. The TDEE calculator works out how many calories
-you burn on an average day from your profile and what you log. It then sets a daily calorie target and macros for
-your goal.
+This update shows the calories you burn and need on every day in the day log. A new **Calories** card sits under
+the day's body values: what you burned, from your resting energy, daily activity and the exercise logged that day,
+and what the day needs for your goal. Tap it for the full breakdown. Each exercise can also choose its own
+**Activity**, so its calories are more accurate.
 
-Install it over the current app as usual. Everything you've logged is kept, and there's no database upgrade. Your
-profile and target travel in your backups.
+Install it over the current app as usual. Everything you've logged is kept. The database gets one small upgrade,
+an empty Activity for each exercise, which keeps every row.
 
 ## What's new
 
-- **Settings › Profile.** Set your sex, date of birth (your age is worked out for each date), height and daily
-  activity outside training. Each activity level is described in plain words, from Mostly sitting to Heavy physical
-  work. The Sex row on the main Settings list has moved here, and search finds each value.
-- **The TDEE calculator**, from the Body tracker's ⋮ menu or Settings › Profile:
-  - **Your details:** the profile, plus your latest bodyweight and body fat. Change any of them right there, or log
-    a new value without leaving the screen. Anything missing is named.
-  - **Result:** resting energy, using Mifflin-St Jeor, or Katch-McArdle when a body fat value from the last two
-    weeks is logged (you can choose either). Then your daily activity, your training averaged over the last 28 days
-    of logs, and the daily total.
-  - **Goal:** maintain; lose 0.25 to 1% of your bodyweight a week, or 10, 20 or 25% under your total; recomposition;
-    lean bulk; bulk; or a custom target. Each shows its calories and the expected weekly change. Targets below your
-    resting energy, below a safe minimum, or losing more than 1% a week are flagged.
-  - **Macros:** protein, fat and carbohydrate in grams and calories for the goal.
-  - **Set as my target** saves the calories and macros, with Undo.
+- **The Calories card on the day log**, on any date: "Burned ≈ 2,640 kcal · Need ≈ 2,240 kcal". Until your
+  profile and a recent bodyweight are set, it says what's missing and opens your profile.
+- **The calories breakdown.** Tap the card to see resting energy and its equation, daily activity, each exercise's
+  calories with its time and how they were worked out, and the total burned. Below that is what the day needs.
+- **Choose how each day's need is set,** right in the breakdown: **the same every day** (your daily target), or
+  **follow each day's training** (what you burned that day, plus your goal's change), so a training day needs more
+  than a rest day.
+- **An Activity for each exercise.** In the exercise form, choose from weight training (light, moderate or
+  vigorous), circuit training, bodyweight exercises, intervals, walking, running, cycling, rowing, elliptical, stair
+  climber, swimming, sports, yoga or stretching, each with its value from the 2024 Compendium of Physical
+  Activities. **Automatic** keeps working it out from your logged effort, distance and time.
 
 ## Improved
 
-- **The body fat calculator uses your profile height** when no Height measurement is logged.
-- **Until two weeks of training are logged,** the calculator uses a planned week instead: sessions, minutes and
-  effort, which you can change on the screen.
+- **The TDEE calculator** uses each exercise's Activity in its training average.
+- **Home Screen Settings › Show calories** hides the card if you'd rather not see it.
+- **The README** on GitHub now describes everything added since the rename.
 
 ## Known limitations
 
-- Every figure is an estimate. Resting energy equations are usually within about 10% for a person, so watch your
-  bodyweight trend for two to three weeks and adjust.
-- Exercise calories use effort (from RPE where logged) and, for walking, running and cycling, your distance and time.
-  Choosing an activity for each exercise, and a daily calories card on the day log, come in the next update.
+- Every figure is an estimate. Exercise calories count only what's above resting, so they're lower than a fitness
+  watch's total, and a strength session's time comes from the workout timer when it was used, otherwise from each set
+  and its rest.
+- Food intake and steps aren't tracked yet. Both are on the feature list (#176, #175).

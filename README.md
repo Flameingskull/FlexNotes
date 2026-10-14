@@ -49,7 +49,12 @@ custom metrics.
   Room, Android's standard database library ([#36](https://github.com/Flameingskull/FlexNotes/issues/36)): every
   upgrade is checked against a recorded layout, and every read and save goes through queries checked when the app is
   built. From 1.0.119 to 1.0.122 big workout changes, photo dates and screen updates got faster and more accurate (photos
-  can now re-read their dates from their metadata), and in 1.0.124 the app was renamed FlexNotes. Next come accessibility checks on a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)),
+  can now re-read their dates from their metadata), and in 1.0.124 the app was renamed FlexNotes. From 1.0.125 to
+  1.0.130 everything became editable where it's shown ([#171](https://github.com/Flameingskull/FlexNotes/issues/171)):
+  body values on any day and in History, FitNotes values included, reordering in place behind a Reorder toggle, and
+  a profile with a TDEE calculator and daily calories ([#172](https://github.com/Flameingskull/FlexNotes/issues/172),
+  [#173](https://github.com/Flameingskull/FlexNotes/issues/173), [#174](https://github.com/Flameingskull/FlexNotes/issues/174)).
+  Next come accessibility checks on a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)),
   measuring save speed on a long history ([#60](https://github.com/Flameingskull/FlexNotes/issues/60)) and the
   [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
@@ -68,6 +73,9 @@ custom metrics.
 
 - **Local only.** No accounts, no cloud services, no subscriptions and **no internet permission**. Google cloud backup
   is turned off for FlexNotes. Backups go only to a folder you choose.
+- **Work where the data is shown.** Anything you can see, you can change, move or delete right there, on any date,
+  whether you typed it in or it came from FitNotes. Reordering is done in place: a **Reorder** button in the top bar
+  shows drag handles, and turns gold while it's on.
 - **Every update installs over the last one** and keeps your data. Database changes are always migrated, never reset.
 - **Android phones** (Android 10 or newer), across phone screen sizes. A self-hosted web version may come later.
 - **The FlexNotes look:** luxury black and vibrant gold. Cards, bars and buttons are smoked glass with fine gold
@@ -115,7 +123,7 @@ custom metrics.
 - **Workouts.** The exercise library's title (**+** on the day log) switches between **All exercises**, each of your
   workouts and **Create new workout**. A workout shows its days as cards, with the next one marked in gold, and
   **Log all** adds a whole day at once, with Undo. In the editor, each day has **+** (Add exercise) and a menu to
-  rename, duplicate, move, copy or delete it, and each exercise chooses how its sets are filled: **copy previous**,
+  rename, duplicate, copy or delete it (the top bar's **Reorder** drags days and exercises), and each exercise chooses how its sets are filled: **copy previous**,
   **predefined** sets (a blank weight or reps copies last time's), or **none**. Each exercise can also plan its
   **rest**: **copy previous rest** (the rests from its last workout, as sets can be copied), or one rest for every
   set or a rest per set, and a longer break before the next exercise; a day's menu sets them for every exercise at
@@ -133,8 +141,8 @@ custom metrics.
   after an exercise's last set it uses the planned break before the next one. A day keeps the rests it was logged with,
   even if the workout changes later. Both timers keep running with the screen off, in a notification with its own
   buttons.
-- **Reorder, supersets and ticking sets off.** Drag exercises into a new order in the workout drawer, or move
-  exercises and sets up or down; a superset always moves as one. Group
+- **Reorder, supersets and ticking sets off.** Drag exercises into a new order in the workout drawer, or choose
+  **⋮ → Reorder exercises** on the day log to drag them there; a superset always moves as one. Group
   exercises into **supersets**: they sit together with a gold bar, and saving a set moves you round-robin to the next
   exercise in the group, with the rest timer starting after each round. Workouts keep their supersets. Every set on
   the exercise screen has a **done tick**, which can start the rest timer. Ticking an exercise's last set shows
@@ -164,27 +172,40 @@ custom metrics.
   Duplicates are detected and skipped, so re-importing a folder is safe. **Photos → ⋮ → Re-read photo dates** runs
   the same order again over photos already imported (except any you dated by hand), says how many changed, and can be
   undone.
-- **Manual entry:** add photos to a specific day and log measurements by hand, with a date, time and comment. A value
-  you logged can be changed or deleted on the measurement's Track tab (tap it there, or in its History). If the same value later arrives in a
-  FitNotes backup, the FitNotes copy is skipped and your entry is kept.
-- **Measurements:** the body tracker's **Measurements** screen lists every measurement with an on/off switch, adds
-  the standard set (bodyweight and eight tape measurements), and creates your own, such as calories or sleep, with
-  their own unit. **Body fat** and **Height** are there for everyone. You can link one to a FitNotes measurement so
-  imports fill it in, and imports keep your on/off choices.
+- **Body values where you see them:** log a value with the **+** on the day log's body values card (for that day),
+  on an empty day, or in the Body tracker. Tap any value, on the day log or in History, to change its value, date,
+  time or comment, or delete it; a long press deletes it at once, with **Undo**. Values imported from FitNotes can be
+  changed and deleted too, and a later import keeps your change: an edited value isn't doubled and a deleted one
+  doesn't come back. If a value you typed later arrives in a FitNotes backup, the FitNotes copy is skipped.
+- **Measurements:** the Body tracker's pencil switches it to editing measurements: an on/off switch for each, its
+  unit and goal, the standard set (bodyweight and eight tape measurements), and your own, such as sleep, with their
+  own unit. **Body fat** and **Height** are there for everyone. You can link one to a FitNotes measurement so imports
+  fill it in, and imports keep your on/off choices.
 - **Body fat from your measurements:** enter body fat by hand, or tap **Calculate from measurements**. It uses the US
   Navy circumference method (metric body-density form with Siri's equation, typically within about ±3.5 percentage
   points of underwater weighing), working from your latest height, neck and waist (plus hips for women). Each one is
   shown with its date, and any value more than 14 days old is flagged. A missing measurement is named so you can enter
-  it on the spot, and impossible inputs are refused with the reason. **Settings → Sex (Body Fat)** holds the one
-  choice the formula needs.
+  it on the spot, and impossible inputs are refused with the reason. Your sex comes from your profile, and your profile
+  height is used when no Height measurement is logged.
+- **Profile:** **Settings → Profile** keeps your sex, date of birth (your age is worked out for each date), height and
+  daily activity outside training, from Mostly sitting to Heavy physical work, for every calculation that needs them.
+- **TDEE calculator and daily calories:** from the Body tracker's ⋮ menu or your profile. It estimates your resting
+  energy (Mifflin-St Jeor, or Katch-McArdle when a recent body fat value is logged), adds your daily activity and your
+  logged training averaged over 28 days (or a planned week until two weeks are logged), and gives your daily total.
+  Pick a goal (maintain, lose by a weekly rate or a deficit, recomposition, lean bulk, bulk or a custom target) to see
+  its calories, the expected weekly change and macros, with warnings for unsafe targets, then **Set as my target**.
+  Exercise calories count only what's above resting (MET − 1, from the 2024 Compendium of Physical Activities), with
+  effort from RPE and the ACSM equations for walking and running; each exercise can also choose its own **Activity**.
+  A **Calories** card on the day log shows what each day burned and needed, the same every day or following that
+  day's training, and opens the breakdown. Every figure is an estimate.
 - **Guided setup:** a fresh install opens a short, skippable setup: restore a FlexNotes backup, or choose your units,
   an automatic backup folder, a FitNotes import, your progress photos, the starter exercise library and the standard
   body measurements.
   **Settings → Show Setup Again** opens it any time.
 - **Settings:** open it from the **⋮** menu on the day log. As in FitNotes, it's one list. **SETTINGS** has Theme,
   Unit System, Calendar Week Start, Default Weight Increment, Home Screen Settings, Track Personal Records, Mark Sets
-  Complete, Auto-Select Next Set and Keep Screen On, in FitNotes's order, then FlexNotes's own: your units, sex for the
-  body fat formula, the rest timer, how new sets fill in, set types, effort, warm-ups, the workout timer, the
+  Complete, Auto-Select Next Set and Keep Screen On, in FitNotes's order, then FlexNotes's own: your units, your
+  **Profile**, the rest timer, how new sets fill in, set types, effort, warm-ups, the workout timer, the
   estimated 1RM formula and settings, and **Progress Photos & Media** (the pose for new photos, how the gallery is
   grouped, remembered slideshow and video options, and the PDF report's page style and photos per day). **DATA**
   has Backup, Restore, Automatic Backup, Spreadsheet Export, Calculate Personal Records, Delete Workout History,
@@ -213,7 +234,7 @@ custom metrics.
     deleted on the next import. A safety copy is taken first, so it can be undone.
   - **Reset settings to defaults:** puts units, the rest timer, logging, display, photo and report options back as
     they were when FlexNotes was new, with **Undo** straight afterwards. Workouts, photos, measurements, backups,
-    backup folders and schedules, pinned graphs and your body fat profile are kept. Home Screen Settings, Rest Timer
+    backup folders and schedules, pinned graphs, your profile and your calorie target are kept. Home Screen Settings, Rest Timer
     and Progress Photos & Media can also be reset on their own, from **Reset this section** in each page's ⋮ menu.
 - **Getting around:** as in FitNotes, there's no tab bar. The **day log** is home, and its top bar has **Calendar**,
   **+** (the exercise library and workout switcher), the rest countdown while you rest, and a **⋮** menu with the
@@ -230,9 +251,10 @@ custom metrics.
     back to today. The day's body values come first, in one card with each name and its value, and the change since
     the previous value (amount, date and the value it moved from) on its own line. Then come the day's progress photos
     and a card for each exercise: its name, a gold tick once every set is done, and its sets as bold figures in
-    columns. Tap an exercise to log its sets, or long-press it for its options (comment, history, records, reorder,
-    superset, swap, remove). The workout's time, totals and comment follow. An empty day reads "Workout log empty"
-    and offers **Add exercise**, **Add workout** and **Copy previous workout**.
+    columns. Tap an exercise to log its sets, or long-press it for its options (comment, history, records, superset,
+    swap, remove); tap its comment to edit it. The workout's time, totals and comment follow: tap the time to change
+    it. An empty day reads "Workout log empty" and offers **Add exercise**, **Add workout**, **Copy previous workout**
+    and **Log body value**.
   - **All days** (from the Calendar's top bar): a timeline of every day, with that day's photos, measurements and
     workout summary.
   - **Calendar:** as in FitNotes, a month grid (swipe between months) with category dots, photo and measurement
@@ -246,10 +268,12 @@ custom metrics.
     value before (coloured by your goal), or "Tap to record a value". **History** shows every value, newest day first,
     for all measurements or one. **Graph** shows one measurement with its range, trend line, goal line, photo days and
     stats. Tap a measurement to log a value: the day, the value with − and + buttons, the time and a comment, with its
-    own History and Graph (Body fat adds **Calculate from measurements**). The pencil opens **Measurements**, where each measurement shows its unit and goal and a
-    checkbox turns tracking on or off.
+    own History and Graph (Body fat adds **Calculate from measurements**). **+** logs any measurement, the pencil
+    edits the measurements in place (each with its unit, goal and a tracking checkbox), and **Reorder** drags them
+    into the order every screen uses.
   - **Exercise library:** as in FitNotes, it opens on **All exercises** with the search field always at the top,
     then your categories, then a category's exercises. Tap an exercise to log it, or long-press to choose several and go through them in turn.
+    Each category's ⋮ edits or deletes it, **⋮ → New category** adds one, and **Reorder** drags the categories.
     The exercise form's **Your types** makes exercise types of your own: pick what each set records (weight, reps,
     distance, time, or a metric of your own with its name and unit, such as jump height in cm). Set entry, history,
     graphs (**Best** and **Total** for the metric), records, predefined workout sets and CSV export follow the type.
@@ -264,7 +288,7 @@ custom metrics.
     and **Max pace**. Weight-and-reps exercises end the list with **Relative Strength**: each day's best estimated
     1RM divided by the bodyweight logged nearest that day (within 14 days; days without one are left out and marked).
     Its menu button opens the **workout drawer**: the day's exercises in order,
-    to jump between or reorder, with **Add exercise**, **Add to superset** and **Home** at the bottom. As in FitNotes,
+    to jump between or reorder, with **Add exercise** and **Add to superset** at the bottom. As in FitNotes,
     the top bar then has the rest timer, a trophy that opens **Records**, **Stats** (Max weight, Estimated 1RM, Max reps, Max volume, Workout reps and Workout volume, each with
     its date, which a tap opens, plus totals and first and last logged, for a period or any date range), **Goals** and
     a **1RM calculator**.
@@ -356,8 +380,8 @@ reference, so the two never collide. Importing a FitNotes backup follows these r
    Body measurements are skipped when the same measurement, date, time and value exists, or when you entered the same
    value by hand that day.
 5. **Your changes in FlexNotes win.** After you rename an exercise or category, the FitNotes name still maps to it.
-   After you delete imported data, or edit an imported set, comment or time, the next import doesn't bring the
-   original back. Re-creating a deleted exercise with the same name lets its FitNotes history import again.
+   After you delete imported data, or edit an imported set, comment, time or body value, the next import doesn't bring
+   the original back. Re-creating a deleted exercise with the same name lets its FitNotes history import again.
 
 The rules are also documented in the code (`data/Workouts.kt`).
 
@@ -399,8 +423,11 @@ The first time FlexNotes opens, a short guided setup walks through the steps bel
 
 ## Limits
 
-- Sets, and exercises in the workout editor, are reordered with buttons (and TalkBack actions), not by dragging.
-  Routines from FitNotes backups aren't imported.
+- Sets are reordered with buttons (and TalkBack actions), not by dragging. Routines from FitNotes backups aren't
+  imported.
+- Calories are estimates from your profile and what you log. Food intake isn't logged yet
+  ([#176](https://github.com/Flameingskull/FlexNotes/issues/176)), and steps aren't read from the phone
+  ([#175](https://github.com/Flameingskull/FlexNotes/issues/175)).
 - Graphs use compact dropdowns rather than FitNotes's 1m / 3m / 6m / 1y / all buttons, so the graph gets the room
   ([#125](https://github.com/Flameingskull/FlexNotes/issues/125)).
 - Planned rests apply to days logged from a workout from 1.0.73 on; earlier days use each exercise's own rest or

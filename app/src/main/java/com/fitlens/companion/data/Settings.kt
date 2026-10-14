@@ -150,6 +150,10 @@ data class PortableSettings(
     val bmrFormula: String = "auto",
     /** A planned week of training for when too little is logged, `Energy.Plan.encode`, or null for the default. */
     val trainingPlan: String? = null,
+    /** The day's calorie need (#174): `EnergyEstimates.MODE_SAME` (the target every day) or `MODE_TRAINING`. */
+    val calorieMode: String = EnergyEstimates.MODE_SAME,
+    /** Show the calories card on the day log (#174). */
+    val homeShowCalories: Boolean = true,
     /** The pose new photos get (#46): null to ask each time, [Poses.NONE] for none, or one of [Poses.all]. */
     val photoDefaultPose: String? = null,
     /** How the Photos grid is grouped (#46), one of [MediaPrefs.GROUPS]. */
@@ -370,6 +374,8 @@ object Settings {
             P_MACRO_CARB to s.macroCarbG?.toString(),
             P_BMR_FORMULA to s.bmrFormula.takeIf { it != "auto" },
             P_TRAINING_PLAN to s.trainingPlan?.takeIf { it.isNotBlank() },
+            P_CALORIE_MODE to s.calorieMode.takeIf { it != EnergyEstimates.MODE_SAME },
+            P_HOME_CALORIES to if (s.homeShowCalories) null else "0",
             P_PHOTO_POSE to MediaPrefs.storeDefaultPose(s.photoDefaultPose),
             P_PHOTO_GROUP to s.photoGroupBy.takeIf { it != MediaPrefs.GROUP_MONTH },
             P_REMEMBER_VIDEO to if (s.rememberVideoOpts) null else "0",
@@ -454,6 +460,8 @@ object Settings {
     private const val P_MACRO_CARB = "macro_carb_g"
     private const val P_BMR_FORMULA = "bmr_formula"
     private const val P_TRAINING_PLAN = "training_plan"
+    private const val P_CALORIE_MODE = "calorie_mode"
+    private const val P_HOME_CALORIES = "home_show_calories"
     // Progress photos and media (#46), with the names the issue gave them.
     private const val P_PHOTO_POSE = "photo_default_pose"
     private const val P_PHOTO_GROUP = "photo_group_by"
@@ -561,6 +569,8 @@ object Settings {
         macroCarbG = get(P_MACRO_CARB)?.toIntOrNull()?.takeIf { it in 0..2000 },
         bmrFormula = Energy.Formula.of(get(P_BMR_FORMULA)).key,
         trainingPlan = Energy.Plan.decode(get(P_TRAINING_PLAN))?.encode(),
+        calorieMode = if (get(P_CALORIE_MODE) == EnergyEstimates.MODE_TRAINING) EnergyEstimates.MODE_TRAINING else EnergyEstimates.MODE_SAME,
+        homeShowCalories = get(P_HOME_CALORIES) != "0",
         // Unknown values (from a later build's backup) fall back to the defaults (#46).
         photoDefaultPose = MediaPrefs.defaultPoseOf(get(P_PHOTO_POSE)),
         photoGroupBy = MediaPrefs.groupOf(get(P_PHOTO_GROUP)),
@@ -609,7 +619,8 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     macroFatG = macroFatG,
     macroCarbG = macroCarbG,
     bmrFormula = bmrFormula,
-    trainingPlan = trainingPlan
+    trainingPlan = trainingPlan,
+    calorieMode = calorieMode
 )
 
 /**
@@ -634,7 +645,9 @@ enum class PreferenceGroup {
 
 /** These preferences with [group]'s values taken from [other]: defaults to reset, the old values for Undo. */
 internal fun PortableSettings.withGroupFrom(group: PreferenceGroup, other: PortableSettings): PortableSettings = when (group) {
-    PreferenceGroup.HOME -> copy(homeShowCategories = other.homeShowCategories, homeSetsShown = other.homeSetsShown)
+    PreferenceGroup.HOME -> copy(
+        homeShowCategories = other.homeShowCategories, homeSetsShown = other.homeSetsShown, homeShowCalories = other.homeShowCalories
+    )
     PreferenceGroup.REST -> copy(
         restSeconds = other.restSeconds, restAutoStart = other.restAutoStart, restVibrate = other.restVibrate,
         restSound = other.restSound, restVolume = other.restVolume

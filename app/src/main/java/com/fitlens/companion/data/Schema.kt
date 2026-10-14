@@ -67,7 +67,9 @@ data class ExerciseRow(
     @ColumnInfo(defaultValue = "-1") val default_graph: Int,
     val rest_seconds: Int?,
     val distance_unit: String?,
-    val weight_unit: String?
+    val weight_unit: String?,
+    /** The exercise's own activity, an `Energy.Activity` key (#174), or null to work its calories out automatically. */
+    val activity: String?
 )
 
 @Entity(

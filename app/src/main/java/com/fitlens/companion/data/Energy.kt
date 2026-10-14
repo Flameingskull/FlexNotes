@@ -69,6 +69,33 @@ object Energy {
         }
     }
 
+    /**
+     * An exercise's own activity (#174), with its 2024 Adult Compendium MET, chosen in the exercise editor when the
+     * automatic estimate doesn't fit. Stored by its key, so values that share a MET stay apart.
+     */
+    enum class Activity(val key: String, val met: Double) {
+        STRENGTH_LIGHT("strength_light", 3.5),
+        STRENGTH_MODERATE("strength_moderate", 5.0),
+        STRENGTH_VIGOROUS("strength_vigorous", 6.0),
+        CIRCUIT("circuit", 8.0),
+        CALISTHENICS("calisthenics", 3.8),
+        HIIT("hiit", 8.0),
+        WALKING("walking", 3.5),
+        RUNNING("running", 9.8),
+        CYCLING("cycling", 6.8),
+        ROWING("rowing", 7.0),
+        ELLIPTICAL("elliptical", 5.0),
+        STAIRS("stairs", 9.0),
+        SWIMMING("swimming", 7.0),
+        SPORTS("sports", 6.0),
+        YOGA("yoga", 2.8),
+        STRETCHING("stretching", 2.3);
+
+        companion object {
+            fun of(key: String?): Activity? = entries.firstOrNull { it.key == key }
+        }
+    }
+
     // ---------- Resting energy ----------
 
     /** Mifflin-St Jeor resting energy in kcal a day. */

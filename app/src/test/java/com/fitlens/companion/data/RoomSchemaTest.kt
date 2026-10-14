@@ -212,6 +212,20 @@ class RoomSchemaTest {
     }
 
     @Test
+    fun aV21DatabaseGainsAnEmptyActivityAndKeepsItsExercises() {
+        // 1.0.129 (#174): one nullable column; every exercise keeps its values and stays automatic.
+        OldSchemas.create(file, 21, OldSchemas.V20) { db ->
+            db.row("exercise", "id" to 1L, "name" to "Bench Press", "category_id" to 0L, "weight_step" to 2.5, "rest_seconds" to 120)
+        }
+        Db(app).use { h ->
+            val db = h.writableDatabase
+            assertEquals(Db.VERSION, db.version)
+            assertTrue(db.hasColumn("exercise", "activity"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM exercise WHERE id=1 AND name='Bench Press' AND weight_step=2.5 AND rest_seconds=120 AND activity IS NULL"))
+        }
+    }
+
+    @Test
     fun everyUpgradeIsRegistered() {
         // Room needs a path from every version FlexNotes has shipped; a database from any of them opens.
         (1 until Db.VERSION).forEach { v ->

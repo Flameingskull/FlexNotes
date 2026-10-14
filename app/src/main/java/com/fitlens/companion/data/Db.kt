@@ -24,8 +24,8 @@ class Db(context: Context) : Closeable {
 
     companion object {
         const val NAME = "fitlens.db"
-        /** 21: Room takes over the file (#36). */
-        const val VERSION = 21
+        /** 21: Room takes over the file (#36). 22: an exercise's own activity for its calories (#174). */
+        const val VERSION = 22
 
         /** The most ids one query binds, inside the 999-variable limit of older phones' SQLite. */
         const val MAX_IDS = 500
@@ -278,6 +278,12 @@ class Db(context: Context) : Closeable {
                 // ---- 1.0.100: a custom type's metric in predefined sets (#155) ------------------------------------------
                 // One nullable column, so every predefined set keeps its values and has no metric. Replays safely (#77).
                 if (hasTable(db, "routine_day_set")) addColumn(db, "routine_day_set", "metric", "REAL")
+            }
+            if (oldVersion < 22) {
+                // ---- 1.0.129: an exercise's own activity for its calories (#174) -------------------------------------
+                // One nullable column (an `Energy.Activity` key), so every exercise keeps its values and stays
+                // automatic. Replays safely (#77); the rebuild that follows keeps every row.
+                if (hasTable(db, "exercise")) addColumn(db, "exercise", "activity", "TEXT")
             }
         }
 

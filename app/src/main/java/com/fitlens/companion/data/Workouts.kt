@@ -377,6 +377,11 @@ object Workouts {
         )
     }
 
+    /** An exercise's own activity for its calories (#174), an `Energy.Activity` key, or null for automatic. */
+    suspend fun setExerciseActivity(id: Long, activity: String?): Unit = write(LIBRARY) { w ->
+        w.setExerciseActivity(id, Energy.Activity.of(activity)?.key)
+    }
+
     // ---------- Exercise types (#14) ----------
 
     /**

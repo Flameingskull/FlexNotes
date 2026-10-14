@@ -71,8 +71,12 @@ object EnergyEstimates {
     fun workoutSeconds(snap: Snapshot, date: String): Double =
         snap.workoutTimes[date].orEmpty().filter { it.end.isNotBlank() }.sumOf { Dates.secondsBetween(it.start, it.end) }.toDouble()
 
+    /** Each exercise's own activity as a MET, for those that have one (#174). */
+    fun exerciseMets(snap: Snapshot): Map<Long, Double> =
+        snap.exercises.values.mapNotNull { e -> Energy.Activity.of(e.activity)?.let { e.id to it.met } }.toMap()
+
     /** [date]'s exercises as bouts for [Energy.bouts]; [mets] are exercises' own activities (#174). */
-    fun bouts(snap: Snapshot, date: String, rest: Rest, mets: Map<Long, Double> = emptyMap()): List<Energy.Bout> {
+    fun bouts(snap: Snapshot, date: String, rest: Rest, mets: Map<Long, Double> = exerciseMets(snap)): List<Energy.Bout> {
         val sets = snap.setsByDate[date].orEmpty()
         if (sets.isEmpty()) return emptyList()
         val lastOf = sets.groupBy { it.exerciseId }.mapValues { e -> e.value.last().id }
@@ -90,7 +94,7 @@ object EnergyEstimates {
     }
 
     /** Each exercise's net calories on [date] at [kg], biggest first. */
-    fun exerciseKcal(snap: Snapshot, date: String, kg: Double, rest: Rest, mets: Map<Long, Double> = emptyMap()): List<Energy.BoutKcal> =
+    fun exerciseKcal(snap: Snapshot, date: String, kg: Double, rest: Rest, mets: Map<Long, Double> = exerciseMets(snap)): List<Energy.BoutKcal> =
         bouts(snap, date, rest, mets).map { Energy.boutKcal(it, kg) }.sortedByDescending { it.kcal }
 
     /** Training calories a day, averaged over the [Energy.AVERAGE_DAYS] ending on [date], or from the plan. */
@@ -100,7 +104,7 @@ object EnergyEstimates {
      * The average day's training calories (#173): from the last [Energy.AVERAGE_DAYS] of logs once at least
      * [Energy.MIN_LOGGED_DAYS] days have passed since the first logged set, otherwise from [plan].
      */
-    fun training(snap: Snapshot, date: String, kg: Double, rest: Rest, plan: Energy.Plan, mets: Map<Long, Double> = emptyMap()): Training {
+    fun training(snap: Snapshot, date: String, kg: Double, rest: Rest, plan: Energy.Plan, mets: Map<Long, Double> = exerciseMets(snap)): Training {
         val first = snap.setsByDate.keys.minOrNull()
         val logged = first != null && Dates.epochDay(date) - Dates.epochDay(first) >= Energy.MIN_LOGGED_DAYS - 1
         if (!logged) return Training(plan.dailyKcal(kg), false, 0)
@@ -125,7 +129,7 @@ object EnergyEstimates {
     }
 
     /** The average daily total (TDEE) as of [date]. */
-    fun daily(snap: Snapshot, prefs: PortableSettings, date: String, rest: Rest, mets: Map<Long, Double> = emptyMap()): Daily {
+    fun daily(snap: Snapshot, prefs: PortableSettings, date: String, rest: Rest, mets: Map<Long, Double> = exerciseMets(snap)): Daily {
         val inputs = inputs(snap, prefs, date)
         val resting = Energy.resting(inputs, Energy.Formula.of(prefs.bmrFormula))
         val base = resting.bmr?.let { b -> inputs.lifestyle?.let { b * it.factor } }
@@ -133,5 +137,55 @@ object EnergyEstimates {
         val training = kg?.let { training(snap, date, it, rest, Energy.Plan.decode(prefs.trainingPlan) ?: Energy.Plan.DEFAULT, mets) }
         val tdee = if (base != null && training != null) base + training.kcalPerDay else null
         return Daily(resting, inputs.lifestyle, base, training, tdee, kg)
+    }
+
+    /** How the day's calorie need is set (#174): the target every day, or that day's total with the goal's change. */
+    const val MODE_SAME = "same"
+    const val MODE_TRAINING = "training"
+
+    /** One day's calories (#174): what was burned and what the day needs. */
+    data class Day(
+        val date: String,
+        val bmr: Double,
+        val formula: Energy.Formula,
+        /** BMR × (lifestyle factor − 1): daily activity outside training, digestion included. */
+        val activityKcal: Double,
+        val exercises: List<Energy.BoutKcal>,
+        /** The day's net exercise calories added up. */
+        val exerciseKcal: Double,
+        val burned: Double,
+        /** The daily need, or null when no target or goal is set. */
+        val need: Double?,
+        val mode: String,
+        /** The goal's change a day (target − average daily total), or 0 when maintaining. */
+        val goalKcal: Double
+    )
+
+    /**
+     * [date]'s calories, or the [Daily] that says what's missing (#174). Burned is resting energy, daily activity and
+     * the day's exercise. The need is the target on every day ([MODE_SAME]), or with [MODE_TRAINING] that day's burned
+     * total plus the goal's daily change, so a training day needs more than a rest day.
+     */
+    fun day(snap: Snapshot, prefs: PortableSettings, date: String, rest: Rest): Pair<Day?, Daily> {
+        val mets = exerciseMets(snap)
+        val daily = daily(snap, prefs, date, rest, mets)
+        val bmr = daily.resting.bmr
+        val base = daily.baseKcal
+        val kg = daily.kg
+        if (bmr == null || base == null || kg == null) return null to daily
+        val exercises = exerciseKcal(snap, date, kg, rest, mets)
+        val exerciseKcal = exercises.sumOf { it.kcal }
+        val burned = base + exerciseKcal
+        val tdee = daily.tdee
+        val goal = Energy.Goal.decode(prefs.calorieGoal)
+        val target = prefs.calorieTargetKcal?.toDouble() ?: if (goal != null && tdee != null) Energy.target(goal, tdee, kg) else null
+        val goalKcal = if (target != null && tdee != null) target - tdee else 0.0
+        val mode = if (prefs.calorieMode == MODE_TRAINING) MODE_TRAINING else MODE_SAME
+        val need = when {
+            target == null -> null
+            mode == MODE_TRAINING -> burned + goalKcal
+            else -> target
+        }
+        return Day(date, bmr, daily.resting.formula, base - bmr, exercises, exerciseKcal, burned, need, mode, goalKcal) to daily
     }
 }
