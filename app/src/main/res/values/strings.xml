@@ -2660,7 +2660,7 @@
     <string name="cal_card_eaten_over">Eaten %1$s kcal · %2$s kcal over the %3$s needed</string>
     <string name="cal_card_log_hint">Tap to log what you ate.</string>
     <string name="cal_sheet_eaten">Eaten</string>
-    <string name="cal_sheet_eaten_intro">Type the day's totals. Protein, fat and carbs are optional. They're kept as body values, so the Body tracker graphs them.</string>
+    <string name="cal_sheet_eaten_intro">Type the day\'s totals. Protein, fat and carbs are optional. They\'re kept as body values, so the Body tracker graphs them.</string>
     <string name="cal_field_kcal">Calories (kcal)</string>
     <string name="cal_field_protein">Protein (g)</string>
     <string name="cal_field_fat">Fat (g)</string>
@@ -2677,10 +2677,10 @@
     <string name="tdee_measured">Measured from what you ate</string>
     <string name="tdee_measured_note">Over the last %1$d days you ate %2$s kcal a day on average, and your weight trend was %3$s %4$s a week. Each kg gained or lost stores or releases about 7,700 kcal.</string>
     <string name="tdee_measured_progress">To measure your TDEE from what you eat, log calories on the day log on at least %1$d of the last %2$d days and weigh in at least %3$d times, two weeks apart. So far: %4$d days logged, %5$d weigh-ins over %6$d days.</string>
-    <string name="tdee_measured_odd">Your logged calories and weight trend give a TDEE that can't be right. Check for a missed or mistyped day.</string>
+    <string name="tdee_measured_odd">Your logged calories and weight trend give a TDEE that can\'t be right. Check for a missed or mistyped day.</string>
     <string name="tdee_source">Your goal uses</string>
     <string name="tdee_source_estimate">The estimate</string>
     <string name="tdee_source_measured">The measured TDEE</string>
     <string name="tdee_source_estimate_desc">Worked out from the equations above.</string>
-    <string name="tdee_source_measured_desc">From what you ate and your weight trend. Usually more accurate once you've logged for two to three weeks.</string>
+    <string name="tdee_source_measured_desc">From what you ate and your weight trend. Usually more accurate once you\'ve logged for two to three weeks.</string>
 </resources>
