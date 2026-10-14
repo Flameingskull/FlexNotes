@@ -3,7 +3,7 @@
 > **Status (2026-10-14): Done.** Step 0: issues #164–#176 filed and imported; tracker plan item "In-place editing
 > and grouped screens: plan across builds (2026-10-14)", completed. Build 1 (1.0.125: #164, #166, #167, #168, #169).
 > Build 2 (1.0.126: #165, #170). Build 3 (1.0.127: #171, the audit; no large findings). Build 4 (1.0.129: #172,
-> #173; its first run, 1.0.128, failed CI and published nothing). Build 5 (1.0.130: #174, with the README refresh).
+> #173; its first run, 1.0.128, failed CI and published nothing). Build 5 (1.0.131: #174, with the README refresh; its first run, 1.0.130, failed only for the new exported schema, which was then committed).
 > Nothing remains. Filed under rule 5, not in this plan: #175 (step count), #176 (intake logging), both
 > `needs-triage`.
 >

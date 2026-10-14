@@ -50,7 +50,7 @@ custom metrics.
   upgrade is checked against a recorded layout, and every read and save goes through queries checked when the app is
   built. From 1.0.119 to 1.0.122 big workout changes, photo dates and screen updates got faster and more accurate (photos
   can now re-read their dates from their metadata), and in 1.0.124 the app was renamed FlexNotes. From 1.0.125 to
-  1.0.130 everything became editable where it's shown ([#171](https://github.com/Flameingskull/FlexNotes/issues/171)):
+  1.0.131 everything became editable where it's shown ([#171](https://github.com/Flameingskull/FlexNotes/issues/171)):
   body values on any day and in History, FitNotes values included, reordering in place behind a Reorder toggle, and
   a profile with a TDEE calculator and daily calories ([#172](https://github.com/Flameingskull/FlexNotes/issues/172),
   [#173](https://github.com/Flameingskull/FlexNotes/issues/173), [#174](https://github.com/Flameingskull/FlexNotes/issues/174)).
