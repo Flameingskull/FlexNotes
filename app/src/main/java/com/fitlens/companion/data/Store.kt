@@ -50,16 +50,127 @@ class LibraryPart internal constructor(
 }
 
 /** The sets area, in date then log order, with the lookups built from it. */
-class SetPart internal constructor(val sets: List<SetRow>, val countWarmups: Boolean) {
-    val setsByDate: Map<String, List<SetRow>> = sets.groupBy { it.date }
-    val setsByExercise: Map<Long, List<SetRow>> = sets.groupBy { it.exerciseId }
-    val statSets: List<SetRow> = if (countWarmups) sets else sets.filter { !it.isWarmup }
-    val statSetsByExercise: Map<Long, List<SetRow>> = statSets.groupBy { it.exerciseId }
-    val lastUsedByExercise: Map<Long, String> = setsByExercise.mapValues { e -> e.value.last().date }
-    val workoutsByExercise: Map<Long, Int> = setsByExercise.mapValues { e -> e.value.distinctBy { it.date }.size }
-
+class SetPart private constructor(
+    val sets: List<SetRow>,
+    val countWarmups: Boolean,
+    val setsByDate: Map<String, List<SetRow>>,
+    val setsByExercise: Map<Long, List<SetRow>>,
+    val statSets: List<SetRow>,
+    val statSetsByExercise: Map<Long, List<SetRow>>,
+    val lastUsedByExercise: Map<Long, String>,
+    val workoutsByExercise: Map<Long, Int>
+) {
     /** The same sets counted under another warm-up setting (#43): rebuilt from memory, never re-read. */
     internal fun withWarmups(count: Boolean): SetPart = if (count == countWarmups) this else SetPart(sets, count)
+
+    /**
+     * This part after a write that changed only the sets on [days] (`yyyy-MM-dd`), #60: the sets on those days
+     * matching [replaced] give way to [fresh], the same sets as just re-read, and the lookups are patched for those
+     * days and the exercises on them. Every other day's and exercise's list is carried over as the same object, so
+     * saving a set costs about the same however long the history is. Equal to a full rebuild (`StoreMergeTest`).
+     */
+    internal fun patched(days: Set<String>, fresh: List<SetRow>, replaced: (SetRow) -> Boolean): SetPart {
+        if (days.isEmpty()) return this
+        val freshByDay = fresh.groupBy { it.date.take(10) }
+        // Each changed day's sets as they are now, in log order.
+        val now = days.sorted().associateWith { day ->
+            val (from, to) = sets.dayRange(day)
+            (sets.subList(from, to).filterNot(replaced) + freshByDay[day].orEmpty()).sortedWith(SET_ORDER)
+        }
+        val touched = HashSet<Long>()
+        now.forEach { (day, onDay) ->
+            val (from, to) = sets.dayRange(day)
+            sets.subList(from, to).mapTo(touched) { it.exerciseId }
+            onDay.mapTo(touched) { it.exerciseId }
+        }
+        val counted: (SetRow) -> Boolean = { countWarmups || !it.isWarmup }
+
+        val newSets = now.entries.fold(sets) { list, (day, onDay) -> spliceDay(list, day, onDay) }
+        val newStat = if (countWarmups) newSets
+            else now.entries.fold(statSets) { list, (day, onDay) -> spliceDay(list, day, onDay.filter(counted)) }
+
+        val byDate = HashMap(setsByDate)
+        byDate.keys.removeAll { it.take(10) in days }
+        now.values.forEach { onDay -> byDate.putAll(onDay.groupBy { it.date }) }
+
+        val byExercise = LinkedHashMap(setsByExercise)
+        val statByExercise = LinkedHashMap(statSetsByExercise)
+        val lastUsed = LinkedHashMap(lastUsedByExercise)
+        val workouts = LinkedHashMap(workoutsByExercise)
+        touched.forEach { id ->
+            val list = now.entries.fold(setsByExercise[id].orEmpty()) { l, (day, onDay) ->
+                spliceDay(l, day, onDay.filter { it.exerciseId == id })
+            }
+            val stat = if (countWarmups) list else now.entries.fold(statSetsByExercise[id].orEmpty()) { l, (day, onDay) ->
+                spliceDay(l, day, onDay.filter { it.exerciseId == id && counted(it) })
+            }
+            if (list.isEmpty()) {
+                byExercise.remove(id); lastUsed.remove(id); workouts.remove(id)
+            } else {
+                byExercise[id] = list
+                lastUsed[id] = list.last().date
+                // Distinct dates: the old count, less the changed days' old dates, plus their new ones.
+                val old = setsByExercise[id].orEmpty()
+                var count = workoutsByExercise[id] ?: 0
+                days.forEach { day ->
+                    val (from, to) = old.dayRange(day)
+                    count -= old.subList(from, to).distinctBy { it.date }.size
+                    val (nFrom, nTo) = list.dayRange(day)
+                    count += list.subList(nFrom, nTo).distinctBy { it.date }.size
+                }
+                workouts[id] = count
+            }
+            if (stat.isEmpty()) statByExercise.remove(id) else statByExercise[id] = stat
+        }
+        return SetPart(
+            newSets, countWarmups, byDate.toSortedMap(), byExercise, newStat, statByExercise, lastUsed, workouts
+        )
+    }
+
+    companion object {
+        /** Builds the part and every lookup from [sets], already in [SET_ORDER]. */
+        internal operator fun invoke(sets: List<SetRow>, countWarmups: Boolean): SetPart {
+            val setsByExercise = sets.groupBy { it.exerciseId }
+            val statSets = if (countWarmups) sets else sets.filter { !it.isWarmup }
+            return SetPart(
+                sets = sets,
+                countWarmups = countWarmups,
+                setsByDate = sets.groupBy { it.date },
+                setsByExercise = setsByExercise,
+                statSets = statSets,
+                statSetsByExercise = statSets.groupBy { it.exerciseId },
+                lastUsedByExercise = setsByExercise.mapValues { e -> e.value.last().date },
+                workoutsByExercise = setsByExercise.mapValues { e -> e.value.distinctBy { it.date }.size }
+            )
+        }
+    }
+}
+
+/** Sorts after any date-and-time on a day, so `[day, day + DAY_END)` holds exactly that day's dates. */
+private const val DAY_END = "~"
+
+/** Where [day]'s sets start and end in this list, which is in [SET_ORDER]: two binary searches, no scan. */
+internal fun List<SetRow>.dayRange(day: String): Pair<Int, Int> = firstAtOrAfter(day) to firstAtOrAfter(day + DAY_END)
+
+private fun List<SetRow>.firstAtOrAfter(date: String): Int {
+    var lo = 0
+    var hi = size
+    while (lo < hi) {
+        val mid = (lo + hi) ushr 1
+        if (this[mid].date < date) lo = mid + 1 else hi = mid
+    }
+    return lo
+}
+
+/** [list] (in [SET_ORDER]) with its sets on [day] replaced by [onDay]; the list itself when nothing changes. */
+internal fun spliceDay(list: List<SetRow>, day: String, onDay: List<SetRow>): List<SetRow> {
+    val (from, to) = list.dayRange(day)
+    if (from == to && onDay.isEmpty()) return list
+    val out = ArrayList<SetRow>(list.size - (to - from) + onDay.size)
+    out.addAll(list.subList(0, from))
+    out.addAll(onDay)
+    out.addAll(list.subList(to, list.size))
+    return out
 }
 
 /** The notes area: workout comments and times, and exercise comments. */
@@ -407,34 +518,63 @@ object Store {
     }
 
     /**
-     * After a small set write (#60): re-reads only the sets of [exerciseIds] and the sets on [dates], and keeps every
-     * other set as it was. A set that moved to another exercise needs both exercises named. [areas] are re-read in
-     * full in the same update, for a write that also changed the notes or the library; naming [Area.SETS], or more
-     * exercises and dates than one query can bind, re-reads every set instead.
+     * After a small set write (#60): re-reads only the sets of [exerciseIds], the sets on [dates], and the sets of
+     * each exercise on one day in [exerciseDays], and keeps every other set as it was. A set that moved to another
+     * exercise or day needs both named. [areas] are re-read in full in the same update, for a write that also changed
+     * the notes or the library; naming [Area.SETS], or more than one query can bind, re-reads every set instead.
+     *
+     * Days and exercise-days are re-read through the date index and patched into the lookups ([SetPart.patched]),
+     * so their cost doesn't grow with the history. A whole exercise is re-read and its lookups rebuilt.
      */
     suspend fun refreshSets(
         exerciseIds: Collection<Long> = emptyList(),
         dates: Collection<String> = emptyList(),
-        areas: Set<Area> = emptySet()
+        areas: Set<Area> = emptySet(),
+        exerciseDays: Collection<DayExercise> = emptyList()
     ) = withContext(Dispatchers.IO) {
         lock.withLock<Unit> {
             val old = _snapshot.value
-            val ex = exerciseIds.toSet()
             val ds = dates.map { it.take(10) }.toSet()
-            if (old == null || Area.SETS in areas || ex.size + ds.size > Db.MAX_IDS) {
+            val named = exerciseDays.map { DayExercise(it.day.take(10), it.exercise_id) }.toSet()
+            // Many days (an undo of a large delete) are read faster as whole exercises, in one query.
+            val ex = if (named.size + ds.size > PATCH_LIMIT) exerciseIds.toSet() + named.map { it.exercise_id }
+                else exerciseIds.toSet()
+            // An exercise re-read whole already covers its days.
+            val pairs = named.filter { it.exercise_id !in ex && it.day !in ds }.toSet()
+            if (old == null || Area.SETS in areas || ex.size + ds.size + pairs.size > Db.MAX_IDS) {
                 _snapshot.value = build(old, areas + Area.SETS)
-            } else {
-                val base = if (areas.isEmpty()) old else build(old, areas)
-                if (ex.isNotEmpty() || ds.isNotEmpty()) {
-                    val fresh = db.snapshotDao.setsFor(ex.toList(), ds.toList()).map { it.toModel() }
-                    val merged = mergeSets(base.sets, fresh) { it.exerciseId in ex || it.date.take(10) in ds }
-                    _snapshot.value = base.replacing(SetPart(merged, Settings.currentPortable().warmupsCount))
-                } else {
-                    _snapshot.value = base
-                }
+                return@withLock
             }
+            val base = if (areas.isEmpty()) old else build(old, areas)
+            val r = db.snapshotDao
+            val warmups = Settings.currentPortable().warmupsCount
+            val part = when {
+                ex.isNotEmpty() -> {
+                    val pairKeys = pairs.map { it.exercise_id to it.day }.toSet()
+                    val fresh = r.setsFor(ex.toList(), ds.toList()).map { it.toModel() } +
+                        pairs.flatMap { p -> r.setsOfOn(p.exercise_id, p.day, p.day + DAY_END).map { it.toModel() } }
+                    val merged = mergeSets(base.sets, fresh.sortedWith(SET_ORDER)) {
+                        it.exerciseId in ex || it.date.take(10) in ds || (it.exerciseId to it.date.take(10)) in pairKeys
+                    }
+                    SetPart(merged, warmups)
+                }
+                ds.isNotEmpty() || pairs.isNotEmpty() -> {
+                    val pairKeys = pairs.map { it.exercise_id to it.day }.toSet()
+                    val fresh = ds.flatMap { d -> r.setsOn(d, d + DAY_END).map { it.toModel() } } +
+                        pairs.flatMap { p -> r.setsOfOn(p.exercise_id, p.day, p.day + DAY_END).map { it.toModel() } }
+                    base.setPart.withWarmups(warmups).patched(ds + pairs.map { it.day }, fresh) {
+                        val day = it.date.take(10)
+                        day in ds || (it.exerciseId to day) in pairKeys
+                    }
+                }
+                else -> null
+            }
+            _snapshot.value = if (part == null) base else base.replacing(part)
         }
     }
+
+    /** The most days and exercise-days [refreshSets] reads one by one and patches in. */
+    private const val PATCH_LIMIT = 64
 
     /** Builds a snapshot, reading [areas] and reusing every other part of [old] (reading everything when it's null). */
     private fun build(old: Snapshot?, areas: Set<Area>): Snapshot {

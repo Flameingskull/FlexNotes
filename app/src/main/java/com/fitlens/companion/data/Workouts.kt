@@ -140,13 +140,21 @@ object Workouts {
         }
 
     /**
-     * Which sets a write changed: those of [exercises] and those on [dates] (#60), plus any other [areas] of the
-     * snapshot it touched (the notes, the library).
+     * Which sets a write changed: those of [exercises], those on [dates], and those of one exercise on one day in
+     * [exerciseDays] (#60), plus any other [areas] of the snapshot it touched (the notes, the library). The narrower
+     * the scope, the less is re-read: a single set names its exercise-day, so saving it costs the same however long
+     * the history is.
      */
     private class SetScope {
         val exercises = HashSet<Long>()
         val dates = HashSet<String>()
+        val exerciseDays = HashSet<DayExercise>()
         val areas = HashSet<Area>()
+
+        /** Names the exercise-days of the sets with these ids. Before a delete, while the rows still exist. */
+        fun addDaysOfSets(w: WorkoutDao, ids: Collection<Long>) {
+            ids.toList().chunked(Db.MAX_IDS).forEach { exerciseDays += w.daysOfSets(it) }
+        }
 
         /** Names the exercises of the sets with these ids. Call it before a delete, while the rows still exist. */
         fun addSets(w: WorkoutDao, ids: Collection<Long>) {
@@ -167,7 +175,7 @@ object Workouts {
             val scope = SetScope()
             val result = db.transaction { block(db.workoutDao, scope) }
             val written = System.nanoTime()
-            Store.refreshSets(scope.exercises, scope.dates, scope.areas)
+            Store.refreshSets(scope.exercises, scope.dates, scope.areas, scope.exerciseDays)
             // How long a set save takes on this phone, shown in Settings › About (#60).
             WriteTimings.record(kind, start, written, System.nanoTime(), Store.snapshot.value?.sets?.size ?: 0)
             result
@@ -279,14 +287,14 @@ object Workouts {
      * edit, an imported set becomes FlexNotes's own; its values are unchanged, so no skip rule is needed.
      */
     suspend fun setComment(id: Long, comment: String?): Unit = writeSets { w, scope ->
-        scope.addSets(w, listOf(id))
+        scope.addDaysOfSets(w, listOf(id))
         val changed = w.setComment(id, comment?.trim()?.takeIf { it.isNotEmpty() }, Sources.FLEXNOTES)
         if (changed == 0) throw WorkoutDataException(R.string.wde_set_gone)
     }
 
     /** Ticks a set off, or clears the tick (#19). Nothing else about the set changes. */
     suspend fun setDone(id: Long, done: Boolean): Unit = writeSets { w, scope ->
-        scope.addSets(w, listOf(id))
+        scope.addDaysOfSets(w, listOf(id))
         w.setDone(id, flag(done))
     }
 
@@ -321,7 +329,7 @@ object Workouts {
      * set, so moving an exercise is moving its sets as a block.
      */
     suspend fun reorderDay(orderedIds: List<Long>): Unit = writeSets { w, scope ->
-        scope.addSets(w, orderedIds)
+        scope.addDaysOfSets(w, orderedIds)
         orderedIds.forEachIndexed { i, id -> w.setPosition(id, i + 1L) }
     }
 
@@ -544,8 +552,8 @@ object Workouts {
     ): Long = writeSets { w, scope ->
         val d = checkDate(date)
         if (!w.exerciseExists(exerciseId)) throw WorkoutDataException(R.string.wde_exercise_gone)
-        // Its PR mark is decided here against earlier sets, so no other set changes and only this exercise is re-read.
-        scope.exercises += exerciseId
+        // Its PR mark is decided here against earlier sets, so no other set changes and only its day is re-read.
+        scope.exerciseDays += DayExercise(d, exerciseId)
         val countWarmups = Settings.currentPortable().warmupsCount
         // A warm-up is never a record unless warm-ups count, and uncounted warm-ups never set the bar (#43).
         val pr = if (setType == SetTypes.WARMUP && !countWarmups) false else isPr ?: Records.isNewRecord(
@@ -561,8 +569,8 @@ object Workouts {
     suspend fun updateSet(set: SetRow): Unit = writeSets { w, scope ->
         val d = checkDate(set.date)
         val old = w.setById(set.id) ?: throw WorkoutDataException(R.string.wde_set_gone)
-        scope.exercises += old.exercise_id
-        scope.exercises += set.exerciseId
+        scope.exerciseDays += DayExercise(old.date.take(10), old.exercise_id)
+        scope.exerciseDays += DayExercise(d, set.exerciseId)
         val newKey = setKey(set.exerciseId, d, set.weightKg, set.reps, set.distance, set.durationSec)
         if (old.source == Sources.FITNOTES && old.key() != newKey) w.addSkip(RULE_SET, old.key())
         w.updateSet(
@@ -570,14 +578,19 @@ object Workouts {
             set.comment?.takeIf { it.isNotBlank() }, Sources.FLEXNOTES, set.setType, set.rpe, set.metric
         )
         // A new weight, rep count or date can make or end a record, for this set and those logged after it.
-        replayPrs(w, scope.exercises)
+        val changed = ArrayList<Long>()
+        replayPrs(w, setOf(old.exercise_id, set.exerciseId), changed = changed)
+        scope.addDaysOfSets(w, changed)
     }
 
     suspend fun deleteSet(id: Long): Unit = writeSets { w, scope ->
-        scope.addSets(w, listOf(id))
+        scope.addDaysOfSets(w, listOf(id))
+        val exercises = w.exercisesOfSets(listOf(id))
         deleteSetsById(w, listOf(id))
         // A deleted record hands its mark to the next set that now beats everything before it.
-        replayPrs(w, scope.exercises)
+        val changed = ArrayList<Long>()
+        replayPrs(w, exercises, changed = changed)
+        scope.addDaysOfSets(w, changed)
     }
 
     /**
@@ -626,12 +639,13 @@ object Workouts {
     /**
      * Replays the PR marks of [exercises], or of every exercise when it's null (#23). A write replays only the
      * exercises whose sets it changed: no other exercise's records can move, so saving a set stays quick (#60).
-     * Returns how many marks changed. Internal for `WorkoutDaoTest`.
+     * Returns how many marks changed, and adds the ids of those sets to [changed]. Internal for `WorkoutDaoTest`.
      */
     internal fun replayPrs(
         w: WorkoutDao,
         exercises: Collection<Long>? = null,
-        countWarmups: Boolean = Settings.currentPortable().warmupsCount
+        countWarmups: Boolean = Settings.currentPortable().warmupsCount,
+        changed: MutableCollection<Long>? = null
     ): Int {
         val candidates = when {
             exercises == null -> w.prCandidates()
@@ -655,6 +669,7 @@ object Workouts {
             if (pr != (s.is_pr != 0)) changes += s.id to pr
         }
         changes.forEach { (id, pr) -> w.setPr(id, flag(pr)) }
+        changed?.addAll(changes.map { it.first })
         return changes.size
     }
 
@@ -663,7 +678,7 @@ object Workouts {
      * date they carry; their old ids are not reused. Returns how many were added.
      */
     suspend fun addSets(rows: List<SetRow>): Int = writeSets { w, scope ->
-        scope.exercises += rows.map { it.exerciseId }
+        rows.mapTo(scope.exerciseDays) { DayExercise(it.date.take(10), it.exerciseId) }
         rows.forEach { s ->
             // Back in its old place (#70), group (#18) and tick (#19); 0 lets the triggers decide.
             w.addSet(
@@ -676,7 +691,9 @@ object Workouts {
                 w.deleteOneSkip(RULE_SET, setKey(s.exerciseId, s.date, s.weightKg, s.reps, s.distance, s.durationSec))
             }
         }
-        replayPrs(w, scope.exercises)
+        val changed = ArrayList<Long>()
+        replayPrs(w, rows.map { it.exerciseId }.toSet(), changed = changed)
+        scope.addDaysOfSets(w, changed)
         rows.size
     }
 

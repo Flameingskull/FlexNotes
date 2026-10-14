@@ -65,4 +65,92 @@ class StoreMergeTest {
     fun nothingNamedChangesNothing() {
         assertEquals(before, mergeSets(before, emptyList()) { false })
     }
+
+    // ---------- SetPart.patched: a day-scoped write patches the lookups instead of rebuilding them ----------
+
+    private fun warmup(id: Long, exercise: Long, date: String, position: Long) =
+        set(id, exercise, date, position).copy(setType = SetTypes.WARMUP)
+
+    /** Every lookup of [actual] equals a full rebuild from the same sets. */
+    private fun assertSameAsRebuild(database: List<SetRow>, countWarmups: Boolean, actual: SetPart) {
+        val expected = SetPart(fullReload(database), countWarmups)
+        assertEquals(expected.sets, actual.sets)
+        assertEquals(expected.setsByDate, actual.setsByDate)
+        assertEquals(expected.setsByDate.keys.toList(), actual.setsByDate.keys.toList())
+        assertEquals(expected.setsByExercise, actual.setsByExercise)
+        assertEquals(expected.statSets, actual.statSets)
+        assertEquals(expected.statSetsByExercise, actual.statSetsByExercise)
+        assertEquals(expected.lastUsedByExercise, actual.lastUsedByExercise)
+        assertEquals(expected.workoutsByExercise, actual.workoutsByExercise)
+    }
+
+    /** Patches [old] for a write that changed [pairs] (exercise to day), reading them back from [database]. */
+    private fun patch(old: SetPart, database: List<SetRow>, vararg pairs: Pair<Long, String>): SetPart {
+        val keys = pairs.toSet()
+        val fresh = database.filter { (it.exerciseId to it.date.take(10)) in keys }.sortedWith(SET_ORDER)
+        return old.patched(keys.map { it.second }.toSet(), fresh) { (it.exerciseId to it.date.take(10)) in keys }
+    }
+
+    @Test
+    fun aSetSavedOnAnExistingDayPatchesOnlyItsDayAndExercise() {
+        val old = SetPart(before, false)
+        val database = before + set(7, 10, "2026-09-03", 3, weight = 105.0)
+        val patched = patch(old, database, 10L to "2026-09-03")
+        assertSameAsRebuild(database, false, patched)
+        // Untouched days and exercises keep the very same lists.
+        assertSame(old.setsByDate["2026-09-01"], patched.setsByDate["2026-09-01"])
+        assertSame(old.setsByExercise[30L], patched.setsByExercise[30L])
+    }
+
+    @Test
+    fun aSetOnANewDayBetweenOthersAndAFirstSetOfANewExercise() {
+        val old = SetPart(before, false)
+        val database = before + set(7, 40, "2026-09-02", 1) + set(8, 10, "2026-09-02", 2)
+        assertSameAsRebuild(database, false, patch(old, database, 40L to "2026-09-02", 10L to "2026-09-02"))
+    }
+
+    @Test
+    fun deletingAnExercisesLastSetDropsItFromEveryLookup() {
+        val old = SetPart(before, true)
+        val database = before.filter { it.id != 6L }
+        val patched = patch(old, database, 30L to "2026-09-05")
+        assertSameAsRebuild(database, true, patched)
+        assertEquals(null, patched.setsByExercise[30L])
+        assertEquals(null, patched.setsByDate["2026-09-05"])
+    }
+
+    @Test
+    fun aSetMovedToAnotherDayAndExercise() {
+        val old = SetPart(before, false)
+        val database = before.map { if (it.id == 1L) it.copy(exerciseId = 20, date = "2026-09-05", position = 9) else it }
+        assertSameAsRebuild(database, false, patch(old, database, 10L to "2026-09-01", 20L to "2026-09-05"))
+    }
+
+    @Test
+    fun warmUpsStayOutOfTheStatListsWhenTheyDontCount() {
+        val withWarmup = fullReload(before + warmup(7, 20, "2026-09-03", 0))
+        for (count in listOf(false, true)) {
+            val old = SetPart(withWarmup, count)
+            val database = withWarmup + warmup(8, 20, "2026-09-03", 4) + set(9, 20, "2026-09-03", 5)
+            assertSameAsRebuild(database, count, patch(old, database, 20L to "2026-09-03"))
+        }
+    }
+
+    @Test
+    fun aWholeDayWithTimesInItsDates() {
+        // Dates can carry a time; a day still means every date that starts with it.
+        val timed = fullReload(before + set(7, 10, "2026-09-03 18:30:00", 1) + set(8, 20, "2026-09-04", 1))
+        val old = SetPart(timed, false)
+        val database = timed.filter { it.id != 4L }.map { if (it.id == 7L) it.copy(weightKg = 120.0) else it }
+        val fresh = database.filter { it.date.take(10) == "2026-09-03" }.sortedWith(SET_ORDER)
+        val patched = old.patched(setOf("2026-09-03"), fresh) { it.date.take(10) == "2026-09-03" }
+        assertSameAsRebuild(database, false, patched)
+        assertSame(old.setsByDate["2026-09-04"], patched.setsByDate["2026-09-04"])
+    }
+
+    @Test
+    fun spliceDayKeepsTheListWhenNothingChanges() {
+        assertSame(before, spliceDay(before, "2026-09-02", emptyList()))
+        assertEquals(3 to 5, before.dayRange("2026-09-03"))
+    }
 }

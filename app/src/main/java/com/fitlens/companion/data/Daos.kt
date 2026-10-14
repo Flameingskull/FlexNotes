@@ -58,6 +58,17 @@ interface SnapshotDao {
     )
     fun setsFor(exerciseIds: List<Long>, days: List<String>): List<WorkoutSetRow>
 
+    /** The sets dated from [day] up to [dayEnd] (one day: `yyyy-MM-dd` to `yyyy-MM-dd~`), through the date index (#60). */
+    @Query("SELECT * FROM workout_set WHERE date >= :day AND date < :dayEnd ORDER BY date, position, id")
+    fun setsOn(day: String, dayEnd: String): List<WorkoutSetRow>
+
+    /** [exerciseId]'s sets on one day, as [setsOn] (#60). */
+    @Query(
+        "SELECT * FROM workout_set WHERE exercise_id = :exerciseId AND date >= :day AND date < :dayEnd " +
+            "ORDER BY date, position, id"
+    )
+    fun setsOfOn(exerciseId: Long, day: String, dayEnd: String): List<WorkoutSetRow>
+
     @Query("SELECT * FROM workout_comment ORDER BY id")
     fun workoutComments(): List<WorkoutCommentRow>
 
