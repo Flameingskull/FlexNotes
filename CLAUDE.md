@@ -90,6 +90,11 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
 - **Redesign first (owner decision, 2026-09-26):** builds now follow #79's page bundles: day log (#81, #84, #8), then
   the library and routine switcher (#83), the exercise screen (#82) and routines (#91, #21, #99). Feature-only builds
   wait until those land.
+- **Work where the data is shown (owner design principle, 2026-10-14):** related pages and functions are grouped
+  together, and every entry can be viewed, edited, moved or deleted from the screen that shows it, on any date,
+  whatever its source (FitNotes import or typed in). No separate screen for what the screen showing the data can do,
+  and no dead controls. Reordering is in place: drag handles, hidden until a Reorder toggle is on. Plan:
+  `docs/plans/2026-10-14-in-place-editing.md` (#164–#174, audit epic #171).
 
 ## Plans (check at the start of every session)
 
