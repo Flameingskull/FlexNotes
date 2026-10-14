@@ -607,6 +607,9 @@ fun ExerciseCard(
     transformKey: Any? = null,
     /** TalkBack actions on the card, such as Move up / Move down (#170). */
     actions: List<CustomAccessibilityAction> = emptyList(),
+    /** Tapping the [comment] edits it where it's shown (#171), with [commentLabel] for TalkBack. */
+    onComment: (() -> Unit)? = null,
+    commentLabel: String? = null,
     sets: @Composable ColumnScope.() -> Unit
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -673,11 +676,15 @@ fun ExerciseCard(
         Column(Modifier.fillMaxWidth().padding(top = Spacing.xs, bottom = Spacing.md, end = Spacing.sm)) {
             sets()
             if (!comment.isNullOrBlank()) {
+                val edit = onComment
                 Text(
                     "“$comment”",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(start = Spacing.lg, top = Spacing.xs, end = Spacing.md)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(if (edit != null) Modifier.clickable(onClickLabel = commentLabel, onClick = edit) else Modifier)
+                        .padding(start = Spacing.lg, top = Spacing.xs, end = Spacing.md)
                 )
             }
         }

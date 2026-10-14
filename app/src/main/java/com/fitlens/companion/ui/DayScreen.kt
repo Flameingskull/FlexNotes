@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -245,6 +246,7 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                     onCopyPrevious = { copyPrevious = true },
                     onOpenRecord = { openRecord = it.id },
                     onAddValue = { addValue = true },
+                    onEditTime = { editTime = true },
                     reordering = reordering && shown == date
                 )
             }
@@ -295,6 +297,7 @@ private fun DayContent(
     onCopyPrevious: () -> Unit,
     onOpenRecord: (MRecord) -> Unit,
     onAddValue: () -> Unit,
+    onEditTime: () -> Unit,
     reordering: Boolean
 ) {
     val res = LocalContext.current.resources
@@ -405,7 +408,20 @@ private fun DayContent(
                     stringResource(R.string.day_volume, fmtNum(snap.weight(sets.sumOf { it.weightKg * it.reps }), 0), snap.weightUnit)
                 ).joinToString("  ·  ")
                 Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
-                    Text(info.uppercase(), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    // The workout's time is changed where it's shown (#171); a running timer is stopped from ⋮.
+                    Text(
+                        info.uppercase(),
+                        Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = Spacing.touch)
+                            .then(
+                                if (live == null) Modifier.clickable(onClickLabel = stringResource(R.string.day_edit_time), onClick = onEditTime)
+                                else Modifier
+                            )
+                            .wrapContentHeight(Alignment.CenterVertically),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                     // The workout comment is the day's own note on the session as a whole (owner, 2026-10-03), under a
                     // heading so it reads apart from the exercises' comments.
                     if (comments.isNotEmpty() || sets.isNotEmpty()) {
@@ -684,8 +700,10 @@ private fun ExerciseOnDay(
         onClick = { nav.push(Screen.SetEntry(date, exId)) },
         // The card grows into the exercise screen it opens, and shrinks back on Back (#93).
         transformKey = exerciseTransformKey(date, exId),
-        // The exercise's comment in this workout sits under its sets (#107).
+        // The exercise's comment in this workout sits under its sets (#107); tapping it edits it here (#171).
         comment = exerciseComment,
+        onComment = { commenting = true },
+        commentLabel = stringResource(R.string.day_ex_edit_comment),
         // FitNotes ticks the exercise once all its sets are done ("Mark sets complete", #19).
         done = exSets.isNotEmpty() && exSets.all { it.done },
         // With "Mark sets complete" on, an unfinished exercise shows how many of its sets are done ("2/4").

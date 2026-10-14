@@ -796,6 +796,7 @@
     <string name="day_ex_records">Records and goals</string>
     <string name="day_move_up">Move up</string>
     <string name="day_reorder_exercises">Reorder exercises</string>
+    <string name="day_edit_time">Change the workout time</string>
     <string name="day_reorder_hint">Drag the handles to reorder. Supersets move together. Tap the gold Reorder icon when you\'re done.</string>
     <string name="day_move_down">Move down</string>
     <string name="day_ex_superset">Superset with…</string>

@@ -57,7 +57,6 @@ fun deleteBodyValue(res: Resources, r: MRecord) {
  * Logs a body measurement, or edits one (#27, #88): the measurement, value, date, time and an optional comment, as a
  * sheet over the screen showing it (#164, #169). [existing] opens a value to change, move to another date or time, or
  * delete, whatever its source: an imported value edited here stays as edited after the next import (#166).
- * [onOpenDay] adds an Open day button.
  */
 @Composable
 fun MeasurementEntrySheet(
@@ -65,7 +64,6 @@ fun MeasurementEntrySheet(
     date: String,
     initialName: String? = null,
     existing: MRecord? = null,
-    onOpenDay: ((String) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val res = LocalContext.current.resources
@@ -146,9 +144,6 @@ fun MeasurementEntrySheet(
             value = comment, onValueChange = { comment = it },
             label = { Text(stringResource(R.string.mse_comment_optional)) }, modifier = Modifier.fillMaxWidth()
         )
-        if (existing != null && onOpenDay != null) {
-            TextButton(onClick = { onDismiss(); onOpenDay(existing.date) }) { Text(stringResource(R.string.st_open_day, Dates.medium(existing.date))) }
-        }
     }
     if (calculating) {
         BodyFatCalculatorSheet(snap, theDate, onDismiss = { calculating = false }) { p, c ->

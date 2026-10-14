@@ -128,9 +128,6 @@ fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
                     TopBarAction(Icons.Filled.Edit, stringResource(R.string.body_edit_measurements)) { editing = true }
                 )
             },
-            overflow = if (editing) emptyList() else listOf(
-                MenuAction(stringResource(R.string.body_edit_measurements)) { editing = true }
-            ),
             trailing = {
                 if (!editing && measurements.size > 1 && pager.currentPage == 0) ReorderToggle(reordering) { reordering = it }
             }

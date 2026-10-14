@@ -2,9 +2,9 @@
 
 > **Status (2026-10-14): in progress.** Step 0 done: issues #164–#176 filed and imported; tracker plan item
 > "In-place editing and grouped screens: plan across builds (2026-10-14)". Build 1 done (1.0.125: #164, #166, #167,
-> #168, #169). Build 2 done (1.0.126: #165, #170). Left: Build 3 (#171, the audit epic), Build 4 (#172, #173),
-> Build 5 (#174). Filed under rule 5, not in this plan: #175 (step count), #176 (intake logging). Next: Build 3,
-> the audit (#171).
+> #168, #169). Build 2 done (1.0.126: #165, #170). Build 3 done (1.0.127: #171, the audit; no large findings). Left:
+> Build 4 (#172, #173), Build 5 (#174). Filed under rule 5, not in this plan: #175 (step count), #176 (intake
+> logging). Next: Build 4, `/safe-build 172 173`.
 >
 > Issue map: (1) #167 · (2) #164 · (3) #165 · (4) #170 · (5) #168 · (6) #166 · (7) #169 · audit #171 ·
 > (8) #172 · (9) #173 · (10) #174.
