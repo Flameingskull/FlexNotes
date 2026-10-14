@@ -32,6 +32,7 @@ import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Energy
 import com.fitlens.companion.data.Energy.Goal
 import com.fitlens.companion.data.EnergyEstimates
+import com.fitlens.companion.data.Intake
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.fmtNum
@@ -174,11 +175,40 @@ fun TdeeScreen(snap: Snapshot, nav: Nav) {
                 )
                 if (!t.fromLogs) TrainingPlanRows(prefs.trainingPlan)
             }
-            val tdee = daily.tdee
-            if (tdee != null) {
-                Figure(stringResource(R.string.tdee_total), stringResource(R.string.tdee_kcal, kcalText(tdee)), big = true)
+            daily.estimate?.let { e ->
+                Figure(stringResource(R.string.tdee_total), stringResource(R.string.tdee_kcal, kcalText(e)), big = !daily.usesMeasured)
             }
             SettingsNote(stringResource(R.string.tdee_estimate_note, Energy.TYPICAL_ERROR_PERCENT))
+            // The TDEE measured from what was eaten and the weight trend (#176), and which one the goal uses.
+            val measured = daily.measured
+            val p = daily.progress
+            if (measured != null) {
+                Figure(stringResource(R.string.tdee_measured), stringResource(R.string.tdee_kcal, kcalText(measured.tdee)), big = daily.usesMeasured)
+                SettingsNote(
+                    stringResource(
+                        R.string.tdee_measured_note, Intake.WINDOW_DAYS, kcalText(measured.intakeKcal),
+                        fmtSigned(snap.weight(measured.kgPerWeek), 2), snap.weightUnit
+                    )
+                )
+                SettingsChoiceRow(
+                    stringResource(R.string.tdee_source),
+                    listOf(stringResource(R.string.tdee_source_estimate), stringResource(R.string.tdee_source_measured)),
+                    if (daily.usesMeasured) 1 else 0,
+                    descriptions = listOf(stringResource(R.string.tdee_source_estimate_desc), stringResource(R.string.tdee_source_measured_desc))
+                ) { i ->
+                    Settings.updatePortable { it.copy(tdeeSource = if (i == 1) EnergyEstimates.SOURCE_MEASURED else EnergyEstimates.SOURCE_ESTIMATE) }
+                }
+            } else if (p.enough) {
+                SettingsNote(stringResource(R.string.tdee_measured_odd), error = true)
+            } else {
+                SettingsNote(
+                    stringResource(
+                        R.string.tdee_measured_progress, Intake.MIN_INTAKE_DAYS, Intake.WINDOW_DAYS, Intake.MIN_WEIGH_INS,
+                        p.intakeDays, p.weighIns, p.spanDays
+                    )
+                )
+            }
+            val tdee = daily.tdee
 
             val kg = daily.kg
             if (tdee != null && bmr != null && kg != null) {

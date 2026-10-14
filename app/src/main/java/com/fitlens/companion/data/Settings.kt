@@ -152,6 +152,8 @@ data class PortableSettings(
     val trainingPlan: String? = null,
     /** The day's calorie need (#174): `EnergyEstimates.MODE_SAME` (the target every day) or `MODE_TRAINING`. */
     val calorieMode: String = EnergyEstimates.MODE_SAME,
+    /** Which TDEE the goal uses (#176): `EnergyEstimates.SOURCE_ESTIMATE` (the formulas) or `SOURCE_MEASURED`. */
+    val tdeeSource: String = EnergyEstimates.SOURCE_ESTIMATE,
     /** Show the calories card on the day log (#174). */
     val homeShowCalories: Boolean = true,
     /** The pose new photos get (#46): null to ask each time, [Poses.NONE] for none, or one of [Poses.all]. */
@@ -375,6 +377,7 @@ object Settings {
             P_BMR_FORMULA to s.bmrFormula.takeIf { it != "auto" },
             P_TRAINING_PLAN to s.trainingPlan?.takeIf { it.isNotBlank() },
             P_CALORIE_MODE to s.calorieMode.takeIf { it != EnergyEstimates.MODE_SAME },
+            P_TDEE_SOURCE to s.tdeeSource.takeIf { it != EnergyEstimates.SOURCE_ESTIMATE },
             P_HOME_CALORIES to if (s.homeShowCalories) null else "0",
             P_PHOTO_POSE to MediaPrefs.storeDefaultPose(s.photoDefaultPose),
             P_PHOTO_GROUP to s.photoGroupBy.takeIf { it != MediaPrefs.GROUP_MONTH },
@@ -461,6 +464,7 @@ object Settings {
     private const val P_BMR_FORMULA = "bmr_formula"
     private const val P_TRAINING_PLAN = "training_plan"
     private const val P_CALORIE_MODE = "calorie_mode"
+    private const val P_TDEE_SOURCE = "tdee_source"
     private const val P_HOME_CALORIES = "home_show_calories"
     // Progress photos and media (#46), with the names the issue gave them.
     private const val P_PHOTO_POSE = "photo_default_pose"
@@ -570,6 +574,7 @@ object Settings {
         bmrFormula = Energy.Formula.of(get(P_BMR_FORMULA)).key,
         trainingPlan = Energy.Plan.decode(get(P_TRAINING_PLAN))?.encode(),
         calorieMode = if (get(P_CALORIE_MODE) == EnergyEstimates.MODE_TRAINING) EnergyEstimates.MODE_TRAINING else EnergyEstimates.MODE_SAME,
+        tdeeSource = if (get(P_TDEE_SOURCE) == EnergyEstimates.SOURCE_MEASURED) EnergyEstimates.SOURCE_MEASURED else EnergyEstimates.SOURCE_ESTIMATE,
         homeShowCalories = get(P_HOME_CALORIES) != "0",
         // Unknown values (from a later build's backup) fall back to the defaults (#46).
         photoDefaultPose = MediaPrefs.defaultPoseOf(get(P_PHOTO_POSE)),
@@ -620,7 +625,8 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     macroCarbG = macroCarbG,
     bmrFormula = bmrFormula,
     trainingPlan = trainingPlan,
-    calorieMode = calorieMode
+    calorieMode = calorieMode,
+    tdeeSource = tdeeSource
 )
 
 /**

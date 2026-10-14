@@ -121,8 +121,16 @@ object EnergyEstimates {
         /** BMR × the lifestyle factor, the day without training. */
         val baseKcal: Double?,
         val training: Training?,
+        /** The daily total the goal uses: [measured]'s when it's chosen and there, otherwise [estimate]. */
         val tdee: Double?,
-        val kg: Double?
+        val kg: Double?,
+        /** The formulas' daily total: [baseKcal] plus [training]. */
+        val estimate: Double? = tdee,
+        /** The TDEE measured from intake and the weight trend (#176), when there's enough logged. */
+        val measured: Intake.Measured? = null,
+        val progress: Intake.Progress = Intake.Progress(0, 0, 0),
+        /** [tdee] is [measured]'s. */
+        val usesMeasured: Boolean = false
     ) {
         val missing: List<Energy.Missing>
             get() = resting.missing + if (lifestyle == null) listOf(Energy.Missing.LIFESTYLE) else emptyList()
@@ -135,9 +143,16 @@ object EnergyEstimates {
         val base = resting.bmr?.let { b -> inputs.lifestyle?.let { b * it.factor } }
         val kg = inputs.kg
         val training = kg?.let { training(snap, date, it, rest, Energy.Plan.decode(prefs.trainingPlan) ?: Energy.Plan.DEFAULT, mets) }
-        val tdee = if (base != null && training != null) base + training.kcalPerDay else null
-        return Daily(resting, inputs.lifestyle, base, training, tdee, kg)
+        val estimate = if (base != null && training != null) base + training.kcalPerDay else null
+        val (measured, progress) = Intake.measured(snap, date)
+        val useMeasured = measured != null && prefs.tdeeSource == SOURCE_MEASURED
+        val tdee = if (useMeasured) measured!!.tdee else estimate
+        return Daily(resting, inputs.lifestyle, base, training, tdee, kg, estimate, measured, progress, useMeasured)
     }
+
+    /** Which TDEE the goal uses (#176): the formulas' estimate, or the one measured from intake when there is one. */
+    const val SOURCE_ESTIMATE = "estimate"
+    const val SOURCE_MEASURED = "measured"
 
     /** How the day's calorie need is set (#174): the target every day, or that day's total with the goal's change. */
     const val MODE_SAME = "same"

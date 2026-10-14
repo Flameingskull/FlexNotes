@@ -106,7 +106,7 @@ class BodyPart internal constructor(
     val customMetrics: List<MeasurementDef> = measurementDefs.filter { it.custom }.sortedBy { it.name.lowercase() }
     val fitNotesMeasurementNames: List<String> = measurementDefs.filter { !it.custom }.map { it.name }.sortedBy { it.lowercase() }
     val bodyweightName: String? = usedMeasurements.firstOrNull { it.name.equals("Bodyweight", true) || it.name.equals("Body Weight", true) }?.name
-        ?: usedMeasurements.firstOrNull()?.name
+        ?: usedMeasurements.firstOrNull { !Intake.isIntake(it.name) }?.name
 }
 
 /** The photos area, with the dated, undated and needs-review lists. */
@@ -558,6 +558,28 @@ object Store {
             db.transaction {
                 body.ensure(name, stored, 999)
                 body.addManualRecord(name, stored, date, time, MeasureUnits.convert(value, unit, stored), comment)
+            }
+            refresh(Area.BODY)
+        }
+
+    /**
+     * Replaces [date]'s intake (#176) in one transaction: the day's existing intake values ([replace], their ids) go,
+     * and each kind in [values] with an amount above 0 is logged as one value, so the day keeps one total per kind.
+     */
+    suspend fun setIntake(date: String, time: String, replace: List<Long>, values: Map<Intake.Kind, Double>) =
+        withContext(Dispatchers.IO) {
+            val body = db.bodyDao
+            db.transaction {
+                replace.forEach { id ->
+                    body.record(id)?.let { skipImported(db, it) }
+                    body.deleteRecord(id)
+                }
+                values.filterValues { it > 0 }.forEach { (kind, v) ->
+                    // Made as FlexNotes's own measurement the first time, after the others.
+                    val name = body.definitionNames().firstOrNull { kind.matches(it) }
+                        ?: kind.label.also { body.addOwn(it, kind.unit, body.lastOrder() + 1) }
+                    body.addManualRecord(name, kind.unit, date, time, v, null)
+                }
             }
             refresh(Area.BODY)
         }

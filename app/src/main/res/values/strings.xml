@@ -2654,4 +2654,33 @@
     <string name="cal_sheet_macros">Your macros: protein %1$d g, fat %2$d g, carbohydrate %3$d g.</string>
     <string name="cal_sheet_note">Estimates: resting energy is usually within about %1$d%% for a person, and exercise calories are net of what you\'d burn at rest. An exercise\'s Activity in the library makes its figure more accurate.</string>
     <string name="cal_sheet_open_tdee">Open the TDEE calculator</string>
+    <!-- What was eaten and the measured TDEE (#176) -->
+    <string name="cal_card_eaten">Eaten %1$s kcal</string>
+    <string name="cal_card_eaten_under">Eaten %1$s kcal · %2$s kcal under the %3$s needed</string>
+    <string name="cal_card_eaten_over">Eaten %1$s kcal · %2$s kcal over the %3$s needed</string>
+    <string name="cal_card_log_hint">Tap to log what you ate.</string>
+    <string name="cal_sheet_eaten">Eaten</string>
+    <string name="cal_sheet_eaten_intro">Type the day's totals. Protein, fat and carbs are optional. They're kept as body values, so the Body tracker graphs them.</string>
+    <string name="cal_field_kcal">Calories (kcal)</string>
+    <string name="cal_field_protein">Protein (g)</string>
+    <string name="cal_field_fat">Fat (g)</string>
+    <string name="cal_field_carbs">Carbs (g)</string>
+    <string name="cal_eaten_save">Save what I ate</string>
+    <string name="cal_eaten_clear">Clear the day</string>
+    <string name="cal_eaten_saved">Saved what you ate, %1$s.</string>
+    <string name="cal_eaten_cleared">Cleared what you ate, %1$s.</string>
+    <string name="cal_sheet_vs_burned">Against what you burned</string>
+    <string name="cal_sheet_vs_need">Against what you need</string>
+    <string name="cal_under">%1$s kcal under</string>
+    <string name="cal_over">%1$s kcal over</string>
+    <string name="cal_sheet_set_up_note">Set up your profile to see what this day burned and needs: %1$s.</string>
+    <string name="tdee_measured">Measured from what you ate</string>
+    <string name="tdee_measured_note">Over the last %1$d days you ate %2$s kcal a day on average, and your weight trend was %3$s %4$s a week. Each kg gained or lost stores or releases about 7,700 kcal.</string>
+    <string name="tdee_measured_progress">To measure your TDEE from what you eat, log calories on the day log on at least %1$d of the last %2$d days and weigh in at least %3$d times, two weeks apart. So far: %4$d days logged, %5$d weigh-ins over %6$d days.</string>
+    <string name="tdee_measured_odd">Your logged calories and weight trend give a TDEE that can't be right. Check for a missed or mistyped day.</string>
+    <string name="tdee_source">Your goal uses</string>
+    <string name="tdee_source_estimate">The estimate</string>
+    <string name="tdee_source_measured">The measured TDEE</string>
+    <string name="tdee_source_estimate_desc">Worked out from the equations above.</string>
+    <string name="tdee_source_measured_desc">From what you ate and your weight trend. Usually more accurate once you've logged for two to three weeks.</string>
 </resources>

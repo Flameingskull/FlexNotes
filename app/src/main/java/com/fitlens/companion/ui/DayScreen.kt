@@ -78,6 +78,7 @@ import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.ExerciseTypes
+import com.fitlens.companion.data.Intake
 import com.fitlens.companion.data.MRecord
 import com.fitlens.companion.data.Photo
 import com.fitlens.companion.data.Settings
@@ -309,7 +310,9 @@ private fun DayContent(
 ) {
     val res = LocalContext.current.resources
     val photos = snap.photosByDate[date] ?: emptyList()
-    val records = snap.recordsByDate[date] ?: emptyList()
+    val dayRecords = snap.recordsByDate[date] ?: emptyList()
+    // What was eaten is shown and edited in the calories card (#176), unless that card is hidden.
+    val records = if (showCalories) dayRecords.filterNot { Intake.isIntake(it.name) } else dayRecords
     val sets = snap.setsByDate[date] ?: emptyList()
     val comments = snap.workoutComments[date].orEmpty()
     // Exercises in the order they were first logged that day.
@@ -339,7 +342,7 @@ private fun DayContent(
         // The day's calories, burned and needed (#174), after the body values; Home Screen Settings can hide it.
         if (showCalories) {
             item(key = "calories") {
-                CaloriesCard(snap, date, onOpen = onCalories, onSetUp = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) })
+                CaloriesCard(snap, date, onOpen = onCalories)
             }
         }
         // The day's progress photos (a FlexNotes extra).
@@ -348,7 +351,7 @@ private fun DayContent(
         }
         if (sets.isEmpty()) {
             item(key = "empty") {
-                val nothing = records.isEmpty() && photos.isEmpty()
+                val nothing = dayRecords.isEmpty() && photos.isEmpty()
                 EmptyDay(
                     showEmptyText = nothing,
                     compact = !nothing,
