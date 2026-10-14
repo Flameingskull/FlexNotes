@@ -130,8 +130,26 @@ data class PortableSettings(
     val pinnedGraphs: String? = null,
     /** The exercises each exercise's graph is compared with (#53), "id=id,id;…" (`GraphCompare.encode`). */
     val graphCompare: String? = null,
-    /** Sex for the body fat formula (#153), `BodyFat.Sex.key`, or null until the user chooses. */
+    /** Sex for the body fat formula (#153) and resting energy (#172), `BodyFat.Sex.key`, or null until chosen. */
     val profileSex: String? = null,
+    /** The profile (#172): date of birth (ISO), so age is worked out for each date, or null. */
+    val profileBirthDate: String? = null,
+    /** Height in cm, the profile's own value (not the Height measurement), or null. */
+    val profileHeightCm: Double? = null,
+    /** Daily activity outside training, `Energy.Lifestyle.key`, or null. */
+    val profileLifestyle: String? = null,
+    /** The TDEE calculator's goal (#173), `Energy.Goal.encode`, or null for none chosen. */
+    val calorieGoal: String? = null,
+    /** The daily calorie target set from the calculator, or null. */
+    val calorieTargetKcal: Int? = null,
+    /** The macro targets set with it, in grams a day, or null. */
+    val macroProteinG: Int? = null,
+    val macroFatG: Int? = null,
+    val macroCarbG: Int? = null,
+    /** Which resting energy equation, `Energy.Formula.key`. */
+    val bmrFormula: String = "auto",
+    /** A planned week of training for when too little is logged, `Energy.Plan.encode`, or null for the default. */
+    val trainingPlan: String? = null,
     /** The pose new photos get (#46): null to ask each time, [Poses.NONE] for none, or one of [Poses.all]. */
     val photoDefaultPose: String? = null,
     /** How the Photos grid is grouped (#46), one of [MediaPrefs.GROUPS]. */
@@ -342,6 +360,16 @@ object Settings {
             P_PINNED_GRAPHS to s.pinnedGraphs?.takeIf { it.isNotBlank() },
             P_GRAPH_COMPARE to s.graphCompare?.takeIf { it.isNotBlank() },
             P_PROFILE_SEX to s.profileSex?.takeIf { it.isNotBlank() },
+            P_PROFILE_BIRTH to s.profileBirthDate?.takeIf { it.isNotBlank() },
+            P_PROFILE_HEIGHT to s.profileHeightCm?.toString(),
+            P_PROFILE_LIFESTYLE to s.profileLifestyle?.takeIf { it.isNotBlank() },
+            P_CALORIE_GOAL to s.calorieGoal?.takeIf { it.isNotBlank() },
+            P_CALORIE_TARGET to s.calorieTargetKcal?.toString(),
+            P_MACRO_PROTEIN to s.macroProteinG?.toString(),
+            P_MACRO_FAT to s.macroFatG?.toString(),
+            P_MACRO_CARB to s.macroCarbG?.toString(),
+            P_BMR_FORMULA to s.bmrFormula.takeIf { it != "auto" },
+            P_TRAINING_PLAN to s.trainingPlan?.takeIf { it.isNotBlank() },
             P_PHOTO_POSE to MediaPrefs.storeDefaultPose(s.photoDefaultPose),
             P_PHOTO_GROUP to s.photoGroupBy.takeIf { it != MediaPrefs.GROUP_MONTH },
             P_REMEMBER_VIDEO to if (s.rememberVideoOpts) null else "0",
@@ -415,6 +443,17 @@ object Settings {
     private const val P_PINNED_GRAPHS = "pinned_graphs"
     private const val P_GRAPH_COMPARE = "graph_compare"
     private const val P_PROFILE_SEX = "profile_sex"
+    // The profile and the TDEE calculator (#172, #173).
+    private const val P_PROFILE_BIRTH = "profile_birth_date"
+    private const val P_PROFILE_HEIGHT = "profile_height_cm"
+    private const val P_PROFILE_LIFESTYLE = "profile_lifestyle"
+    private const val P_CALORIE_GOAL = "calorie_goal"
+    private const val P_CALORIE_TARGET = "calorie_target_kcal"
+    private const val P_MACRO_PROTEIN = "macro_protein_g"
+    private const val P_MACRO_FAT = "macro_fat_g"
+    private const val P_MACRO_CARB = "macro_carb_g"
+    private const val P_BMR_FORMULA = "bmr_formula"
+    private const val P_TRAINING_PLAN = "training_plan"
     // Progress photos and media (#46), with the names the issue gave them.
     private const val P_PHOTO_POSE = "photo_default_pose"
     private const val P_PHOTO_GROUP = "photo_group_by"
@@ -511,6 +550,17 @@ object Settings {
         pinnedGraphs = get(P_PINNED_GRAPHS)?.takeIf { it.isNotBlank() },
         graphCompare = get(P_GRAPH_COMPARE)?.takeIf { it.isNotBlank() },
         profileSex = get(P_PROFILE_SEX)?.takeIf { it.isNotBlank() },
+        // Each profile value is checked as it's read, so a bad or newer backup can't break the formulas (#172).
+        profileBirthDate = get(P_PROFILE_BIRTH)?.takeIf { Dates.parse(it) != null },
+        profileHeightCm = get(P_PROFILE_HEIGHT)?.toDoubleOrNull()?.takeIf { it in 50.0..260.0 },
+        profileLifestyle = Energy.Lifestyle.of(get(P_PROFILE_LIFESTYLE))?.key,
+        calorieGoal = Energy.Goal.decode(get(P_CALORIE_GOAL))?.encode(),
+        calorieTargetKcal = get(P_CALORIE_TARGET)?.toIntOrNull()?.takeIf { it in 500..10000 },
+        macroProteinG = get(P_MACRO_PROTEIN)?.toIntOrNull()?.takeIf { it in 0..1000 },
+        macroFatG = get(P_MACRO_FAT)?.toIntOrNull()?.takeIf { it in 0..1000 },
+        macroCarbG = get(P_MACRO_CARB)?.toIntOrNull()?.takeIf { it in 0..2000 },
+        bmrFormula = Energy.Formula.of(get(P_BMR_FORMULA)).key,
+        trainingPlan = Energy.Plan.decode(get(P_TRAINING_PLAN))?.encode(),
         // Unknown values (from a later build's backup) fall back to the defaults (#46).
         photoDefaultPose = MediaPrefs.defaultPoseOf(get(P_PHOTO_POSE)),
         photoGroupBy = MediaPrefs.groupOf(get(P_PHOTO_GROUP)),
@@ -543,13 +593,23 @@ private object MetaToDeviceMigration : DataMigration<Preferences> {
 
 /**
  * The user's preferences at their defaults (#41). What they made rather than set stays: pinned graphs and their
- * comparisons, the routine last open, and the sex the body fat formula uses.
+ * comparisons, the routine last open, the profile (#172) and the calorie target set from it (#173).
  */
 internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSettings(
     pinnedGraphs = pinnedGraphs,
     graphCompare = graphCompare,
     lastRoutineId = lastRoutineId,
-    profileSex = profileSex
+    profileSex = profileSex,
+    profileBirthDate = profileBirthDate,
+    profileHeightCm = profileHeightCm,
+    profileLifestyle = profileLifestyle,
+    calorieGoal = calorieGoal,
+    calorieTargetKcal = calorieTargetKcal,
+    macroProteinG = macroProteinG,
+    macroFatG = macroFatG,
+    macroCarbG = macroCarbG,
+    bmrFormula = bmrFormula,
+    trainingPlan = trainingPlan
 )
 
 /**

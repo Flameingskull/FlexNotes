@@ -46,6 +46,8 @@ fun BodyFatCalculatorSheet(snap: Snapshot, date: String, onDismiss: () -> Unit, 
     val sex = BodyFat.Sex.of(prefs.profileSex)
     val typed = remember { mutableStateMapOf<BodyFat.Input, String>() }
     val day = Dates.epochDay(date)
+    // The profile's height (#172) stands in when no Height measurement is logged.
+    val profileHeight = prefs.profileHeightCm
 
     /** One input: the measurement it's logged under, its latest value by [date], and the unit to type a new one in. */
     class InputState(val input: BodyFat.Input, val name: String, val latest: MRecord?, val unit: String) {
@@ -53,10 +55,12 @@ fun BodyFatCalculatorSheet(snap: Snapshot, date: String, onDismiss: () -> Unit, 
         val stale: Boolean get() = (ageDays ?: 0) > BodyFat.STALE_DAYS
         val typedValue: Double? get() = typed[input]?.trim()?.replace(',', '.')?.toDoubleOrNull()?.takeIf { it > 0 }
         /** What the formula uses, in centimetres: a value typed here, or the latest logged one. */
+        val fromProfile: Double? get() = if (input == BodyFat.Input.HEIGHT && latest == null) profileHeight else null
         val cm: Double? get() = typedValue?.let { LengthUnits.convert(it, unit, LengthUnits.CM) }
-            ?: latest?.let { LengthUnits.convert(it.value, it.unit, LengthUnits.CM) }
+            ?: latest?.let { LengthUnits.convert(it.value, it.unit, LengthUnits.CM) } ?: fromProfile
         /** The value used, as it reads to the user. */
         val shown: String? get() = typedValue?.let { "${fmtNum(it, 1)} $unit" } ?: latest?.let { "${fmtNum(it.value, 1)} ${it.unit}".trim() }
+            ?: fromProfile?.let { heightText(it, unit) }
     }
 
     val rows = (sex?.let { BodyFat.inputs(it) } ?: emptyList()).map { input ->
@@ -122,7 +126,11 @@ fun BodyFatCalculatorSheet(snap: Snapshot, date: String, onDismiss: () -> Unit, 
             )
         } else {
             SectionLabel(stringResource(R.string.body_measurements))
-            rows.forEach { r -> InputRow(r.input, r.latest, r.ageDays, r.stale, r.unit, typed[r.input].orEmpty()) { typed[r.input] = it } }
+            rows.forEach { r ->
+                InputRow(r.input, r.latest, r.ageDays, r.stale, r.unit, typed[r.input].orEmpty(), r.fromProfile?.let { heightText(it, r.unit) }) {
+                    typed[r.input] = it
+                }
+            }
             when {
                 missing.isNotEmpty() -> Text(
                     pluralStringResource(
@@ -154,12 +162,15 @@ private fun InputRow(
     stale: Boolean,
     unit: String,
     text: String,
+    /** The profile's height, shown when no Height is logged (#172). */
+    profile: String?,
     onText: (String) -> Unit
 ) {
     val res = LocalContext.current.resources
     Column(Modifier.fillMaxWidth()) {
         val value = latest?.let { "${fmtNum(it.value, 1)} ${it.unit}".trim() }
         val status = when {
+            latest == null && profile != null -> stringResource(R.string.bf_from_profile, profile)
             latest == null -> stringResource(R.string.bf_not_logged)
             ageDays == 0L -> stringResource(R.string.bf_today, value.orEmpty())
             else -> pluralStringResource(R.plurals.bf_days_ago, (ageDays ?: 0L).toInt(), value.orEmpty(), Dates.medium(latest.date), (ageDays ?: 0L).toInt())

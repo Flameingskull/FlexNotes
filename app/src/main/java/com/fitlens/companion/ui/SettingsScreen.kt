@@ -82,6 +82,8 @@ enum class SettingsSection(@StringRes val title: Int, val group: PreferenceGroup
     Rest(R.string.settings_page_rest, PreferenceGroup.REST),
     // Defaults for photos, the slideshow and video, and the PDF report (#46).
     Media(R.string.settings_page_media, PreferenceGroup.MEDIA),
+    // Sex, date of birth, height and daily activity for every formula (#172).
+    Profile(R.string.settings_page_profile),
     // In-app help and About (#33).
     Help(R.string.settings_page_help),
     About(R.string.settings_page_about)
@@ -156,6 +158,17 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.media_pdf_photos, SettingsSection.Media, R.string.search_media_pdf_photos_kw) {
         prefs.pdfPhotosPerDay.coerceIn(0, 4).let { if (it == 0) res.getString(R.string.media_none) else "$it" }
     },
+    SettingEntry(R.string.prof_sex, SettingsSection.Profile, R.string.search_prof_sex_kw) {
+        com.fitlens.companion.data.BodyFat.Sex.of(prefs.profileSex)?.let { sexText(res, it) } ?: res.getString(R.string.settings_not_set)
+    },
+    SettingEntry(R.string.prof_birth, SettingsSection.Profile, R.string.search_prof_birth_kw) { birthText(res, prefs.profileBirthDate) },
+    SettingEntry(R.string.prof_height, SettingsSection.Profile, R.string.search_prof_height_kw) {
+        prefs.profileHeightCm?.let { heightText(it, prefs.lengthUnit) } ?: res.getString(R.string.settings_not_set)
+    },
+    SettingEntry(R.string.prof_lifestyle, SettingsSection.Profile, R.string.search_prof_lifestyle_kw) {
+        com.fitlens.companion.data.Energy.Lifestyle.of(prefs.profileLifestyle)?.let { lifestyleText(res, it) } ?: res.getString(R.string.settings_not_set)
+    },
+    SettingEntry(R.string.tdee_title, SettingsSection.Profile, R.string.search_tdee_kw, R.string.prof_group_uses),
     SettingEntry(R.string.search_guides, SettingsSection.Help, R.string.search_guides_kw, R.string.help_group_guides),
     SettingEntry(R.string.search_version, SettingsSection.About, R.string.search_version_kw, R.string.about_group_app),
     SettingEntry(R.string.speed_title, SettingsSection.About, R.string.search_speed_kw),
@@ -307,13 +320,9 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
                 summary = stringResource(R.string.settings_length_unit_summary)
             ) { i -> Settings.updatePortable { it.copy(lengthUnit = if (i == 1) LengthUnits.IN else LengthUnits.CM) } }
         },
-        mainRow(s, R.string.settings_sex, R.string.settings_sex_kw) { title ->
-            SettingsChoiceRow(
-                title,
-                com.fitlens.companion.data.BodyFat.Sex.entries.map { sexText(LocalContext.current.resources, it) },
-                com.fitlens.companion.data.BodyFat.Sex.of(prefs.profileSex)?.ordinal ?: -1,
-                summary = stringResource(R.string.settings_sex_summary)
-            ) { i -> Settings.updatePortable { it.copy(profileSex = com.fitlens.companion.data.BodyFat.Sex.entries[i].key) } }
+        // The profile (#172) took over the Sex row: one page for every value the formulas use.
+        mainRow(s, R.string.settings_profile, R.string.settings_profile_kw) { title ->
+            SettingsActionRow(title, profileSummary(LocalContext.current.resources, prefs)) { open(SettingsSection.Profile) }
         },
         mainRow(s, R.string.settings_week_start, R.string.settings_week_start_kw) { title ->
             SettingsChoiceRow(
@@ -577,6 +586,7 @@ fun SettingsPageScreen(snap: Snapshot, nav: Nav, section: SettingsSection, targe
                     SettingsSection.Home -> HomePage()
                     SettingsSection.Rest -> RestPage()
                     SettingsSection.Media -> MediaPage()
+                    SettingsSection.Profile -> ProfilePage(nav)
                     SettingsSection.Help -> HelpPage()
                     SettingsSection.About -> AboutPage()
                 }
