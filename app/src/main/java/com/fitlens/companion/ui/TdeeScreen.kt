@@ -105,6 +105,7 @@ private fun goals(custom: Int): List<Goal> =
  * (each goal with its calories and expected weekly change), MACROS, then Set as my target, with Undo. Every figure is
  * an estimate, and missing inputs are named rather than guessed.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun TdeeScreen(snap: Snapshot, nav: Nav) {
     val prefs by Settings.portable.collectAsState()
