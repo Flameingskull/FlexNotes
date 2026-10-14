@@ -42,6 +42,7 @@ import java.io.File
  * - give every control a touch target of at least 48 × 48dp (a smaller control counts when Compose can stretch its
  *   touch area to 48dp without running into another control);
  * - show its text whole: not clipped by a parent or cut short with an ellipsis, so titles and labels wrap instead;
+ * - keep text apart: no two pieces of text drawn over each other;
  * - fit the screen's width, with nothing pushed off the right-hand edge.
  *
  * The TalkBack, switch access and contrast checks in #157 still need a real phone.
@@ -86,20 +87,29 @@ class PhoneSizeTest {
                 out += "$name: \"${node.label()}\" has a ${dp(r.width, px)} × ${dp(r.height, px)}dp touch target with no room to grow"
             }
         }
-        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
-            .fetchSemanticsNodes().forEach { node ->
-                val layouts = mutableListOf<TextLayoutResult>()
-                node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
-                val layout = layouts.firstOrNull()
-                if (layout != null && layout.lineCount > 0 && layout.isLineEllipsized(layout.lineCount - 1)) {
-                    out += "$name: \"${node.label()}\" is cut short with an ellipsis"
+        val texts = compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
+            .fetchSemanticsNodes()
+        // Two pieces of text drawn over each other, such as a value running into the next column.
+        texts.forEachIndexed { i, a ->
+            texts.drop(i + 1).forEach { b ->
+                if (a.unclipped().deflate(1f).overlaps(b.unclipped().deflate(1f))) {
+                    out += "$name: \"${a.label()}\" overlaps \"${b.label()}\""
                 }
-                // A parent that clips the text shows less of it than it laid out.
-                val r = node.unclipped()
-                val shown = node.boundsInRoot
-                if (shown.width < r.width - 1f || shown.height < r.height - 1f) out += "$name: \"${node.label()}\" is clipped"
-                if (r.right > right) out += "$name: \"${node.label()}\" runs ${dp(r.right - right, px)}dp off the screen"
             }
+        }
+        texts.forEach { node ->
+            val layouts = mutableListOf<TextLayoutResult>()
+            node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
+            val layout = layouts.firstOrNull()
+            if (layout != null && layout.lineCount > 0 && layout.isLineEllipsized(layout.lineCount - 1)) {
+                out += "$name: \"${node.label()}\" is cut short with an ellipsis"
+            }
+            // A parent that clips the text shows less of it than it laid out.
+            val r = node.unclipped()
+            val shown = node.boundsInRoot
+            if (shown.width < r.width - 1f || shown.height < r.height - 1f) out += "$name: \"${node.label()}\" is clipped"
+            if (r.right > right) out += "$name: \"${node.label()}\" runs ${dp(r.right - right, px)}dp off the screen"
+        }
         // Kept for a look at 320dp; not compared (the screenshot tests compare their own widths).
         File("build/outputs/roborazzi/phone").mkdirs()
         compose.onNodeWithTag(TAG).captureRoboImage(

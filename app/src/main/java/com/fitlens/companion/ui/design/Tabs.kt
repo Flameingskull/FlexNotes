@@ -38,6 +38,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.ui.fitDatePickerColors
@@ -63,7 +64,8 @@ fun FitTabRow(
     selected: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    scrollable: Boolean = titles.size >= 5
+    // At large font sizes the titles get their full width and the row scrolls, rather than cutting them short (#157).
+    scrollable: Boolean = titles.size >= 5 || LocalDensity.current.fontScale > LARGE_FONT
 ) {
     val tabs: @Composable () -> Unit = {
         titles.forEachIndexed { i, t ->
@@ -101,6 +103,9 @@ fun FitTabRow(
         GoldHairline()
     }
 }
+
+/** Above this font scale, a tab row scrolls so its titles keep their full width (#157). */
+private const val LARGE_FONT = 1.3f
 
 /**
  * A [FitTabRow] with a swipeable pager underneath (#80). Tapping a tab animates to its page; swiping a page moves

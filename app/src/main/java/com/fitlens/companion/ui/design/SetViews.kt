@@ -53,6 +53,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -237,6 +239,37 @@ private fun setInnerPadding(framed: Boolean, hasCommentButton: Boolean) = when {
 }
 
 /**
+ * A set's value columns (#112): side by side in equal columns, each right-aligned, as FitNotes shows them. When one
+ * doesn't fit its column (a small phone at a large font size, #157) they stack instead, each right-aligned on its own
+ * line, so figures never run into each other.
+ */
+@Composable
+private fun SetCells(cells: List<SetCell>) {
+    Layout(content = { cells.forEach { SetCellText(it) } }) { measurables, constraints ->
+        if (measurables.isEmpty()) return@Layout layout(constraints.minWidth, constraints.minHeight) {}
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth
+            else measurables.sumOf { it.maxIntrinsicWidth(constraints.maxHeight) }
+        val share = width / measurables.size
+        val fits = measurables.all { it.maxIntrinsicWidth(constraints.maxHeight) <= share }
+        val loose = constraints.copy(minHeight = 0)
+        if (fits) {
+            val placeables = measurables.map { it.measure(loose.copy(minWidth = share, maxWidth = share)) }
+            val height = maxOf(placeables.maxOf { it.height }, constraints.minHeight)
+            layout(width, height) {
+                placeables.forEachIndexed { i, p -> p.placeRelative(i * share, (height - p.height) / 2) }
+            }
+        } else {
+            val placeables = measurables.map { it.measure(loose.copy(minWidth = width, maxWidth = width)) }
+            val height = maxOf(placeables.sumOf { it.height }, constraints.minHeight)
+            layout(width, height) {
+                var y = 0
+                placeables.forEach { p -> p.placeRelative(0, y); y += p.height }
+            }
+        }
+    }
+}
+
+/**
  * A value and its unit, right-aligned in its column as FitNotes shows them ("144.0 kgs   3 reps", #112), in tabular
  * figures so the columns line up down the list.
  */
@@ -402,9 +435,7 @@ fun SetRow(
                 }
                 Column(Modifier.weight(1f)) {
                     if (cells != null) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            cells.forEach { SetCellText(it, Modifier.weight(1f)) }
-                        }
+                        SetCells(cells)
                         if (effort != null) {
                             Text(
                                 effort,
@@ -443,8 +474,10 @@ fun SetRow(
                 // #23 replaces this with a live gold trophy; today only imported FitNotes flags are shown.
                 if (columns) {
                     val badgeHere = !showIndex && badge != null
+                    // Grows with the font size, so "PR" stays on one line at the largest sizes (#157).
+                    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
                     Row(
-                        Modifier.width(if (showIndex) SetMarkWidth else SetMarkWideWidth),
+                        Modifier.width((if (showIndex) SetMarkWidth else SetMarkWideWidth) * fontScale),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -635,8 +668,7 @@ fun ExerciseCard(
                 name,
                 // FitNotes sets the exercise's name large but not bold (#141).
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Medium),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
+                // Wraps in full rather than cutting a long name short at large font sizes (#157).
                 modifier = Modifier.weight(1f)
             )
             if (hasPr) {

@@ -6,9 +6,12 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import com.fitlens.companion.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -100,11 +103,9 @@ fun FitTopBar(
     val titleContent: @Composable () -> Unit = {
         Column(horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start) {
             if (titleMenu.isEmpty()) {
-                Text(
+                FittedTitle(
                     title,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = if (onBack != null || navigation != null) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall
+                    if (onBack != null || navigation != null) MaterialTheme.typography.titleLarge else MaterialTheme.typography.headlineSmall
                 )
             } else {
                 Box {
@@ -114,13 +115,7 @@ fun FitTopBar(
                             .clickable(onClickLabel = stringResource(R.string.cmn_switch)) { titleOpen = true },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            title,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.titleLarge,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
+                        FittedTitle(title, MaterialTheme.typography.titleLarge, Modifier.weight(1f, fill = false))
                         Icon(Icons.Filled.ArrowDropDown, contentDescription = null, tint = Brand.Gold)
                     }
                     DropdownMenu(expanded = titleOpen, onDismissRequest = { titleOpen = false }) {
@@ -196,6 +191,33 @@ fun FitTopBar(
         GoldHairline()
     }
 }
+
+/**
+ * The top bar's one-line title, made smaller (down to [MIN_TITLE_SCALE] of its size) when it doesn't fit, so a date
+ * such as "Thursday, 2 Oct" stays whole on a small phone at a large font size (#157). Only a title still too long at
+ * that size ends in an ellipsis.
+ */
+@Composable
+private fun FittedTitle(title: String, style: TextStyle, modifier: Modifier = Modifier) {
+    var scale by remember(title, style) { mutableFloatStateOf(1f) }
+    Text(
+        title,
+        modifier,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        style = if (scale == 1f) style else style.copy(
+            fontSize = if (style.fontSize.isSpecified) style.fontSize * scale else style.fontSize,
+            lineHeight = if (style.lineHeight.isSpecified) style.lineHeight * scale else style.lineHeight
+        ),
+        onTextLayout = { layout ->
+            if ((layout.hasVisualOverflow || layout.isLineEllipsized(0)) && scale > MIN_TITLE_SCALE) {
+                scale = (scale - 0.1f).coerceAtLeast(MIN_TITLE_SCALE)
+            }
+        }
+    )
+}
+
+private const val MIN_TITLE_SCALE = 0.6f
 
 /** A 48dp overflow ("more") button that opens [items] as a dropdown. */
 @Composable
