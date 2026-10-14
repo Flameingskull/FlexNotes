@@ -1,36 +1,39 @@
 ## Overview
 
-This update shows the calories you burn and need on every day in the day log. A new **Calories** card sits under
-the day's body values: what you burned, from your resting energy, daily activity and the exercise logged that day,
-and what the day needs for your goal. Tap it for the full breakdown. Each exercise can also choose its own
-**Activity**, so its calories are more accurate.
+This update lets you log what you eat, right on the day log, and uses it to measure your real daily energy need.
+The **Calories** card now shows what you ate against what the day needs. After two to three weeks of logging, the
+TDEE calculator works out your TDEE from what you ate and how your bodyweight moved, which is usually more accurate
+than any equation.
 
-Install it over the current app as usual. Everything you've logged is kept. The database gets one small upgrade,
-an empty Activity for each exercise, which keeps every row.
+Install it over the current app as usual. Everything you've logged is kept, and the database doesn't change.
 
 ## What's new
 
-- **The Calories card on the day log**, on any date: "Burned ≈ 2,640 kcal · Need ≈ 2,240 kcal". Until your
-  profile and a recent bodyweight are set, it says what's missing and opens your profile.
-- **The calories breakdown.** Tap the card to see resting energy and its equation, daily activity, each exercise's
-  calories with its time and how they were worked out, and the total burned. Below that is what the day needs.
-- **Choose how each day's need is set,** right in the breakdown: **the same every day** (your daily target), or
-  **follow each day's training** (what you burned that day, plus your goal's change), so a training day needs more
-  than a rest day.
-- **An Activity for each exercise.** In the exercise form, choose from weight training (light, moderate or
-  vigorous), circuit training, bodyweight exercises, intervals, walking, running, cycling, rowing, elliptical, stair
-  climber, swimming, sports, yoga or stretching, each with its value from the 2024 Compendium of Physical
-  Activities. **Automatic** keeps working it out from your logged effort, distance and time.
+- **Log what you ate, on any day.** Tap the Calories card on the day log and type the day's calories, plus protein,
+  fat and carbs if you track them. Change them or clear them in the same place, with Undo.
+- **Eaten against needed.** The card reads, for example, "Eaten 2,100 kcal · 140 kcal under the 2,240 needed". The
+  breakdown also compares what you ate with what you burned.
+- **A measured TDEE.** Once you've logged calories on at least 14 of the last 28 days, and weighed in at least three
+  times two weeks apart, the TDEE calculator shows your TDEE measured from what you ate and your weight trend, next to
+  the estimate. The trend is a line fitted through every weigh-in, so one heavy morning barely moves it.
+- **Choose which TDEE your goal uses.** In the TDEE calculator, set your goal from the estimate or from the measured
+  TDEE. Your target and each day's need follow your choice.
+- **Graphs for free.** What you eat is kept as body values (Calories eaten, Protein eaten, Fat eaten and Carbs
+  eaten), so the Body tracker graphs them and your backups include them.
 
 ## Improved
 
-- **The TDEE calculator** uses each exercise's Activity in its training average.
-- **Home Screen Settings › Show calories** hides the card if you'd rather not see it.
-- **The README** on GitHub now describes everything added since the rename.
+- The Calories card always opens its breakdown, so you can log what you ate before your profile is set up. The
+  breakdown says what's missing and links to your profile.
+- Until there's enough to measure, the TDEE calculator says how far you've got: days logged, weigh-ins, and the days
+  between them.
 
 ## Known limitations
 
-- Every figure is an estimate. Exercise calories count only what's above resting, so they're lower than a fitness
-  watch's total, and a strength session's time comes from the workout timer when it was used, otherwise from each set
-  and its rest.
-- Food intake and steps aren't tracked yet. Both are on the feature list (#176, #175).
+- Intake is typed as each day's totals. There's no food database or barcode scanning, and FlexNotes stays local
+  only.
+- The measured TDEE counts only days with calories logged. A day you ate but didn't log is left out rather than
+  counted as zero.
+- The measured TDEE needs a bodyweight measurement. It's shown only when the result is plausible. A missed or
+  mistyped day can make it unusable until the logs are fixed.
+- The step count from the phone's sensor (#175) is planned for a later build.
