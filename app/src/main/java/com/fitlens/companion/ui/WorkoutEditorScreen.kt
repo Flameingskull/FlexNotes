@@ -69,6 +69,15 @@ import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.FitTopBar
+import com.fitlens.companion.ui.design.ReorderToggle
+import com.fitlens.companion.ui.design.DragHandle
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.key
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.GoldButton
 import com.fitlens.companion.ui.design.ListRowWithMenu
@@ -117,6 +126,8 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     var restingDay by remember { mutableStateOf<Long?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
+    // Reorder in place (#170): drag handles on the days and their exercises while the toggle is on.
+    var reordering by rememberSaveable(id) { mutableStateOf(false) }
 
     val draft = Routine(
         original.id, name, notes, original.sortOrder,
@@ -156,6 +167,9 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             title = stringResource(if (id == 0L) R.string.workout_new_title else R.string.workout_edit_title),
             onBack = { if (dirty) confirmLeave = true else nav.pop() },
             actions = listOf(TopBarAction(Icons.Filled.Check, stringResource(R.string.workout_save), enabled = name.isNotBlank()) { save() }),
+            trailing = {
+                if (days.size > 1 || days.any { it.slots.size > 1 }) ReorderToggle(reordering) { reordering = it }
+            },
             overflow = if (original.id == 0L) emptyList() else listOf(
                 MenuAction(stringResource(R.string.workout_duplicate)) {
                     AppScope.scope.launch {
@@ -185,6 +199,7 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                         snap = snap,
                         day = day,
                         label = day.name.ifBlank { dayN(di + 1) },
+                        reordering = reordering,
                         canCopy = snap.routines.any { it.id != original.id },
                         onAdd = { adding = day.key },
                         onRename = { renaming = day.key },
@@ -357,6 +372,7 @@ private fun DayCard(
     snap: Snapshot,
     day: DayDraft,
     label: String,
+    reordering: Boolean,
     canCopy: Boolean,
     onAdd: () -> Unit,
     onRename: () -> Unit,
@@ -372,6 +388,14 @@ private fun DayCard(
 ) {
     var menu by remember { mutableStateOf(false) }
     val slots = day.slots
+    // A day moves by its own height at each step of its handle (#170).
+    var cardHeight by remember { mutableStateOf(0) }
+    val density = LocalDensity.current
+    val res = LocalContext.current.resources
+    val dayActions = listOfNotNull(
+        onMoveUp?.let { f -> CustomAccessibilityAction(res.getString(R.string.workout_move_up)) { f(); true } },
+        onMoveDown?.let { f -> CustomAccessibilityAction(res.getString(R.string.workout_move_down)) { f(); true } }
+    )
     // FitNotes's day card (#143, its screenshots 26 and 33): the day's name with + and ⋮ over a rule, then each
     // exercise with how its sets are filled, its ⋮ and a drag handle.
     Column(
@@ -379,8 +403,12 @@ private fun DayCard(
             .fillMaxWidth()
             .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
             .raisedGlass(FitShapes.card)
+            .onSizeChanged { cardHeight = it.height }
     ) {
-        Row(Modifier.fillMaxWidth().padding(start = Spacing.lg), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().padding(start = Spacing.lg).semantics { if (dayActions.isNotEmpty()) customActions = dayActions },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 label,
                 style = MaterialTheme.typography.titleMedium,
@@ -395,8 +423,6 @@ private fun DayCard(
                     listOfNotNull(
                         MenuAction(stringResource(R.string.workout_rename_day), onClick = onRename),
                         MenuAction(stringResource(R.string.workout_duplicate_day), onClick = onDuplicate),
-                        onMoveUp?.let { MenuAction(stringResource(R.string.workout_move_up), onClick = it) },
-                        onMoveDown?.let { MenuAction(stringResource(R.string.workout_move_down), onClick = it) },
                         if (canCopy && slots.isNotEmpty()) MenuAction(stringResource(R.string.workout_copy_to_another), onClick = onCopy) else null,
                         if (slots.isNotEmpty()) MenuAction(stringResource(R.string.workout_rest_every_exercise), onClick = onRest) else null,
                         MenuAction(stringResource(R.string.workout_delete_day), onClick = onDelete)
@@ -404,6 +430,10 @@ private fun DayCard(
                         DropdownMenuItem(text = { Text(a.label) }, onClick = { menu = false; a.onClick() })
                     }
                 }
+            }
+            if (reordering && (onMoveUp != null || onMoveDown != null)) {
+                val step = with(density) { cardHeight.toDp() }.coerceAtLeast(Spacing.row)
+                DragHandle(label, step, onMoveUp, onMoveDown)
             }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(Brand.Gold.copy(alpha = 0.7f)))
@@ -422,6 +452,8 @@ private fun DayCard(
         val groups = slots.map { it.planned.superset }.filter { it > 0 }.distinct()
         slots.forEachIndexed { i, slot ->
             fun withPlanned(at: Int, p: PlannedExercise) = slots.toMutableList().also { it[at] = slots[at].copy(planned = p) }
+            // Keyed by the slot, so a row being dragged keeps its handle as the list reorders under it (#170).
+            key(slot.key) {
             ListRowWithMenu(
                 title = snap.exercises[slot.planned.exerciseId]?.name ?: stringResource(R.string.workout_exercise_title),
                 subtitle = planSummary(LocalContext.current.resources, snap, slot.planned) +
@@ -451,11 +483,20 @@ private fun DayCard(
                     MenuAction(stringResource(R.string.workout_swap_exercise)) { onSwap(slot.key) },
                     MenuAction(stringResource(R.string.workout_remove)) { onChange(slots.filter { it.key != slot.key }) }
                 ),
-                onMoveUp = if (i > 0) ({ onChange(slots.toMutableList().also { it.add(i - 1, it.removeAt(i)) }) }) else null,
-                onMoveDown = if (i < slots.lastIndex) ({ onChange(slots.toMutableList().also { it.add(i + 1, it.removeAt(i)) }) }) else null
+                // Supersets move together (#170), as on the day log.
+                onMoveUp = if (i > 0) ({ onChange(moveSlot(slots, i, -1)) }) else null,
+                onMoveDown = if (i < slots.lastIndex) ({ onChange(moveSlot(slots, i, 1)) }) else null,
+                handle = reordering
             )
+            }
         }
     }
+}
+
+/** [slots] with the one at [at] moved one place up ([by] −1) or down (+1), its superset moving with it ([moveInOrder]). */
+private fun moveSlot(slots: List<Slot>, at: Int, by: Int): List<Slot> {
+    val byKey = slots.associateBy { it.key }
+    return moveInOrder(slots.map { it.key }, { k -> byKey[k]?.planned?.superset ?: 0 }, at, by).map { byKey.getValue(it) }
 }
 
 /**

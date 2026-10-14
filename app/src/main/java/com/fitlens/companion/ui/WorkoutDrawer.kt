@@ -2,7 +2,6 @@ package com.fitlens.companion.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,11 +16,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import com.fitlens.companion.ui.design.DragHandle
 import com.fitlens.companion.ui.design.FitIcons
+import com.fitlens.companion.ui.design.rememberInPlaceOrder
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -30,11 +29,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.customActions
@@ -149,7 +146,8 @@ fun moveSet(snap: Snapshot, date: String, setId: Long, by: Int): Boolean {
 /**
  * The workout drawer (#85, #17), FitNotes's training navigation panel: the day's summary and every exercise in
  * workout order with its set count, the current one picked out. Tap an exercise to jump to it, drag its handle to
- * reorder (TalkBack: Move up / Move down), add another, or go back to the day log.
+ * reorder (TalkBack: Move up / Move down), or add another. The phone's back returns to the day log (the Home row that
+ * did nothing is gone, #165).
  */
 @Composable
 fun WorkoutDrawer(
@@ -158,27 +156,18 @@ fun WorkoutDrawer(
     current: Long,
     onOpen: (Long) -> Unit,
     onAddExercise: () -> Unit,
-    onDayLog: () -> Unit,
     /** Add to superset (#124): group exercises of the day with the current one. */
     onAddToSuperset: () -> Unit = {}
 ) {
     val sets = snap.setsByDate[date].orEmpty()
     val shown = displayOrder(snap, date)
-    // While a handle is dragged the rows follow this local order; it's saved once, when the finger lifts (#85).
-    var dragOrder by remember { mutableStateOf<List<Long>?>(null) }
-    LaunchedEffect(shown) { dragOrder = null }
-    val logged = dragOrder ?: shown
+    // While a handle is dragged the rows follow the drag's order; it's saved once, when the finger lifts (#85, #170).
+    val dragOrder = rememberInPlaceOrder(shown)
+    val logged = dragOrder.of(shown)
     val groups = remember(sets) { sets.groupBy { it.exerciseId }.mapValues { e -> e.value.maxOf { it.superset } } }
     val groupOf: (Long) -> Int = { groups[it] ?: 0 }
-    fun dragStep(exId: Long, by: Int) {
-        val cur = dragOrder ?: shown
-        dragOrder = moveInOrder(cur, groupOf, cur.indexOf(exId), by)
-    }
-    fun dragEnd() {
-        val final = dragOrder ?: return
-        if (final == shown) dragOrder = null
-        else saveExerciseOrder(snap, date, final).invokeOnCompletion { dragOrder = null }
-    }
+    fun dragStep(exId: Long, by: Int) = dragOrder.step(shown, exId, by) { l, at, b -> moveInOrder(l, groupOf, at, b) }
+    fun dragEnd() = dragOrder.end(shown) { saveExerciseOrder(snap, date, it) }
     val letters = supersetLetters(snap, date)
     // The exercise being logged is listed even before its first set.
     val order = if (current in logged) logged else logged + current
@@ -265,18 +254,16 @@ fun WorkoutDrawer(
                             ),
                             description = stringResource(R.string.drawer_superset_options, name)
                         )
-                        if (logged.size > 1) DragHandle(name, onStep = { by -> dragStep(exId, by) }, onEnd = { dragEnd() })
+                        if (logged.size > 1) DragHandle(name, Spacing.row, { dragStep(exId, -1) }, { dragStep(exId, 1) }, onEnd = { dragEnd() })
                     }
                 }
             }
         }
-        // FitNotes's footer (#124, #141): three uppercase rows with an icon each, a rule between them.
+        // FitNotes's footer (#124, #141): uppercase rows with an icon each, a rule between them.
         GoldHairline()
         DrawerAction(Icons.Filled.Add, stringResource(R.string.day_add_exercise), onAddExercise)
         HorizontalDivider(color = Brand.Hairline)
         DrawerAction(FitIcons.Link, stringResource(R.string.drawer_add_to_superset), onAddToSuperset)
-        HorizontalDivider(color = Brand.Hairline)
-        DrawerAction(Icons.Filled.Home, stringResource(R.string.drawer_home), onDayLog)
     }
 }
 
@@ -295,44 +282,6 @@ private fun DrawerAction(icon: androidx.compose.ui.graphics.vector.ImageVector, 
         Icon(icon, contentDescription = null, tint = Brand.Gold)
         Spacer(Modifier.width(Spacing.lg))
         Text(label.uppercase(), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurface)
-    }
-}
-
-/**
- * A 48dp drag handle (#85): dragging it by a row's height calls [onStep] with −1 (up) or +1 (down), and [onEnd] when
- * the finger lifts or the drag is cancelled. TalkBack users move rows with the row's custom actions instead.
- */
-@Composable
-private fun DragHandle(name: String, onStep: (Int) -> Unit, onEnd: () -> Unit) {
-    val step by rememberUpdatedState(onStep)
-    val end by rememberUpdatedState(onEnd)
-    val dragLabel = stringResource(R.string.drawer_drag, name)
-    Box(
-        Modifier
-            .size(Spacing.touch)
-            .semantics { contentDescription = dragLabel }
-            .pointerInput(Unit) {
-                var total = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { total = 0f },
-                    onDragEnd = { total = 0f; end() },
-                    onDragCancel = { total = 0f; end() }
-                ) { change, dragAmount ->
-                    change.consume()
-                    total += dragAmount
-                    val stepPx = Spacing.row.toPx()
-                    if (total <= -stepPx) {
-                        step(-1)
-                        total += stepPx
-                    } else if (total >= stepPx) {
-                        step(1)
-                        total -= stepPx
-                    }
-                }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(Icons.Filled.Menu, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

@@ -1,39 +1,36 @@
 ## Overview
 
-This update lets you change your body values where you see them. Tap a value on the day log, on any date, and it
-opens right there to edit, move or delete. Values imported from FitNotes can now be changed too, and a later FitNotes
-import keeps your changes. Logging values and setting up measurements now happen in the Body tracker.
+This update lets you reorder things where they're listed, by dragging, without opening a separate menu or sheet.
+A new **Reorder** button shows drag handles beside each row while it's on, and turns gold to show it's on. It's in
+the workout editor, the day log, the Body tracker and the exercise library. This update also removes a button
+that did nothing on the exercise screen.
 
 Install it over the current app as usual. Everything you've logged is kept, and there's no database upgrade.
 
 ## What's new
 
-- **Edit a body value on the day log.** Tap a value on any day to open it on that day: change the value, the date,
-  the time or the comment, or delete it. A long press deletes it at once, with Undo.
-- **Log a value from the day you're on.** The body values card has a small **+** that logs a value for that day.
-  An empty day offers **Log body value** beside Add exercise.
-- **A + in the Body tracker.** It logs any measurement without leaving the tracker.
-- **Measurements are set up in the Body tracker.** The pencil switches the tracker to its edit mode, where you turn
-  measurements on or off, choose units, set goals, and create or edit your own measurements. The separate
-  Measurements screen is gone. Each of your own measurements can also be edited from its ⋮ menu.
+- **Reorder in the workout editor.** Tap Reorder in the top bar, then drag a day's handle to move the whole day, or
+  an exercise's handle to move it within its day. Supersets move together. Save the workout as usual.
+- **Reorder the day's exercises.** On the day log, choose **⋮ › Reorder exercises**. The exercises show as a compact
+  list with handles. Drag them into order (supersets move together), then tap the gold Reorder button or Back.
+- **Reorder measurements in the Body tracker.** Tap Reorder on the Track tab and drag the measurements. The new order
+  is used everywhere measurements are listed.
+- **Reorder categories in the library.** Tap Reorder above the category list and drag. Each category's ⋮ now has
+  Edit and Delete, and **⋮ › New category** adds one.
 
 ## Improved
 
-- **Values imported from FitNotes can be changed and deleted.** An edited value stays as you left it after the
-  next FitNotes import, and a deleted one doesn't come back. A body tracker CSV imported again respects your
-  deletions in the same way.
-- **History edits in place.** In the Body tracker's History, and in each measurement's History, tapping a value
-  opens it to edit, and a long press deletes it with Undo.
-- **Add measurement has left the day log's ⋮ menu.** Values are logged from the day itself or from the Body tracker.
+- Each new order is saved once, when you lift your finger, so dragging stays smooth.
+- With TalkBack, every row still offers Move up and Move down. Each move is saved at once.
+- The Move up and Move down menu items, the measurement order sheet and the category manager sheet are gone. Their
+  jobs are now done in the list itself.
 
 ## Fixed
 
-- Tapping a body value on the day log opened that measurement on today, with nothing selected. It now opens the
-  value you tapped, on its own date.
+- The workout drawer's **Home** row on the exercise screen did nothing. It has been removed, and the phone's Back
+  returns you to the day log.
 
 ## Known limitations
 
-- A FitNotes value you edited counts as your own from then on: deleting one of your own measurements also deletes
-  the values you edited in it.
-- Reordering measurements still uses the Reorder sheet in the Body tracker's ⋮ menu. Drag-to-reorder in place is
-  coming in a later update.
+- A dragged row moves one place for each row height you drag. In the workout editor, a day moves one place for
+  each height of its own card.

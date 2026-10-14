@@ -113,6 +113,11 @@ import com.fitlens.companion.ui.design.DropdownPill
 import com.fitlens.companion.data.WeightUnits
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.FitTopBar
+import com.fitlens.companion.ui.design.rememberInPlaceOrder
+import com.fitlens.companion.ui.design.ReorderToggle
+import com.fitlens.companion.ui.design.DragHandle
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import com.fitlens.companion.ui.design.ListRowWithMenu
 import com.fitlens.companion.ui.design.MenuAction
 import com.fitlens.companion.ui.design.PickerItem
@@ -183,7 +188,9 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
     var editing by remember { mutableStateOf<Exercise?>(null) }
     var deleting by remember { mutableStateOf<Exercise?>(null) }
     var merging by remember { mutableStateOf<Exercise?>(null) }
-    var showCategories by remember { mutableStateOf(false) }
+    var creatingCategory by remember { mutableStateOf(false) }
+    // Reorder in place (#170): drag handles on the categories while the toggle is on.
+    var reordering by rememberSaveable { mutableStateOf(false) }
     var seeding by remember { mutableStateOf(false) }
 
     fun open(ids: List<Long>) {
@@ -261,9 +268,12 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
                 TopBarAction(Icons.Filled.Add, stringResource(R.string.lib_new_exercise)) { creating = true }
             ),
             overflow = if (picked.isNotEmpty() || routineMode) emptyList() else listOf(
-                MenuAction(stringResource(R.string.lib_manage_categories)) { showCategories = true },
+                MenuAction(stringResource(R.string.lib_new_category)) { creatingCategory = true },
                 MenuAction(stringResource(R.string.lib_add_starter)) { seeding = true }
-            )
+            ),
+            trailing = {
+                if (atTop && !routineMode && snap.categoriesSorted.size > 1) ReorderToggle(reordering) { reordering = it }
+            }
         )
         // As in FitNotes (#123): the search field is always there above the list; typing searches every exercise.
         if (picked.isEmpty() && !routineMode && category == null) {
@@ -299,7 +309,7 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
                     }
                 )
                 wide -> Row(Modifier.fillMaxSize()) {
-                    CategoryList(snap, category, Modifier.weight(0.4f).fillMaxHeight()) { category = it }
+                    CategoryList(snap, category, reordering, Modifier.weight(0.4f).fillMaxHeight()) { category = it }
                     Box(Modifier.width(1.dp).fillMaxHeight().background(Brand.Gold.copy(alpha = 0.35f)))
                     Box(Modifier.weight(0.6f).fillMaxHeight()) {
                         if (showingExercises) {
@@ -314,7 +324,7 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
                     }
                 }
                 showingExercises -> exerciseList()
-                else -> CategoryList(snap, null) { category = it }
+                else -> CategoryList(snap, null, reordering) { category = it }
             }
         }
 
@@ -345,7 +355,7 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
     }
     deleting?.let { ex -> DeleteExerciseSheet(snap, ex) { deleting = null } }
     merging?.let { ex -> MergeExerciseFlow(snap, ex) { merging = null } }
-    if (showCategories) CategoryManagerSheet(snap) { showCategories = false }
+    if (creatingCategory) CategoryEditorSheet(snap, existing = null, onDismiss = { creatingCategory = false })
     if (seeding) StarterLibraryDialog { seeding = false }
 }
 
@@ -441,18 +451,41 @@ private fun toggle(picked: MutableList<Long>, id: Long) {
  * picked out when the list sits beside the exercises on a wide screen.
  */
 @Composable
-private fun CategoryList(snap: Snapshot, selectedId: Long?, modifier: Modifier = Modifier, onOpen: (Long) -> Unit) {
+private fun CategoryList(
+    snap: Snapshot,
+    selectedId: Long?,
+    reordering: Boolean,
+    modifier: Modifier = Modifier,
+    onOpen: (Long) -> Unit
+) {
     val counts = remember(snap.libraryKey) { snap.exercisesSorted.groupingBy { it.categoryId }.eachCount() }
     var editing by remember { mutableStateOf<com.fitlens.companion.data.Category?>(null) }
+    var deleting by remember { mutableStateOf<com.fitlens.companion.data.Category?>(null) }
+    // Categories are edited, deleted and moved where they're listed (#170): each one's ⋮, and its drag handle while
+    // Reorder is on, saved once when the finger lifts.
+    val shown = snap.categoriesSorted.map { it.id }
+    val dragOrder = rememberInPlaceOrder(shown)
+    val order = dragOrder.of(shown)
     LazyColumn(modifier, contentPadding = PaddingValues(bottom = Spacing.xxl)) {
         if (snap.favouriteExercises.isNotEmpty()) {
             item(key = "fav") {
                 CategoryRow(stringResource(R.string.lib_favourites), snap.favouriteExercises.size, selectedId == FAVOURITES, emptyList()) { onOpen(FAVOURITES) }
             }
         }
-        snap.categoriesSorted.forEach { c ->
-            item(key = "c${c.id}") {
-                CategoryRow(c.name, counts[c.id] ?: 0, selectedId == c.id, listOf(MenuAction(stringResource(R.string.lib_edit_category)) { editing = c })) { onOpen(c.id) }
+        order.forEachIndexed { i, id ->
+            val c = snap.categories[id] ?: return@forEachIndexed
+            item(key = "c$id") {
+                CategoryRow(
+                    c.name, counts[c.id] ?: 0, selectedId == c.id,
+                    listOf(
+                        MenuAction(stringResource(R.string.lib_edit_category)) { editing = c },
+                        MenuAction(stringResource(R.string.lib_delete_category)) { deleting = c }
+                    ),
+                    handle = reordering,
+                    onMoveUp = if (i > 0) ({ dragOrder.step(shown, id, -1) }) else null,
+                    onMoveDown = if (i < order.lastIndex) ({ dragOrder.step(shown, id, 1) }) else null,
+                    onMoveEnd = { dragOrder.end(shown) { final -> AppScope.scope.launch { Workouts.reorderCategories(final) } } }
+                ) { onOpen(c.id) }
             }
         }
         val loose = counts[Workouts.UNCATEGORISED] ?: 0
@@ -465,13 +498,33 @@ private fun CategoryList(snap: Snapshot, selectedId: Long?, modifier: Modifier =
         }
     }
     editing?.let { c -> CategoryEditorSheet(snap, existing = c, onDismiss = { editing = null }) }
+    deleting?.let { c -> DeleteCategorySheet(snap, c) { deleting = null } }
 }
 
-/** A category as FitNotes lists it (#143, its screenshots 25 and 32): the name and a ⋮, a fine rule under each. */
+/**
+ * A category as FitNotes lists it (#143, its screenshots 25 and 32): the name and a ⋮, a fine rule under each. While
+ * [handle] is on a drag handle moves it (#170); TalkBack's Move up / Move down are always there and save at once.
+ */
 @Composable
-private fun CategoryRow(name: String, count: Int, selected: Boolean, menu: List<MenuAction>, onClick: () -> Unit) {
+private fun CategoryRow(
+    name: String,
+    count: Int,
+    selected: Boolean,
+    menu: List<MenuAction>,
+    handle: Boolean = false,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
+    onMoveEnd: (() -> Unit)? = null,
+    onClick: () -> Unit
+) {
     val showLabel = stringResource(R.string.lib_show_category, name)
     val spoken = stringResource(R.string.lib_category_spoken, name, pluralStringResource(R.plurals.lib_exercises, count, count))
+    val moveUp = stringResource(R.string.cmn_move_up)
+    val moveDown = stringResource(R.string.cmn_move_down)
+    val moves = listOfNotNull(
+        onMoveUp?.let { f -> CustomAccessibilityAction(moveUp) { f(); onMoveEnd?.invoke(); true } },
+        onMoveDown?.let { f -> CustomAccessibilityAction(moveDown) { f(); onMoveEnd?.invoke(); true } }
+    )
     Row(
         Modifier
             .fillMaxWidth()
@@ -481,12 +534,14 @@ private fun CategoryRow(name: String, count: Int, selected: Boolean, menu: List<
             .semantics(mergeDescendants = true) {
                 contentDescription = spoken
                 this.selected = selected
+                if (moves.isNotEmpty()) customActions = moves
             }
             .padding(start = Spacing.lg, end = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
         if (menu.isNotEmpty()) OverflowMenu(menu, description = stringResource(R.string.lib_options_for, name)) else Spacer(Modifier.size(Spacing.touch))
+        if (handle && (onMoveUp != null || onMoveDown != null)) DragHandle(name, Spacing.row + 1.dp, onMoveUp, onMoveDown, onMoveEnd)
     }
     HorizontalDivider(color = Brand.Hairline)
 }
@@ -1088,90 +1143,24 @@ private fun MergeExerciseFlow(snap: Snapshot, ex: Exercise, onDismiss: () -> Uni
 // Categories
 // ---------------------------------------------------------------------------------------------------------
 
-/**
- * Every category with its colour and exercise count, to add, rename, recolour, delete or reorder (#83). The order
- * follows the drag handles at once and is saved when the sheet closes, so a drag doesn't reload the data at every step.
- */
+/** Confirms deleting category [c] (#83); its exercises become uncategorised. From the category's ⋮ in the library. */
 @Composable
-fun CategoryManagerSheet(snap: Snapshot, onDismiss: () -> Unit) {
-    var creating by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<Category?>(null) }
-    var deleting by remember { mutableStateOf<Category?>(null) }
-    val ids = snap.categoriesSorted.map { it.id }
-    val order = remember { mutableStateListOf<Long>().apply { addAll(ids) } }
-    var moved by remember { mutableStateOf(false) }
-    // Categories added or deleted while the sheet is open join or leave the order.
-    LaunchedEffect(ids.toSet()) {
-        val kept = order.filter { it in ids }
-        order.clear()
-        order.addAll(kept + ids.filter { it !in kept })
-    }
-    DisposableEffect(Unit) {
-        onDispose {
-            if (moved) {
-                val final = order.toList()
-                AppScope.scope.launch { Workouts.reorderCategories(final) }
-            }
-        }
-    }
-    fun move(from: Int, to: Int) {
-        if (to !in order.indices) return
-        order.add(to, order.removeAt(from))
-        moved = true
-    }
-
+fun DeleteCategorySheet(snap: Snapshot, c: Category, onDismiss: () -> Unit) {
     val res = LocalContext.current.resources
-    FitSheet(
-        title = stringResource(R.string.lib_categories),
+    val count = snap.exercisesSorted.count { it.categoryId == c.id }
+    ConfirmSheet(
+        title = stringResource(R.string.lib_delete_title, c.name),
+        message = if (count == 0) stringResource(R.string.lib_category_is_empty) else
+            stringResource(R.string.lib_category_delete_body, pluralStringResource(R.plurals.lib_exercises, count, count)),
+        confirmLabel = stringResource(R.string.lib_delete_category),
         onDismiss = onDismiss,
-        dismissLabel = stringResource(R.string.ex_done),
-        confirmLabel = stringResource(R.string.lib_new_category),
-        onConfirm = { creating = true },
-        destructive = false
-    ) {
-        if (snap.categoriesSorted.isEmpty()) {
-            Text(stringResource(R.string.lib_categories_none), style = MaterialTheme.typography.bodyMedium)
-        }
-        order.forEachIndexed { i, id ->
-            val c = snap.categories[id] ?: return@forEachIndexed
-            val count = snap.exercisesSorted.count { it.categoryId == c.id }
-            // Keyed by id, so a row being dragged stays with its category as the list reorders.
-            key(id) {
-                ListRowWithMenu(
-                    title = c.name,
-                    subtitle = pluralStringResource(R.plurals.lib_exercises, count, count),
-                    leading = { Dot(categoryColour(c.colour), 12.dp) },
-                    onClick = { editing = c },
-                    menu = listOf(
-                        MenuAction(stringResource(R.string.lib_edit)) { editing = c },
-                        MenuAction(stringResource(R.string.lib_delete)) { deleting = c }
-                    ),
-                    onMoveUp = if (i > 0) ({ move(i, i - 1) }) else null,
-                    onMoveDown = if (i < order.lastIndex) ({ move(i, i + 1) }) else null
-                )
+        onConfirm = {
+            AppScope.scope.launch {
+                Workouts.deleteCategory(c.id)
+                UiEvents.show(res.getString(R.string.lib_deleted, c.name))
             }
-            GoldHairline()
         }
-    }
-
-    if (creating) CategoryEditorSheet(snap, existing = null, onDismiss = { creating = false })
-    editing?.let { c -> CategoryEditorSheet(snap, existing = c, onDismiss = { editing = null }) }
-    deleting?.let { c ->
-        val count = snap.exercisesSorted.count { it.categoryId == c.id }
-        ConfirmSheet(
-            title = stringResource(R.string.lib_delete_title, c.name),
-            message = if (count == 0) stringResource(R.string.lib_category_is_empty) else
-                stringResource(R.string.lib_category_delete_body, pluralStringResource(R.plurals.lib_exercises, count, count)),
-            confirmLabel = stringResource(R.string.lib_delete_category),
-            onDismiss = { deleting = null },
-            onConfirm = {
-                AppScope.scope.launch {
-                    Workouts.deleteCategory(c.id)
-                    UiEvents.show(res.getString(R.string.lib_deleted, c.name))
-                }
-            }
-        )
-    }
+    )
 }
 
 /** Names and colours a category, as a sheet (#83). */

@@ -128,33 +128,3 @@ fun MeasurementGoalSheet(def: MeasurementDef, onDismiss: () -> Unit) {
         )
     }
 }
-
-/** Moves measurements up and down. The order is used by the Body tab, the day view, videos and the PDF report. */
-@Composable
-fun MeasurementOrderSheet(measurements: List<MeasurementDef>, onDismiss: () -> Unit) {
-    var order by remember { mutableStateOf(measurements.map { it.name }) }
-    fun move(i: Int, by: Int) {
-        val j = i + by
-        if (j !in order.indices) return
-        order = order.toMutableList().also { it.add(j, it.removeAt(i)) }
-    }
-    FitSheet(
-        title = stringResource(R.string.mg_order_title),
-        onDismiss = onDismiss,
-        confirmLabel = stringResource(R.string.mg_order_save),
-        onConfirm = {
-            val names = order
-            val units = measurements.associate { it.name to it.unit }
-            AppScope.scope.launch { Store.reorderMeasurements(names, units) }
-            onDismiss()
-        }
-    ) {
-        order.forEachIndexed { i, name ->
-            ListRowWithMenu(
-                title = name,
-                onMoveUp = if (i > 0) { { move(i, -1) } } else null,
-                onMoveDown = if (i < order.lastIndex) { { move(i, 1) } } else null
-            )
-        }
-    }
-}

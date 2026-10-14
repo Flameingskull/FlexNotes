@@ -605,6 +605,8 @@ fun ExerciseCard(
     menu: List<MenuAction> = emptyList(),
     /** The key of the screen this card opens, which it grows into ([containerTransform], #93). */
     transformKey: Any? = null,
+    /** TalkBack actions on the card, such as Move up / Move down (#170). */
+    actions: List<CustomAccessibilityAction> = emptyList(),
     sets: @Composable ColumnScope.() -> Unit
 ) {
     var menuOpen by remember { mutableStateOf(false) }
@@ -620,6 +622,7 @@ fun ExerciseCard(
                 onLongClickLabel = if (menu.isNotEmpty()) stringResource(R.string.cmn_options_for, name) else null,
                 onLongClick = if (menu.isNotEmpty()) ({ menuOpen = true }) else null
             )
+            .semantics { if (actions.isNotEmpty()) customActions = actions }
     ) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = Spacing.row).padding(start = Spacing.lg, end = Spacing.md),

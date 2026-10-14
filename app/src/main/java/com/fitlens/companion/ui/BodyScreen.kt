@@ -5,6 +5,13 @@ import com.fitlens.companion.ui.design.MenuAction
 import com.fitlens.companion.ui.design.TopBarAction
 import com.fitlens.companion.ui.design.FitTabRow
 import com.fitlens.companion.ui.design.FitTopBar
+import com.fitlens.companion.data.Store
+import com.fitlens.companion.ui.design.rememberInPlaceOrder
+import com.fitlens.companion.ui.design.ReorderToggle
+import com.fitlens.companion.ui.design.DragHandle
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.background
 import androidx.compose.runtime.key
 import kotlinx.coroutines.launch
@@ -92,7 +99,7 @@ fun <T> inRange(items: List<T>, range: Long, dateOf: (T) -> String): List<T> {
  * Everything is done here (#167, #169): + logs any measurement in a sheet, a History value opens in its sheet to edit,
  * move or delete (a long press deletes with Undo), and the pencil switches the tracker to its edit mode
  * ([MeasurementsEditor]: tracking, units, goals, custom measurements), so there's no separate Measurements screen.
- * [startEditing] opens it in edit mode. ⋮ reorders.
+ * [startEditing] opens it in edit mode. The Reorder toggle shows drag handles on TRACK, saved once per drag (#170).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -100,7 +107,9 @@ fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
     val res = LocalContext.current.resources
     // Every enabled measurement, logged or not, as FitNotes lists them.
     val measurements = snap.allMeasurements.filter { it.enabled }
-    var ordering by remember { mutableStateOf(false) }
+    var reordering by rememberSaveable { mutableStateOf(false) }
+    val names = measurements.map { it.name }
+    val dragOrder = rememberInPlaceOrder(names)
     var editing by rememberSaveable { mutableStateOf(startEditing) }
     var adding by rememberSaveable { mutableStateOf(false) }
     var open by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -119,10 +128,12 @@ fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
                     TopBarAction(Icons.Filled.Edit, stringResource(R.string.body_edit_measurements)) { editing = true }
                 )
             },
-            overflow = if (editing) emptyList() else listOfNotNull(
-                if (measurements.size > 1) MenuAction(stringResource(R.string.body_reorder)) { ordering = true } else null,
+            overflow = if (editing) emptyList() else listOf(
                 MenuAction(stringResource(R.string.body_edit_measurements)) { editing = true }
-            )
+            ),
+            trailing = {
+                if (!editing && measurements.size > 1 && pager.currentPage == 0) ReorderToggle(reordering) { reordering = it }
+            }
         )
         if (editing) {
             MeasurementsEditor(snap)
@@ -142,8 +153,21 @@ fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
             HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
                 when (page) {
                     0 -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-                        items(measurements, key = { it.name }) { m ->
-                            MeasurementListRow(snap, m) { nav.push(Screen.BodyMeasurement(m.name)) }
+                        val order = dragOrder.of(names)
+                        val byName = measurements.associateBy { it.name }
+                        fun save() = dragOrder.end(names) { final ->
+                            val units = measurements.associate { it.name to it.unit }
+                            AppScope.scope.launch { Store.reorderMeasurements(final, units) }
+                        }
+                        itemsIndexed(order, key = { _, n -> n }) { i, n ->
+                            val m = byName[n] ?: return@itemsIndexed
+                            MeasurementListRow(
+                                snap, m,
+                                handle = reordering,
+                                onMoveUp = if (i > 0) ({ dragOrder.step(names, n, -1) }) else null,
+                                onMoveDown = if (i < order.lastIndex) ({ dragOrder.step(names, n, 1) }) else null,
+                                onMoveEnd = { save() }
+                            ) { nav.push(Screen.BodyMeasurement(m.name)) }
                             HorizontalDivider(color = Brand.Hairline)
                         }
                     }
@@ -168,7 +192,6 @@ fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
     open?.let { id -> snap.records.firstOrNull { it.id == id } }?.let { r ->
         MeasurementEntrySheet(snap, r.date, existing = r) { open = null }
     }
-    if (ordering) MeasurementOrderSheet(measurements) { ordering = false }
 }
 
 /** The Track, History and Graph tabs, as the body tracker and each measurement name them. */
@@ -198,7 +221,15 @@ internal fun agoText(res: Resources, date: String, time: String): String {
  * to record a value"), and on the right the latest value with its unit, the change since the value before under it.
  */
 @Composable
-private fun MeasurementListRow(snap: Snapshot, m: MeasurementDef, onOpen: () -> Unit) {
+private fun MeasurementListRow(
+    snap: Snapshot,
+    m: MeasurementDef,
+    handle: Boolean = false,
+    onMoveUp: (() -> Unit)? = null,
+    onMoveDown: (() -> Unit)? = null,
+    onMoveEnd: (() -> Unit)? = null,
+    onOpen: () -> Unit
+) {
     val res = LocalContext.current.resources
     val recs = snap.recordsByName[m.name].orEmpty()
     val last = recs.lastOrNull()
@@ -207,13 +238,21 @@ private fun MeasurementListRow(snap: Snapshot, m: MeasurementDef, onOpen: () -> 
     val change = if (last != null && prev != null) changeText(res, prev, last) else null
     val spoken = m.name + ", " + (last?.let { res.getString(R.string.body_value_on, "${fmtNum(it.value)} $unit".trim(), Dates.medium(it.date)) }
         ?: res.getString(R.string.body_nothing_logged)) + (change?.let { ", $it" } ?: "")
+    // TalkBack moves a measurement whether or not the handles show (#170); each move is saved at once.
+    val moves = listOfNotNull(
+        onMoveUp?.let { f -> CustomAccessibilityAction(res.getString(R.string.cmn_move_up)) { f(); onMoveEnd?.invoke(); true } },
+        onMoveDown?.let { f -> CustomAccessibilityAction(res.getString(R.string.cmn_move_down)) { f(); onMoveEnd?.invoke(); true } }
+    )
     Row(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 72.dp)
             .clickable(onClickLabel = res.getString(R.string.day_open_named, m.name), onClick = onOpen)
-            .semantics(mergeDescendants = true) { contentDescription = spoken }
-            .padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            .semantics(mergeDescendants = true) {
+                contentDescription = spoken
+                if (moves.isNotEmpty()) customActions = moves
+            }
+            .padding(start = Spacing.lg, end = if (handle) Spacing.xs else Spacing.lg, top = Spacing.sm, bottom = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
@@ -235,6 +274,7 @@ private fun MeasurementListRow(snap: Snapshot, m: MeasurementDef, onOpen: () -> 
                 }
             }
         }
+        if (handle && (onMoveUp != null || onMoveDown != null)) DragHandle(m.name, 72.dp, onMoveUp, onMoveDown, onMoveEnd)
     }
 }
 

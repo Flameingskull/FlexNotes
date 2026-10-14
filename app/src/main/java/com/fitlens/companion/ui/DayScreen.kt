@@ -94,6 +94,10 @@ import com.fitlens.companion.ui.design.ExerciseCard
 import com.fitlens.companion.ui.design.FitIcons
 import com.fitlens.companion.ui.design.SetCommentSheet
 import com.fitlens.companion.ui.design.FitTopBar
+import com.fitlens.companion.ui.design.ListRowWithMenu
+import com.fitlens.companion.ui.design.ReorderToggle
+import com.fitlens.companion.ui.design.rememberInPlaceOrder
+import androidx.compose.ui.semantics.CustomAccessibilityAction
 import com.fitlens.companion.ui.design.MenuAction
 import com.fitlens.companion.ui.design.SearchablePicker
 import com.fitlens.companion.ui.design.SetRow
@@ -125,6 +129,8 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
     // A body value is logged and edited on the day itself (#164, #167, #168): the value open in its sheet, or a new one.
     var openRecord by state.saved<Long?>("openRecord", null)
     var addValue by state.saved("addValue", false)
+    // Reorder in place (#170): the exercises as a compact list with drag handles, until the toggle is switched off.
+    var reordering by state.saved("reordering", false)
     var editComment by state.saved("editComment", false)
     var copyPrevious by state.saved("copyPrevious", false)
     var copyToDay by state.saved("copyToDay", false)
@@ -165,11 +171,17 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                 TopBarAction(Icons.Filled.Add, stringResource(R.string.day_add_exercise)) { nav.push(Screen.Library(date)) }
             ),
             // A running rest stays in view after going back to the day (#109).
-            trailing = { RestTimerButton(onOpen = { restSheet = true }, onlyWhileRunning = true) },
+            trailing = {
+                if (reordering) ReorderToggle(true) { reordering = it }
+                RestTimerButton(onOpen = { restSheet = true }, onlyWhileRunning = true)
+            },
             overflow = listOfNotNull(
                 if (date != Dates.today()) MenuAction(stringResource(R.string.day_go_today)) { go(Dates.today()) } else null,
                 MenuAction(stringResource(R.string.day_add_workout)) { addWorkout = true },
                 MenuAction(stringResource(R.string.day_replace_workout), enabled = sets.isNotEmpty()) { replaceWorkout = true },
+                MenuAction(stringResource(R.string.day_reorder_exercises), enabled = sets.map { it.exerciseId }.distinct().size > 1) {
+                    reordering = true
+                },
                 MenuAction(stringResource(R.string.day_create_workout), enabled = sets.isNotEmpty()) { saveAsWorkout = true },
                 MenuAction(stringResource(if (running != null) R.string.day_stop_timer else R.string.day_workout_time)) {
                     if (running != null) WorkoutClock.stop(res, date, running) else editTime = true
@@ -232,12 +244,14 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                     onAddWorkout = { addWorkout = true },
                     onCopyPrevious = { copyPrevious = true },
                     onOpenRecord = { openRecord = it.id },
-                    onAddValue = { addValue = true }
+                    onAddValue = { addValue = true },
+                    reordering = reordering && shown == date
                 )
             }
         }
     }
 
+    androidx.activity.compose.BackHandler(enabled = reordering) { reordering = false }
     if (addValue) MeasurementEntrySheet(snap, date) { addValue = false }
     // A value deleted or gone since (an import, a restore) simply closes its sheet.
     openRecord?.let { id -> snap.records.firstOrNull { it.id == id } }?.let { r ->
@@ -280,7 +294,8 @@ private fun DayContent(
     onAddWorkout: () -> Unit,
     onCopyPrevious: () -> Unit,
     onOpenRecord: (MRecord) -> Unit,
-    onAddValue: () -> Unit
+    onAddValue: () -> Unit,
+    reordering: Boolean
 ) {
     val res = LocalContext.current.resources
     val photos = snap.photosByDate[date] ?: emptyList()
@@ -294,6 +309,9 @@ private fun DayContent(
         displayOrder(snap, date).mapNotNull { ex -> grouped[ex]?.let { ex to it } }
     }
     val letters = remember(sets) { supersetLetters(snap, date) }
+    val shownOrder = byExercise.map { it.first }
+    val dragOrder = rememberInPlaceOrder(shownOrder)
+    val groupOf: (Long) -> Int = { ex -> byExercise.firstOrNull { it.first == ex }?.second?.maxOf { s -> s.superset } ?: 0 }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Spacing.sm, bottom = Spacing.xl)) {
         // As in FitNotes: the day's body values in one card at the top.
@@ -326,7 +344,39 @@ private fun DayContent(
                 )
             }
         }
-        byExercise.forEach { (exId, exSets) ->
+        if (reordering) {
+            // Reorder in place (#170): each exercise as one row with a drag handle, supersets moving together, saved
+            // once when the finger lifts.
+            val order = dragOrder.of(shownOrder)
+            item(key = "reorder-hint") {
+                Text(
+                    stringResource(R.string.day_reorder_hint),
+                    Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            order.forEachIndexed { i, exId ->
+                item(key = "r$exId") {
+                    val exSets = byExercise.firstOrNull { it.first == exId }?.second.orEmpty()
+                    val group = groupOf(exId)
+                    val move: (List<Long>, Int, Int) -> List<Long> = { l, at, by -> moveInOrder(l, groupOf, at, by) }
+                    ListRowWithMenu(
+                        title = snap.exercises[exId]?.name ?: stringResource(R.string.day_exercise_fallback, exId),
+                        subtitle = pluralStringResource(R.plurals.day_sets, exSets.size, exSets.size) +
+                            (letters[group]?.let { "  ·  " + stringResource(R.string.drawer_superset_suffix, it) } ?: ""),
+                        leading = {
+                            Dot(if (group > 0) Brand.Gold else categoryColour(snap.categoryOf(exId)?.colour ?: 0), Spacing.md)
+                        },
+                        onMoveUp = if (i > 0) ({ dragOrder.step(shownOrder, exId, -1, move) }) else null,
+                        onMoveDown = if (i < order.lastIndex) ({ dragOrder.step(shownOrder, exId, 1, move) }) else null,
+                        onMoveEnd = { dragOrder.end(shownOrder) { saveExerciseOrder(snap, date, it) } }
+                    )
+                    HorizontalDivider(color = Brand.Hairline)
+                }
+            }
+        }
+        if (!reordering) byExercise.forEach { (exId, exSets) ->
             item(key = "e$exId") {
                 val group = exSets.maxOf { it.superset }
                 val firstOfGroup = group > 0 && byExercise.firstOrNull { (_, s) -> s.maxOf { it.superset } == group }?.first == exId
@@ -641,16 +691,20 @@ private fun ExerciseOnDay(
         // With "Mark sets complete" on, an unfinished exercise shows how many of its sets are done ("2/4").
         setsDone = exSets.count { it.done },
         setsTotal = if (markComplete) exSets.size else null,
+        // Moving is done in place with ⋮ Reorder exercises (#170); TalkBack moves the card from here.
+        actions = displayOrder(snap, date).let { order ->
+            val at = order.indexOf(exId)
+            listOfNotNull(
+                if (at > 0) CustomAccessibilityAction(res.getString(R.string.day_move_up)) { moveExercise(snap, date, exId, -1); true } else null,
+                if (at in 0 until order.lastIndex) CustomAccessibilityAction(res.getString(R.string.day_move_down)) { moveExercise(snap, date, exId, 1); true } else null
+            )
+        },
         menu = listOf(
             MenuAction(stringResource(R.string.day_ex_log_sets)) { nav.push(Screen.SetEntry(date, exId)) },
             MenuAction(stringResource(if (exerciseComment.isNullOrBlank()) R.string.day_ex_add_comment else R.string.day_ex_edit_comment)) { commenting = true },
             MenuAction(stringResource(R.string.day_ex_history)) { nav.push(Screen.SetEntry(date, exId, page = 1)) },
             MenuAction(stringResource(R.string.day_ex_overview)) { overview = true },
             MenuAction(stringResource(R.string.day_ex_records)) { nav.push(Screen.ExerciseDetail(exId)) },
-            MenuAction(stringResource(R.string.day_move_up), enabled = displayOrder(snap, date).indexOf(exId) > 0) { moveExercise(snap, date, exId, -1) },
-            MenuAction(stringResource(R.string.day_move_down), enabled = displayOrder(snap, date).let { it.indexOf(exId) in 0 until it.lastIndex }) {
-                moveExercise(snap, date, exId, 1)
-            },
             MenuAction(stringResource(R.string.day_ex_superset), enabled = dayExercises(snap, date).size > 1) { grouping = true },
             MenuAction(stringResource(R.string.day_remove_superset), enabled = group > 0) {
                 AppScope.scope.launch { Workouts.ungroupExercise(date, exId) }

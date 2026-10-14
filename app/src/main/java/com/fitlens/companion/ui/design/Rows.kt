@@ -108,9 +108,9 @@ fun StatTile(
  * A list row of at least 56dp (#80): an optional [leading] dot or icon, a title, an optional subtitle and a
  * trailing overflow [menu].
  *
- * When [onMoveUp] or [onMoveDown] is given, a 48dp drag handle appears: dragging it by a row's height calls the
- * matching callback, and TalkBack users get "Move up" / "Move down" actions on the row. The caller reorders its
- * list in the callbacks.
+ * When [onMoveUp] or [onMoveDown] is given, TalkBack users get "Move up" / "Move down" actions on the row, and while
+ * [handle] is on a 48dp drag handle appears: dragging it by a row's height calls the matching callback, and
+ * [onMoveEnd] when the finger lifts (#170). The caller reorders its list in the callbacks.
  */
 @Composable
 fun ListRowWithMenu(
@@ -121,14 +121,17 @@ fun ListRowWithMenu(
     onClick: (() -> Unit)? = null,
     menu: List<MenuAction> = emptyList(),
     onMoveUp: (() -> Unit)? = null,
-    onMoveDown: (() -> Unit)? = null
+    onMoveDown: (() -> Unit)? = null,
+    handle: Boolean = true,
+    onMoveEnd: (() -> Unit)? = null
 ) {
     val tap = onClick
     val moveUp = stringResource(R.string.cmn_move_up)
     val moveDown = stringResource(R.string.cmn_move_down)
     val moveActions = listOfNotNull(
-        onMoveUp?.let { f -> CustomAccessibilityAction(moveUp) { f(); true } },
-        onMoveDown?.let { f -> CustomAccessibilityAction(moveDown) { f(); true } }
+        // A TalkBack move is a whole move, so it ends (and saves) at once.
+        onMoveUp?.let { f -> CustomAccessibilityAction(moveUp) { f(); onMoveEnd?.invoke(); true } },
+        onMoveDown?.let { f -> CustomAccessibilityAction(moveDown) { f(); onMoveEnd?.invoke(); true } }
     )
     Row(
         modifier
@@ -152,19 +155,21 @@ fun ListRowWithMenu(
             }
         }
         if (menu.isNotEmpty()) OverflowMenu(menu, description = stringResource(R.string.cmn_options_for, title))
-        if (onMoveUp != null || onMoveDown != null) DragHandle(title, Spacing.row, onMoveUp, onMoveDown)
+        if (handle && (onMoveUp != null || onMoveDown != null)) DragHandle(title, Spacing.row, onMoveUp, onMoveDown, onMoveEnd)
     }
 }
 
 /**
  * A 48dp drag handle for reordering a list: dragging it by [step] (the height of one item) calls [onMoveUp] or
- * [onMoveDown]. The caller reorders its list in the callbacks and gives the item TalkBack "Move up" / "Move down"
- * actions, as [ListRowWithMenu] does.
+ * [onMoveDown], and [onEnd] when the finger lifts or the drag is cancelled (a list saved once per drag, #85, #170).
+ * The caller reorders its list in the callbacks and gives the item TalkBack "Move up" / "Move down" actions, as
+ * [ListRowWithMenu] does.
  */
 @Composable
-fun DragHandle(title: String, step: Dp, onMoveUp: (() -> Unit)?, onMoveDown: (() -> Unit)?) {
+fun DragHandle(title: String, step: Dp, onMoveUp: (() -> Unit)?, onMoveDown: (() -> Unit)?, onEnd: (() -> Unit)? = null) {
     val up by rememberUpdatedState(onMoveUp)
     val down by rememberUpdatedState(onMoveDown)
+    val end by rememberUpdatedState(onEnd)
     val dragLabel = stringResource(R.string.cmn_drag_reorder, title)
     Box(
         Modifier
@@ -174,8 +179,8 @@ fun DragHandle(title: String, step: Dp, onMoveUp: (() -> Unit)?, onMoveDown: (()
                 var total = 0f
                 detectVerticalDragGestures(
                     onDragStart = { total = 0f },
-                    onDragEnd = { total = 0f },
-                    onDragCancel = { total = 0f }
+                    onDragEnd = { total = 0f; end?.invoke() },
+                    onDragCancel = { total = 0f; end?.invoke() }
                 ) { change, dragAmount ->
                     change.consume()
                     total += dragAmount

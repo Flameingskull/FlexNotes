@@ -120,6 +120,9 @@ object FitIcons {
             "C8.68,8.06 9,6.5 9,6.5h7C16,6.5 16.75,8.06 15.75,9.06z"
     )
 
+    /** Reorder in place (#170): Material's reorder lines. */
+    val Reorder: ImageVector = icon("FlexNotes.Reorder", "M3,15h18v-2H3v2zM3,19h18v-2H3v2zM3,11h18V9H3v2zM3,5v2h18V5H3z")
+
     /** A photo's pose (#92): a standing figure. */
     val Pose: ImageVector = icon(
         "FlexNotes.Pose",

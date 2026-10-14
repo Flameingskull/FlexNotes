@@ -795,6 +795,8 @@
     <string name="day_ex_overview">Overview</string>
     <string name="day_ex_records">Records and goals</string>
     <string name="day_move_up">Move up</string>
+    <string name="day_reorder_exercises">Reorder exercises</string>
+    <string name="day_reorder_hint">Drag the handles to reorder. Supersets move together. Tap the gold Reorder icon when you\'re done.</string>
     <string name="day_move_down">Move down</string>
     <string name="day_ex_superset">Superset with…</string>
     <string name="day_remove_superset">Remove from superset</string>
@@ -838,8 +840,6 @@
     <string name="drawer_superset_next">Superset with the next exercise</string>
     <string name="drawer_superset_options">Superset options for %1$s</string>
     <string name="drawer_add_to_superset">Add to superset</string>
-    <string name="drawer_home">Home</string>
-    <string name="drawer_drag">Drag to reorder %1$s</string>
     <!-- Calendar (#94) -->
     <string name="cal_change_filter">Change the filter</string>
     <string name="cal_filter_days">Filter days</string>
@@ -1034,7 +1034,6 @@
     <string name="lib_create_workout">Create new workout</string>
     <string name="lib_edit_workout">Edit workout</string>
     <string name="lib_new_exercise">New exercise</string>
-    <string name="lib_manage_categories">Manage categories</string>
     <string name="lib_add_starter">Add starter library</string>
     <string name="lib_search_every">Search every exercise</string>
     <string name="lib_empty_title">Your library is empty</string>
@@ -1112,8 +1111,6 @@
     <string name="lib_merging">Merging exercises…</string>
     <string name="lib_merge_safety">Before merging %1$s into %2$s</string>
     <string name="lib_merged">Merged %1$s into %2$s (%3$s). Undo is in Settings → Backup.</string>
-    <string name="lib_categories">Categories</string>
-    <string name="lib_categories_none">No categories yet.</string>
     <string name="lib_category_is_empty">The category is empty.</string>
     <string name="lib_category_delete_body">Its %1$s and all their logged history are kept. They become uncategorised.</string>
     <string name="lib_delete_category">Delete category</string>
@@ -1483,7 +1480,6 @@
     <!-- Body tracker (#94) -->
     <string name="body_title">Body Tracker</string>
     <string name="body_measurements">Measurements</string>
-    <string name="body_reorder">Reorder measurements</string>
     <string name="body_edit_measurements">Edit measurements</string>
     <string name="body_edit_done">Done editing measurements</string>
     <string name="body_empty_title">No measurements yet</string>
@@ -1596,8 +1592,6 @@
     <string name="mg_title">Goal for %1$s</string>
     <string name="mg_target_optional">Target (%1$s, optional)</string>
     <string name="mg_note">Changes in the history are green when they move towards the goal and red when they move away. A goal set here isn\'t replaced by a later FitNotes import.</string>
-    <string name="mg_order_title">Order of measurements</string>
-    <string name="mg_order_save">Save order</string>
     <!-- Custom metrics (#94) -->
     <string name="cm_new">New custom metric</string>
     <string name="cm_unit">Unit (e.g. cm, kcal, hrs)</string>
@@ -2184,6 +2178,7 @@
     <string name="cmn_move_down">Move down</string>
     <string name="cmn_options_for">Options for %1$s</string>
     <string name="cmn_drag_reorder">Drag to reorder %1$s</string>
+    <string name="cmn_reorder">Reorder</string>
     <string name="cmn_more_options">More options</string>
     <string name="cmn_settings">Settings</string>
     <string name="cmn_switch">Switch</string>

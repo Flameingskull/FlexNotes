@@ -427,10 +427,6 @@ fun SetEntryScreen(
                         if (id != exerciseId) nav.replace(Screen.SetEntry(date, id))
                     },
                     onAddExercise = { scope.launch { drawer.close() }; nav.push(Screen.Library(date)) },
-                    onDayLog = {
-                        scope.launch { drawer.close() }
-                        while (!nav.atHome && nav.top !is Screen.Day) nav.pop()
-                    },
                     onAddToSuperset = {
                         scope.launch { drawer.close() }
                         if (dayExercises(snap, date).any { it != exerciseId }) grouping = true
