@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.isSpecified
@@ -193,13 +194,15 @@ fun FitTopBar(
 }
 
 /**
- * The top bar's one-line title, made smaller (down to [MIN_TITLE_SCALE] of its size) when it doesn't fit, so a date
- * such as "Thursday, 2 Oct" stays whole on a small phone at a large font size (#157). Only a title still too long at
- * that size ends in an ellipsis.
+ * The top bar's one-line title, made smaller when it doesn't fit, so a date such as "Thursday, 2 Oct" stays whole on a
+ * small phone at a large font size (#157). It stops at [MIN_TITLE_SIZE] of its size at the standard font size; only a
+ * title still too long then ends in an ellipsis.
  */
 @Composable
 private fun FittedTitle(title: String, style: TextStyle, modifier: Modifier = Modifier) {
-    var scale by remember(title, style) { mutableFloatStateOf(1f) }
+    // Never smaller than [MIN_TITLE_SIZE] of the title's size at the standard font size, however large the user's is.
+    val floor = (MIN_TITLE_SIZE / LocalDensity.current.fontScale).coerceAtMost(1f)
+    var scale by remember(title, style, floor) { mutableFloatStateOf(1f) }
     Text(
         title,
         modifier,
@@ -210,14 +213,14 @@ private fun FittedTitle(title: String, style: TextStyle, modifier: Modifier = Mo
             lineHeight = if (style.lineHeight.isSpecified) style.lineHeight * scale else style.lineHeight
         ),
         onTextLayout = { layout ->
-            if ((layout.hasVisualOverflow || layout.isLineEllipsized(0)) && scale > MIN_TITLE_SCALE) {
-                scale = (scale - 0.1f).coerceAtLeast(MIN_TITLE_SCALE)
+            if ((layout.hasVisualOverflow || layout.isLineEllipsized(0)) && scale > floor) {
+                scale = (scale - 0.1f).coerceAtLeast(floor)
             }
         }
     )
 }
 
-private const val MIN_TITLE_SCALE = 0.6f
+private const val MIN_TITLE_SIZE = 0.8f
 
 /** A 48dp overflow ("more") button that opens [items] as a dropdown. */
 @Composable

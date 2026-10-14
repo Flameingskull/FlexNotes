@@ -104,6 +104,8 @@ class PhoneSizeTest {
             if (layout != null && layout.lineCount > 0 && layout.isLineEllipsized(layout.lineCount - 1)) {
                 out += "$name: \"${node.label()}\" is cut short with an ellipsis"
             }
+            // Text in a row that scrolls sideways (a scrolling tab row) is meant to run past the edge.
+            if (node.inHorizontalScroll()) return@forEach
             // A parent that clips the text shows less of it than it laid out.
             val r = node.unclipped()
             val shown = node.boundsInRoot
@@ -122,6 +124,15 @@ class PhoneSizeTest {
     /** Whether [other] lies wholly inside this rectangle (a control nested in another, such as a row's switch). */
     private fun Rect.encloses(other: Rect) =
         left <= other.left + 0.5f && top <= other.top + 0.5f && right >= other.right - 0.5f && bottom >= other.bottom - 0.5f
+
+    private fun SemanticsNode.inHorizontalScroll(): Boolean {
+        var p = parent
+        while (p != null) {
+            if (p.config.getOrNull(SemanticsProperties.HorizontalScrollAxisRange) != null) return true
+            p = p.parent
+        }
+        return false
+    }
 
     /** Where the node is laid out, before any parent clips it. */
     private fun SemanticsNode.unclipped(): Rect = Rect(positionInRoot, size.toSize())

@@ -466,7 +466,8 @@ fun SetRow(
                             "“$comment”",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 2,
+                            // Twice the lines at large font sizes, where each holds half as much (#157).
+                            maxLines = if (LocalDensity.current.fontScale > 1.3f) 4 else 2,
                             overflow = TextOverflow.Ellipsis
                         )
                     }
