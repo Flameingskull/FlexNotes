@@ -14,7 +14,8 @@ import kotlin.math.roundToInt
  *   American Dietetic Association's 2005 review: 10 × kg + 6.25 × cm − 5 × age + 5 (men) or − 161 (women). With a
  *   recent body fat value, Katch-McArdle (370 + 21.6 × lean kg) is used instead, being more accurate for lean and
  *   trained people.
- * - **Daily activity outside training** ([Lifestyle]): a factor on BMR that includes digestion.
+ * - **Daily activity outside training** ([Lifestyle]): a factor on BMR that includes digestion. Or, from the phone's
+ *   step counter (#175), the Sitting factor plus the walking in the steps above [STEP_BASELINE] ([stepKcal]).
  * - **Exercise:** net calories only, (MET − 1) × kg × hours, since resting energy is already counted. METs from the
  *   2024 Adult Compendium of Physical Activities. Running and walking with a distance and time use the ACSM metabolic
  *   equations (VO₂ from speed, 5 kcal per litre of oxygen), which beat a flat MET.
@@ -148,6 +149,25 @@ object Energy {
         )
         if (missing.isNotEmpty()) return Resting(null, Formula.MIFFLIN, missing)
         return Resting(mifflin(inputs.sex!!, inputs.kg!!, inputs.heightCm!!, inputs.age!!), Formula.MIFFLIN, emptyList())
+    }
+
+    // ---------- Steps (#175) ----------
+
+    /** Steps a day the Sitting level already allows for (moving about at home or work); only steps above it add. */
+    const val STEP_BASELINE = 2500
+
+    /** A stride in metres: about 0.415 × height for men and 0.413 × height for women, or 0.75 m without a height. */
+    fun strideMetres(heightCm: Double?, sex: BodyFat.Sex?): Double =
+        heightCm?.takeIf { it > 0 }?.let { it / 100.0 * if (sex == BodyFat.Sex.FEMALE) 0.413 else 0.415 } ?: 0.75
+
+    /**
+     * Net kcal for [steps] in a day at [kg]: the steps above [STEP_BASELINE], walked at an easy pace on the flat (ACSM
+     * walking: 0.1 ml of oxygen per kg per metre, 5 kcal per litre).
+     */
+    fun stepKcal(steps: Double, kg: Double, heightCm: Double?, sex: BodyFat.Sex?): Double {
+        if (kg <= 0) return 0.0
+        val metres = max(0.0, steps - STEP_BASELINE) * strideMetres(heightCm, sex)
+        return 0.1 * metres * kg / 1000.0 * 5.0
     }
 
     // ---------- Exercise ----------

@@ -777,6 +777,13 @@ interface ImportDao {
     )
     fun addRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?, source: String): Long
 
+    /** The first value of [name] on [date], whatever its source (a day's steps, #175). */
+    @Query("SELECT * FROM mrecord WHERE name = :name AND date = :date ORDER BY id LIMIT 1")
+    fun firstRecordOn(name: String, date: String): MeasurementRecordRow?
+
+    @Query("UPDATE mrecord SET value = :value WHERE id = :id")
+    fun setRecordValue(id: Long, value: Double)
+
     /** A value already there: the same measurement, day and value, at the same time or entered by hand. */
     @Query(
         "SELECT EXISTS(SELECT 1 FROM mrecord WHERE name = :name AND date = :date AND abs(value - :value) < 0.001 " +

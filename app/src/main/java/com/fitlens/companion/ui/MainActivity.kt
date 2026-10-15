@@ -73,6 +73,7 @@ import com.fitlens.companion.data.FileKind
 import com.fitlens.companion.data.FitNotesImporter
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
+import com.fitlens.companion.data.Steps
 import com.fitlens.companion.data.Store
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -293,6 +294,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // The step counter always answers while FlexNotes is on screen (#175).
+        Steps.onAppVisible(applicationContext)
         lifecycleScope.launch {
             if (BackupSync.autoSyncEnabled() && BackupSync.folder() != null && UiEvents.busy.value == null) {
                 UiEvents.busy.value = getString(R.string.ma_checking)

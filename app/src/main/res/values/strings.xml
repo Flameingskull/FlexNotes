@@ -397,6 +397,7 @@
     <string name="search_prof_birth_kw">age birthday born calories bmr</string>
     <string name="search_prof_height_kw">tall cm inches body fat calories bmr</string>
     <string name="search_prof_lifestyle_kw">activity level job steps active sedentary calories tdee</string>
+    <string name="search_steps_kw">steps step counter pedometer walking daily activity calories tdee</string>
     <string name="search_tdee_kw">tdee calories maintenance bmr diet cut bulk deficit surplus macros protein</string>
     <string name="search_guides">Guides</string>
     <string name="search_guides_kw">how to help instructions logging photos backups import</string>
@@ -2544,6 +2545,14 @@
     <string name="prof_height_unset">Not set yet: change the value to set it.</string>
     <string name="prof_lifestyle">Daily activity</string>
     <string name="prof_lifestyle_summary">How active you are outside training. Workouts are counted from what you log.</string>
+    <string name="steps_use">Daily activity from my steps</string>
+    <string name="steps_use_summary">Counts your steps with the phone\'s step counter, on this phone only, and uses them instead of the level above once %1$d days are counted. Each day\'s steps are kept in the Body tracker.</string>
+    <string name="steps_short">Activity from steps</string>
+    <string name="steps_no_sensor">This phone has no step counter.</string>
+    <string name="steps_not_allowed">FlexNotes isn\'t allowed to count steps. In the phone\'s settings, allow Physical activity for FlexNotes.</string>
+    <string name="steps_open_settings">Open the phone\'s settings</string>
+    <string name="steps_status">Today so far: %1$s steps. Average: %2$s steps a day over the last %3$d days counted.</string>
+    <string name="steps_status_waiting">Today so far: %1$s steps. The daily activity level above is used until %2$d full days are counted.</string>
     <string name="prof_life_sitting">Mostly sitting</string>
     <string name="prof_life_some_walking">Sitting with some walking</string>
     <string name="prof_life_on_feet">On your feet most of the day</string>
@@ -2584,6 +2593,7 @@
     <string name="tdee_missing_lifestyle">your daily activity</string>
     <string name="tdee_bmr">Resting energy (%1$s)</string>
     <string name="tdee_activity">Daily activity: %1$s (× %2$s)</string>
+    <string name="tdee_activity_steps">Daily activity: %1$s steps a day (%2$d days)</string>
     <string name="tdee_training_logged">Training, average of the last %1$d days</string>
     <string name="tdee_training_planned">Training, planned (less than two weeks logged)</string>
     <string name="tdee_plan_sessions">Sessions a week</string>
@@ -2642,6 +2652,7 @@
     <string name="cal_sheet_title">Calories, %1$s</string>
     <string name="cal_sheet_burned">Burned</string>
     <string name="cal_sheet_activity">Daily activity</string>
+    <string name="cal_sheet_activity_steps">Daily activity (%1$s steps)</string>
     <string name="cal_sheet_exercise">%1$s, %2$d min (%3$s)</string>
     <string name="cal_method_walk">walking equation</string>
     <string name="cal_method_run">running equation</string>

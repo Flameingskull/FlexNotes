@@ -239,7 +239,10 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
         } else {
             SectionLabel(stringResource(R.string.cal_sheet_burned))
             Figure(stringResource(R.string.tdee_bmr, formulaText(res, day.formula)), stringResource(R.string.tdee_kcal, kcalText(day.bmr)))
-            Figure(stringResource(R.string.cal_sheet_activity), stringResource(R.string.tdee_plus_kcal, kcalText(day.activityKcal)))
+            Figure(
+                day.steps?.let { stringResource(R.string.cal_sheet_activity_steps, stepsText(it)) } ?: stringResource(R.string.cal_sheet_activity),
+                stringResource(R.string.tdee_plus_kcal, kcalText(day.activityKcal))
+            )
             day.exercises.forEach { b ->
                 val name = snap.exercises[b.bout.exerciseId]?.name ?: stringResource(R.string.day_exercise_fallback, b.bout.exerciseId)
                 val minutes = (b.bout.seconds / 60.0).roundToInt()

@@ -690,6 +690,25 @@ object Store {
 
     // ---------- Manual measurements ----------
 
+    /**
+     * Adds steps from the phone's step counter to each date's Steps value (#175), creating it when the day has none.
+     * A value the user edited is added to as it stands. Runs from the background too, before any screen has loaded
+     * the data, so the snapshot is only refreshed when there is one.
+     */
+    suspend fun addSteps(byDate: Map<String, Long>) = withContext(Dispatchers.IO) {
+        if (byDate.isEmpty()) return@withContext
+        val records = db.importDao
+        db.transaction {
+            db.bodyDao.ensure(Steps.NAME, Steps.UNIT, 999)
+            byDate.forEach { (date, steps) ->
+                val r = records.firstRecordOn(Steps.NAME, date)
+                if (r == null) records.addRecord(Steps.NAME, Steps.UNIT, date, Steps.TIME, steps.toDouble(), null, Steps.SOURCE)
+                else records.setRecordValue(r.id, r.value + steps)
+            }
+        }
+        if (_snapshot.value != null) refresh(Area.BODY)
+    }
+
     suspend fun addManualRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?) =
         withContext(Dispatchers.IO) {
             val body = db.bodyDao

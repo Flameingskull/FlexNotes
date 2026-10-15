@@ -1,6 +1,14 @@
 package com.fitlens.companion.ui
 
+import android.Manifest
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
 import android.content.res.Resources
+import android.net.Uri
+import android.provider.Settings as AndroidSettings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -9,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.fitlens.companion.R
 import com.fitlens.companion.data.BodyFat
 import com.fitlens.companion.data.Dates
@@ -16,11 +25,14 @@ import com.fitlens.companion.data.Energy
 import com.fitlens.companion.data.LengthUnits
 import com.fitlens.companion.data.PortableSettings
 import com.fitlens.companion.data.Settings
+import com.fitlens.companion.data.Steps
+import com.fitlens.companion.data.Store
 import com.fitlens.companion.ui.design.SettingsActionRow
 import com.fitlens.companion.ui.design.SettingsChoiceRow
 import com.fitlens.companion.ui.design.SettingsGroup
 import com.fitlens.companion.ui.design.SettingsNote
 import com.fitlens.companion.ui.design.SettingsNumberRow
+import com.fitlens.companion.ui.design.SettingsSwitchRow
 import kotlin.math.roundToInt
 
 /** A height in cm as the length unit shows it, whole: "180 cm" or "71 in". */
@@ -59,7 +71,8 @@ internal fun profileSummary(res: Resources, prefs: PortableSettings): String {
         BodyFat.Sex.of(prefs.profileSex)?.let { sexText(res, it) },
         Energy.age(prefs.profileBirthDate, Dates.today())?.let { res.getString(R.string.prof_age_n, it) },
         prefs.profileHeightCm?.let { heightText(it, prefs.lengthUnit) },
-        Energy.Lifestyle.of(prefs.profileLifestyle)?.let { lifestyleText(res, it) }
+        if (prefs.activityFromSteps) res.getString(R.string.steps_short)
+        else Energy.Lifestyle.of(prefs.profileLifestyle)?.let { lifestyleText(res, it) }
     )
     return if (parts.isEmpty()) res.getString(R.string.prof_summary_empty) else parts.joinToString(" · ")
 }
@@ -104,11 +117,83 @@ internal fun ProfileRows(prefs: PortableSettings) {
         summary = stringResource(R.string.prof_lifestyle_summary),
         descriptions = Energy.Lifestyle.entries.map { lifestyleDescription(res, it) }
     ) { i -> Settings.updatePortable { it.copy(profileLifestyle = Energy.Lifestyle.entries[i].key) } }
+    StepsRows(prefs)
     if (pickBirth) {
         PickDateDialog(prefs.profileBirthDate ?: "1990-01-01", onDismiss = { pickBirth = false }) { d ->
             if (Energy.age(d, Dates.today()) != null) Settings.updatePortable { it.copy(profileBirthDate = d) }
         }
     }
+}
+
+/** A whole number of steps: "8,532". */
+internal fun stepsText(steps: Double): String = kcalText(steps)
+
+/** Opens this app's page in the phone's settings, where a refused permission can be allowed. */
+private fun openAppSettings(context: Context) {
+    val intent = Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        // No settings screen on this phone; the note above says what to allow.
+    }
+}
+
+/**
+ * Daily activity from the phone's step counter (#175): a switch under Daily activity that asks for the Physical
+ * activity permission when it's turned on, then what's been counted. Until [Steps.MIN_DAYS] days are counted the
+ * activity level above is still used. Without a step counter the switch is off and says why.
+ */
+@Composable
+private fun StepsRows(prefs: PortableSettings) {
+    val ctx = LocalContext.current
+    val available = remember { Steps.available(ctx) }
+    var allowed by remember { mutableStateOf(Steps.permitted(ctx)) }
+    var refused by remember { mutableStateOf(false) }
+    val on = prefs.activityFromSteps
+    LifecycleResumeEffect(on) {
+        allowed = Steps.permitted(ctx)
+        // Allowed in the phone's settings while counting was already on: start the background reading.
+        if (allowed && on) Steps.start(ctx)
+        onPauseOrDispose { }
+    }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        allowed = granted
+        refused = !granted
+        if (granted) Steps.turnOn(ctx)
+    }
+    SettingsSwitchRow(
+        stringResource(R.string.steps_use),
+        prefs.activityFromSteps && available,
+        summary = stringResource(R.string.steps_use_summary, Steps.MIN_DAYS),
+        enabled = available,
+        disabledReason = stringResource(R.string.steps_no_sensor)
+    ) { on ->
+        when {
+            !on -> Steps.turnOff(ctx)
+            allowed -> Steps.turnOn(ctx)
+            else -> ask.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+        }
+    }
+    if (!available) return
+    if (!allowed && (prefs.activityFromSteps || refused)) {
+        SettingsNote(stringResource(R.string.steps_not_allowed), error = true)
+        SettingsActionRow(stringResource(R.string.steps_open_settings)) { openAppSettings(ctx) }
+        return
+    }
+    if (!prefs.activityFromSteps) return
+    val snap by Store.snapshot.collectAsState()
+    val s = snap ?: return
+    val today = Dates.today()
+    val todaySteps = Steps.on(s, today) ?: 0.0
+    val average = Steps.average(s, today)
+    SettingsNote(
+        if (average != null) {
+            stringResource(R.string.steps_status, stepsText(todaySteps), stepsText(average.perDay), average.days)
+        } else {
+            stringResource(R.string.steps_status_waiting, stepsText(todaySteps), Steps.MIN_DAYS)
+        }
+    )
 }
 
 /** Settings → Profile (#172): the profile's rows, and the TDEE calculator that uses them. */

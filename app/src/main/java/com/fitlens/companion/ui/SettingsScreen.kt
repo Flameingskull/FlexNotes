@@ -169,6 +169,9 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.prof_lifestyle, SettingsSection.Profile, R.string.search_prof_lifestyle_kw) {
         com.fitlens.companion.data.Energy.Lifestyle.of(prefs.profileLifestyle)?.let { lifestyleText(res, it) } ?: res.getString(R.string.settings_not_set)
     },
+    SettingEntry(R.string.steps_use, SettingsSection.Profile, R.string.search_steps_kw) {
+        onOff(prefs.activityFromSteps)
+    },
     SettingEntry(R.string.tdee_title, SettingsSection.Profile, R.string.search_tdee_kw, R.string.prof_group_uses),
     SettingEntry(R.string.search_guides, SettingsSection.Help, R.string.search_guides_kw, R.string.help_group_guides),
     SettingEntry(R.string.search_version, SettingsSection.About, R.string.search_version_kw, R.string.about_group_app),

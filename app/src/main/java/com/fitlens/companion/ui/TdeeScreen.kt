@@ -161,7 +161,14 @@ fun TdeeScreen(snap: Snapshot, nav: Nav) {
             }
             val base = daily.baseKcal
             val bmr = daily.resting.bmr
-            if (base != null && bmr != null && daily.lifestyle != null) {
+            val steps = daily.steps
+            if (base != null && bmr != null && steps != null) {
+                // From the step counter (#175): the Sitting level plus the average day's steps.
+                Figure(
+                    stringResource(R.string.tdee_activity_steps, stepsText(steps.perDay), steps.days),
+                    stringResource(R.string.tdee_plus_kcal, kcalText(base - bmr))
+                )
+            } else if (base != null && bmr != null && daily.lifestyle != null) {
                 Figure(
                     stringResource(R.string.tdee_activity, lifestyleText(res, daily.lifestyle), fmtNum(daily.lifestyle.factor, 2)),
                     stringResource(R.string.tdee_plus_kcal, kcalText(base - bmr))
