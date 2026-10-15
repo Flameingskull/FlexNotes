@@ -1,34 +1,32 @@
 ## Overview
 
-FlexNotes can now count your steps with your phone's own step counter and use them in your calorie estimate. Until
-now, daily activity outside training was a level you picked (Mostly sitting, Some walking and so on). With step
-counting on, the calories you burn each day follow how much you actually walked.
-
-Everything stays on your phone. FlexNotes reads the phone's step counter directly. It doesn't use Health Connect or
-any online service, and it still has no internet access.
+This update makes the calorie estimate from your steps more accurate and makes falls easier to read. A walk or run you
+log as a workout is no longer counted a second time through your phone's steps. The red used for falls is now a
+little brighter, so it reads clearly on every card.
 
 Install it over the current app as usual. Everything you've logged is kept, and the database doesn't change.
 
-## What's new
+## Improved
 
-- **Daily activity from my steps.** In Settings, Profile (and on the TDEE calculator) there's a new switch under
-  Daily activity. Turning it on asks once for the Physical activity permission. If your phone has no step counter,
-  the switch says so.
-- **Your steps in the Body tracker.** Each day's steps are recorded as a **Steps** value in the Body tracker, so you
-  can see them, graph them, and edit or delete a day like any other value.
-- **A sharper calorie estimate.** Once three full days are counted, the TDEE calculator uses the Mostly sitting level
-  plus the walking in your average steps above 2,500 a day, instead of the level you picked. Until then it keeps using
-  your chosen level. The figure takes your bodyweight and height into account.
-- **Each day's own steps.** The calories sheet on the day log shows that day's steps and the activity calories they
-  add, so a busy day burns more than a quiet one. Today's figure grows as you walk.
+- **Logged walks and runs aren't counted twice.** With Daily activity from my steps on, a walk or run you log while
+  carrying your phone was counted twice: once as the exercise's own calories and again in the day's steps. Now the
+  steps that walk or run took come off the day's steps, worked out from its distance and your stride (a longer stride
+  for a run). The day's calories and your average daily total (TDEE) both use this.
+- **What was left out is shown.** The calories sheet on the day log shows the day's steps and how many were left out
+  for logged walks and runs. The TDEE calculator says when its average steps leave them out.
+- **Clearer falls.** The red for a value that went down, and for graph lines, is slightly brighter. It now meets the
+  standard contrast for text on every card and surface, as the gold, ivory and green already did. The PDF report and
+  progress videos use the same red.
+- **Contrast is checked on every build.** Each new version now checks every text and control colour against every
+  background it's drawn on, so a hard-to-read colour can't ship unnoticed.
 
 ## Known limitations
 
-- Steps are counted only while step counting is on and FlexNotes is installed. FlexNotes reads the counter when you
-  open it and, when the phone allows, every 15 minutes in the background. If the phone doesn't let it read in the
-  background, steps between two readings that span midnight are shared between the days by time.
-- Restarting the phone loses the steps taken since FlexNotes last read the counter.
-- A walk or run you log as a workout while carrying your phone is also counted in your steps, so on those days the
-  estimate can count some of that walking twice (#181).
+- A walk or run counts as one when the exercise's activity is set to Walking or Running, or when it has a distance and
+  a time at walking or running pace. Other exercises, such as a hike logged only as a time, are counted as before.
+- If you logged a walk without carrying your phone, its steps are still taken off, so that day's activity can be
+  slightly lower than it should be.
 - Cardio distances from FitNotes are still imported as logged, without converting between kilometres and miles
   (#180). That fix needs a FitNotes backup with cardio sets to confirm where FitNotes keeps the distance unit.
+- The rest of the accessibility checks (TalkBack, switch access and whole screens on a small phone) still need a phone
+  (#157).
