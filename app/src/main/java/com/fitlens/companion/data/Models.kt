@@ -469,6 +469,9 @@ object MeasureUnits {
         else -> emptyList()
     }
 
+    /** A weight or a length: a unit FlexNotes converts between kg and lbs, or cm and in. */
+    fun convertible(unit: String?): Boolean = WeightUnits.of(unit) != null || LengthUnits.of(unit) != null
+
     /** Both are weights, or both are lengths, so one converts to the other. */
     fun sameKind(a: String?, b: String?): Boolean =
         (WeightUnits.of(a) != null && WeightUnits.of(b) != null) || (LengthUnits.of(a) != null && LengthUnits.of(b) != null)

@@ -767,6 +767,10 @@ interface ImportDao {
     @Query("UPDATE measurement SET unit = :unit WHERE name = :name")
     fun setMeasurementUnit(name: String, unit: String)
 
+    /** Gives an imported value the unit FitNotes kept it in, when an older import left it without one. */
+    @Query("UPDATE mrecord SET unit = :unit WHERE id = :id")
+    fun setRecordUnit(id: Long, unit: String)
+
     @Query(
         "INSERT INTO mrecord(name, unit, date, time, value, comment, source) " +
             "VALUES(:name, :unit, :date, :time, :value, :comment, :source)"

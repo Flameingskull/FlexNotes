@@ -2342,6 +2342,10 @@
         <item quantity="one">%1$d workout time</item>
         <item quantity="other">%1$d workout times</item>
     </plurals>
+    <plurals name="imp_units_fixed">
+        <item quantity="one">the unit of %1$d earlier imported body value</item>
+        <item quantity="other">the units of %1$d earlier imported body values</item>
+    </plurals>
     <plurals name="imp_records">
         <item quantity="one">%1$d body tracker record</item>
         <item quantity="other">%1$d body tracker records</item>

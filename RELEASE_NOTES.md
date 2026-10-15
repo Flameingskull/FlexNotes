@@ -1,9 +1,17 @@
 ## Overview
 
-This update is about speed and small screens. Saving a set now takes the same short time however many years of
-history you have, and the workout screens fit properly on small phones with Android's largest font size.
+This update fixes body values imported from FitNotes in inches or pounds, which showed unconverted as centimetres or
+kilograms. Saving a set now takes the same short time however many years of history you have, and the workout screens
+fit properly on small phones with Android's largest font size.
 
 Install it over the current app as usual. Everything you've logged is kept, and the database doesn't change.
+
+## Fixed
+
+- **Imported body values keep their unit.** A neck measurement logged in inches in FitNotes, or a bodyweight in
+  pounds, now comes in with that unit and shows converted to the cm or kg you use in FlexNotes, instead of the same
+  figure with the wrong unit. To repair values you imported before this update, import your FitNotes backup again
+  from Settings: nothing is duplicated, and the summary says how many units it fixed.
 
 ## Improved
 

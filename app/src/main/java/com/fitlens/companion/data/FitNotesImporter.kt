@@ -31,9 +31,12 @@ class ImportPlan {
     var measurementsAdded = 0
     var recordsAdded = 0
     var recordsSkipped = 0
+    /** Values imported earlier without a unit FlexNotes understands, given FitNotes's unit by this import. */
+    var unitsFixed = 0
 
     val nothingNew: Boolean
-        get() = categoriesAdded + exercisesAdded + setsAdded + commentsAdded + timesAdded + measurementsAdded + recordsAdded == 0
+        get() = categoriesAdded + exercisesAdded + setsAdded + commentsAdded + timesAdded + measurementsAdded + recordsAdded +
+            unitsFixed == 0
 
     /** What the import adds, one line each. */
     fun addedLines(res: Resources): List<String> = buildList {
@@ -53,6 +56,7 @@ class ImportPlan {
         count(R.plurals.imp_times, timesAdded)
         count(R.plurals.imp_records, recordsAdded)
         count(R.plurals.imp_measurements, measurementsAdded)
+        count(R.plurals.imp_units_fixed, unitsFixed)
     }
 
     /** What the import skips because FlexNotes already has it (or the user removed it in FlexNotes). */
@@ -401,12 +405,21 @@ object FitNotesImporter {
         val recordKeys = HashSet<String>()
         val manualKeys = HashSet<String>()
         fun rk(name: String, date: String, time: String, value: Double) = Workouts.recordKey(name, date, time, value)
+        // Imported values with no unit FlexNotes understands, by key: an import before 1.0.134 could leave inches
+        // shown as centimetres (or pounds as kilograms). This import gives them FitNotes's unit.
+        val unitless = HashMap<String, Long>()
         fun mk(name: String, date: String, value: Double) = name + "|" + date + "|" + fmtNum(value, 3)
         for (r in all.records()) {
             recordKeys.add(rk(r.name, r.date, r.time, r.value))
+            if (r.source == "fitnotes" && !MeasureUnits.convertible(r.unit)) unitless[rk(r.name, r.date, r.time, r.value)] = r.id
             if (r.source == "manual") manualKeys.add(mk(r.name, r.date, r.value))
         }
         fun addRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?) {
+            val fixable = unitless.remove(rk(name, date, time, value))
+            if (fixable != null && MeasureUnits.convertible(unit)) {
+                w.setRecordUnit(fixable, unit)
+                plan.unitsFixed++
+            }
             // An imported value the user edited or deleted stays as they left it (#166).
             if (rk(name, date, time, value) in recordKeys || mk(name, date, value) in manualKeys ||
                 consumeSkip(Workouts.RULE_RECORD, rk(name, date, time, value))
@@ -418,18 +431,18 @@ object FitNotesImporter {
             recordKeys.add(rk(name, date, time, value))
             plan.recordsAdded++
         }
+        // FitNotes's own units setting: 0 is imperial (lbs, inches), 1 metric.
+        var metric = 1
+        src.each("SELECT metric FROM settings LIMIT 1") { c -> metric = c.int(0) }
         val defs = HashMap<Long, Pair<String, String>>()
-        src.each(
-            "SELECT m._id, m.name, IFNULL(u.short_name, ''), m.sort_order, m.goal_type, m.goal_value, m.enabled " +
-                "FROM Measurement m LEFT JOIN MeasurementUnit u ON u._id = m.unit_id"
-        ) { c ->
+        val readDefinition: (Cursor) -> Unit = readDefinition@{ c ->
             val name = c.strOr(1)
-            val unit = c.strOr(2)
             val custom = aliases[name.trim().lowercase()]
+            val unit = fitNotesUnit(c.strOr(2), c.strOr(7), metric == 0, body.definition(custom ?: name)?.unit, name)
             defs[c.lng(0)] = (custom ?: name) to unit
             if (custom != null) {
                 w.setUnitIfNone(custom, unit)
-                return@each
+                return@readDefinition
             }
             // Measurement definitions imported from FitNotes (not custom metrics) follow FitNotes: their unit, order
             // and goal are refreshed. Custom metrics made in FlexNotes are never changed.
@@ -444,6 +457,13 @@ object FitNotesImporter {
                 else w.refreshMeasurement(name, unit, c.int(3), c.int(4), c.dbl(5), c.int(6))
             }
         }
+        // Not every FitNotes version keeps a long name for each unit.
+        val longName = if (src.each("SELECT long_name FROM MeasurementUnit LIMIT 1") {}) "IFNULL(u.long_name, '')" else "''"
+        src.each(
+            "SELECT m._id, m.name, IFNULL(u.short_name, ''), m.sort_order, m.goal_type, m.goal_value, m.enabled, $longName " +
+                "FROM Measurement m LEFT JOIN MeasurementUnit u ON u._id = m.unit_id",
+            readDefinition
+        )
         src.each("SELECT measurement_id, date, time, value, comment FROM MeasurementRecord") { c ->
             val def = defs[c.lng(0)] ?: return@each
             addRecord(def.first, def.second, c.strOr(1).take(10), c.strOr(2), c.dbl(3), c.str(4))
@@ -458,8 +478,6 @@ object FitNotesImporter {
 
         // FitNotes's weight unit is used for display unless the user has picked one in FlexNotes.
         if (!db.metaDao.has("weight_unit_manual")) {
-            var metric = 1
-            src.each("SELECT metric FROM settings LIMIT 1") { c -> metric = c.int(0) }
             db.metaDao.put(MetaRow("weight_unit", if (metric == 0) "lbs" else "kg"))
         }
         return plan
@@ -524,6 +542,26 @@ object FitNotesImporter {
     }
 
     /** Lower-case FitNotes measurement name → custom metric that takes its values. */
+    /**
+     * The unit a FitNotes measurement's values are in: its [short] name if FlexNotes knows it ("in", "kg"), else its
+     * [long] name ("Inches"). With neither, a weight or length is told apart by the unit of the FlexNotes measurement it
+     * goes into ([target]) or of the standard measurement of that [name], and gets FitNotes's units setting
+     * ([imperial]): pounds or inches, otherwise kilograms or centimetres. Anything else ("%") keeps its short name.
+     * Internal for `FitNotesImporterTest`.
+     */
+    internal fun fitNotesUnit(short: String, long: String, imperial: Boolean, target: String?, name: String): String {
+        if (MeasureUnits.convertible(short)) return short.trim()
+        (WeightUnits.of(long) ?: LengthUnits.of(long))?.let { return it }
+        if (short.isNotBlank()) return short
+        val like = target?.takeIf { MeasureUnits.convertible(it) }
+            ?: StandardMeasurements.all.firstOrNull { it.first.equals(name.trim(), ignoreCase = true) }?.second
+        return when {
+            WeightUnits.of(like) != null -> if (imperial) "lbs" else "kg"
+            LengthUnits.of(like) != null -> if (imperial) LengthUnits.IN else LengthUnits.CM
+            else -> short
+        }
+    }
+
     private fun customAliases(w: ImportDao): Map<String, String> {
         val out = HashMap<String, String>()
         for (m in w.customMetrics()) {

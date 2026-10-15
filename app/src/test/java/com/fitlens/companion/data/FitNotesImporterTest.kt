@@ -214,6 +214,68 @@ class FitNotesImporterTest {
         assertEquals(3, db.count("SELECT COUNT(*) FROM mrecord"))
     }
 
+    /**
+     * An imperial FitNotes backup: Neck in inches, its unit known only by its long name, and Bodyweight with no unit
+     * row at all (FitNotes's units setting says pounds).
+     */
+    private fun withImperialMeasurements() {
+        backup.delete()
+        val schema = fitNotesSchema + listOf(
+            "CREATE TABLE settings(_id INTEGER PRIMARY KEY, metric INTEGER)",
+            "CREATE TABLE MeasurementUnit(_id INTEGER PRIMARY KEY, long_name TEXT, short_name TEXT)",
+            "CREATE TABLE Measurement(_id INTEGER PRIMARY KEY, name TEXT, unit_id INTEGER, sort_order INTEGER, " +
+                "goal_type INTEGER, goal_value REAL, enabled INTEGER)",
+            "CREATE TABLE MeasurementRecord(_id INTEGER PRIMARY KEY, measurement_id INTEGER, date TEXT, time TEXT, " +
+                "value REAL, comment TEXT)"
+        )
+        OldSchemas.create(backup, 1, schema) { b ->
+            fillBackup(b)
+            b.row("settings", "_id" to 1L, "metric" to 0)
+            b.row("MeasurementUnit", "_id" to 4L, "long_name" to "Inches", "short_name" to "")
+            b.row("Measurement", "_id" to 1L, "name" to "Neck", "unit_id" to 4L, "sort_order" to 1, "goal_type" to 0, "goal_value" to 0.0, "enabled" to 1)
+            b.row("Measurement", "_id" to 2L, "name" to "Bodyweight", "unit_id" to 99L, "sort_order" to 2, "goal_type" to 0, "goal_value" to 0.0, "enabled" to 1)
+            b.row("MeasurementRecord", "measurement_id" to 1L, "date" to "2026-01-10", "time" to "07:00:00", "value" to 15.5)
+            b.row("MeasurementRecord", "measurement_id" to 2L, "date" to "2026-01-10", "time" to "07:00:00", "value" to 180.0)
+        }
+    }
+
+    @Test
+    fun inchesAndPoundsKeepTheirUnitInAMeasurementSetUpInCentimetres() {
+        withImperialMeasurements()
+        // Set up from the standard measurements before the import: Neck in cm, Bodyweight in kg.
+        db.row("measurement", "name" to "Neck", "unit" to "cm", "custom" to 1, "edited" to 1)
+        db.row("measurement", "name" to "Bodyweight", "unit" to "kg", "custom" to 1, "edited" to 1)
+        import()
+        // The values stay as FitNotes kept them, with their unit, so the cm and kg screens convert them.
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck' AND unit='in' AND value=15.5"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight' AND unit='lbs' AND value=180"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM measurement WHERE name='Neck' AND unit='cm'"))
+    }
+
+    @Test
+    fun reImportingGivesEarlierUnitlessValuesTheirUnit() {
+        withImperialMeasurements()
+        db.row("measurement", "name" to "Neck", "unit" to "cm", "custom" to 1, "edited" to 1)
+        // What an import before 1.0.134 could leave: the inch figure with no unit, shown as centimetres.
+        db.row("mrecord", "name" to "Neck", "unit" to "", "date" to "2026-01-10", "time" to "07:00:00", "value" to 15.5, "source" to "fitnotes")
+        val plan = import()
+        assertEquals(1, plan.unitsFixed)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck'"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck' AND unit='in'"))
+        assertEquals(0, import().unitsFixed)
+    }
+
+    @Test
+    fun aFitNotesUnitIsReadFromItsShortNameLongNameOrKind() {
+        assertEquals("kgs", FitNotesImporter.fitNotesUnit("kgs", "", imperial = true, target = null, name = "Bodyweight"))
+        assertEquals("in", FitNotesImporter.fitNotesUnit("", "Inches", imperial = false, target = "cm", name = "Neck"))
+        assertEquals("in", FitNotesImporter.fitNotesUnit("", "", imperial = true, target = "cm", name = "Neck"))
+        assertEquals("cm", FitNotesImporter.fitNotesUnit("", "", imperial = false, target = null, name = "Waist"))
+        assertEquals("lbs", FitNotesImporter.fitNotesUnit("", "", imperial = true, target = null, name = "Bodyweight"))
+        assertEquals("%", FitNotesImporter.fitNotesUnit("%", "Percent", imperial = true, target = null, name = "Body fat"))
+        assertEquals("", FitNotesImporter.fitNotesUnit("", "", imperial = true, target = null, name = "Mood"))
+    }
+
     @Test
     fun valuesForACustomMetricGoIntoIt() {
         withMeasurements()
