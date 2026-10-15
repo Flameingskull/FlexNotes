@@ -93,6 +93,17 @@ object EnergyEstimates {
         return Energy.bouts(inputs, workoutSeconds(snap, date), mets)
     }
 
+    private val NO_REST = Rest { _, _, _, _ -> 0 }
+
+    /**
+     * The steps on [date] that logged walks and runs already count (#181), so the phone's steps for them aren't added
+     * a second time. Only cardio and the exercises' own activities matter, so rests aren't needed.
+     */
+    fun walkedSteps(snap: Snapshot, date: String, inputs: Energy.Inputs): Double =
+        bouts(snap, date, NO_REST, emptyMap()).sumOf { b ->
+            Energy.walkedSteps(b, Energy.Activity.of(snap.exercises[b.exerciseId]?.activity), inputs.heightCm, inputs.sex)
+        }
+
     /** Each exercise's net calories on [date] at [kg], biggest first. */
     fun exerciseKcal(snap: Snapshot, date: String, kg: Double, rest: Rest, mets: Map<Long, Double> = exerciseMets(snap)): List<Energy.BoutKcal> =
         bouts(snap, date, rest, mets).map { Energy.boutKcal(it, kg) }.sortedByDescending { it.kcal }
@@ -143,8 +154,9 @@ object EnergyEstimates {
         val inputs = inputs(snap, prefs, date)
         val resting = Energy.resting(inputs, Energy.Formula.of(prefs.bmrFormula))
         val kg = inputs.kg
-        // With step counting on and enough days counted, the steps replace the chosen activity level (#175).
-        val steps = if (prefs.activityFromSteps && kg != null) Steps.average(snap, date) else null
+        // With step counting on and enough days counted, the steps replace the chosen activity level (#175), less
+        // the steps of logged walks and runs, which training already counts (#181).
+        val steps = if (prefs.activityFromSteps && kg != null) Steps.average(snap, date) { d -> walkedSteps(snap, d, inputs) } else null
         val base = resting.bmr?.let { b ->
             if (steps != null && kg != null) {
                 b * Energy.Lifestyle.SITTING.factor + Energy.stepKcal(steps.perDay, kg, inputs.heightCm, inputs.sex)
@@ -187,8 +199,10 @@ object EnergyEstimates {
         val mode: String,
         /** The goal's change a day (target − average daily total), or 0 when maintaining. */
         val goalKcal: Double,
-        /** The steps [activityKcal] is from (#175), or null when it's from the activity level or the average. */
-        val steps: Double? = null
+        /** The steps counted that day (#175), or null when [activityKcal] is from the activity level or the average. */
+        val steps: Double? = null,
+        /** Of [steps], those left out because a logged walk or run already counts them (#181). */
+        val walkedSteps: Double = 0.0
     )
 
     /**
@@ -206,10 +220,13 @@ object EnergyEstimates {
         val exercises = exerciseKcal(snap, date, kg, rest, mets)
         val exerciseKcal = exercises.sumOf { it.kcal }
         // A day with steps counted uses its own steps (so far, for today); other days use the average's activity.
+        // Steps a logged walk or run took are left out, since its own calories count them (#181).
         val steps = if (daily.steps != null) Steps.on(snap, date) else null
+        var walked = 0.0
         val activity = if (steps != null) {
             val inputs = inputs(snap, prefs, date)
-            bmr * (Energy.Lifestyle.SITTING.factor - 1) + Energy.stepKcal(steps, kg, inputs.heightCm, inputs.sex)
+            walked = minOf(steps, walkedSteps(snap, date, inputs))
+            bmr * (Energy.Lifestyle.SITTING.factor - 1) + Energy.stepKcal(steps - walked, kg, inputs.heightCm, inputs.sex)
         } else {
             base - bmr
         }
@@ -224,6 +241,6 @@ object EnergyEstimates {
             mode == MODE_TRAINING -> burned + goalKcal
             else -> target
         }
-        return Day(date, bmr, daily.resting.formula, activity, exercises, exerciseKcal, burned, need, mode, goalKcal, steps) to daily
+        return Day(date, bmr, daily.resting.formula, activity, exercises, exerciseKcal, burned, need, mode, goalKcal, steps, walked) to daily
     }
 }

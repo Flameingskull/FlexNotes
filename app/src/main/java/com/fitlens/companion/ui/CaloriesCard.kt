@@ -240,7 +240,11 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
             SectionLabel(stringResource(R.string.cal_sheet_burned))
             Figure(stringResource(R.string.tdee_bmr, formulaText(res, day.formula)), stringResource(R.string.tdee_kcal, kcalText(day.bmr)))
             Figure(
-                day.steps?.let { stringResource(R.string.cal_sheet_activity_steps, stepsText(it)) } ?: stringResource(R.string.cal_sheet_activity),
+                day.steps?.let {
+                    // A logged walk or run counts its own calories, so its steps are left out here (#181).
+                    if (day.walkedSteps >= 0.5) stringResource(R.string.cal_sheet_activity_steps_less, stepsText(it), stepsText(day.walkedSteps))
+                    else stringResource(R.string.cal_sheet_activity_steps, stepsText(it))
+                } ?: stringResource(R.string.cal_sheet_activity),
                 stringResource(R.string.tdee_plus_kcal, kcalText(day.activityKcal))
             )
             day.exercises.forEach { b ->

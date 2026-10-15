@@ -62,4 +62,32 @@ class StepsTest {
         assertEquals(0.75, Energy.strideMetres(null, null), 1e-9)
         assertEquals(0.68145, Energy.strideMetres(165.0, Sex.FEMALE), 1e-9)
     }
+
+    private fun bout(metres: Double, seconds: Double, cardio: Boolean = true) = Energy.Bout(1L, cardio, seconds, metres)
+
+    @Test
+    fun loggedWalksAndRunsAreTakenAsTheirSteps() {
+        // 5 km in an hour is a walk: 5,000 m over a 0.747 m stride.
+        assertEquals(5_000.0 / 0.747, Energy.walkedSteps(bout(5_000.0, 3_600.0), null, 180.0, Sex.MALE), 1e-6)
+        // 5 km in 25 minutes is a run, with a stride 1.4 times as long.
+        assertEquals(5_000.0 / (0.747 * 1.4), Energy.walkedSteps(bout(5_000.0, 1_500.0), null, 180.0, Sex.MALE), 1e-6)
+        // An exercise's own activity decides, even without a time.
+        assertEquals(5_000.0 / 0.747, Energy.walkedSteps(bout(5_000.0, 0.0), Energy.Activity.WALKING, 180.0, Sex.MALE), 1e-6)
+        assertEquals(0.0, Energy.walkedSteps(bout(5_000.0, 900.0), Energy.Activity.CYCLING, 180.0, Sex.MALE), 1e-9)
+        // Cycling speed, no time, no distance, or not cardio: no steps.
+        assertEquals(0.0, Energy.walkedSteps(bout(10_000.0, 1_200.0), null, 180.0, Sex.MALE), 1e-9)
+        assertEquals(0.0, Energy.walkedSteps(bout(5_000.0, 0.0), null, 180.0, Sex.MALE), 1e-9)
+        assertEquals(0.0, Energy.walkedSteps(bout(0.0, 1_800.0), null, 180.0, Sex.MALE), 1e-9)
+        assertEquals(0.0, Energy.walkedSteps(bout(5_000.0, 3_600.0, cardio = false), null, 180.0, Sex.MALE), 1e-9)
+    }
+
+    @Test
+    fun aLoggedWalkIsNotCountedTwice() {
+        // 12,000 steps on a day with a logged 5 km walk: only the 5,306 other steps add daily activity.
+        val walked = Energy.walkedSteps(bout(5_000.0, 3_600.0), null, 180.0, Sex.MALE)
+        val walk = Energy.boutKcal(bout(5_000.0, 3_600.0), 80.0).kcal
+        val both = Energy.stepKcal(12_000.0 - walked, 80.0, 180.0, Sex.MALE) + walk
+        assertEquals(Energy.stepKcal(12_000.0, 80.0, 180.0, Sex.MALE), both, 1.0)
+        assertTrue(Energy.stepKcal(12_000.0 - walked, 80.0, 180.0, Sex.MALE) < Energy.stepKcal(12_000.0, 80.0, 180.0, Sex.MALE))
+    }
 }

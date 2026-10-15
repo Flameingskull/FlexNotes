@@ -2594,6 +2594,7 @@
     <string name="tdee_bmr">Resting energy (%1$s)</string>
     <string name="tdee_activity">Daily activity: %1$s (× %2$s)</string>
     <string name="tdee_activity_steps">Daily activity: %1$s steps a day (%2$d days)</string>
+    <string name="tdee_activity_steps_less">Daily activity: %1$s steps a day outside logged walks and runs (%2$d days)</string>
     <string name="tdee_training_logged">Training, average of the last %1$d days</string>
     <string name="tdee_training_planned">Training, planned (less than two weeks logged)</string>
     <string name="tdee_plan_sessions">Sessions a week</string>
@@ -2653,6 +2654,7 @@
     <string name="cal_sheet_burned">Burned</string>
     <string name="cal_sheet_activity">Daily activity</string>
     <string name="cal_sheet_activity_steps">Daily activity (%1$s steps)</string>
+    <string name="cal_sheet_activity_steps_less">Daily activity (%1$s steps, less %2$s in logged walks and runs)</string>
     <string name="cal_sheet_exercise">%1$s, %2$d min (%3$s)</string>
     <string name="cal_method_walk">walking equation</string>
     <string name="cal_method_run">running equation</string>

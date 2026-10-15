@@ -170,6 +170,29 @@ object Energy {
         return 0.1 * metres * kg / 1000.0 * 5.0
     }
 
+    /** A running stride is about this many times a walking one, at an easy running pace (#181). */
+    const val RUN_STRIDE_FACTOR = 1.4
+
+    /**
+     * The steps a logged walk or run took (#181), which the phone counted too when it was carried: its distance over
+     * the stride, a running stride being [RUN_STRIDE_FACTOR] times as long. [activity] is the exercise's own activity;
+     * without one, a cardio bout with a distance and a time at walking or running speed counts. 0 for anything else.
+     */
+    fun walkedSteps(b: Bout, activity: Activity?, heightCm: Double?, sex: BodyFat.Sex?): Double {
+        if (b.metres <= 0) return 0.0
+        val speed = if (b.seconds > 0) b.metres / (b.seconds / 60.0) else null
+        val running = when (activity) {
+            Activity.WALKING -> false
+            Activity.RUNNING -> true
+            null -> {
+                if (!b.cardio || speed == null || speed > RUN_MAX_M_PER_MIN) return 0.0
+                speed > WALK_MAX_M_PER_MIN
+            }
+            else -> return 0.0
+        }
+        return b.metres / (strideMetres(heightCm, sex) * if (running) RUN_STRIDE_FACTOR else 1.0)
+    }
+
     // ---------- Exercise ----------
 
     /** Net kcal for [met] over [hours] at [kg]: resting energy is already counted, so one MET comes off. */

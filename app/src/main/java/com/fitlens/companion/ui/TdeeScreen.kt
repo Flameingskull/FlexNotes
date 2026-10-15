@@ -165,7 +165,9 @@ fun TdeeScreen(snap: Snapshot, nav: Nav) {
             if (base != null && bmr != null && steps != null) {
                 // From the step counter (#175): the Sitting level plus the average day's steps.
                 Figure(
-                    stringResource(R.string.tdee_activity_steps, stepsText(steps.perDay), steps.days),
+                    // Logged walks and runs count in training, so their steps are left out (#181).
+                    if (steps.leftOutPerDay >= 0.5) stringResource(R.string.tdee_activity_steps_less, stepsText(steps.perDay), steps.days)
+                    else stringResource(R.string.tdee_activity_steps, stepsText(steps.perDay), steps.days),
                     stringResource(R.string.tdee_plus_kcal, kcalText(base - bmr))
                 )
             } else if (base != null && bmr != null && daily.lifestyle != null) {

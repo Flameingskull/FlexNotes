@@ -210,21 +210,28 @@ object Steps {
     fun on(snap: Snapshot, date: String): Double? =
         snap.recordsByName[NAME].orEmpty().filter { it.date.take(10) == date }.takeIf { it.isNotEmpty() }?.sumOf { it.value }
 
-    /** Average steps a day and the days it's taken from. */
-    data class Average(val perDay: Double, val days: Int)
+    /**
+     * Average steps a day and the days it's taken from. [leftOutPerDay] is the average a day taken off [perDay] as
+     * logged walks and runs (#181).
+     */
+    data class Average(val perDay: Double, val days: Int, val leftOutPerDay: Double = 0.0)
 
     /**
      * The average steps a day over the [Energy.AVERAGE_DAYS] ending on [date], from the days with steps recorded, or
-     * null with fewer than [MIN_DAYS]. Today is left out while it's still being counted.
+     * null with fewer than [MIN_DAYS]. Today is left out while it's still being counted. [leftOut] gives a day's steps
+     * already counted elsewhere (logged walks and runs, #181), taken off that day's steps but never below none.
      */
-    fun average(snap: Snapshot, date: String, today: String = Dates.today()): Average? {
+    fun average(snap: Snapshot, date: String, today: String = Dates.today(), leftOut: (String) -> Double = { 0.0 }): Average? {
         val start = Energy.averageStart(date)
         val byDay = snap.recordsByName[NAME].orEmpty()
             .filter { val d = it.date.take(10); d in start..date && d != today }
             .groupBy { it.date.take(10) }
             .mapValues { e -> e.value.sumOf { it.value } }
         if (byDay.size < MIN_DAYS) return null
-        return Average(byDay.values.sum() / byDay.size, byDay.size)
+        val kept = byDay.mapValues { (d, steps) -> maxOf(0.0, steps - leftOut(d)) }
+        val total = byDay.values.sum()
+        val keptTotal = kept.values.sum()
+        return Average(keptTotal / byDay.size, byDay.size, (total - keptTotal) / byDay.size)
     }
 }
 
