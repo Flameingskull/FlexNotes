@@ -197,9 +197,13 @@ class FitNotesImporterTest {
     @Test
     fun bodyValuesAreAddedOnceAndUserEditsToADefinitionWin() {
         withMeasurements()
-        // The user reordered Waist and set its goal in FlexNotes, and logged the same Bodyweight value by hand.
+        // The user shows Waist in inches, reordered it and set its goal in FlexNotes, and logged the same Bodyweight
+        // value by hand.
         db.execSQL("DELETE FROM measurement WHERE name='Waist'")
-        db.row("measurement", "name" to "Waist", "unit" to "in", "sort_order" to 7, "goal_type" to 1, "goal_value" to 30.0, "edited" to 1)
+        db.row(
+            "measurement", "name" to "Waist", "unit" to "in", "display_unit" to "in", "sort_order" to 7, "goal_type" to 1,
+            "goal_value" to 30.0, "edited" to 1
+        )
         db.row("mrecord", "name" to "Bodyweight", "unit" to "kg", "date" to "2026-01-11", "time" to "12:00:00", "value" to 81.5, "source" to "manual")
 
         val plan = import()
