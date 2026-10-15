@@ -31,7 +31,7 @@ class ImportPlan {
     var measurementsAdded = 0
     var recordsAdded = 0
     var recordsSkipped = 0
-    /** Values imported earlier without a unit FlexNotes understands, given FitNotes's unit by this import. */
+    /** Values imported earlier without a unit FlexNotes understands, converted and given their unit by this import. */
     var unitsFixed = 0
 
     val nothingNew: Boolean
@@ -402,59 +402,92 @@ object FitNotesImporter {
         val aliases = customAliases(w)
         val body = db.bodyDao
         fun target(name: String) = aliases[name.trim().lowercase()] ?: name
-        val recordKeys = HashSet<String>()
-        val manualKeys = HashSet<String>()
-        fun rk(name: String, date: String, time: String, value: Double) = Workouts.recordKey(name, date, time, value)
-        // Imported values with no unit FlexNotes understands, by key: an import before 1.0.134 could leave inches
-        // shown as centimetres (or pounds as kilograms). This import gives them FitNotes's unit.
-        val unitless = HashMap<String, Long>()
-        fun mk(name: String, date: String, value: Double) = name + "|" + date + "|" + fmtNum(value, 3)
+        // FitNotes's own units setting: 0 is imperial (lbs, inches), 1 metric.
+        var metric = 1
+        src.each("SELECT metric FROM settings LIMIT 1") { c -> metric = c.int(0) }
+        // The units the user has set in FlexNotes. Until they pick a weight unit, FlexNotes takes FitNotes's (below).
+        val weightUnit = if (db.metaDao.has("weight_unit_manual")) WeightUnits.of(db.metaDao.get("weight_unit")) ?: "kg"
+            else if (metric == 0) "lbs" else "kg"
+        val lengthUnit = LengthUnits.of(db.metaDao.get("length_unit")) ?: LengthUnits.CM
+
+        // Values already in FlexNotes, by name, date and time, to recognise a value imported or typed before whatever
+        // unit it was kept in.
+        val existing = HashMap<String, MutableList<MeasurementRecordRow>>()
+        val manual = HashMap<String, MutableList<MeasurementRecordRow>>()
         for (r in all.records()) {
-            recordKeys.add(rk(r.name, r.date, r.time, r.value))
-            if (r.source == "fitnotes" && !MeasureUnits.convertible(r.unit)) unitless[rk(r.name, r.date, r.time, r.value)] = r.id
-            if (r.source == "manual") manualKeys.add(mk(r.name, r.date, r.value))
+            existing.getOrPut(r.name + "|" + r.date + "|" + r.time) { ArrayList() } += r
+            if (r.source == "manual") manual.getOrPut(r.name + "|" + r.date) { ArrayList() } += r
         }
-        fun addRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?) {
-            val fixable = unitless.remove(rk(name, date, time, value))
-            if (fixable != null && MeasureUnits.convertible(unit)) {
-                w.setRecordUnit(fixable, unit)
-                plan.unitsFixed++
+        fun same(a: Double, b: Double) = fmtNum(a, 3) == fmtNum(b, 3)
+        /** [value] in FitNotes's [from] is the same as [r]'s value, in whatever unit [r] is kept in. */
+        fun matches(r: MeasurementRecordRow, value: Double, from: String) =
+            same(r.value, if (MeasureUnits.sameKind(from, r.unit)) MeasureUnits.convert(value, from, r.unit) else value)
+
+        // The unit each FlexNotes measurement's values are recorded in: the one the user sees it in.
+        val units = HashMap<String, String>()
+        /** The unit a value in FitNotes's [from] is recorded in under [name]: the user's, when one converts to the other. */
+        fun recordUnit(name: String, from: String): String {
+            val to = units[name] ?: return from
+            return if (MeasureUnits.sameKind(from, to)) to else from
+        }
+
+        fun addRecord(name: String, from: String, date: String, time: String, value: Double, comment: String?) {
+            val unit = recordUnit(name, from)
+            // Converted before it's recorded; the same unit on both sides keeps the figure as it is.
+            val recorded = if (unit == from) value else MeasureUnits.convert(value, from, unit)
+            val here = existing[name + "|" + date + "|" + time].orEmpty()
+            val match = here.firstOrNull { matches(it, value, from) }
+            if (match != null) {
+                // An earlier import that couldn't tell the unit kept FitNotes's figure without one: put it right.
+                if (match.source == "fitnotes" && !MeasureUnits.convertible(match.unit) && MeasureUnits.convertible(from) &&
+                    same(match.value, value)
+                ) {
+                    w.setRecordValueUnit(match.id, recorded, unit)
+                    plan.unitsFixed++
+                }
+                plan.recordsSkipped++
+                return
             }
-            // An imported value the user edited or deleted stays as they left it (#166).
-            if (rk(name, date, time, value) in recordKeys || mk(name, date, value) in manualKeys ||
-                consumeSkip(Workouts.RULE_RECORD, rk(name, date, time, value))
+            // A value typed in by hand on that day, or an imported value the user edited or deleted, stays as they left
+            // it (#166).
+            if (manual[name + "|" + date].orEmpty().any { matches(it, value, from) } ||
+                consumeSkip(Workouts.RULE_RECORD, Workouts.recordKey(name, date, time, recorded)) ||
+                consumeSkip(Workouts.RULE_RECORD, Workouts.recordKey(name, date, time, value))
             ) {
                 plan.recordsSkipped++
                 return
             }
-            w.addRecord(name, unit, date, time, value, comment, "fitnotes")
-            recordKeys.add(rk(name, date, time, value))
+            val id = w.addRecord(name, unit, date, time, recorded, comment, "fitnotes")
+            existing.getOrPut(name + "|" + date + "|" + time) { ArrayList() } +=
+                MeasurementRecordRow(id, name, unit, date, time, recorded, comment, "fitnotes")
             plan.recordsAdded++
         }
-        // FitNotes's own units setting: 0 is imperial (lbs, inches), 1 metric.
-        var metric = 1
-        src.each("SELECT metric FROM settings LIMIT 1") { c -> metric = c.int(0) }
+
         val defs = HashMap<Long, Pair<String, String>>()
         val readDefinition: (Cursor) -> Unit = readDefinition@{ c ->
             val name = c.strOr(1)
-            val custom = aliases[name.trim().lowercase()]
-            val unit = fitNotesUnit(c.strOr(2), c.strOr(7), metric == 0, body.definition(custom ?: name)?.unit, name)
-            defs[c.lng(0)] = (custom ?: name) to unit
-            if (custom != null) {
-                w.setUnitIfNone(custom, unit)
-                return@readDefinition
+            val into = aliases[name.trim().lowercase()] ?: name
+            val have = body.definition(into)
+            val from = fitNotesUnit(c.strOr(2), c.strOr(7), metric == 0, have?.unit, name)
+            defs[c.lng(0)] = into to from
+            // The unit the user sees this measurement in, or for a new one the user's weight or length unit.
+            val shown = when {
+                have != null && MeasureUnits.convertible(have.unit) ->
+                    MeasureUnits.display(have.unit, weightUnit, lengthUnit, have.display_unit) ?: have.unit
+                else -> MeasureUnits.display(from, weightUnit, lengthUnit) ?: from
             }
-            // Measurement definitions imported from FitNotes (not custom metrics) follow FitNotes: their unit, order
-            // and goal are refreshed. Custom metrics made in FlexNotes are never changed.
-            val existing = body.definition(name)
-            if (existing == null) {
-                w.addMeasurement(name, unit, c.int(3), c.int(4), c.dbl(5), c.int(6))
-                plan.measurementsAdded++
-            } else if (existing.custom == 0) {
-                // A goal or order the user set in FlexNotes wins over FitNotes's (#27); the unit still follows FitNotes.
-                // So does switching it on or off on the Measurements screen.
-                if (existing.edited != 0) w.setMeasurementUnit(name, unit)
-                else w.refreshMeasurement(name, unit, c.int(3), c.int(4), c.dbl(5), c.int(6))
+            units[into] = shown
+            val goal = if (MeasureUnits.sameKind(from, shown)) MeasureUnits.convert(c.dbl(5), from, shown) else c.dbl(5)
+            when {
+                have == null -> {
+                    w.addMeasurement(name, shown, c.int(3), c.int(4), goal, c.int(6))
+                    plan.measurementsAdded++
+                }
+                // A measurement with no unit yet takes this one; the unit the user set is never changed.
+                have.unit.isBlank() -> w.setUnitIfNone(into, shown)
+                // A FitNotes measurement the user hasn't edited follows FitNotes's order and goal (#27).
+                have.custom == 0 && have.edited == 0 ->
+                    w.refreshMeasurement(name, have.unit, c.int(3), c.int(4), MeasureUnits.convert(goal, shown, have.unit), c.int(6))
             }
         }
         // Not every FitNotes version keeps a long name for each unit.
@@ -468,17 +501,22 @@ object FitNotesImporter {
             val def = defs[c.lng(0)] ?: return@each
             addRecord(def.first, def.second, c.strOr(1).take(10), c.strOr(2), c.dbl(3), c.str(4))
         }
-        // Very old FitNotes versions kept body weight in a separate table.
+        // Very old FitNotes versions kept body weight, always in kilograms, in a separate table.
         src.each("SELECT date, body_weight_metric, body_fat, comments FROM BodyWeight") { c ->
             val date = c.strOr(0).take(10)
             val time = c.strOr(0).drop(11).take(8)
-            if (c.dbl(1) > 0) addRecord(target("Bodyweight"), "kgs", date, time, c.dbl(1), c.str(3))
+            val bodyweight = target("Bodyweight")
+            if (bodyweight !in units) {
+                val have = body.definition(bodyweight)?.takeIf { MeasureUnits.convertible(it.unit) }
+                units[bodyweight] = have?.let { MeasureUnits.display(it.unit, weightUnit, lengthUnit, it.display_unit) } ?: weightUnit
+            }
+            if (c.dbl(1) > 0) addRecord(bodyweight, "kg", date, time, c.dbl(1), c.str(3))
             if (c.dbl(2) > 0) addRecord(target("Body Fat"), "%", date, time, c.dbl(2), null)
         }
 
         // FitNotes's weight unit is used for display unless the user has picked one in FlexNotes.
         if (!db.metaDao.has("weight_unit_manual")) {
-            db.metaDao.put(MetaRow("weight_unit", if (metric == 0) "lbs" else "kg"))
+            db.metaDao.put(MetaRow("weight_unit", weightUnit))
         }
         return plan
     }

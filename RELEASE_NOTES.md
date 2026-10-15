@@ -8,10 +8,13 @@ Install it over the current app as usual. Everything you've logged is kept, and 
 
 ## Fixed
 
-- **Imported body values keep their unit.** A neck measurement logged in inches in FitNotes, or a bodyweight in
-  pounds, now comes in with that unit and shows converted to the cm or kg you use in FlexNotes, instead of the same
-  figure with the wrong unit. To repair values you imported before this update, import your FitNotes backup again
-  from Settings: nothing is duplicated, and the summary says how many units it fixed.
+- **Imported body values are converted to your units.** A FitNotes import now reads the unit each body value was
+  logged in and compares it with the unit you use in FlexNotes for that measurement. When they differ (inches and
+  centimetres, pounds and kilograms) the value is converted before it's recorded; when they match it's recorded as it
+  is. Before, a neck logged in inches could show the same figure as centimetres. Your FlexNotes units are never
+  changed by an import.
+- **Repairing earlier imports.** Import your FitNotes backup again from Settings to convert values that came in
+  without their unit. Nothing is duplicated, and the summary says how many it fixed.
 
 ## Improved
 

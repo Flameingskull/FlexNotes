@@ -206,8 +206,9 @@ class FitNotesImporterTest {
         assertEquals(2, plan.recordsAdded)
         assertEquals(1, plan.recordsSkipped)
         assertEquals(2, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight'"))
-        // The unit follows FitNotes; the order and goal set in FlexNotes are kept.
-        assertEquals(1, db.count("SELECT COUNT(*) FROM measurement WHERE name='Waist' AND unit='cm' AND sort_order=7 AND goal_type=1 AND goal_value=30"))
+        // The unit, order and goal set in FlexNotes are kept, and FitNotes's 84 cm is recorded in inches.
+        assertEquals(1, db.count("SELECT COUNT(*) FROM measurement WHERE name='Waist' AND unit='in' AND sort_order=7 AND goal_type=1 AND goal_value=30"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Waist' AND unit='in' AND abs(value - 84 / 2.54) < 0.001"))
 
         val again = import()
         assertEquals(0, again.recordsAdded)
@@ -239,30 +240,60 @@ class FitNotesImporterTest {
         }
     }
 
+    /** The user has chosen kilograms in FlexNotes (lengths default to centimetres). */
+    private fun userPicksKilograms() {
+        db.row("meta", "k" to "weight_unit", "v" to "kg")
+        db.row("meta", "k" to "weight_unit_manual", "v" to "1")
+    }
+
     @Test
-    fun inchesAndPoundsKeepTheirUnitInAMeasurementSetUpInCentimetres() {
+    fun valuesInTheSameUnitOnBothSidesAreRecordedAsTheyAre() {
+        withMeasurements()
+        import()
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Waist' AND unit='cm' AND value=84"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight' AND unit='kg' AND value=82"))
+    }
+
+    @Test
+    fun valuesInAnotherUnitAreConvertedToTheUsersBeforeTheyAreRecorded() {
         withImperialMeasurements()
+        userPicksKilograms()
         // Set up from the standard measurements before the import: Neck in cm, Bodyweight in kg.
         db.row("measurement", "name" to "Neck", "unit" to "cm", "custom" to 1, "edited" to 1)
         db.row("measurement", "name" to "Bodyweight", "unit" to "kg", "custom" to 1, "edited" to 1)
         import()
-        // The values stay as FitNotes kept them, with their unit, so the cm and kg screens convert them.
-        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck' AND unit='in' AND value=15.5"))
-        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight' AND unit='lbs' AND value=180"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck' AND unit='cm' AND abs(value - 15.5 * 2.54) < 0.001"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight' AND unit='kg' AND abs(value - 180 * 0.45359237) < 0.001"))
         assertEquals(1, db.count("SELECT COUNT(*) FROM measurement WHERE name='Neck' AND unit='cm'"))
+        // A second import recognises the converted values and adds nothing.
+        assertEquals(0, import().recordsAdded)
+        assertEquals(2, db.count("SELECT COUNT(*) FROM mrecord"))
     }
 
     @Test
-    fun reImportingGivesEarlierUnitlessValuesTheirUnit() {
+    fun aNewMeasurementTakesTheUsersUnit() {
         withImperialMeasurements()
+        userPicksKilograms()
+        import()
+        assertEquals(1, db.count("SELECT COUNT(*) FROM measurement WHERE name='Neck' AND unit='cm'"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck' AND unit='cm' AND abs(value - 15.5 * 2.54) < 0.001"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight' AND unit='kg'"))
+    }
+
+    @Test
+    fun reImportingConvertsEarlierUnitlessValues() {
+        withImperialMeasurements()
+        userPicksKilograms()
         db.row("measurement", "name" to "Neck", "unit" to "cm", "custom" to 1, "edited" to 1)
         // What an import before 1.0.134 could leave: the inch figure with no unit, shown as centimetres.
         db.row("mrecord", "name" to "Neck", "unit" to "", "date" to "2026-01-10", "time" to "07:00:00", "value" to 15.5, "source" to "fitnotes")
         val plan = import()
         assertEquals(1, plan.unitsFixed)
         assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck'"))
-        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck' AND unit='in'"))
-        assertEquals(0, import().unitsFixed)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck' AND unit='cm' AND abs(value - 15.5 * 2.54) < 0.001"))
+        val again = import()
+        assertEquals(0, again.unitsFixed)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Neck'"))
     }
 
     @Test
