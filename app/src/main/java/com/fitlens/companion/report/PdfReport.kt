@@ -49,7 +49,7 @@ private class Palette(
 
 private val DARK = Palette(
     bg = 0xFF050505.toInt(), card = 0xFF141414.toInt(), text = 0xFFF7F3EA.toInt(), muted = 0xFFBDB6A8.toInt(),
-    gold = 0xFFF2BE22.toInt(), accent = 0xFFFFDB6E.toInt(), line = 0xFFE5484D.toInt(), fill = 0x33F2BE22,
+    gold = 0xFFF2BE22.toInt(), accent = 0xFFFFDB6E.toInt(), line = 0xFFF05E62.toInt(), fill = 0x33F2BE22,
     hairline = 0xFF38342B.toInt(), grid = 0x33FFFFFF
 )
 

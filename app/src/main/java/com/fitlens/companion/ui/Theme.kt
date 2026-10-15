@@ -59,8 +59,8 @@ object Brand {
     val Wine = Color(0xFF4A1416)
     /** A value that went up, and progress towards a goal. */
     val Rise = Color(0xFF4CC38A)
-    /** A value that went down, progress away from a goal, and the line of every graph. */
-    val Fall = Color(0xFFE5484D)
+    /** A value that went down, progress away from a goal, and the line of every graph. 4.6:1 on [SurfaceHighest] (#157). */
+    val Fall = Color(0xFFF05E62)
 }
 
 /** The colour of a change: green for a rise, red for a fall, plain for no change. */

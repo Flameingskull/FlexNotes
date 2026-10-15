@@ -65,7 +65,7 @@ object FrameRenderer {
     // The app's palette (1.0.71): vibrant gold on black, red graph lines over translucent gold
     private const val GOLD = 0xFFF2BE22.toInt()
     private const val GOLD_SOFT = 0x99F2BE22.toInt()
-    private const val RED = 0xFFE5484D.toInt()
+    private const val RED = 0xFFF05E62.toInt()
     private const val MUTED = 0xFFCFC9BE.toInt()
     private const val IVORY = 0xFFF7F3EA.toInt()
 
