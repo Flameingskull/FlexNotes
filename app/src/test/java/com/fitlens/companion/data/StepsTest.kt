@@ -60,6 +60,6 @@ class StepsTest {
         // 7,500 steps above the baseline × 0.747 m = 5,602.5 m; 0.1 ml/kg/m × 80 kg = 44,820 ml; × 5 kcal/L.
         assertEquals(224.1, Energy.stepKcal(10_000.0, 80.0, 180.0, Sex.MALE), 1e-9)
         assertEquals(0.75, Energy.strideMetres(null, null), 1e-9)
-        assertEquals(0.6815, Energy.strideMetres(165.0, Sex.FEMALE), 1e-9)
+        assertEquals(0.68145, Energy.strideMetres(165.0, Sex.FEMALE), 1e-9)
     }
 }
