@@ -54,8 +54,11 @@ custom metrics.
   body values on any day and in History, FitNotes values included, reordering in place behind a Reorder toggle, and
   a profile with a TDEE calculator and daily calories ([#172](https://github.com/Flameingskull/FlexNotes/issues/172),
   [#173](https://github.com/Flameingskull/FlexNotes/issues/173), [#174](https://github.com/Flameingskull/FlexNotes/issues/174)).
-  Next come accessibility checks on a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)),
-  measuring save speed on a long history ([#60](https://github.com/Flameingskull/FlexNotes/issues/60)) and the
+  1.0.133 added food logging and a TDEE measured from it ([#176](https://github.com/Flameingskull/FlexNotes/issues/176)); 1.0.134 made saving a set as quick with
+  years of history as with weeks ([#60](https://github.com/Flameingskull/FlexNotes/issues/60)) and fitted the workout screens to small phones at the largest font
+  size; 1.0.136 converts every imported body value into your own units ([#178](https://github.com/Flameingskull/FlexNotes/issues/178)). Next come the accessibility
+  checks that need a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)), converting imported cardio distances the same way
+  ([#180](https://github.com/Flameingskull/FlexNotes/issues/180)), and the
   [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
   Imports always merge and never overwrite FlexNotes data. There's no export back to FitNotes.
@@ -198,6 +201,11 @@ custom metrics.
   effort from RPE and the ACSM equations for walking and running; each exercise can also choose its own **Activity**.
   A **Calories** card on the day log shows what each day burned and needed, the same every day or following that
   day's training, and opens the breakdown. Every figure is an estimate.
+- **What you ate, and a measured TDEE:** tap the Calories card on any day to type that day's calories, plus protein,
+  fat and carbs if you track them; the card then reads what you ate against what the day needed. They're kept as body
+  values (Calories eaten and so on), so the Body tracker graphs them and backups include them. Once you've logged
+  calories on 14 of the last 28 days and weighed in three times at least two weeks apart, the TDEE calculator also
+  shows your TDEE **measured** from what you ate and your bodyweight trend, and your goal can follow either figure.
 - **Guided setup:** a fresh install opens a short, skippable setup: restore a FlexNotes backup, or choose your units,
   an automatic backup folder, a FitNotes import, your progress photos, the starter exercise library and the standard
   body measurements.
@@ -378,7 +386,13 @@ reference, so the two never collide. Importing a FitNotes backup follows these r
    sets in FlexNotes. Importing the same backup twice changes nothing.
 4. Workout comments and times are skipped when the same comment, or the same start and end, is already on that date.
    Body measurements are skipped when the same measurement, date, time and value exists, or when you entered the same
-   value by hand that day.
+   value by hand that day, whatever unit either was kept in.
+6. **Imported values arrive in your units.** The import reads the unit each FitNotes measurement was logged in and
+   compares it with the unit you use for that measurement in FlexNotes. When they differ (inches and centimetres,
+   pounds and kilograms) the value is converted before it's recorded; when they match it's recorded as it is. An
+   import never changes your units. Importing a backup again converts values an import before 1.0.136 brought in
+   without their unit. Set weights were always correct: FitNotes and FlexNotes both keep them in kilograms and show
+   them in your unit.
 5. **Your changes in FlexNotes win.** After you rename an exercise or category, the FitNotes name still maps to it.
    After you delete imported data, or edit an imported set, comment, time or body value, the next import doesn't bring
    the original back. Re-creating a deleted exercise with the same name lets its FitNotes history import again.
@@ -425,15 +439,14 @@ The first time FlexNotes opens, a short guided setup walks through the steps bel
 
 - Sets are reordered with buttons (and TalkBack actions), not by dragging. Routines from FitNotes backups aren't
   imported.
-- Calories are estimates from your profile and what you log. Food intake isn't logged yet
-  ([#176](https://github.com/Flameingskull/FlexNotes/issues/176)), and steps aren't read from the phone
-  ([#175](https://github.com/Flameingskull/FlexNotes/issues/175)).
+- Calories are estimates from your profile and what you log. Intake is typed as each day's totals (there's no food
+  database or barcode scanning), and steps aren't read from the phone ([#175](https://github.com/Flameingskull/FlexNotes/issues/175)).
+- Cardio distances from FitNotes are imported as logged, without converting between kilometres and miles yet
+  ([#180](https://github.com/Flameingskull/FlexNotes/issues/180)).
 - Graphs use compact dropdowns rather than FitNotes's 1m / 3m / 6m / 1y / all buttons, so the graph gets the room
   ([#125](https://github.com/Flameingskull/FlexNotes/issues/125)).
 - Planned rests apply to days logged from a workout from 1.0.73 on; earlier days use each exercise's own rest or
   your usual length.
-- Values imported from FitNotes can be viewed but not edited in FlexNotes: the next import would bring the original
-  back. Change them in FitNotes and import again.
 - Android doesn't let one app read another app's private data, and FitNotes has no interface for other apps. So
   FlexNotes can't pull data out of FitNotes directly or make FitNotes create a backup. Folder sync is the closest to
   automatic that Android allows. It works best if FitNotes saves its backups to one folder on your phone.
@@ -490,6 +503,10 @@ pull requests run the `check` job only — a debug build with no secrets — so 
 raising AGP and the Gradle wrapper if that level needs it, and review the behaviour changes for that Android version:
 permissions, the photo picker, the foreground services and notifications used by the rest timer and automatic
 backups, and edge-to-edge. Confirm the exact level against Google's current policy page at the time.
+
+Every build also runs the unit tests in CI, including a timed set save on four years of history
+(`SaveSpeedTest`), screenshot tests of the design components, and phone-size checks at 320dp wide with the largest
+font (`PhoneSizeTest`: 48dp touch targets, no text cut off or overlapping).
 
 Updates never change `applicationId` (`com.fitlens.companion`), the signing setup, the signing secrets or
 `BUILD_OFFSET`. Every build stays an update that installs over the previous one and keeps its data.
