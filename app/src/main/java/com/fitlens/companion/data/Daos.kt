@@ -796,9 +796,19 @@ interface ImportDao {
     )
     fun addRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?, source: String): Long
 
-    /** The first value of [name] on [date], whatever its source (a day's steps, #175). */
-    @Query("SELECT * FROM mrecord WHERE name = :name AND date = :date ORDER BY id LIMIT 1")
+    /**
+     * The first value of [name] on [date] from any source but Health Connect (a day's steps, #175), whose daily totals
+     * are replaced at each sync rather than added to (#184).
+     */
+    @Query("SELECT * FROM mrecord WHERE name = :name AND date = :date AND source <> 'health_connect' ORDER BY id LIMIT 1")
     fun firstRecordOn(name: String, date: String): MeasurementRecordRow?
+
+    /** [name]'s values from [source] on [dates] (Health Connect's days at a sync, #184). */
+    @Query("SELECT * FROM mrecord WHERE name = :name AND source = :source AND date IN (:dates)")
+    fun recordsFrom(name: String, source: String, dates: List<String>): List<MeasurementRecordRow>
+
+    @Query("DELETE FROM mrecord WHERE id = :id")
+    fun deleteRecordById(id: Long)
 
     @Query("UPDATE mrecord SET value = :value WHERE id = :id")
     fun setRecordValue(id: Long, value: Double)

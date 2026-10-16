@@ -84,6 +84,8 @@ enum class SettingsSection(@StringRes val title: Int, val group: PreferenceGroup
     Media(R.string.settings_page_media, PreferenceGroup.MEDIA),
     // Sex, date of birth, height and daily activity for every formula (#172).
     Profile(R.string.settings_page_profile),
+    // Health Connect as the source of steps and what was eaten (#184).
+    HealthConnect(R.string.settings_page_hc),
     // In-app help and About (#33).
     Help(R.string.settings_page_help),
     About(R.string.settings_page_about)
@@ -169,9 +171,9 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.prof_lifestyle, SettingsSection.Profile, R.string.search_prof_lifestyle_kw) {
         com.fitlens.companion.data.Energy.Lifestyle.of(prefs.profileLifestyle)?.let { lifestyleText(res, it) } ?: res.getString(R.string.settings_not_set)
     },
-    SettingEntry(R.string.steps_use, SettingsSection.Profile, R.string.search_steps_kw) {
-        onOff(prefs.activityFromSteps)
-    },
+    SettingEntry(R.string.steps_use, SettingsSection.Profile, R.string.search_steps_kw) { stepsSourceText(res, prefs) },
+    SettingEntry(R.string.hc_intake, SettingsSection.HealthConnect, R.string.search_hc_intake_kw) { onOff(prefs.hcIntake) },
+    SettingEntry(R.string.hc_sync_now, SettingsSection.HealthConnect, R.string.search_hc_sync_kw),
     SettingEntry(R.string.tdee_title, SettingsSection.Profile, R.string.search_tdee_kw, R.string.prof_group_uses),
     SettingEntry(R.string.search_guides, SettingsSection.Help, R.string.search_guides_kw, R.string.help_group_guides),
     SettingEntry(R.string.search_version, SettingsSection.About, R.string.search_version_kw, R.string.about_group_app),
@@ -482,6 +484,13 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
         mainRow(d, R.string.settings_import, R.string.settings_import_kw) { title ->
             SettingsActionRow(title, stringResource(R.string.settings_import_summary)) { open(SettingsSection.Import) }
         },
+        mainRow(d, R.string.settings_page_hc, R.string.settings_hc_kw) { title ->
+            SettingsActionRow(
+                title,
+                stringResource(R.string.settings_hc_summary),
+                value = stringResource(if (prefs.hcSteps || prefs.hcIntake) R.string.settings_value_on else R.string.settings_value_off)
+            ) { open(SettingsSection.HealthConnect) }
+        },
         mainRow(o, R.string.settings_help, R.string.settings_help_kw) { title ->
             SettingsActionRow(title, stringResource(R.string.settings_help_summary)) { open(SettingsSection.Help) }
         },
@@ -591,6 +600,7 @@ fun SettingsPageScreen(snap: Snapshot, nav: Nav, section: SettingsSection, targe
                     SettingsSection.Rest -> RestPage()
                     SettingsSection.Media -> MediaPage()
                     SettingsSection.Profile -> ProfilePage(nav)
+                    SettingsSection.HealthConnect -> HealthConnectPage()
                     SettingsSection.Help -> HelpPage()
                     SettingsSection.About -> AboutPage()
                 }

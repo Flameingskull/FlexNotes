@@ -156,7 +156,7 @@ object EnergyEstimates {
         val kg = inputs.kg
         // With step counting on and enough days counted, the steps replace the chosen activity level (#175), less
         // the steps of logged walks and runs, which training already counts (#181).
-        val steps = if (prefs.activityFromSteps && kg != null) Steps.average(snap, date) { d -> walkedSteps(snap, d, inputs) } else null
+        val steps = if (prefs.activityFromSteps && kg != null) Steps.average(snap, date, hcPrimary = prefs.hcSteps) { d -> walkedSteps(snap, d, inputs) } else null
         val base = resting.bmr?.let { b ->
             if (steps != null && kg != null) {
                 b * Energy.Lifestyle.SITTING.factor + Energy.stepKcal(steps.perDay, kg, inputs.heightCm, inputs.sex)
@@ -166,7 +166,7 @@ object EnergyEstimates {
         }
         val training = kg?.let { training(snap, date, it, rest, Energy.Plan.decode(prefs.trainingPlan) ?: Energy.Plan.DEFAULT, mets) }
         val estimate = if (base != null && training != null) base + training.kcalPerDay else null
-        val (measured, progress) = Intake.measured(snap, date)
+        val (measured, progress) = Intake.measured(snap, date, prefs.hcIntake)
         val useMeasured = measured != null && prefs.tdeeSource == SOURCE_MEASURED
         val tdee = if (useMeasured) measured!!.tdee else estimate
         return Daily(resting, inputs.lifestyle, base, training, tdee, kg, estimate, measured, progress, useMeasured, steps)
@@ -221,7 +221,7 @@ object EnergyEstimates {
         val exerciseKcal = exercises.sumOf { it.kcal }
         // A day with steps counted uses its own steps (so far, for today); other days use the average's activity.
         // Steps a logged walk or run took are left out, since its own calories count them (#181).
-        val steps = if (daily.steps != null) Steps.on(snap, date) else null
+        val steps = if (daily.steps != null) Steps.on(snap, date, prefs.hcSteps) else null
         var walked = 0.0
         val activity = if (steps != null) {
             val inputs = inputs(snap, prefs, date)

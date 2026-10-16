@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Energy
 import com.fitlens.companion.data.EnergyEstimates
+import com.fitlens.companion.data.HealthConnect
 import com.fitlens.companion.data.Intake
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
@@ -79,10 +80,18 @@ internal fun rememberDayCalories(snap: Snapshot, date: String): Pair<EnergyEstim
     }
 }
 
-/** [date]'s logged intake (#176), each kind's total. */
+/** [date]'s logged intake (#176), each kind's total that counts ([hcPrimary]: Health Connect's first, #186). */
 @Composable
-private fun rememberIntake(snap: Snapshot, date: String): Map<Intake.Kind, Double> =
-    remember(snap.bodyKey, date) { Intake.totals(snap, date) }
+private fun rememberIntake(snap: Snapshot, date: String, hcPrimary: Boolean): Map<Intake.Kind, Double> =
+    remember(snap.bodyKey, date, hcPrimary) { Intake.totals(snap, date, hcPrimary) }
+
+/** Where [date]'s counted intake came from when it's Health Connect's (#186): "Health Connect · MacrosFirst", or null. */
+@Composable
+private fun rememberIntakeOrigin(snap: Snapshot, date: String, hcPrimary: Boolean): String? =
+    remember(snap.bodyKey, date, hcPrimary) {
+        val hc = Intake.healthConnectOn(snap, date, hcPrimary)
+        (hc.firstOrNull { Intake.Kind.KCAL.matches(it.name) } ?: hc.firstOrNull())?.let { it.comment ?: HealthConnect.NAME }
+    }
 
 /** "540 kcal under" or "120 kcal over": [eaten] against [other]. */
 private fun balanceText(res: android.content.res.Resources, eaten: Double, other: Double): String =
@@ -97,8 +106,10 @@ private fun balanceText(res: android.content.res.Resources, eaten: Double, other
 @Composable
 internal fun CaloriesCard(snap: Snapshot, date: String, onOpen: () -> Unit) {
     val res = LocalContext.current.resources
+    val prefs by Settings.portable.collectAsState()
     val (day, daily) = rememberDayCalories(snap, date)
-    val eaten = rememberIntake(snap, date)[Intake.Kind.KCAL]
+    val eaten = rememberIntake(snap, date, prefs.hcIntake)[Intake.Kind.KCAL]
+    val origin = rememberIntakeOrigin(snap, date, prefs.hcIntake)
     Column(
         Modifier
             .fillMaxWidth()
@@ -143,6 +154,9 @@ internal fun CaloriesCard(snap: Snapshot, date: String, onOpen: () -> Unit) {
             eaten != null -> Text(stringResource(R.string.cal_card_eaten, kcalText(eaten)), style = MaterialTheme.typography.bodyMedium)
             else -> Text(stringResource(R.string.cal_card_log_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        origin?.let {
+            Text(stringResource(R.string.cal_card_from, it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
@@ -174,21 +188,26 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
     val res = LocalContext.current.resources
     val prefs by Settings.portable.collectAsState()
     val (day, daily) = rememberDayCalories(snap, date)
-    val totals = rememberIntake(snap, date)
-    val typed = remember(date) { mutableStateMapOf<Intake.Kind, String>().apply { totals.forEach { (k, v) -> put(k, fmtNum(v, 1)) } } }
+    val totals = rememberIntake(snap, date, prefs.hcIntake)
+    // The fields edit what the user logged; while Health Connect's totals count for the day (#186) they're shown apart.
+    val origin = rememberIntakeOrigin(snap, date, prefs.hcIntake)
+    val own = remember(snap.bodyKey, date) { Intake.ownTotals(snap, date) }
+    val typed = remember(date) {
+        mutableStateMapOf<Intake.Kind, String>().apply { (if (origin != null) own else totals).forEach { (k, v) -> put(k, fmtNum(v, 1)) } }
+    }
     val valid = Intake.Kind.entries.all { k -> typed[k].isNullOrBlank() || intakeValue(typed[k].orEmpty()) != null }
     val dayLabel = relativeDayLabel(date)
     val undoLabel = stringResource(R.string.undo)
 
-    /** Replaces the day's intake with [values], with Undo back to what was there. */
+    /** Replaces the day's logged intake with [values], with Undo back to what was there. Health Connect's stays. */
     fun write(values: Map<Intake.Kind, Double>, message: String) {
-        val before = totals
+        val before = own
         val time = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
-        AppScope.scope.launch { Store.setIntake(date, time, Intake.recordsOn(snap, date).map { it.id }, values) }
+        AppScope.scope.launch { Store.setIntake(date, time, Intake.ownRecordsOn(snap, date).map { it.id }, values) }
         UiEvents.show(message, undoLabel) {
             AppScope.scope.launch {
                 val now = Store.snapshot.value ?: return@launch
-                Store.setIntake(date, time, Intake.recordsOn(now, date).map { it.id }, before)
+                Store.setIntake(date, time, Intake.ownRecordsOn(now, date).map { it.id }, before)
             }
         }
         onDismiss()
@@ -203,8 +222,8 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
             val values = Intake.Kind.entries.mapNotNull { k -> typed[k]?.let { intakeValue(it) }?.let { k to it } }.toMap()
             write(values, res.getString(R.string.cal_eaten_saved, dayLabel))
         },
-        secondaryLabel = if (totals.isNotEmpty()) stringResource(R.string.cal_eaten_clear) else null,
-        onSecondary = if (totals.isNotEmpty()) {
+        secondaryLabel = if (own.isNotEmpty()) stringResource(R.string.cal_eaten_clear) else null,
+        onSecondary = if (own.isNotEmpty()) {
             { write(emptyMap(), res.getString(R.string.cal_eaten_cleared, dayLabel)) }
         } else null
     ) {
@@ -214,6 +233,7 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        origin?.let { SettingsNote(stringResource(R.string.cal_sheet_hc_note, it)) }
         val fields = listOf(
             Intake.Kind.KCAL to R.string.cal_field_kcal, Intake.Kind.PROTEIN to R.string.cal_field_protein,
             Intake.Kind.FAT to R.string.cal_field_fat, Intake.Kind.CARBS to R.string.cal_field_carbs

@@ -22,9 +22,21 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
+    <!-- Health Connect (#184): read only, for the types the user switches to it in Settings, asked for there. The data
+         is read on the phone and kept there: FlexNotes has no internet permission. Background reading lets the hourly
+         sync run while FlexNotes is closed; it's optional. -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_NUTRITION" />
+    <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
+
     <!-- Lets the app see and launch FitNotes on Android 11+ -->
     <queries>
         <package android:name="com.github.jamesgay.fitnotes" />
+        <!-- Health Connect itself, and the apps that write to it, so a value can name the app it came from. -->
+        <package android:name="com.google.android.apps.healthdata" />
+        <intent>
+            <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+        </intent>
     </queries>
 
     <application
@@ -67,7 +79,24 @@
                 <data android:mimeType="text/comma-separated-values" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <!-- Health Connect's "why this app reads your data" link (Android 13 and earlier), #184: opens Settings ›
+                 Health Connect, which says what's read and that it never leaves the phone. -->
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
         </activity>
+
+        <!-- The same link on Android 14 and later. Health Connect won't show its permission dialog without these. -->
+        <activity-alias
+            android:name=".ViewPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".ui.MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
 
         <service
             android:name=".ui.TimerService"

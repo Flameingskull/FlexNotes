@@ -10,6 +10,9 @@ import kotlin.math.abs
  * The measured (adaptive) TDEE: over the [WINDOW_DAYS] before a date, the average logged intake less the energy the
  * bodyweight trend stored or released ([Energy.KCAL_PER_KG] a kg, the trend a least-squares line through the
  * weigh-ins, so a single heavy morning doesn't swing it). Plain Kotlin, tested in `IntakeTest`.
+ *
+ * Intake can also come from Health Connect (#186): each day's totals are kept as `Sources.HEALTH_CONNECT` values, and
+ * with `PortableSettings.hcIntake` they count instead of what was typed on a day that has them (`Sources.dayValues`).
  */
 object Intake {
     /** One kind of intake: its body value's name and unit. */
@@ -85,19 +88,32 @@ object Intake {
     fun records(snap: Snapshot, kind: Kind): List<MRecord> =
         snap.recordsByName.entries.filter { kind.matches(it.key) }.flatMap { it.value }
 
-    /** [date]'s intake records, of every kind. */
+    /** [date]'s intake records, of every kind and source. */
     fun recordsOn(snap: Snapshot, date: String): List<MRecord> =
         snap.recordsByDate[date].orEmpty().filter { isIntake(it.name) }
 
-    /** [date]'s total of each kind logged that day. */
-    fun totals(snap: Snapshot, date: String): Map<Kind, Double> {
+    /** [date]'s intake records the user logged (typed or imported), leaving out Health Connect's: what the sheet edits. */
+    fun ownRecordsOn(snap: Snapshot, date: String): List<MRecord> =
+        recordsOn(snap, date).filter { it.source != Sources.HEALTH_CONNECT }
+
+    /** [date]'s total of each kind that counts, by the primary source rule ([hcPrimary]: Health Connect). */
+    fun totals(snap: Snapshot, date: String, hcPrimary: Boolean = false): Map<Kind, Double> = sum(recordsOn(snap, date)) { Sources.dayValues(it, hcPrimary) }
+
+    /** [date]'s total of each kind the user logged, without Health Connect's. */
+    fun ownTotals(snap: Snapshot, date: String): Map<Kind, Double> = sum(ownRecordsOn(snap, date)) { it }
+
+    /** Health Connect's records that count on [date] (#186), or none when what was typed counts. */
+    fun healthConnectOn(snap: Snapshot, date: String, hcPrimary: Boolean): List<MRecord> {
         val on = recordsOn(snap, date)
-        return Kind.entries.mapNotNull { k -> on.filter { k.matches(it.name) }.takeIf { it.isNotEmpty() }?.let { k to it.sumOf { r -> r.value } } }.toMap()
+        return Kind.entries.flatMap { k -> Sources.dayValues(on.filter { k.matches(it.name) }, hcPrimary) }.filter { it.source == Sources.HEALTH_CONNECT }
     }
 
-    /** Each day's logged calories, by epoch day. */
-    fun kcalByDay(snap: Snapshot): Map<Long, Double> =
-        records(snap, Kind.KCAL).groupBy { Dates.epochDay(it.date) }.mapValues { e -> e.value.sumOf { it.value } }
+    private fun sum(on: List<MRecord>, counted: (List<MRecord>) -> List<MRecord>): Map<Kind, Double> =
+        Kind.entries.mapNotNull { k -> counted(on.filter { k.matches(it.name) }).takeIf { it.isNotEmpty() }?.let { k to it.sumOf { r -> r.value } } }.toMap()
+
+    /** Each day's logged calories that count, by epoch day. */
+    fun kcalByDay(snap: Snapshot, hcPrimary: Boolean = false): Map<Long, Double> =
+        records(snap, Kind.KCAL).groupBy { Dates.epochDay(it.date) }.mapValues { e -> Sources.dayValues(e.value, hcPrimary).sumOf { it.value } }
 
     /** Every weigh-in as (epoch day, kg). */
     fun weighIns(snap: Snapshot): List<Pair<Long, Double>> {
@@ -105,7 +121,7 @@ object Intake {
         return snap.recordsByName[name].orEmpty().map { Dates.epochDay(it.date) to MeasureUnits.convert(it.value, it.unit, "kg") }
     }
 
-    /** The TDEE measured as of [date] from the snapshot. */
-    fun measured(snap: Snapshot, date: String): Pair<Measured?, Progress> =
-        measure(kcalByDay(snap), weighIns(snap), Dates.epochDay(date))
+    /** The TDEE measured as of [date] from the snapshot, counting intake by the primary source rule. */
+    fun measured(snap: Snapshot, date: String, hcPrimary: Boolean = false): Pair<Measured?, Progress> =
+        measure(kcalByDay(snap, hcPrimary), weighIns(snap), Dates.epochDay(date))
 }

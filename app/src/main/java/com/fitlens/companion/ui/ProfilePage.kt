@@ -22,6 +22,7 @@ import com.fitlens.companion.R
 import com.fitlens.companion.data.BodyFat
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Energy
+import com.fitlens.companion.data.HealthConnect
 import com.fitlens.companion.data.LengthUnits
 import com.fitlens.companion.data.PortableSettings
 import com.fitlens.companion.data.Settings
@@ -32,7 +33,6 @@ import com.fitlens.companion.ui.design.SettingsChoiceRow
 import com.fitlens.companion.ui.design.SettingsGroup
 import com.fitlens.companion.ui.design.SettingsNote
 import com.fitlens.companion.ui.design.SettingsNumberRow
-import com.fitlens.companion.ui.design.SettingsSwitchRow
 import kotlin.math.roundToInt
 
 /** A height in cm as the length unit shows it, whole: "180 cm" or "71 in". */
@@ -139,22 +139,39 @@ internal fun openAppSettings(context: Context) {
     }
 }
 
+/** Where steps come from (#175, #185): Off, the phone's step counter, or Health Connect. */
+internal fun stepsSourceText(res: Resources, prefs: PortableSettings): String = res.getString(
+    when {
+        !prefs.activityFromSteps -> R.string.steps_source_off
+        prefs.hcSteps -> R.string.hc_source_hc
+        else -> R.string.steps_source_phone
+    }
+)
+
 /**
- * Daily activity from the phone's step counter (#175): a switch under Daily activity that asks for the Physical
- * activity permission when it's turned on, then what's been counted. Until [Steps.MIN_DAYS] days are counted the
- * activity level above is still used. Without a step counter the switch is off and says why.
+ * Daily activity from steps (#175), under Daily activity: where they come from, Off, the phone's step counter (asks
+ * for the Physical activity permission) or Health Connect (#185, asks for its steps permission), then what's been
+ * recorded. Until [Steps.MIN_DAYS] days have steps the activity level above is still used. Also on Settings ›
+ * Health Connect.
  */
 @Composable
-private fun StepsRows(prefs: PortableSettings) {
+internal fun StepsRows(prefs: PortableSettings) {
     val ctx = LocalContext.current
+    val res = ctx.resources
     val available = remember { Steps.available(ctx) }
     var allowed by remember { mutableStateOf(Steps.permitted(ctx)) }
     var refused by remember { mutableStateOf(false) }
-    val on = prefs.activityFromSteps
-    LifecycleResumeEffect(on) {
+    var hcMissing by remember { mutableStateOf(false) }
+    val source = when {
+        !prefs.activityFromSteps -> 0
+        prefs.hcSteps -> 2
+        else -> 1
+    }
+    val hc = rememberHealthConnectAccess { Steps.useHealthConnect(ctx) }
+    LifecycleResumeEffect(source) {
         allowed = Steps.permitted(ctx)
         // Allowed in the phone's settings while counting was already on: start the background reading.
-        if (allowed && on) Steps.start(ctx)
+        if (allowed && source == 1) Steps.start(ctx)
         onPauseOrDispose { }
     }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
@@ -162,31 +179,52 @@ private fun StepsRows(prefs: PortableSettings) {
         refused = !granted
         if (granted) Steps.turnOn(ctx)
     }
-    SettingsSwitchRow(
+    SettingsChoiceRow(
         stringResource(R.string.steps_use),
-        prefs.activityFromSteps && available,
+        listOf(res.getString(R.string.steps_source_off), res.getString(R.string.steps_source_phone), res.getString(R.string.hc_source_hc)),
+        source,
         summary = stringResource(R.string.steps_use_summary, Steps.MIN_DAYS),
-        enabled = available,
-        disabledReason = stringResource(R.string.steps_no_sensor)
-    ) { on ->
-        when {
-            !on -> Steps.turnOff(ctx)
-            allowed -> Steps.turnOn(ctx)
-            else -> ask.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+        descriptions = listOf(
+            stringResource(R.string.steps_source_off_desc),
+            stringResource(if (available) R.string.steps_source_phone_desc else R.string.steps_no_sensor),
+            stringResource(R.string.steps_source_hc_desc)
+        )
+    ) { i ->
+        hcMissing = false
+        refused = false
+        when (i) {
+            0 -> Steps.turnOff(ctx)
+            1 -> when {
+                !available -> {}
+                allowed -> Steps.turnOn(ctx)
+                else -> ask.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+            }
+            else -> if (hc.status == HealthConnect.Status.AVAILABLE) hc.ask(HealthConnect.Kind.STEPS) else hcMissing = true
         }
     }
-    if (!available) return
-    if (!allowed && (prefs.activityFromSteps || refused)) {
+    if (hcMissing || (source == 2 && hc.status != HealthConnect.Status.AVAILABLE)) {
+        HealthConnectMissingRows(hc.status)
+        return
+    }
+    if (hc.refused == HealthConnect.Kind.STEPS || (source == 2 && hc.notAllowed(HealthConnect.Kind.STEPS))) {
+        HealthConnectNotAllowedRows(R.string.hc_what_steps)
+        if (source != 2) return
+    }
+    if (source == 1 && !available) {
+        SettingsNote(stringResource(R.string.steps_no_sensor), error = true)
+        return
+    }
+    if (!allowed && (source == 1 || refused)) {
         SettingsNote(stringResource(R.string.steps_not_allowed), error = true)
         SettingsActionRow(stringResource(R.string.steps_open_settings)) { openAppSettings(ctx) }
         return
     }
-    if (!prefs.activityFromSteps) return
+    if (source == 0) return
     val snap by Store.snapshot.collectAsState()
     val s = snap ?: return
     val today = Dates.today()
-    val todaySteps = Steps.on(s, today) ?: 0.0
-    val average = Steps.average(s, today)
+    val todaySteps = Steps.on(s, today, prefs.hcSteps) ?: 0.0
+    val average = Steps.average(s, today, hcPrimary = prefs.hcSteps)
     SettingsNote(
         if (average != null) {
             stringResource(R.string.steps_status, stepsText(todaySteps), stepsText(average.perDay), average.days)

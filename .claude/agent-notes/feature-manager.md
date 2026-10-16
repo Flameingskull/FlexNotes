@@ -169,3 +169,5 @@ that stop being true. The repository is public: no personal data, secrets or `FI
   delete the old `app/src/test/screenshots/<name>_*.png`, let CI record the new ones, and commit them from the run's
   `screenshots-N` artifact. On this PC, shell heredocs can drop backslashes: edit `strings.xml` apostrophes (`\'`)
   with the Edit tool, not a script.
+- 2026-10-16: `area: photos` label created (for #195); tracker `area` is an array of the label suffixes. Write issue bodies with the Write tool to a temp file and pass `--body-file`: long Git Bash heredocs with apostrophes failed to parse.
+- 2026-10-16 (1.0.142, #184): Health Connect values are body values with source `health_connect`, one per day, replaced by `Store.writeHealthDays`. Anything that sums a day's values must go through `Sources.dayValues(day, hcPrimary)`; anything that edits/replaces "the user's" values must leave `health_connect` rows out (`Intake.ownRecordsOn`, `ImportDao.firstRecordOn`). New HC types: add a `HealthConnect.Kind`, its manifest `READ_*` permission and a `PortableSettings.hc*` flag.

@@ -31,7 +31,9 @@ import kotlin.coroutines.resume
 
 /**
  * Daily steps from the phone's own step counter (#175), for the daily activity part of the calorie estimate. Local
- * only: `Sensor.TYPE_STEP_COUNTER` with the Physical activity permission, no Health Connect and no internet.
+ * only: `Sensor.TYPE_STEP_COUNTER` with the Physical activity permission, and no internet. Steps can come from Health
+ * Connect instead (#185, `PortableSettings.hcSteps`): the counter is then off and `HealthConnect.sync` writes each
+ * day's total, and [on] and [average] follow the primary source rule (`Sources.dayValues`).
  *
  * The sensor counts every step since the phone started. FlexNotes reads it when it opens and, where the phone allows,
  * every 15 minutes in the background, and adds the steps since the last reading to that day's **Steps** value in the
@@ -65,14 +67,14 @@ object Steps {
     fun permitted(context: Context): Boolean =
         ContextCompat.checkSelfPermission(context, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED
 
-    /** Counting is on, allowed and possible on this phone. */
+    /** Counting with the phone's step counter is on, allowed and possible on this phone. */
     fun counting(context: Context): Boolean =
-        Settings.currentPortable().activityFromSteps && permitted(context) && available(context)
+        Settings.currentPortable().let { it.activityFromSteps && !it.hcSteps } && permitted(context) && available(context)
 
     /** Turns step counting on (the permission is already granted), starts the schedule and takes a first reading. */
     fun turnOn(context: Context) {
         val app = context.applicationContext
-        Settings.updatePortable { it.copy(activityFromSteps = true) }
+        Settings.updatePortable { it.copy(activityFromSteps = true, hcSteps = false) }
         scope.launch {
             runCatching { schedule(app) }
             runCatching { sample(app) }
@@ -80,11 +82,23 @@ object Steps {
     }
 
     /** Turns step counting off. Steps already recorded stay in the Body tracker. */
-    fun turnOff(context: Context) {
+    fun turnOff(context: Context) = stopCounter(context) { it.copy(activityFromSteps = false, hcSteps = false) }
+
+    /**
+     * Steps from Health Connect (#185; its permission is already granted): the phone's counter stops, and the next
+     * sync fills Steps with Health Connect's daily totals. Steps already counted stay.
+     */
+    fun useHealthConnect(context: Context) {
+        stopCounter(context) { it.copy(activityFromSteps = true, hcSteps = true) }
+        HealthConnect.syncSoon(context)
+    }
+
+    private fun stopCounter(context: Context, change: (PortableSettings) -> PortableSettings) {
         val app = context.applicationContext
-        Settings.updatePortable { it.copy(activityFromSteps = false) }
+        Settings.updatePortable(change)
         scope.launch {
             runCatching { schedule(app) }
+            runCatching { HealthConnect.schedule(app) }
             // The next time counting is turned on starts afresh, so the time it was off isn't counted.
             Settings.updateDeviceNow { it.copy(stepsLast = null) }
         }
@@ -206,9 +220,10 @@ object Steps {
 
     // ---------- Reading the recorded steps ----------
 
-    /** The steps recorded on [date], or null when there are none. */
-    fun on(snap: Snapshot, date: String): Double? =
-        snap.recordsByName[NAME].orEmpty().filter { it.date.take(10) == date }.takeIf { it.isNotEmpty() }?.sumOf { it.value }
+    /** The steps recorded on [date] from the primary source ([hcPrimary]: Health Connect), or null when there are none. */
+    fun on(snap: Snapshot, date: String, hcPrimary: Boolean = false): Double? =
+        Sources.dayValues(snap.recordsByName[NAME].orEmpty().filter { it.date.take(10) == date }, hcPrimary)
+            .takeIf { it.isNotEmpty() }?.sumOf { it.value }
 
     /**
      * Average steps a day and the days it's taken from. [leftOutPerDay] is the average a day taken off [perDay] as
@@ -221,12 +236,15 @@ object Steps {
      * null with fewer than [MIN_DAYS]. Today is left out while it's still being counted. [leftOut] gives a day's steps
      * already counted elsewhere (logged walks and runs, #181), taken off that day's steps but never below none.
      */
-    fun average(snap: Snapshot, date: String, today: String = Dates.today(), leftOut: (String) -> Double = { 0.0 }): Average? {
+    fun average(
+        snap: Snapshot, date: String, today: String = Dates.today(), hcPrimary: Boolean = false,
+        leftOut: (String) -> Double = { 0.0 }
+    ): Average? {
         val start = Energy.averageStart(date)
         val byDay = snap.recordsByName[NAME].orEmpty()
             .filter { val d = it.date.take(10); d in start..date && d != today }
             .groupBy { it.date.take(10) }
-            .mapValues { e -> e.value.sumOf { it.value } }
+            .mapValues { e -> Sources.dayValues(e.value, hcPrimary).sumOf { it.value } }
         if (byDay.size < MIN_DAYS) return null
         val kept = byDay.mapValues { (d, steps) -> maxOf(0.0, steps - leftOut(d)) }
         val total = byDay.values.sum()

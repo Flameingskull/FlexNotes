@@ -10,6 +10,20 @@ import java.util.Locale
 object Sources {
     const val FITNOTES = "fitnotes"
     const val FLEXNOTES = "fitlens"
+
+    /** Body values read from Health Connect (#184): one total a day, replaced at each sync. */
+    const val HEALTH_CONNECT = "health_connect"
+
+    /**
+     * The primary source rule (#184): of one measurement's values on one day, those that count. With Health Connect
+     * as the primary source, its values when the day has any; otherwise FlexNotes's own (typed, the phone's step
+     * counter, FitNotes), falling back to Health Connect's on a day with nothing else. Every value stays recorded and
+     * visible in the Body tracker; only what's counted changes.
+     */
+    fun dayValues(day: List<MRecord>, hcPrimary: Boolean): List<MRecord> {
+        val (hc, own) = day.partition { it.source == HEALTH_CONNECT }
+        return if (hcPrimary) hc.ifEmpty { own } else own.ifEmpty { hc }
+    }
 }
 
 data class Category(val id: Long, val name: String, val colour: Int, val sortOrder: Int, val source: String = Sources.FLEXNOTES) {

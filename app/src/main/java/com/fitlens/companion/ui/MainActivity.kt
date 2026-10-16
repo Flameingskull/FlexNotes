@@ -71,6 +71,7 @@ import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Backups
 import com.fitlens.companion.data.FileKind
 import com.fitlens.companion.data.FitNotesImporter
+import com.fitlens.companion.data.HealthConnect
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Steps
@@ -264,6 +265,9 @@ class Nav {
     }
 }
 
+/** Health Connect's link to an app's reasons for reading its data (Android 13 and earlier), #184. */
+private const val HC_RATIONALE = "androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"
+
 class MainActivity : ComponentActivity() {
 
     private val nav = Nav()
@@ -299,6 +303,8 @@ class MainActivity : ComponentActivity() {
         super.onResume()
         // The step counter always answers while FlexNotes is on screen (#175).
         Steps.onAppVisible(applicationContext)
+        // Health Connect can always be read while FlexNotes is on screen (#184).
+        HealthConnect.onAppVisible(applicationContext)
         lifecycleScope.launch {
             if (BackupSync.autoSyncEnabled() && BackupSync.folder() != null && UiEvents.busy.value == null) {
                 UiEvents.busy.value = getString(R.string.ma_checking)
@@ -339,6 +345,12 @@ class MainActivity : ComponentActivity() {
             // Opened from the "backup folder unavailable" notification.
             intent.removeExtra(AutoBackup.EXTRA_OPEN_BACKUPS)
             openBackups()
+            return
+        }
+        if (intent.action == HC_RATIONALE || intent.action == Intent.ACTION_VIEW_PERMISSION_USAGE) {
+            // Health Connect's link to why FlexNotes reads its data (#184).
+            intent.action = null
+            openSettingsPage(SettingsSection.HealthConnect)
             return
         }
         val uris = ArrayList<Uri>()

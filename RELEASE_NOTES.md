@@ -1,43 +1,47 @@
 ## Overview
 
-This update makes progress photos quicker to take. FlexNotes now has its own camera, opened from a new camera button
-at the top of the day log. You can line each shot up with your last photo in the same pose. Shots go straight onto
-that day, with their pose, and never into your phone's gallery. Cardio distances imported from FitNotes also now
-arrive in your own distance unit.
+FlexNotes can now use what other apps record on your phone, through Google Health Connect. Choose Health Connect as
+the source of your daily steps, or of what you ate, and FlexNotes fills them in for you. A watch's step count or a food
+app such as MacrosFirst can then feed the calorie estimate and the measured TDEE without you typing anything.
 
-Install it over the current app as usual. Everything you've logged is kept, and the database doesn't change.
+Health Connect runs on your phone, so nothing leaves it: FlexNotes only reads, and it still has no internet
+permission. Install this update over the current app as usual. Everything you've logged is kept, and the database
+doesn't change.
 
 ## What's new
 
-- **Add photos from the top of the day log.** A camera button now sits between Calendar and +. It offers **Take
-  photo** or **Choose from phone**, both dated to the day you're looking at. It replaces "Add photos to this day" in
-  the ⋮ menu. The Add photo tile in the day's photo strip and the + on the Photos screen offer the same choice.
-- **FlexNotes's own camera.** Take photo opens a viewfinder inside FlexNotes:
-  - choose the pose (Front, Side, Back or Other) before the shot;
-  - turn on a faint outline of your last photo in that pose, so your shots line up from week to week;
-  - set a self-timer of 3 or 10 seconds for full-body shots, and tap the shutter again to cancel it;
-  - switch between the front and back cameras.
-- **Retake or Use photo.** After each shot you can retake it or keep it. A kept photo is saved like any imported
-  photo, on that day with its pose. It's included in your backups, and nothing is written to your gallery.
-- **The camera permission is asked for only when the camera opens.** If you refuse it, the camera explains why it's
-  needed and offers your phone's settings. Once you allow it there, you go straight back to the viewfinder.
+- **Settings › Health Connect.** A new page under DATA. For steps, and for food and macros, choose where FlexNotes gets
+  them. It asks for Health Connect's permission only when you switch a type to it. The page also shows when FlexNotes
+  last synced, has a **Sync now** button, opens Health Connect's own settings, and explains what's read and why.
+- **Steps from Health Connect.** Daily activity from my steps (Settings › Profile, and the new page) now offers
+  **Off**, **Phone's step counter** or **Health Connect**. With Health Connect, the phone's own counter stops and each
+  day's total comes from Health Connect. Health Connect applies your app priority, so steps from a watch and the phone
+  aren't counted twice. The calorie estimate uses them just as it did the phone's count.
+- **Food and macros from Health Connect.** Choose Health Connect for food and macros, and each day's calories, protein,
+  fat and carbs come from the apps that write them, such as MacrosFirst. The calories card shows where the figures came
+  from, for example "From Health Connect · MacrosFirst". The measured TDEE then works from those logs as well.
+- **Automatic syncing.** FlexNotes reads the last 30 days whenever it opens. If you allow background reading in Health
+  Connect, it also syncs every hour while it's closed.
 
 ## Improved
 
-- **Cardio distances from FitNotes in your unit.** FitNotes keeps each cardio set's distance in the unit you logged
-  it in. The import now reads that unit and converts the distance to the exercise's distance unit, or your own, so a
-  3-mile run shows as 4.83 km if you use kilometres. Importing the same backup again adds nothing. Runs an earlier
-  import brought in without converting are put right in place.
-- **Top bar on small screens.** On a narrow phone with a large font, a top bar icon that would crowd the title moves
-  into the ⋮ menu instead.
+- **Your own values always stay.** Each day's Health Connect total is kept in the Body tracker as its own value,
+  marked Health Connect, beside anything you typed or the phone counted. A sync replaces only Health Connect's values,
+  never yours. On a day with no Health Connect figures, what you typed counts. Editing a Health Connect value makes it
+  yours, and later syncs leave it alone.
+- **Typing intake while Health Connect is on.** The calories sheet still lets you type the day's totals. While
+  Health Connect has figures for that day, it says they're the ones counted, and keeps what you typed for days without
+  them. Switch back to Typed in FlexNotes at any time, and your typed figures count again.
 
 ## Known limitations
 
-- FitNotes's distance unit for metres is confirmed from a real backup. Kilometres, miles and yards follow FitNotes's
-  order of units. If a run imported from FitNotes shows the wrong distance, please report it with the unit you logged
-  it in. Distances on exercises that aren't cardio in FitNotes, such as a loaded carry, are still imported as logged.
-- The photo outline uses your latest photo in the chosen pose. It doesn't adjust for a different camera or distance.
-- Health Connect (steps, food and macros, bodyweight, active calories, sleep and workouts from other apps) is planned
-  for the next updates (#184 to #190).
+- Health Connect is built into Android 14 and later. On Android 13 and earlier, the page offers to install it from the
+  Play Store.
+- Only the last 30 days are read, which is what Health Connect allows by default. Reading the full history is
+  planned (#192). FlexNotes doesn't write to Health Connect yet (#191).
+- If you delete a Health Connect value while Health Connect is still the source, the next sync brings it back. To keep
+  your own figure for that day, edit the value instead.
+- Bodyweight, body fat, active calories, resting heart rate, sleep and workouts from Health Connect are planned for
+  the next updates (#187 to #190).
 - The rest of the accessibility checks (TalkBack, switch access and whole screens on a small phone) still need a phone
   (#157).

@@ -60,7 +60,9 @@ data class DeviceSettings(
     val whatsNewSeen: Long = 0,
     /** The last step counter reading (#175), `Steps.Reading.encode`, or null before the first. The counter belongs to
      *  this phone, so it never travels in backups. */
-    val stepsLast: String? = null
+    val stepsLast: String? = null,
+    /** When Health Connect was last read on this phone (#184), epoch milliseconds, or null before the first sync. */
+    val hcSyncedAt: Long? = null
 )
 
 /**
@@ -143,6 +145,10 @@ data class PortableSettings(
     val profileLifestyle: String? = null,
     /** Daily activity from the phone's step counter (#175) instead of [profileLifestyle], once enough days are counted. */
     val activityFromSteps: Boolean = false,
+    /** Steps come from Health Connect (#185) rather than the phone's step counter; only with [activityFromSteps]. */
+    val hcSteps: Boolean = false,
+    /** What was eaten comes from Health Connect (#186) when it has values for the day, rather than what was typed. */
+    val hcIntake: Boolean = false,
     /** The TDEE calculator's goal (#173), `Energy.Goal.encode`, or null for none chosen. */
     val calorieGoal: String? = null,
     /** The daily calorie target set from the calculator, or null. */
@@ -375,6 +381,8 @@ object Settings {
             P_PROFILE_HEIGHT to s.profileHeightCm?.toString(),
             P_PROFILE_LIFESTYLE to s.profileLifestyle?.takeIf { it.isNotBlank() },
             P_ACTIVITY_STEPS to if (s.activityFromSteps) "1" else null,
+            P_HC_STEPS to if (s.hcSteps) "1" else null,
+            P_HC_INTAKE to if (s.hcIntake) "1" else null,
             P_CALORIE_GOAL to s.calorieGoal?.takeIf { it.isNotBlank() },
             P_CALORIE_TARGET to s.calorieTargetKcal?.toString(),
             P_MACRO_PROTEIN to s.macroProteinG?.toString(),
@@ -418,6 +426,7 @@ object Settings {
     private const val D_SETUP_DONE = "setup_done"
     private const val D_WHATS_NEW_SEEN = "whats_new_seen"
     private const val D_STEPS_LAST = "steps_last"
+    private const val D_HC_SYNCED = "hc_synced_at"
 
     /** Every phone-only key, as it was named in `meta` before 1.0.21. */
     internal val DEVICE_KEYS = listOf(
@@ -464,6 +473,8 @@ object Settings {
     private const val P_PROFILE_HEIGHT = "profile_height_cm"
     private const val P_PROFILE_LIFESTYLE = "profile_lifestyle"
     private const val P_ACTIVITY_STEPS = "activity_from_steps"
+    private const val P_HC_STEPS = "hc_steps"
+    private const val P_HC_INTAKE = "hc_intake"
     private const val P_CALORIE_GOAL = "calorie_goal"
     private const val P_CALORIE_TARGET = "calorie_target_kcal"
     private const val P_MACRO_PROTEIN = "macro_protein_g"
@@ -506,7 +517,8 @@ object Settings {
         calendarFilter = get(D_CALENDAR_FILTER),
         setupDone = bool(get(D_SETUP_DONE)),
         whatsNewSeen = get(D_WHATS_NEW_SEEN)?.toLongOrNull() ?: 0,
-        stepsLast = get(D_STEPS_LAST)
+        stepsLast = get(D_STEPS_LAST),
+        hcSyncedAt = get(D_HC_SYNCED)?.toLongOrNull()
     )
 
     private fun DeviceSettings.toMap(): Map<String, String?> = mapOf(
@@ -531,7 +543,8 @@ object Settings {
         D_CALENDAR_FILTER to calendarFilter,
         D_SETUP_DONE to if (setupDone) "1" else null,
         D_WHATS_NEW_SEEN to whatsNewSeen.takeIf { it > 0 }?.toString(),
-        D_STEPS_LAST to stepsLast
+        D_STEPS_LAST to stepsLast,
+        D_HC_SYNCED to hcSyncedAt?.toString()
     )
 
     private fun portableFrom(get: (String) -> String?) = PortableSettings(
@@ -577,6 +590,8 @@ object Settings {
         profileHeightCm = get(P_PROFILE_HEIGHT)?.toDoubleOrNull()?.takeIf { it in 50.0..260.0 },
         profileLifestyle = Energy.Lifestyle.of(get(P_PROFILE_LIFESTYLE))?.key,
         activityFromSteps = bool(get(P_ACTIVITY_STEPS)),
+        hcSteps = bool(get(P_HC_STEPS)) && bool(get(P_ACTIVITY_STEPS)),
+        hcIntake = bool(get(P_HC_INTAKE)),
         calorieGoal = Energy.Goal.decode(get(P_CALORIE_GOAL))?.encode(),
         calorieTargetKcal = get(P_CALORIE_TARGET)?.toIntOrNull()?.takeIf { it in 500..10000 },
         macroProteinG = get(P_MACRO_PROTEIN)?.toIntOrNull()?.takeIf { it in 0..1000 },
@@ -630,6 +645,8 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     profileHeightCm = profileHeightCm,
     profileLifestyle = profileLifestyle,
     activityFromSteps = activityFromSteps,
+    hcSteps = hcSteps,
+    hcIntake = hcIntake,
     calorieGoal = calorieGoal,
     calorieTargetKcal = calorieTargetKcal,
     macroProteinG = macroProteinG,
