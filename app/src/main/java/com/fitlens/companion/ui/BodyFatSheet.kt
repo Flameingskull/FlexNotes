@@ -15,6 +15,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import android.content.res.Resources
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import com.fitlens.companion.data.BodyFat
@@ -64,10 +65,8 @@ fun BodyFatCalculatorSheet(snap: Snapshot, date: String, onDismiss: () -> Unit, 
     }
 
     val rows = (sex?.let { BodyFat.inputs(it) } ?: emptyList()).map { input ->
-        val name = snap.recordsByName.keys.firstOrNull { input.matches(it) }
-            ?: snap.allMeasurements.firstOrNull { input.matches(it.name) }?.name
-            ?: input.label
-        val latest = snap.recordsByName[name].orEmpty().lastOrNull { it.date.take(10) <= date }
+        val name = BodyFat.nameFor(input, snap.recordsByName, snap.allMeasurements.map { it.name })
+        val latest = BodyFat.latestOn(name, date, snap.recordsByName)
         // New values are typed in the unit the measurement is shown in, or the length unit.
         val unit = snap.allMeasurements.firstOrNull { it.name == name }?.unit?.takeIf { LengthUnits.of(it) != null }
             ?: latest?.unit?.takeIf { LengthUnits.of(it) != null } ?: prefs.lengthUnit
@@ -93,9 +92,7 @@ fun BodyFatCalculatorSheet(snap: Snapshot, date: String, onDismiss: () -> Unit, 
         // Values typed here are logged too, so the calculation can always be traced back.
         val toSave = rows.mapNotNull { r -> r.typedValue?.let { Triple(r.name, r.unit, it) } }
         AppScope.scope.launch { toSave.forEach { (n, u, v) -> Store.addManualRecord(n, u, date, time, v, null) } }
-        val comment = res.getString(
-            R.string.bf_comment, sexText(res, sex!!).lowercase(), rows.joinToString(", ") { "${inputText(res, it.input).lowercase()} ${it.shown}" }
-        )
+        val comment = bodyFatComment(res, sex!!, rows.map { "${inputText(res, it.input).lowercase()} ${it.shown}" })
         onUse(Math.round(p * 10) / 10.0, comment)
         onDismiss()
     }
@@ -195,4 +192,60 @@ private fun InputRow(
             modifier = Modifier.fillMaxWidth()
         )
     }
+}
+
+/**
+ * Body fat worked out from the latest measurements on or before [date] (#194), for a new Body fat value to start from;
+ * null without a sex in the profile.
+ */
+@Composable
+internal fun rememberBodyFatEstimate(snap: Snapshot, date: String): BodyFat.Estimate? {
+    val prefs by Settings.portable.collectAsState()
+    return remember(snap.bodyKey, date, prefs.profileSex, prefs.profileHeightCm) {
+        BodyFat.estimateOn(
+            date, BodyFat.Sex.of(prefs.profileSex), snap.recordsByName, snap.allMeasurements.map { it.name }, prefs.profileHeightCm
+        )
+    }
+}
+
+/** A value an estimate used, as its comment lists it: "38 cm" or, for the profile's height, "180 cm". */
+private fun usedValue(u: BodyFat.Used, lengthUnit: String): String =
+    u.record?.let { "${fmtNum(it.value, 1)} ${it.unit}".trim() } ?: u.profileCm?.let { heightText(it, lengthUnit) }.orEmpty()
+
+/** The comment a pre-filled value is saved with, the same one the calculator's Use writes. */
+internal fun estimateComment(res: Resources, e: BodyFat.Estimate, lengthUnit: String): String =
+    bodyFatComment(res, e.sex, e.used.map { "${inputText(res, it.input).lowercase()} ${usedValue(it, lengthUnit)}" })
+
+/**
+ * The line under a new Body fat value (#194): which measurements it was calculated from and their dates, any older
+ * than [BodyFat.STALE_DAYS]; or, when it couldn't be, what's missing or wrong. Nothing without an estimate.
+ */
+@Composable
+internal fun BodyFatPrefillNote(estimate: BodyFat.Estimate?, date: String) {
+    val e = estimate ?: return
+    val res = LocalContext.current.resources
+    val prefs by Settings.portable.collectAsState()
+    val result = e.result
+    val text = when {
+        e.missing.isNotEmpty() -> res.getString(
+            R.string.bm_prefill_missing, e.missing.joinToString(", ") { inputText(res, it).lowercase() }, Dates.medium(date)
+        )
+        result is BodyFat.Result.Invalid -> invalidText(res, result)
+        else -> {
+            val from = e.used.joinToString(", ") { u ->
+                val what = "${inputText(res, u.input).lowercase()} ${usedValue(u, prefs.lengthUnit)}"
+                u.record?.let { res.getString(R.string.bm_prefill_dated, what, Dates.medium(it.date)) }
+                    ?: res.getString(R.string.bm_prefill_profile, what)
+            }
+            val stale = e.used.filter { it.stale }
+            res.getString(R.string.bm_prefill_from, from) + if (stale.isEmpty()) "" else " " + res.getString(
+                R.string.bm_prefill_stale, stale.joinToString(", ") { inputText(res, it.input) }, BodyFat.STALE_DAYS
+            )
+        }
+    }
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = if (e.used.any { it.stale } || e.percent == null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+    )
 }

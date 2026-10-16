@@ -48,3 +48,7 @@ internal fun invalidText(res: Resources, invalid: BodyFat.Result.Invalid): Strin
         R.string.bfx_out_of_range, fmtNum(invalid.value, 1), fmtNum(BodyFat.MIN_PERCENT, 0), fmtNum(BodyFat.MAX_PERCENT, 0)
     )
 }
+
+/** "Calculated (US Navy formula, male) from height 180 cm, neck 38 cm, waist 84 cm": how a value was worked out. */
+internal fun bodyFatComment(res: Resources, sex: BodyFat.Sex, parts: List<String>): String =
+    res.getString(R.string.bf_comment, sexText(res, sex).lowercase(), parts.joinToString(", "))

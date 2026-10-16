@@ -16,6 +16,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import android.content.res.Resources
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -29,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import com.fitlens.companion.data.BodyFat
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MRecord
+import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.data.fmtNum
@@ -81,6 +84,25 @@ fun MeasurementEntrySheet(
     var calculating by remember { mutableStateOf(false) }
     val unit = existing?.unit ?: snap.measurementDefs.firstOrNull { it.name == name }?.unit
         ?: snap.recordsByName[name]?.lastOrNull()?.unit ?: ""
+    // A new Body fat value starts from the figure the latest measurements on or before its date give (#194). Seeded
+    // when the measurement, date or inputs change, never over what was typed in between; taken back out if another
+    // measurement is chosen while it's still untouched.
+    val bodyFat = existing == null && BodyFat.isBodyFat(name)
+    val estimate = if (existing == null) rememberBodyFatEstimate(snap, theDate) else null
+    val lengthUnit = Settings.portable.collectAsState().value.lengthUnit
+    val prefill = if (bodyFat) estimate?.percent?.let { fmtNum(it, 1) to estimateComment(res, estimate, lengthUnit) } else null
+    var seeded by remember { mutableStateOf<Pair<String, String>?>(null) }
+    LaunchedEffect(bodyFat, theDate, prefill) {
+        val was = seeded
+        if (prefill != null) {
+            value = prefill.first
+            comment = prefill.second
+        } else if (was != null && value == was.first && comment == was.second) {
+            value = ""
+            comment = ""
+        }
+        seeded = prefill
+    }
 
     fun save() {
         val v = value.trim().replace(',', '.').toDoubleOrNull()
@@ -126,7 +148,8 @@ fun MeasurementEntrySheet(
             modifier = Modifier.fillMaxWidth()
         )
         // Body fat can be worked out from the tape measurements (#153).
-        if (existing == null && BodyFat.isBodyFat(name)) {
+        if (bodyFat) {
+            BodyFatPrefillNote(estimate, theDate)
             TextButton(onClick = { calculating = true }) { Text(stringResource(R.string.bm_calculate)) }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {

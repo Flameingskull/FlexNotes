@@ -25,6 +25,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -35,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.data.BodyFat
+import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MRecord
 import com.fitlens.companion.data.Snapshot
@@ -94,15 +96,21 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
     val chosen = selected?.let { id -> records.firstOrNull { it.id == id } }
     // A new value starts from the latest one on or before the day, as FitNotes fills in last time's value.
     val template = remember(records, date) { records.lastOrNull { it.date.take(10) <= date } ?: records.lastOrNull() }
+    // A new Body fat value starts from the figure the latest measurements on or before the day give, when they give
+    // one (#194), with the comment the calculator's Use writes. Seeded only when the day or its inputs change, so a
+    // recomposition never overwrites what was typed.
+    val estimate = if (isBodyFat) rememberBodyFatEstimate(snap, date) else null
+    val lengthUnit = Settings.portable.collectAsState().value.lengthUnit
+    val prefill = estimate?.percent?.let { it to estimateComment(res, estimate, lengthUnit) }
 
-    LaunchedEffect(selected, date, records) {
+    LaunchedEffect(selected, date, records, prefill) {
         if (selected != null && chosen == null) {
             selected = null
         } else {
             val source = chosen ?: template
-            value = source?.value?.let { fmtNum(it) } ?: ""
+            value = (if (chosen == null) prefill?.first else null)?.let { fmtNum(it, 1) } ?: source?.value?.let { fmtNum(it) } ?: ""
             timeText = chosen?.time?.take(5)?.takeIf { it.isNotBlank() } ?: LocalTime.now().format(HHMM)
-            comment = chosen?.comment.orEmpty()
+            comment = if (chosen != null) chosen.comment.orEmpty() else prefill?.second.orEmpty()
         }
     }
 
@@ -180,6 +188,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                                 }
                             )
                             if (isBodyFat && chosen == null) {
+                                BodyFatPrefillNote(estimate, date)
                                 GlassOutlinedButton(onClick = { calculating = true }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
                                     Text(stringResource(R.string.bm_calculate))
                                 }

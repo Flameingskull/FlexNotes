@@ -91,4 +91,52 @@ object BodyFat {
         }
         return Result.Ok(percent)
     }
+
+    /**
+     * The measurement [input] is logged under: a name with values, else a measurement set up for it, else its label.
+     * [names] are the measurements set up, [records] every value by name, oldest first.
+     */
+    fun nameFor(input: Input, records: Map<String, List<MRecord>>, names: List<String>): String =
+        records.keys.firstOrNull { input.matches(it) } ?: names.firstOrNull { input.matches(it) } ?: input.label
+
+    /** [name]'s latest value on or before [date] (ISO), from [records] (oldest first), or null. */
+    fun latestOn(name: String, date: String, records: Map<String, List<MRecord>>): MRecord? =
+        records[name].orEmpty().lastOrNull { it.date.take(10) <= date }
+
+    /**
+     * One input as an estimate used it: its latest value on or before the day ([record]), or the profile's height
+     * ([profileCm]) when no Height is logged, and how many days old it was.
+     */
+    data class Used(val input: Input, val record: MRecord?, val profileCm: Double?, val ageDays: Long?) {
+        val stale: Boolean get() = (ageDays ?: 0) > STALE_DAYS
+    }
+
+    /** What the latest measurements on or before a day give (#194): the inputs used, those missing, and the result. */
+    data class Estimate(val sex: Sex, val used: List<Used>, val missing: List<Input>, val result: Result?) {
+        /** The result to one decimal, as a new value starts from; null when it can't be worked out. */
+        val percent: Double? get() = (result as? Result.Ok)?.percent?.let { Math.round(it * 10) / 10.0 }
+    }
+
+    /**
+     * Body fat from the latest measurements on or before [date] (#194), so a back-dated entry uses the inputs it had
+     * then. Height is the logged Height, else [profileHeightCm]. Null without a [sex]. Lengths are converted to
+     * centimetres from the unit each value was logged in.
+     */
+    fun estimateOn(
+        date: String, sex: Sex?, records: Map<String, List<MRecord>>, names: List<String>, profileHeightCm: Double?
+    ): Estimate? {
+        sex ?: return null
+        val day = Dates.epochDay(date)
+        val used = inputs(sex).map { input ->
+            val latest = latestOn(nameFor(input, records, names), date, records)
+            val profile = if (input == Input.HEIGHT && latest == null) profileHeightCm?.takeIf { it > 0 } else null
+            Used(input, latest, profile, latest?.let { day - Dates.epochDay(it.date) })
+        }
+        val missing = used.filter { it.record == null && it.profileCm == null }.map { it.input }
+        fun cm(input: Input): Double? = used.firstOrNull { it.input == input }?.let { u ->
+            u.record?.let { LengthUnits.convert(it.value, it.unit, LengthUnits.CM) } ?: u.profileCm
+        }
+        val result = if (missing.isNotEmpty()) null else navy(sex, cm(Input.HEIGHT)!!, cm(Input.NECK)!!, cm(Input.WAIST)!!, cm(Input.HIPS))
+        return Estimate(sex, used, missing, result)
+    }
 }

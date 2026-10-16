@@ -3,6 +3,7 @@ package com.fitlens.companion.data
 import com.fitlens.companion.data.BodyFat.Sex
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import kotlin.math.log10
@@ -54,5 +55,45 @@ class BodyFatTest {
         assertFalse(BodyFat.isBodyFat("Bodyweight"))
         assertTrue(BodyFat.Input.HIPS.matches(" Hip "))
         assertTrue(BodyFat.Input.WAIST.matches("WAIST"))
+    }
+
+    private fun rec(name: String, date: String, value: Double, unit: String = "cm") =
+        MRecord(0, name, unit, date, "08:00:00", value, null, Sources.FLEXNOTES)
+
+    @Test
+    fun anEstimateUsesTheLatestInputsOnOrBeforeItsDate() {
+        // #194: the day being logged chooses the inputs, so a back-dated entry uses the ones it had then.
+        val records = mapOf(
+            "Neck" to listOf(rec("Neck", "2026-09-01", 40.0), rec("Neck", "2026-10-10", 38.0)),
+            "Waist" to listOf(rec("Waist", "2026-09-01", 90.0), rec("Waist", "2026-10-10", 34.0, "in")),
+            "Height" to listOf(rec("Height", "2026-01-01", 180.0))
+        )
+        val names = listOf("Bodyweight", "Neck", "Waist", "Height", "Body fat")
+        val now = BodyFat.estimateOn("2026-10-16", BodyFat.Sex.MALE, records, names, null)!!
+        assertEquals(listOf(38.0, 34.0, 180.0).sorted(), now.used.map { it.record!!.value }.sorted())
+        val inches = (BodyFat.navy(BodyFat.Sex.MALE, 180.0, 38.0, 34.0 * 2.54, null) as BodyFat.Result.Ok).percent
+        assertEquals(Math.round(inches * 10) / 10.0, now.percent!!, 1e-9)
+        assertTrue(now.used.first { it.input == BodyFat.Input.HEIGHT }.stale)
+        assertFalse(now.used.first { it.input == BodyFat.Input.NECK }.stale)
+
+        val before = BodyFat.estimateOn("2026-09-15", BodyFat.Sex.MALE, records, names, null)!!
+        assertEquals(40.0, before.used.first { it.input == BodyFat.Input.NECK }.record!!.value, 0.0)
+        assertEquals(90.0, before.used.first { it.input == BodyFat.Input.WAIST }.record!!.value, 0.0)
+
+        // Nothing logged by then: the missing inputs are named and there's no figure.
+        val early = BodyFat.estimateOn("2026-08-01", BodyFat.Sex.MALE, records, names, null)!!
+        assertEquals(listOf(BodyFat.Input.HEIGHT, BodyFat.Input.NECK, BodyFat.Input.WAIST), early.missing)
+        assertNull(early.percent)
+    }
+
+    @Test
+    fun anEstimateFallsBackToTheProfileHeightAndNeedsHipsForWomen() {
+        val records = mapOf("Neck" to listOf(rec("Neck", "2026-10-10", 33.0)), "Waist" to listOf(rec("Waist", "2026-10-10", 72.0)))
+        val names = listOf("Neck", "Waist")
+        val e = BodyFat.estimateOn("2026-10-16", BodyFat.Sex.FEMALE, records, names, 168.0)!!
+        assertEquals(listOf(BodyFat.Input.HIPS), e.missing)
+        assertEquals(168.0, e.used.first { it.input == BodyFat.Input.HEIGHT }.profileCm!!, 0.0)
+        assertNull(e.percent)
+        assertNull(BodyFat.estimateOn("2026-10-16", null, records, names, 168.0))
     }
 }

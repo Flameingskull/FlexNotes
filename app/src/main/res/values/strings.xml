@@ -1585,6 +1585,11 @@
     <string name="bm_deleted">Value deleted</string>
     <string name="bm_undo">Undo</string>
     <string name="bm_calculated">Calculated: check it, then Save</string>
+    <string name="bm_prefill_from">Calculated from your latest measurements: %1$s. Change it if you like; nothing is saved until you press Save.</string>
+    <string name="bm_prefill_dated">%1$s (%2$s)</string>
+    <string name="bm_prefill_profile">%1$s (your profile)</string>
+    <string name="bm_prefill_stale">%1$s: over %2$d days old, re-measure for an accurate result.</string>
+    <string name="bm_prefill_missing">To fill this in from your measurements, log your %1$s on or before %2$s.</string>
     <string name="mse_log">Log a measurement</string>
     <string name="mse_edit">Edit %1$s</string>
     <string name="mse_measurement">Measurement</string>
