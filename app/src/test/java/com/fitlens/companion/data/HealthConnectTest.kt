@@ -1,6 +1,7 @@
 package com.fitlens.companion.data
 
 import android.app.Application
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.test.core.app.ApplicationProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -180,5 +181,51 @@ class HealthConnectTest {
         assertEquals(500.0 / 3, avg.leftOutPerDay, 1e-9)
         // Too few days: the estimate keeps using steps or the activity level.
         assertEquals(null, ActiveCalories.average(bodySnapshot(active("2026-10-15", 300.0)), today, today))
+    }
+
+    @Test
+    fun anExerciseSessionIsAddedOnceAsACardioSet() = withDb { db ->
+        // #190: a watch's run becomes one cardio set under a Cardio exercise, once, and a deleted one stays deleted.
+        val run = HealthSession("hc-1", "2026-10-15", ExerciseSessionRecord.EXERCISE_TYPE_RUNNING, "Morning run", 1800, 5000.0, "Garmin Connect")
+        val lift = HealthSession("hc-2", "2026-10-15", ExerciseSessionRecord.EXERCISE_TYPE_STRENGTH_TRAINING, null, 3600, null, null)
+        assertEquals(1, HealthSessions.write(db, listOf(run, lift), DistanceUnits.KM))
+        val sql = db.writableDatabase
+        assertEquals(listOf("hc-1"), db.workoutDao.externalIds())
+        assertEquals(
+            1,
+            sql.count(
+                "SELECT COUNT(*) FROM workout_set WHERE external_id = 'hc-1' AND date = '2026-10-15' AND distance = 5.0 " +
+                    "AND duration = 1800 AND source = '${Sources.HEALTH_CONNECT}' AND comment = 'Health Connect · Garmin Connect'"
+            )
+        )
+        assertEquals(
+            1,
+            sql.count(
+                "SELECT COUNT(*) FROM exercise e JOIN category c ON c.id = e.category_id " +
+                    "WHERE e.name = 'Outdoor Run' AND c.name = 'Cardio' AND e.type = ${ExerciseTypes.DISTANCE_TIME}"
+            )
+        )
+        assertEquals(1, sql.count("SELECT COUNT(*) FROM exercise_comment WHERE date = '2026-10-15' AND comment = 'Morning run'"))
+
+        // A second sync adds nothing, and a set deleted in FlexNotes doesn't come back.
+        assertEquals(0, HealthSessions.write(db, listOf(run), DistanceUnits.KM))
+        sql.execSQL("DELETE FROM workout_set")
+        assertEquals(0, HealthSessions.write(db, listOf(run), DistanceUnits.KM))
+        assertEquals(0, sql.count("SELECT COUNT(*) FROM workout_set"))
+
+        // An exercise already there is matched by name, in the user's distance unit; no second Cardio category.
+        val ride = HealthSession("hc-3", "2026-10-16", ExerciseSessionRecord.EXERCISE_TYPE_BIKING, null, 3600, 1609.344, null)
+        val walk = HealthSession("hc-4", "2026-10-16", ExerciseSessionRecord.EXERCISE_TYPE_WALKING, null, 1200, null, null)
+        assertEquals(2, HealthSessions.write(db, listOf(ride, walk), DistanceUnits.MI))
+        assertEquals(1, sql.count("SELECT COUNT(*) FROM workout_set WHERE external_id = 'hc-3' AND distance = 1.0 AND comment = 'Health Connect'"))
+        assertEquals(1, sql.count("SELECT COUNT(*) FROM workout_set WHERE external_id = 'hc-4' AND distance = 0"))
+        assertEquals(1, sql.count("SELECT COUNT(*) FROM category WHERE name = 'Cardio'"))
+    }
+
+    @Test
+    fun strengthSessionsAreLeftOutAndUnknownOnesAreKept() {
+        assertEquals(null, HealthSessions.targetFor(ExerciseSessionRecord.EXERCISE_TYPE_WEIGHTLIFTING))
+        assertEquals("Treadmill Run", HealthSessions.targetFor(ExerciseSessionRecord.EXERCISE_TYPE_RUNNING_TREADMILL)?.name)
+        assertEquals("Other Activity", HealthSessions.targetFor(ExerciseSessionRecord.EXERCISE_TYPE_OTHER_WORKOUT)?.name)
     }
 }

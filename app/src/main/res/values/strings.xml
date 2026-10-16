@@ -2584,7 +2584,7 @@
     <string name="steps_status_waiting">Today so far: %1$s steps. The daily activity level above is used until %2$d full days are counted.</string>
     <!-- Health Connect (#184, #185, #186) -->
     <string name="settings_page_hc">Health Connect</string>
-    <string name="settings_hc_kw">health connect google fit samsung health watch scale steps food macros nutrition weight body fat active calories heart rate sleep sync</string>
+    <string name="settings_hc_kw">health connect google fit samsung health watch scale steps food macros nutrition weight body fat active calories heart rate sleep exercise sessions runs sync</string>
     <string name="settings_hc_summary">Use steps, food, weight, activity and sleep recorded by other apps on this phone</string>
     <string name="search_hc_intake_kw">food macros nutrition calories eaten protein fat carbs health connect macrosfirst</string>
     <string name="search_hc_active_kw">active calories burned activity energy watch health connect tdee</string>
@@ -2616,6 +2616,14 @@
     <string name="hc_what_body_fat">body fat</string>
     <string name="hc_what_resting_hr">resting heart rate</string>
     <string name="hc_what_sleep">sleep</string>
+    <string name="search_hc_exercise_kw">exercise sessions workouts runs rides swims cardio watch strava garmin fitbit health connect</string>
+    <string name="hc_group_workouts">Workouts</string>
+    <string name="hc_exercise">Exercise sessions</string>
+    <string name="hc_exercise_summary">Runs, rides, swims and other sessions your watch or apps record, added to the day log.</string>
+    <string name="hc_exercise_own">Only what you log</string>
+    <string name="hc_exercise_own_desc">Only the workouts you log in FlexNotes.</string>
+    <string name="hc_exercise_hc_desc">Each session from the last %1$d days becomes one cardio set, with its time and distance, under the matching exercise in the Cardio category (made for you if it's missing). Its title goes in the exercise comment. Each session is added once: sessions you edit or delete in FlexNotes stay as you left them. Strength sessions are left out, as you log those set by set.</string>
+    <string name="hc_what_exercise">exercise sessions</string>
     <string name="search_hc_sync_kw">health connect sync refresh read</string>
     <string name="hc_source_hc">Health Connect</string>
     <string name="hc_group_sources">Sources</string>
@@ -2637,7 +2645,7 @@
     <string name="hc_install">Install Health Connect</string>
     <string name="hc_update">Update Health Connect</string>
     <string name="hc_sync_now">Sync now</string>
-    <string name="hc_sync_now_summary">Reads the last %1$d days. The values are kept in the Body tracker, marked Health Connect. What you type is never replaced.</string>
+    <string name="hc_sync_now_summary">Reads the last %1$d days. The values are kept in the Body tracker, marked Health Connect, and exercise sessions in the day log. What you type is never replaced.</string>
     <string name="hc_syncing">Syncing…</string>
     <string name="hc_never">Never</string>
     <string name="hc_synced">Health Connect synced</string>

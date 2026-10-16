@@ -84,6 +84,13 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+// KSP writes a new Db.VERSION's schema while compiling, but the debug assets that carry app/schemas could be merged
+// first, so MigrationTestHelper couldn't find it and the first run of a schema change failed (1.0.130). Merging them
+// after KSP lets that run pass; the exported file is still committed from ci-logs afterwards.
+tasks.configureEach {
+    if (name.startsWith("merge") && name.contains("Debug") && name.endsWith("Assets")) dependsOn("kspDebugKotlin")
+}
+
 dependencies {
     val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
     implementation(composeBom)

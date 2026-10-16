@@ -165,7 +165,7 @@ private fun HealthConnectSourceRow(
 /**
  * Settings › Health Connect (#184): for each type, FlexNotes or Health Connect as the primary source (steps, #185,
  * with the phone's step counter as a third choice; what was eaten, #186; active calories, #188; bodyweight and body
- * fat, #187; resting heart rate and sleep, #189), the permission each needs, when it last synced, Sync now, Health
+ * fat, #187; resting heart rate and sleep, #189; exercise sessions as cardio sets, #190), the permission each needs, when it last synced, Sync now, Health
  * Connect's own settings, and what's read and why (Health Connect's privacy link opens here).
  */
 @Composable
@@ -214,6 +214,13 @@ internal fun HealthConnectPage() {
     HealthConnectSourceRow(
         HealthConnect.Kind.SLEEP, access, prefs.hcSleep, R.string.hc_sleep, R.string.hc_sleep_summary,
         typed, typedDesc, stringResource(R.string.hc_sleep_hc_desc), R.string.hc_what_sleep
+    )
+
+    SettingsGroup(stringResource(R.string.hc_group_workouts))
+    HealthConnectSourceRow(
+        HealthConnect.Kind.EXERCISE, access, prefs.hcExercise, R.string.hc_exercise, R.string.hc_exercise_summary,
+        stringResource(R.string.hc_exercise_own), stringResource(R.string.hc_exercise_own_desc),
+        stringResource(R.string.hc_exercise_hc_desc, HealthConnect.DAYS), R.string.hc_what_exercise
     )
 
     if (access.status == HealthConnect.Status.AVAILABLE) {

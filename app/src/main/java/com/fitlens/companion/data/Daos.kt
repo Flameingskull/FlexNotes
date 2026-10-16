@@ -468,6 +468,24 @@ interface WorkoutDao {
         comment: String?, source: String, setType: Int, rpe: Double?, metric: Double?
     )
 
+    /** A set from Health Connect (#190), kept with its record id. The database's triggers place it (#70, #18). */
+    @Query(
+        "INSERT INTO workout_set(exercise_id, date, distance, duration, comment, source, external_id) " +
+            "VALUES(:exerciseId, :date, :distance, :duration, :comment, :source, :externalId)"
+    )
+    fun addExternalSet(exerciseId: Long, date: String, distance: Double, duration: Int, comment: String?, source: String, externalId: String): Long
+
+    /** The Health Connect records already kept as sets (#190). */
+    @Query("SELECT external_id FROM workout_set WHERE external_id IS NOT NULL")
+    fun externalIds(): List<String>
+
+    /** Every rule key of one [kind]. */
+    @Query("SELECT key FROM import_rule WHERE kind = :kind")
+    fun ruleKeys(kind: String): List<String>
+
+    @Query("SELECT id, distance_unit FROM exercise WHERE distance_unit IS NOT NULL")
+    fun ownDistanceUnits(): List<ExerciseDistanceUnit>
+
     @Query("SELECT * FROM workout_set WHERE id = :id")
     fun setById(id: Long): WorkoutSetRow?
 

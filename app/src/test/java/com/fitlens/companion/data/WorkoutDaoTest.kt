@@ -235,6 +235,22 @@ class ExportedSchemaTest {
     }
 
     @Test
+    fun aV22DatabaseGainsExternalIdsAndKeepsEverySet() {
+        // A database as 1.0.129 to 1.0.144 left it, made from the committed 22.json, upgraded to v23 (#190).
+        helper.createDatabase(Db.NAME, 22).use { db ->
+            db.row("exercise", "id" to 1L, "name" to "Outdoor Run", "type" to ExerciseTypes.DISTANCE_TIME)
+            db.row("workout_set", "id" to 1L, "exercise_id" to 1L, "date" to "2026-10-01", "distance" to 5.0, "duration" to 1500, "position" to 1)
+            db.row("workout_set", "id" to 2L, "exercise_id" to 1L, "date" to "2026-10-02", "distance" to 3.2, "duration" to 1000, "comment" to "Easy", "position" to 1)
+        }
+        val db = helper.runMigrationsAndValidate(Db.NAME, Db.VERSION, true, *migrations)
+        assertEquals(2, db.count("SELECT COUNT(*) FROM workout_set WHERE external_id IS NULL"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM workout_set WHERE id = 1 AND distance = 5.0 AND duration = 1500"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM workout_set WHERE id = 2 AND distance = 3.2 AND comment = 'Easy'"))
+        db.row("workout_set", "exercise_id" to 1L, "date" to "2026-10-03", "duration" to 600, "external_id" to "hc-1")
+        assertEquals(1, db.count("SELECT COUNT(*) FROM workout_set WHERE external_id = 'hc-1'"))
+    }
+
+    @Test
     fun theExportedSchemaIsWhatTheAppOpens() {
         // A database made from the committed JSON opens in the app: same tables, same identity hash.
         helper.createDatabase(Db.NAME, Db.VERSION).close()

@@ -94,7 +94,9 @@ data class WorkoutSetRow(
     @ColumnInfo(defaultValue = "0") val superset: Int,
     @ColumnInfo(defaultValue = "0") val done: Int,
     val rest_seconds: Int?,
-    val metric: Double?
+    val metric: Double?,
+    /** The Health Connect record a set came from (#190), so a re-sync never adds it twice; null for every other set. */
+    val external_id: String? = null
 )
 
 @Entity(tableName = "workout_comment")

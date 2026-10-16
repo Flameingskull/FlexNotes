@@ -177,6 +177,7 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.hc_weight, SettingsSection.HealthConnect, R.string.search_hc_weight_kw) { onOff(prefs.hcWeight) },
     SettingEntry(R.string.hc_body_fat, SettingsSection.HealthConnect, R.string.search_hc_body_fat_kw) { onOff(prefs.hcBodyFat) },
     SettingEntry(R.string.hc_resting_hr, SettingsSection.HealthConnect, R.string.search_hc_resting_hr_kw) { onOff(prefs.hcRestingHr) },
+    SettingEntry(R.string.hc_exercise, SettingsSection.HealthConnect, R.string.search_hc_exercise_kw) { onOff(prefs.hcExercise) },
     SettingEntry(R.string.hc_sleep, SettingsSection.HealthConnect, R.string.search_hc_sleep_kw) { onOff(prefs.hcSleep) },
     SettingEntry(R.string.hc_sync_now, SettingsSection.HealthConnect, R.string.search_hc_sync_kw),
     SettingEntry(R.string.tdee_title, SettingsSection.Profile, R.string.search_tdee_kw, R.string.prof_group_uses),

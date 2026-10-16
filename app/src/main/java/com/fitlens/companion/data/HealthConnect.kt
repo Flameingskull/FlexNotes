@@ -12,6 +12,8 @@ import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.DistanceRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
@@ -19,6 +21,7 @@ import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.work.CoroutineWorker
@@ -35,6 +38,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -47,8 +51,8 @@ import kotlin.reflect.KClass
 /**
  * Reading Google Health Connect (#184), so values other apps record on the phone (steps, #185; what was eaten, #186;
  * bodyweight and body fat, #187; active calories, #188; resting heart rate and sleep, #189) can be the primary source
- * for what FlexNotes records and calculates. Health Connect runs on the phone, so this stays local: read only, no
- * internet permission, accounts or cloud.
+ * for what FlexNotes records and calculates, and exercise sessions become cardio sets (#190, `HealthSessions`).
+ * Health Connect runs on the phone, so this stays local: read only, no internet permission, accounts or cloud.
  *
  * For each type switched to Health Connect in Settings ([Kind.chosen]), a sync reads the last [DAYS] days (the history
  * Health Connect allows by default). Totals are grouped by local day, so Health Connect applies the user's app
@@ -93,9 +97,14 @@ object HealthConnect {
 
     /**
      * A type of data FlexNotes reads: the record it's read from, the daily totals asked for (none for readings, which
-     * are read one by one), and the setting that makes Health Connect its source.
+     * are read one by one), the records it also reads where allowed ([also]: a session's distance), and the setting
+     * that makes Health Connect its source.
      */
-    enum class Kind(val record: KClass<out Record>, val metrics: Set<AggregateMetric<*>> = emptySet()) {
+    enum class Kind(
+        val record: KClass<out Record>,
+        val metrics: Set<AggregateMetric<*>> = emptySet(),
+        val also: Set<KClass<out Record>> = emptySet()
+    ) {
         STEPS(StepsRecord::class, setOf(StepsRecord.COUNT_TOTAL)),
         INTAKE(
             NutritionRecord::class,
@@ -105,7 +114,8 @@ object HealthConnect {
         BODY_FAT(BodyFatRecord::class),
         ACTIVE(ActiveCaloriesBurnedRecord::class, setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)),
         RESTING_HR(RestingHeartRateRecord::class, setOf(RestingHeartRateRecord.BPM_AVG)),
-        SLEEP(SleepSessionRecord::class, setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL));
+        SLEEP(SleepSessionRecord::class, setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL)),
+        EXERCISE(ExerciseSessionRecord::class, also = setOf(DistanceRecord::class));
 
         /** The read permission Health Connect asks the user for. */
         val permission: String get() = HealthPermission.getReadPermission(record)
@@ -119,6 +129,7 @@ object HealthConnect {
             ACTIVE -> p.hcActive
             RESTING_HR -> p.hcRestingHr
             SLEEP -> p.hcSleep
+            EXERCISE -> p.hcExercise
         }
 
         /**
@@ -133,6 +144,7 @@ object HealthConnect {
             ACTIVE -> p.copy(hcActive = on)
             RESTING_HR -> p.copy(hcRestingHr = on)
             SLEEP -> p.copy(hcSleep = on)
+            EXERCISE -> p.copy(hcExercise = on)
         }
     }
 
@@ -157,7 +169,8 @@ object HealthConnect {
     }
 
     /** The permissions to ask for when [kinds] are switched to Health Connect: theirs, and background reading. */
-    fun permissionsFor(vararg kinds: Kind): Set<String> = kinds.map { it.permission }.toSet() + BACKGROUND
+    fun permissionsFor(vararg kinds: Kind): Set<String> =
+        kinds.flatMap { k -> listOf(k.permission) + k.also.map { HealthPermission.getReadPermission(it) } }.toSet() + BACKGROUND
 
     /** Some type is switched to Health Connect. */
     fun anyChosen(p: PortableSettings): Boolean = Kind.entries.any { it.chosen(p) }
@@ -230,8 +243,12 @@ object HealthConnect {
             if (allowed.isEmpty()) return@withLock Outcome.NOT_ALLOWED
             val today = LocalDate.now()
             val from = today.minusDays(DAYS - 1L)
-            val series = allowed.flatMap { read(app, client, it, from, today) }
+            val series = allowed.filter { it != Kind.EXERCISE }.flatMap { read(app, client, it, from, today) }
             Store.replaceHealthConnectDays(series)
+            if (Kind.EXERCISE in allowed) {
+                val distance = HealthPermission.getReadPermission(DistanceRecord::class) in granted
+                HealthSessions.add(sessions(app, client, from, today, distance))
+            }
             Settings.updateDeviceNow { it.copy(hcSyncedAt = System.currentTimeMillis()) }
             Outcome.DONE
         } catch (e: CancellationException) {
@@ -296,8 +313,53 @@ object HealthConnect {
             Kind.SLEEP -> listOf(
                 series(Names.SLEEP, Names.SLEEP_UNIT, true) { r -> r[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.let { it.seconds / 3600.0 } }
             )
-            Kind.WEIGHT, Kind.BODY_FAT -> emptyList()
+            Kind.WEIGHT, Kind.BODY_FAT, Kind.EXERCISE -> emptyList()
         }
+    }
+
+    /**
+     * Every exercise session that started from [from] to [to] (#190), on the local date it started, with the distance
+     * its own app recorded during it when [distance] may be read.
+     */
+    private suspend fun sessions(context: Context, client: HealthConnectClient, from: LocalDate, to: LocalDate, distance: Boolean): List<HealthSession> {
+        val found = mutableListOf<HealthSession>()
+        var page: String? = null
+        do {
+            val response = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = ExerciseSessionRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(from.atStartOfDay(), to.plusDays(1).atStartOfDay()),
+                    pageToken = page
+                )
+            )
+            response.records.forEach { r ->
+                val metres = if (!distance) null else try {
+                    client.aggregate(
+                        AggregateRequest(
+                            metrics = setOf(DistanceRecord.DISTANCE_TOTAL),
+                            timeRangeFilter = TimeRangeFilter.between(r.startTime, r.endTime),
+                            dataOriginFilter = setOf(r.metadata.dataOrigin)
+                        )
+                    )[DistanceRecord.DISTANCE_TOTAL]?.inMeters
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    null
+                }
+                val date = LocalDateTime.ofInstant(r.startTime, r.startZoneOffset ?: ZoneId.systemDefault()).toLocalDate()
+                found += HealthSession(
+                    id = r.metadata.id,
+                    date = date.format(Dates.ISO),
+                    type = r.exerciseType,
+                    title = r.title,
+                    durationSec = Duration.between(r.startTime, r.endTime).seconds.coerceIn(0L, Int.MAX_VALUE.toLong()).toInt(),
+                    metres = metres,
+                    app = appLabel(context, r.metadata.dataOrigin.packageName)
+                )
+            }
+            page = response.pageToken
+        } while (!page.isNullOrEmpty())
+        return found
     }
 
     /**

@@ -162,6 +162,8 @@ data class PortableSettings(
     val hcRestingHr: Boolean = false,
     /** Sleep is read from Health Connect (#189). */
     val hcSleep: Boolean = false,
+    /** Exercise sessions from Health Connect become cardio sets (#190). */
+    val hcExercise: Boolean = false,
     /** The TDEE calculator's goal (#173), `Energy.Goal.encode`, or null for none chosen. */
     val calorieGoal: String? = null,
     /** The daily calorie target set from the calculator, or null. */
@@ -401,6 +403,7 @@ object Settings {
             P_HC_ACTIVE to if (s.hcActive) "1" else null,
             P_HC_RESTING_HR to if (s.hcRestingHr) "1" else null,
             P_HC_SLEEP to if (s.hcSleep) "1" else null,
+            P_HC_EXERCISE to if (s.hcExercise) "1" else null,
             P_CALORIE_GOAL to s.calorieGoal?.takeIf { it.isNotBlank() },
             P_CALORIE_TARGET to s.calorieTargetKcal?.toString(),
             P_MACRO_PROTEIN to s.macroProteinG?.toString(),
@@ -497,6 +500,7 @@ object Settings {
     private const val P_HC_BODY_FAT = "hc_body_fat"
     private const val P_HC_ACTIVE = "hc_active"
     private const val P_HC_RESTING_HR = "hc_resting_hr"
+    private const val P_HC_EXERCISE = "hc_exercise"
     private const val P_HC_SLEEP = "hc_sleep"
     private const val P_CALORIE_GOAL = "calorie_goal"
     private const val P_CALORIE_TARGET = "calorie_target_kcal"
@@ -620,6 +624,7 @@ object Settings {
         hcActive = bool(get(P_HC_ACTIVE)),
         hcRestingHr = bool(get(P_HC_RESTING_HR)),
         hcSleep = bool(get(P_HC_SLEEP)),
+        hcExercise = bool(get(P_HC_EXERCISE)),
         calorieGoal = Energy.Goal.decode(get(P_CALORIE_GOAL))?.encode(),
         calorieTargetKcal = get(P_CALORIE_TARGET)?.toIntOrNull()?.takeIf { it in 500..10000 },
         macroProteinG = get(P_MACRO_PROTEIN)?.toIntOrNull()?.takeIf { it in 0..1000 },
@@ -680,6 +685,7 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     hcActive = hcActive,
     hcRestingHr = hcRestingHr,
     hcSleep = hcSleep,
+    hcExercise = hcExercise,
     calorieGoal = calorieGoal,
     calorieTargetKcal = calorieTargetKcal,
     macroProteinG = macroProteinG,

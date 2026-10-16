@@ -25,7 +25,7 @@ class Db(context: Context) : Closeable {
     companion object {
         const val NAME = "fitlens.db"
         /** 21: Room takes over the file (#36). 22: an exercise's own activity for its calories (#174). */
-        const val VERSION = 22
+        const val VERSION = 23
 
         /** The most ids one query binds, inside the 999-variable limit of older phones' SQLite. */
         const val MAX_IDS = 500
@@ -284,6 +284,12 @@ class Db(context: Context) : Closeable {
                 // One nullable column (an `Energy.Activity` key), so every exercise keeps its values and stays
                 // automatic. Replays safely (#77); the rebuild that follows keeps every row.
                 if (hasTable(db, "exercise")) addColumn(db, "exercise", "activity", "TEXT")
+            }
+            if (oldVersion < 23) {
+                // ---- 1.0.145: exercise sessions from Health Connect (#190) ---------------------------------------------
+                // One nullable column, the Health Connect record a set came from, so a re-sync never adds a session
+                // twice. Every set keeps its values and has none. Replays safely (#77); the rebuild keeps every row.
+                if (hasTable(db, "workout_set")) addColumn(db, "workout_set", "external_id", "TEXT")
             }
         }
 
