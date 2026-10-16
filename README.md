@@ -56,9 +56,14 @@ custom metrics.
   [#173](https://github.com/Flameingskull/FlexNotes/issues/173), [#174](https://github.com/Flameingskull/FlexNotes/issues/174)).
   1.0.133 added food logging and a TDEE measured from it ([#176](https://github.com/Flameingskull/FlexNotes/issues/176)); 1.0.134 made saving a set as quick with
   years of history as with weeks ([#60](https://github.com/Flameingskull/FlexNotes/issues/60)) and fitted the workout screens to small phones at the largest font
-  size; 1.0.136 converts every imported body value into your own units ([#178](https://github.com/Flameingskull/FlexNotes/issues/178)). Next come the accessibility
-  checks that need a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)), converting imported cardio distances the same way
-  ([#180](https://github.com/Flameingskull/FlexNotes/issues/180)), and the
+  size; 1.0.136 converts every imported body value into your own units ([#178](https://github.com/Flameingskull/FlexNotes/issues/178)). 1.0.137 counts
+  daily steps with the phone's step counter for the calorie estimate ([#175](https://github.com/Flameingskull/FlexNotes/issues/175)), and 1.0.139 stops
+  logged walks and runs being counted twice ([#181](https://github.com/Flameingskull/FlexNotes/issues/181)). 1.0.141 adds FlexNotes's own camera for progress
+  photos, from a camera button on the day log ([#182](https://github.com/Flameingskull/FlexNotes/issues/182), [#183](https://github.com/Flameingskull/FlexNotes/issues/183)), and converts imported FitNotes
+  cardio distances into your unit ([#180](https://github.com/Flameingskull/FlexNotes/issues/180)). Next comes **Health Connect**, read only and on the phone:
+  steps, food and macros from apps such as MacrosFirst, bodyweight, active calories, sleep and other apps' workouts
+  ([#184](https://github.com/Flameingskull/FlexNotes/issues/184) to [#190](https://github.com/Flameingskull/FlexNotes/issues/190)), then the accessibility checks that need a real phone
+  ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)) and the
   [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
   Imports always merge and never overwrite FlexNotes data. There's no export back to FitNotes.
@@ -163,6 +168,11 @@ custom metrics.
 - **Optional FitNotes folder sync** for moving over gradually. Point FlexNotes at the folder where FitNotes saves its
   backups, then tap **Sync now**, or turn on automatic sync to import the newest backup whenever FlexNotes opens.
   Automatic sync is **off by default**. You can also share a backup from FitNotes straight into FlexNotes.
+- **FlexNotes's own camera:** the camera button on the day log (and Take photo on the Photos screen's +) opens a
+  viewfinder inside FlexNotes. Choose the pose first, turn on a faint outline of your last photo in that pose so the
+  shots line up week to week, set a 3 or 10 second self-timer for full-body shots, and switch between the front and
+  back cameras. After each shot, Retake or Use photo: a kept photo goes onto that day with its pose, into your
+  backups, and never into your phone's gallery. The camera permission is asked for only when the camera opens.
 - **Bulk photo import:** choose many photos or a whole folder, or share photos from your gallery. You pick the pose
   (Front, Side, Back or Other) for the batch as you import, or set a **pose for new photos** in **Settings → Progress
   Photos & Media** and FlexNotes stops asking. Each photo is dated from:
@@ -199,6 +209,9 @@ custom metrics.
   its calories, the expected weekly change and macros, with warnings for unsafe targets, then **Set as my target**.
   Exercise calories count only what's above resting (MET − 1, from the 2024 Compendium of Physical Activities), with
   effort from RPE and the ACSM equations for walking and running; each exercise can also choose its own **Activity**.
+  **Daily activity from my steps** (Settings → Profile) counts steps with the phone's own step counter, kept on the
+  phone, and uses them for the daily activity once a few days are counted. A walk or run you log as a workout isn't
+  counted a second time: its distance, at your stride, comes off that day's steps.
   A **Calories** card on the day log shows what each day burned and needed, the same every day or following that
   day's training, and opens the breakdown. Every figure is an estimate.
 - **What you ate, and a measured TDEE:** tap the Calories card on any day to type that day's calories, plus protein,
@@ -245,7 +258,7 @@ custom metrics.
     backup folders and schedules, pinned graphs, your profile and your calorie target are kept. Home Screen Settings, Rest Timer
     and Progress Photos & Media can also be reset on their own, from **Reset this section** in each page's ⋮ menu.
 - **Getting around:** as in FitNotes, there's no tab bar. The **day log** is home, and its top bar has **Calendar**,
-  **+** (the exercise library and workout switcher), the rest countdown while you rest, and a **⋮** menu with the
+  a **camera** (Take photo or Choose from phone, for that day), **+** (the exercise library and workout switcher), the rest countdown while you rest, and a **⋮** menu with the
   day's workout actions, then Analysis, Body tracker, Photos and Settings. Each of those slides in on top of the log,
   and Back returns you to it. Rotating the phone, or Android closing FlexNotes in the background, keeps your place:
   the screen you were on and the ones under it, with their open sheets, selections and filters. Choices such as a
@@ -367,8 +380,8 @@ custom metrics.
 FlexNotes only *reads* FitNotes backups and never changes your FitNotes data. FlexNotes backups (`.flexnotes`) are for
 FlexNotes only.
 
-**Permissions:** the only one FlexNotes asks for is notifications (Android 13+), and only when you set up automatic
-backups or start a timer. Switching on a setting that needs them gives a one-line reason first, and if notifications
+**Permissions:** FlexNotes asks for notifications (Android 13+) only when you set up automatic backups or start a
+timer, physical activity only when you turn on step counting, and the camera only when you open FlexNotes's camera. Switching on a setting that needs them gives a one-line reason first, and if notifications
 are off, the setting still works in the app and offers a way to turn them on. It also uses vibration and a foreground service for the timers, which Android grants
 without asking. Photos and folders are accessed through Android's file pickers, and only the ones you choose.
 
@@ -392,7 +405,9 @@ reference, so the two never collide. Importing a FitNotes backup follows these r
    pounds and kilograms) the value is converted before it's recorded; when they match it's recorded as it is. An
    import never changes your units. Importing a backup again converts values an import before 1.0.136 brought in
    without their unit. Set weights were always correct: FitNotes and FlexNotes both keep them in kilograms and show
-   them in your unit.
+   them in your unit. Cardio distances (from 1.0.141) are read in the unit each set was logged in (kilometres, miles,
+   metres or yards) and converted to the exercise's distance unit, or yours; importing again converts runs an
+   earlier import brought in as logged.
 5. **Your changes in FlexNotes win.** After you rename an exercise or category, the FitNotes name still maps to it.
    After you delete imported data, or edit an imported set, comment, time or body value, the next import doesn't bring
    the original back. Re-creating a deleted exercise with the same name lets its FitNotes history import again.
@@ -440,9 +455,10 @@ The first time FlexNotes opens, a short guided setup walks through the steps bel
 - Sets are reordered with buttons (and TalkBack actions), not by dragging. Routines from FitNotes backups aren't
   imported.
 - Calories are estimates from your profile and what you log. Intake is typed as each day's totals (there's no food
-  database or barcode scanning), and steps aren't read from the phone ([#175](https://github.com/Flameingskull/FlexNotes/issues/175)).
-- Cardio distances from FitNotes are imported as logged, without converting between kilometres and miles yet
-  ([#180](https://github.com/Flameingskull/FlexNotes/issues/180)).
+  database or barcode scanning). Steps come from the phone's own step counter; Health Connect is planned
+  ([#184](https://github.com/Flameingskull/FlexNotes/issues/184)).
+- For FitNotes cardio distances, the metres unit is confirmed from a real backup; kilometres, miles and yards follow
+  FitNotes's order of units. Distances on exercises that aren't cardio in FitNotes (a loaded carry) stay as logged.
 - Graphs use compact dropdowns rather than FitNotes's 1m / 3m / 6m / 1y / all buttons, so the graph gets the room
   ([#125](https://github.com/Flameingskull/FlexNotes/issues/125)).
 - Planned rests apply to days logged from a workout from 1.0.73 on; earlier days use each exercise's own rest or

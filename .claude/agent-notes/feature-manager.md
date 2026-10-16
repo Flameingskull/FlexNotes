@@ -164,7 +164,7 @@ that stop being true. The repository is public: no personal data, secrets or `FI
   exercises, dates and extra `scope.areas`; if it can move a record it ends with `replayPrs(w, scope.exercises)`. Never
   call the full `replayPrs(w)` from a per-day or per-exercise write: it reads every weighted set in the history.
   `replayPrs` takes `countWarmups` so tests can call it without loading `Settings`.
-- 2026-10-16 (1.0.140, #182, #183): a `TopBarAction` can carry a `menu` (a dropdown under the icon), and `FitTopBar`
+- 2026-10-16 (1.0.141, #182, #183): a `TopBarAction` can carry a `menu` (a dropdown under the icon), and `FitTopBar`
   moves icons that would crowd the title into the ⋮ menu (`iconsThatFit`). Changing a design sample changes its golden:
   delete the old `app/src/test/screenshots/<name>_*.png`, let CI record the new ones, and commit them from the run's
   `screenshots-N` artifact. On this PC, shell heredocs can drop backslashes: edit `strings.xml` apostrophes (`\'`)
