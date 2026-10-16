@@ -44,6 +44,8 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -150,7 +152,8 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
     var restSheet by state.saved("restSheet", false)
     val running = WorkoutClock.running(snap, date)
     val res = LocalContext.current.resources
-    val importForDay = rememberPhotoImporter(forcedDate = date)
+    // Take photo / Choose from phone (#182), from the top bar's camera and the photo strip's Add tile.
+    val addPhoto = rememberAddPhotoActions(nav, date)
     val hasWorkout = sets.isNotEmpty() || snap.workoutComments.containsKey(date)
     // Remembers which way the last step went, so the page slides in from the matching side.
     var forward by remember { mutableStateOf(true) }
@@ -172,6 +175,7 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
             brandMark = nav.atHome,
             actions = listOf(
                 TopBarAction(Icons.Filled.DateRange, stringResource(R.string.day_calendar)) { nav.push(Screen.Calendar) },
+                TopBarAction(FitIcons.Camera, stringResource(R.string.day_add_photos), menu = addPhoto),
                 TopBarAction(Icons.Filled.Add, stringResource(R.string.day_add_exercise)) { nav.push(Screen.Library(date)) }
             ),
             // A running rest stays in view after going back to the day (#109).
@@ -194,7 +198,6 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                 MenuAction(stringResource(R.string.day_copy_workout)) { copyChooser = true },
                 MenuAction(stringResource(R.string.day_share_workout), enabled = sets.isNotEmpty()) { share = true },
                 MenuAction(stringResource(R.string.day_delete_workout), enabled = hasWorkout) { deleteWorkout = true },
-                MenuAction(stringResource(R.string.day_add_photos)) { importForDay() },
                 MenuAction(stringResource(R.string.day_menu_analysis)) { nav.push(Screen.Analysis) },
                 MenuAction(stringResource(R.string.day_menu_body)) { nav.push(Screen.Body) },
                 MenuAction(stringResource(R.string.day_menu_photos)) { nav.push(Screen.Photos) },
@@ -242,7 +245,7 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                     date = shown,
                     showCategories = prefs.homeShowCategories,
                     setsShown = prefs.homeSetsShown,
-                    onAddPhoto = importForDay,
+                    addPhoto = addPhoto,
                     onEditComment = { editComment = true },
                     onAddExercise = { nav.push(Screen.Library(date)) },
                     onAddWorkout = { addWorkout = true },
@@ -296,7 +299,7 @@ private fun DayContent(
     date: String,
     showCategories: Boolean,
     setsShown: Int,
-    onAddPhoto: () -> Unit,
+    addPhoto: List<MenuAction>,
     onEditComment: () -> Unit,
     onAddExercise: () -> Unit,
     onAddWorkout: () -> Unit,
@@ -347,7 +350,7 @@ private fun DayContent(
         }
         // The day's progress photos (a FlexNotes extra).
         if (photos.isNotEmpty()) {
-            item(key = "photos") { PhotoStrip(snap, nav, photos, onAddPhoto) }
+            item(key = "photos") { PhotoStrip(snap, nav, photos, addPhoto) }
         }
         if (sets.isEmpty()) {
             item(key = "empty") {
@@ -472,9 +475,12 @@ private fun DayContent(
     }
 }
 
-/** The day's progress photos as a compact strip, with an Add photo tile at the end (FlexNotes extra, #81). */
+/**
+ * The day's progress photos as a compact strip, with an Add photo tile at the end (FlexNotes extra, #81) that offers
+ * the top bar's choice, Take photo or Choose from phone (#182).
+ */
 @Composable
-private fun PhotoStrip(snap: Snapshot, nav: Nav, photos: List<Photo>, onAddPhoto: () -> Unit) {
+private fun PhotoStrip(snap: Snapshot, nav: Nav, photos: List<Photo>, addPhoto: List<MenuAction>) {
     val openLabel = stringResource(R.string.day_open_photo)
     val addLabel = stringResource(R.string.day_add_photos)
     LazyRow(
@@ -491,18 +497,28 @@ private fun PhotoStrip(snap: Snapshot, nav: Nav, photos: List<Photo>, onAddPhoto
             )
         }
         item(key = "add") {
-            Column(
-                Modifier
-                    .height(120.dp)
-                    .width(90.dp)
-                    .border(1.dp, Brand.Hairline, FitShapes.row)
-                    .clickable(onClickLabel = addLabel, onClick = onAddPhoto)
-                    .semantics(mergeDescendants = true) { contentDescription = addLabel },
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(Icons.Filled.Add, contentDescription = null, tint = Brand.Gold)
-                Text(stringResource(R.string.day_add_photo_tile), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            var choosing by remember { mutableStateOf(false) }
+            Box {
+                Column(
+                    Modifier
+                        .height(120.dp)
+                        .width(90.dp)
+                        .border(1.dp, Brand.Hairline, FitShapes.row)
+                        .clickable(onClickLabel = addLabel) {
+                            addPhoto.singleOrNull()?.onClick?.invoke() ?: run { choosing = true }
+                        }
+                        .semantics(mergeDescendants = true) { contentDescription = addLabel },
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null, tint = Brand.Gold)
+                    Text(stringResource(R.string.day_add_photo_tile), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                DropdownMenu(expanded = choosing, onDismissRequest = { choosing = false }) {
+                    addPhoto.forEach { m ->
+                        DropdownMenuItem(text = { Text(m.label) }, onClick = { choosing = false; m.onClick() })
+                    }
+                }
             }
         }
     }

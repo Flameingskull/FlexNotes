@@ -17,6 +17,11 @@
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-feature android:name="android.hardware.sensor.stepcounter" android:required="false" />
 
+    <!-- Progress photos taken in FlexNotes's own camera (#183), asked for when the camera first opens. The shots stay
+         in the app's own storage, never the gallery. Phones without a camera still install FlexNotes. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
     <!-- Lets the app see and launch FitNotes on Android 11+ -->
     <queries>
         <package android:name="com.github.jamesgay.fitnotes" />

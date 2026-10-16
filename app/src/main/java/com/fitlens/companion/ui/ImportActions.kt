@@ -1,6 +1,7 @@
 package com.fitlens.companion.ui
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -8,6 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.res.stringResource
+import com.fitlens.companion.ui.design.MenuAction
 import androidx.compose.ui.platform.LocalContext
 import com.fitlens.companion.data.ImportSummary
 import com.fitlens.companion.data.PhotoImportResult
@@ -88,7 +92,9 @@ fun ImportSummary.level(): ResultLevel = if (ok) ResultLevel.Success else Result
 class PendingPhotoImport(
     val uris: List<Uri>,
     val forcedDate: String? = null,
-    val onDone: (PhotoImportResult) -> Unit = {}
+    val onDone: (PhotoImportResult) -> Unit = {},
+    /** The pose, when it was already chosen (the camera, #183): no pose question is asked. */
+    val pose: String? = null
 )
 
 /** Every bulk photo import goes through here, so each one asks for a pose first (see [PhotoImportHost]). */
@@ -107,7 +113,7 @@ fun PhotoImportHost() {
     val prefs by Settings.portable.collectAsState()
     val ctx = LocalContext.current.applicationContext
     val p = pending ?: return
-    val defaultPose = prefs.photoDefaultPose
+    val defaultPose = p.pose ?: prefs.photoDefaultPose
     if (defaultPose != null) {
         LaunchedEffect(p) {
             PhotoImports.pending.value = null
@@ -147,6 +153,23 @@ fun rememberPhotoImporter(forcedDate: String? = null, onDone: (PhotoImportResult
         if (uris.isNotEmpty()) PhotoImports.request(PendingPhotoImport(uris, forcedDate, onDone))
     }
     return { launcher.launch(arrayOf("image/*")) }
+}
+
+/**
+ * The ways to add photos (#182): Take photo, FlexNotes's camera, when the phone has one, and Choose from phone. Every
+ * "add photos" control offers these, dated to [date] (null: the camera uses today, the picker each photo's own date).
+ */
+@Composable
+fun rememberAddPhotoActions(nav: Nav, date: String?, onDone: (PhotoImportResult) -> Unit = {}): List<MenuAction> {
+    val ctx = LocalContext.current
+    val hasCamera = remember { ctx.packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) }
+    val choose = rememberPhotoImporter(forcedDate = date, onDone = onDone)
+    val take = stringResource(R.string.photo_take)
+    val pick = stringResource(R.string.photo_choose)
+    return listOfNotNull(
+        if (hasCamera) MenuAction(take) { nav.push(Screen.Camera(date)) } else null,
+        MenuAction(pick) { choose() }
+    )
 }
 
 /** Imports every image in a chosen folder (and its sub-folders). */

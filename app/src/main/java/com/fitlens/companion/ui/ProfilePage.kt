@@ -129,7 +129,7 @@ internal fun ProfileRows(prefs: PortableSettings) {
 internal fun stepsText(steps: Double): String = kcalText(steps)
 
 /** Opens this app's page in the phone's settings, where a refused permission can be allowed. */
-private fun openAppSettings(context: Context) {
+internal fun openAppSettings(context: Context) {
     val intent = Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try {

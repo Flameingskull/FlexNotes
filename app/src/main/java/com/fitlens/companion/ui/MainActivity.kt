@@ -139,6 +139,9 @@ sealed interface Screen {
     data class ExerciseDetail(val id: Long, val tab: Int = 0) : Screen
     @Serializable
     data class PhotoViewer(val ids: List<Long>, val index: Int) : Screen
+    /** FlexNotes's camera (#183): progress photos dated [date] (null: today), from Take photo (#182). */
+    @Serializable
+    data class Camera(val date: String? = null) : Screen
     @Serializable
     data class Compare(val a: Long, val b: Long) : Screen
     @Serializable
@@ -569,6 +572,7 @@ private fun ScreenContent(s: Snapshot, nav: Nav, screen: Screen) {
         }
         is Screen.ExerciseDetail -> ExerciseDetailScreen(s, nav, screen.id, screen.tab)
         is Screen.PhotoViewer -> PhotoViewerScreen(s, nav, screen.ids, screen.index)
+        is Screen.Camera -> CameraScreen(s, nav, screen.date)
         is Screen.Compare -> CompareScreen(s, nav, screen.a, screen.b)
         is Screen.Slideshow -> SlideshowScreen(s, nav, screen.ids)
         Screen.Review -> ReviewScreen(s, nav)

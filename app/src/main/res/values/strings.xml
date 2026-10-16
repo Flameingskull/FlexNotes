@@ -1760,6 +1760,26 @@
     <string name="pose_back">Back</string>
     <string name="pose_other">Other</string>
     <string name="pose_not_set">Not set</string>
+    <!-- Adding photos (#182) and FlexNotes's camera (#183) -->
+    <string name="photo_take">Take photo</string>
+    <string name="photo_choose">Choose from phone</string>
+    <string name="cam_title">Take photo</string>
+    <string name="cam_why">FlexNotes needs the camera to take progress photos. They stay in FlexNotes and its backups, and never go to your gallery.</string>
+    <string name="cam_refused">Camera access is off for FlexNotes. Allow it here, or in the phone\'s settings under Permissions.</string>
+    <string name="cam_allow">Allow camera</string>
+    <string name="cam_open_settings">Open settings</string>
+    <string name="cam_unavailable">The camera couldn\'t be opened. Close other apps using it and try again.</string>
+    <string name="cam_failed">The photo couldn\'t be taken. Try again.</string>
+    <string name="cam_outline">Outline of the last %1$s photo</string>
+    <string name="cam_timer">Self-timer</string>
+    <string name="cam_timer_off">Off</string>
+    <string name="cam_timer_seconds">%1$d s</string>
+    <string name="cam_shutter">Take photo</string>
+    <string name="cam_cancel_timer">Cancel the self-timer</string>
+    <string name="cam_switch">Switch between front and back camera</string>
+    <string name="cam_review">The photo just taken</string>
+    <string name="cam_retake">Retake</string>
+    <string name="cam_use">Use photo</string>
     <string name="grp_day">Day</string>
     <string name="grp_week">Week</string>
     <string name="grp_month">Month</string>

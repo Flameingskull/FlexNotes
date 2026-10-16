@@ -139,7 +139,8 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
     var poseDialog by state.saved("poseDialog", false)
     var dateDialog by state.saved("dateDialog", false)
     var deleteDialog by state.saved("deleteDialog", false)
-    val importFiles = rememberPhotoImporter()
+    // Take photo / Choose from phone (#182): the camera dates its shot today, the picker each photo by its own date.
+    val addPhoto = rememberAddPhotoActions(nav, date = null)
     val importFolder = rememberFolderPhotoImporter()
 
     val counts = remember(snap.photosKey) { snap.datedPhotos.groupingBy { poseKey(it) }.eachCount() }
@@ -179,7 +180,7 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
                 title = stringResource(R.string.ph_title),
                 onBack = LocalNavBack.current,
                 actions = listOf(
-                    TopBarAction(Icons.Filled.Add, stringResource(R.string.ph_import)) { importFiles() },
+                    TopBarAction(Icons.Filled.Add, stringResource(R.string.ph_import), menu = addPhoto),
                     TopBarAction(Icons.Filled.PlayArrow, stringResource(R.string.ph_slideshow), enabled = snap.datedPhotos.isNotEmpty()) {
                         nav.push(Screen.Slideshow())
                     }
@@ -224,7 +225,7 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
                 stringResource(R.string.ph_empty_body)
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    GoldButton(onClick = importFiles) { Text(stringResource(R.string.ph_choose_photos)) }
+                    GoldButton(onClick = addPhoto.last().onClick) { Text(stringResource(R.string.ph_choose_photos)) }
                     GlassOutlinedButton(onClick = importFolder) { Text(stringResource(R.string.ph_import_folder_short)) }
                 }
             }

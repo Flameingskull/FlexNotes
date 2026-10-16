@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.ui.design.ExerciseCard
 import com.fitlens.companion.ui.design.FitTabRow
+import com.fitlens.companion.ui.design.FitIcons
 import com.fitlens.companion.ui.design.FitTopBar
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.GoldButton
@@ -46,6 +47,8 @@ object DesignSamples {
             title = "Thursday, 2 Oct",
             actions = listOf(
                 TopBarAction(Icons.Filled.DateRange, "Calendar") {},
+                // The day log's Add photos (#182): a camera icon that opens Take photo / Choose from phone.
+                TopBarAction(FitIcons.Camera, "Add photos to this day", menu = listOf(MenuAction("Take photo") {}, MenuAction("Choose from phone") {})),
                 TopBarAction(Icons.Filled.Add, "Add exercise") {}
             ),
             overflow = listOf(MenuAction("Settings") {})

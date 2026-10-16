@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalDensity
@@ -50,12 +53,17 @@ import com.fitlens.companion.ui.GoldHairline
 import com.fitlens.companion.ui.Spacing
 import androidx.compose.ui.res.stringResource
 
-/** An icon action in a [FitTopBar]. [description] is what TalkBack reads. */
+/**
+ * An icon action in a [FitTopBar]. [description] is what TalkBack reads. With a [menu], tapping the icon opens it as a
+ * small dropdown under the icon instead of calling [onClick] (the day log's Add photos, #182); a menu of one entry
+ * runs that entry straight away.
+ */
 data class TopBarAction(
     val icon: ImageVector,
     val description: String,
     val enabled: Boolean = true,
-    val onClick: () -> Unit
+    val menu: List<MenuAction> = emptyList(),
+    val onClick: () -> Unit = {}
 )
 
 /** One entry in an overflow menu ([FitTopBar], [ExerciseCard], [ListRowWithMenu]). */
@@ -159,19 +167,41 @@ fun FitTopBar(
             )
         }
     }
+    // Icons that don't leave the title room (a narrow phone at a large font, #182) move into the ⋮ menu.
+    var fits by remember { mutableIntStateOf(3) }
+    val shown = actions.take(minOf(3, fits))
+    val moved = actions.drop(shown.size).filter { it.enabled }.flatMap { a ->
+        a.menu.ifEmpty { listOf(MenuAction(a.description, onClick = a.onClick)) }
+    }
+    val menu = moved + overflow
     val actionContent: @Composable RowScope.() -> Unit = {
-        actions.take(3).forEach { a ->
-            IconButton(onClick = a.onClick, enabled = a.enabled) {
-                Icon(a.icon, contentDescription = a.description)
+        shown.forEach { a ->
+            if (a.menu.size > 1) {
+                ActionMenu(a)
+            } else {
+                IconButton(onClick = a.menu.singleOrNull()?.onClick ?: a.onClick, enabled = a.enabled) {
+                    Icon(a.icon, contentDescription = a.description)
+                }
             }
         }
         trailing()
         if (onSettings != null) {
             IconButton(onClick = onSettings) { Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.cmn_settings)) }
         }
-        if (overflow.isNotEmpty()) OverflowMenu(overflow)
+        if (menu.isNotEmpty()) OverflowMenu(menu)
     }
-    Column(modifier.background(Glass.bar)) {
+    val density = LocalDensity.current
+    Column(
+        modifier.background(Glass.bar).onSizeChanged { size ->
+            fits = iconsThatFit(
+                width = with(density) { size.width.toDp() },
+                fontScale = density.fontScale,
+                others = (if (onBack != null || navigation != null || brandMark) 1 else 0) + (if (onSettings != null) 1 else 0),
+                actions = actions.size,
+                menu = overflow.isNotEmpty()
+            )
+        }
+    ) {
         if (centered) {
             CenterAlignedTopAppBar(
                 title = titleContent,
@@ -190,6 +220,43 @@ fun FitTopBar(
             )
         }
         GoldHairline()
+    }
+}
+
+/**
+ * How many of a bar's [actions] icons fit beside the title in a bar [width] wide, with [others] icons already there
+ * (the back arrow or brand mark, the Settings gear) and the ⋮ button when [menu] has entries. Each icon is 48dp, and
+ * the title keeps at least [TITLE_ROOM] (more at a large font, where [FittedTitle] can only shrink it so far). At least
+ * one, at most three.
+ */
+internal fun iconsThatFit(width: Dp, fontScale: Float, others: Int, actions: Int, menu: Boolean): Int {
+    val icon = 48.dp
+    val title = if (fontScale >= 1.5f) TITLE_ROOM_LARGE else TITLE_ROOM
+    fun count(withMenu: Boolean): Int {
+        val fixed = icon * (others + if (withMenu) 1 else 0) + Spacing.lg
+        return ((width - fixed - title) / icon).toInt().coerceIn(1, 3)
+    }
+    val n = count(menu)
+    // Moving an icon adds the ⋮ button when the bar has none yet.
+    return if (!menu && n < actions) count(true) else n
+}
+
+private val TITLE_ROOM = 96.dp
+private val TITLE_ROOM_LARGE = 144.dp
+
+/** A top bar icon that opens its [TopBarAction.menu] under it (#182). */
+@Composable
+private fun ActionMenu(a: TopBarAction) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }, enabled = a.enabled) {
+            Icon(a.icon, contentDescription = a.description)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            a.menu.forEach { m ->
+                DropdownMenuItem(text = { Text(m.label) }, onClick = { open = false; m.onClick() }, enabled = m.enabled)
+            }
+        }
     }
 }
 
