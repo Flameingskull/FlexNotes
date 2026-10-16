@@ -1716,7 +1716,7 @@
     <string name="ph_export_menu">Export as image files</string>
     <string name="ph_export_selected">Export as image files</string>
     <string name="ph_export_title">Export photos</string>
-    <string name="ph_export_intro">Saves copies as ordinary image files in a folder you choose, named by date and pose (2026-10-16_front.jpg). Each keeps its FlexNotes date and time, pose and comment in its details. Files already in the folder are never replaced, and your photos in FlexNotes don't change.</string>
+    <string name="ph_export_intro">Saves copies as ordinary image files in a folder you choose, named by date and pose (2026-10-16_front.jpg). Each keeps its FlexNotes date and time, pose and comment in its details. Files already in the folder are never replaced, and your photos in FlexNotes don\'t change.</string>
     <string name="ph_export_all">All photos</string>
     <string name="ph_export_range">Date range</string>
     <string name="ph_export_from">From %1$s</string>
@@ -1745,8 +1745,8 @@
         <item quantity="other">%1$d skipped: their files are missing.</item>
     </plurals>
     <plurals name="ph_export_failed">
-        <item quantity="one">%1$d couldn't be written to the folder.</item>
-        <item quantity="other">%1$d couldn't be written to the folder.</item>
+        <item quantity="one">%1$d couldn\'t be written to the folder.</item>
+        <item quantity="other">%1$d couldn\'t be written to the folder.</item>
     </plurals>
     <string name="ph_redate_busy">Re-reading photo dates…</string>
     <string name="ph_redate_none">Every photo date already matches its metadata. Dates you set by hand weren\'t checked.</string>
@@ -2663,7 +2663,7 @@
     <string name="hc_exercise_summary">Runs, rides, swims and other sessions your watch or apps record, added to the day log.</string>
     <string name="hc_exercise_own">Only what you log</string>
     <string name="hc_exercise_own_desc">Only the workouts you log in FlexNotes.</string>
-    <string name="hc_exercise_hc_desc">Each session from the last %1$d days becomes one cardio set, with its time and distance, under the matching exercise in the Cardio category (made for you if it's missing). Its title goes in the exercise comment. Each session is added once: sessions you edit or delete in FlexNotes stay as you left them. Strength sessions are left out, as you log those set by set.</string>
+    <string name="hc_exercise_hc_desc">Each session from the last %1$d days becomes one cardio set, with its time and distance, under the matching exercise in the Cardio category (made for you if it\'s missing). Its title goes in the exercise comment. Each session is added once: sessions you edit or delete in FlexNotes stay as you left them. Strength sessions are left out, as you log those set by set.</string>
     <string name="hc_what_exercise">exercise sessions</string>
     <string name="search_hc_sync_kw">health connect sync refresh read</string>
     <string name="hc_source_hc">Health Connect</string>
