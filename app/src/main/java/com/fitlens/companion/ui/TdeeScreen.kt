@@ -162,7 +162,16 @@ fun TdeeScreen(snap: Snapshot, nav: Nav) {
             val base = daily.baseKcal
             val bmr = daily.resting.bmr
             val steps = daily.steps
-            if (base != null && bmr != null && steps != null) {
+            val active = daily.active
+            if (base != null && bmr != null && active != null) {
+                // From Health Connect's active calories (#188): the Sitting level plus the average day's, less what
+                // logged exercise already counts.
+                Figure(
+                    if (active.leftOutPerDay >= 0.5) stringResource(R.string.tdee_activity_active_less, kcalText(active.perDay), active.days)
+                    else stringResource(R.string.tdee_activity_active, kcalText(active.perDay), active.days),
+                    stringResource(R.string.tdee_plus_kcal, kcalText(base - bmr))
+                )
+            } else if (base != null && bmr != null && steps != null) {
                 // From the step counter (#175): the Sitting level plus the average day's steps.
                 Figure(
                     // Logged walks and runs count in training, so their steps are left out (#181).

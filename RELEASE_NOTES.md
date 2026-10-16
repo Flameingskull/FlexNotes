@@ -1,47 +1,43 @@
 ## Overview
 
-FlexNotes can now use what other apps record on your phone, through Google Health Connect. Choose Health Connect as
-the source of your daily steps, or of what you ate, and FlexNotes fills them in for you. A watch's step count or a food
-app such as MacrosFirst can then feed the calorie estimate and the measured TDEE without you typing anything.
+Health Connect now brings more of what your scale, watch and health apps record into FlexNotes. Next to steps and
+food, you can now read bodyweight and body fat, active calories, resting heart rate and sleep. Each one is switched on
+separately in Settings › Health Connect. Active calories can also drive the daily activity part of the calorie
+estimate, without counting your logged workouts twice.
 
-Health Connect runs on your phone, so nothing leaves it: FlexNotes only reads, and it still has no internet
-permission. Install this update over the current app as usual. Everything you've logged is kept, and the database
-doesn't change.
+As before, Health Connect runs on your phone and FlexNotes only reads from it. It still has no internet permission.
+Install this update over the current app as usual. Everything you've logged is kept, and the database doesn't change.
 
 ## What's new
 
-- **Settings › Health Connect.** A new page under DATA. For steps, and for food and macros, choose where FlexNotes gets
-  them. It asks for Health Connect's permission only when you switch a type to it. The page also shows when FlexNotes
-  last synced, has a **Sync now** button, opens Health Connect's own settings, and explains what's read and why.
-- **Steps from Health Connect.** Daily activity from my steps (Settings › Profile, and the new page) now offers
-  **Off**, **Phone's step counter** or **Health Connect**. With Health Connect, the phone's own counter stops and each
-  day's total comes from Health Connect. Health Connect applies your app priority, so steps from a watch and the phone
-  aren't counted twice. The calorie estimate uses them just as it did the phone's count.
-- **Food and macros from Health Connect.** Choose Health Connect for food and macros, and each day's calories, protein,
-  fat and carbs come from the apps that write them, such as MacrosFirst. The calories card shows where the figures came
-  from, for example "From Health Connect · MacrosFirst". The measured TDEE then works from those logs as well.
-- **Automatic syncing.** FlexNotes reads the last 30 days whenever it opens. If you allow background reading in Health
-  Connect, it also syncs every hour while it's closed.
+- **Bodyweight and body fat from Health Connect.** Choose Health Connect for Bodyweight or Body fat, and each reading
+  from a smart scale or health app appears in the Body tracker at its own time, in your unit. A morning and an evening
+  weigh-in stay as two readings. Syncing again never adds a reading twice, and a weigh-in that two apps share counts
+  once.
+- **Active calories as your daily activity.** Choose Health Connect for Active calories, and the calories your watch
+  or phone counts as burned in movement are kept as a daily **Active calories** value. After 3 days of them, the
+  calorie estimate uses them instead of your steps or activity level. Logged exercise only adds what goes beyond that
+  day's active calories, so a workout your watch already counted isn't added again. The calories sheet and the TDEE
+  calculator show the figure they used, and how much logged exercise covered.
+- **Resting heart rate and sleep.** Choose Health Connect for either, and each day gets a **Resting heart rate**
+  value (the day's average, in bpm) and a **Sleep** value (hours asleep, counted on the day you wake up). Both appear
+  in the Body tracker with their own graphs.
 
 ## Improved
 
-- **Your own values always stay.** Each day's Health Connect total is kept in the Body tracker as its own value,
-  marked Health Connect, beside anything you typed or the phone counted. A sync replaces only Health Connect's values,
-  never yours. On a day with no Health Connect figures, what you typed counts. Editing a Health Connect value makes it
-  yours, and later syncs leave it alone.
-- **Typing intake while Health Connect is on.** The calories sheet still lets you type the day's totals. While
-  Health Connect has figures for that day, it says they're the ones counted, and keeps what you typed for days without
-  them. Switch back to Typed in FlexNotes at any time, and your typed figures count again.
+- **Settings › Health Connect** now groups the types into Sources (steps, food and macros, active calories) and Body
+  values (bodyweight, body fat, resting heart rate, sleep). Each asks for its own permission only when you switch it
+  on, and each can be found from the Settings search.
+- **Your own values still stay.** Health Connect's values are kept beside what you type, marked Health Connect. A sync
+  replaces only Health Connect's values, never yours, and editing one makes it yours.
+- A Bodyweight or Body fat measurement you named slightly differently, such as "Body Weight", is found and used.
 
 ## Known limitations
 
-- Health Connect is built into Android 14 and later. On Android 13 and earlier, the page offers to install it from the
-  Play Store.
+- Bodyweight readings from Health Connect sit beside the ones you type. The calorie estimate uses the reading nearest
+  the day, whichever source it came from.
 - Only the last 30 days are read, which is what Health Connect allows by default. Reading the full history is
   planned (#192). FlexNotes doesn't write to Health Connect yet (#191).
-- If you delete a Health Connect value while Health Connect is still the source, the next sync brings it back. To keep
-  your own figure for that day, edit the value instead.
-- Bodyweight, body fat, active calories, resting heart rate, sleep and workouts from Health Connect are planned for
-  the next updates (#187 to #190).
+- Workouts recorded by a watch (runs, rides and so on) aren't read yet. They're planned for the next update (#190).
 - The rest of the accessibility checks (TalkBack, switch access and whole screens on a small phone) still need a phone
   (#157).

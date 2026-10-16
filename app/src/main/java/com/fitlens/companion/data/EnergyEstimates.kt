@@ -142,11 +142,16 @@ object EnergyEstimates {
         val progress: Intake.Progress = Intake.Progress(0, 0, 0),
         /** [tdee] is [measured]'s. */
         val usesMeasured: Boolean = false,
-        /** The average steps a day [baseKcal] is from (#175), or null when it's from [lifestyle]. */
-        val steps: Steps.Average? = null
+        /** The average steps a day [baseKcal] is from (#175), or null when it's from [lifestyle] or [active]. */
+        val steps: Steps.Average? = null,
+        /**
+         * The average active calories a day from Health Connect [baseKcal] is from (#188), less what logged exercise
+         * already counts, or null when it's from [steps] or [lifestyle].
+         */
+        val active: Steps.Average? = null
     ) {
         val missing: List<Energy.Missing>
-            get() = resting.missing + if (lifestyle == null && steps == null) listOf(Energy.Missing.LIFESTYLE) else emptyList()
+            get() = resting.missing + if (lifestyle == null && steps == null && active == null) listOf(Energy.Missing.LIFESTYLE) else emptyList()
     }
 
     /** The average daily total (TDEE) as of [date]. */
@@ -154,14 +159,21 @@ object EnergyEstimates {
         val inputs = inputs(snap, prefs, date)
         val resting = Energy.resting(inputs, Energy.Formula.of(prefs.bmrFormula))
         val kg = inputs.kg
-        // With step counting on and enough days counted, the steps replace the chosen activity level (#175), less
-        // the steps of logged walks and runs, which training already counts (#181).
-        val steps = if (prefs.activityFromSteps && kg != null) Steps.average(snap, date, hcPrimary = prefs.hcSteps) { d -> walkedSteps(snap, d, inputs) } else null
+        // With Health Connect's active calories chosen and enough days of them, they're the daily activity (#188),
+        // less what logged exercise already counts (ActiveCalories has the rule), and steps aren't added beside them.
+        val active = if (prefs.hcActive && kg != null) {
+            ActiveCalories.average(snap, date) { d -> exerciseKcal(snap, d, kg, rest, mets).sumOf { it.kcal } }
+        } else null
+        // Otherwise, with step counting on and enough days counted, the steps replace the chosen activity level
+        // (#175), less the steps of logged walks and runs, which training already counts (#181).
+        val steps = if (active == null && prefs.activityFromSteps && kg != null) {
+            Steps.average(snap, date, hcPrimary = prefs.hcSteps) { d -> walkedSteps(snap, d, inputs) }
+        } else null
         val base = resting.bmr?.let { b ->
-            if (steps != null && kg != null) {
-                b * Energy.Lifestyle.SITTING.factor + Energy.stepKcal(steps.perDay, kg, inputs.heightCm, inputs.sex)
-            } else {
-                inputs.lifestyle?.let { b * it.factor }
+            when {
+                active != null -> b * Energy.Lifestyle.SITTING.factor + active.perDay
+                steps != null && kg != null -> b * Energy.Lifestyle.SITTING.factor + Energy.stepKcal(steps.perDay, kg, inputs.heightCm, inputs.sex)
+                else -> inputs.lifestyle?.let { b * it.factor }
             }
         }
         val training = kg?.let { training(snap, date, it, rest, Energy.Plan.decode(prefs.trainingPlan) ?: Energy.Plan.DEFAULT, mets) }
@@ -169,7 +181,7 @@ object EnergyEstimates {
         val (measured, progress) = Intake.measured(snap, date, prefs.hcIntake)
         val useMeasured = measured != null && prefs.tdeeSource == SOURCE_MEASURED
         val tdee = if (useMeasured) measured!!.tdee else estimate
-        return Daily(resting, inputs.lifestyle, base, training, tdee, kg, estimate, measured, progress, useMeasured, steps)
+        return Daily(resting, inputs.lifestyle, base, training, tdee, kg, estimate, measured, progress, useMeasured, steps, active)
     }
 
     /** Which TDEE the goal uses (#176): the formulas' estimate, or the one measured from intake when there is one. */
@@ -202,7 +214,11 @@ object EnergyEstimates {
         /** The steps counted that day (#175), or null when [activityKcal] is from the activity level or the average. */
         val steps: Double? = null,
         /** Of [steps], those left out because a logged walk or run already counts them (#181). */
-        val walkedSteps: Double = 0.0
+        val walkedSteps: Double = 0.0,
+        /** Health Connect's active calories that day (#188), or null when [activityKcal] isn't from them. */
+        val active: Double? = null,
+        /** Of [active], those left out because the day's logged exercise already counts them. */
+        val activeCovered: Double = 0.0
     )
 
     /**
@@ -221,14 +237,22 @@ object EnergyEstimates {
         val exerciseKcal = exercises.sumOf { it.kcal }
         // A day with steps counted uses its own steps (so far, for today); other days use the average's activity.
         // Steps a logged walk or run took are left out, since its own calories count them (#181).
+        // With active calories from Health Connect (#188), a day that has them uses its own, less its logged exercise.
+        val active = if (daily.active != null) ActiveCalories.on(snap, date) else null
         val steps = if (daily.steps != null) Steps.on(snap, date, prefs.hcSteps) else null
         var walked = 0.0
-        val activity = if (steps != null) {
-            val inputs = inputs(snap, prefs, date)
-            walked = minOf(steps, walkedSteps(snap, date, inputs))
-            bmr * (Energy.Lifestyle.SITTING.factor - 1) + Energy.stepKcal(steps - walked, kg, inputs.heightCm, inputs.sex)
-        } else {
-            base - bmr
+        var covered = 0.0
+        val activity = when {
+            active != null -> {
+                covered = minOf(active, exerciseKcal)
+                bmr * (Energy.Lifestyle.SITTING.factor - 1) + active - covered
+            }
+            steps != null -> {
+                val inputs = inputs(snap, prefs, date)
+                walked = minOf(steps, walkedSteps(snap, date, inputs))
+                bmr * (Energy.Lifestyle.SITTING.factor - 1) + Energy.stepKcal(steps - walked, kg, inputs.heightCm, inputs.sex)
+            }
+            else -> base - bmr
         }
         val burned = bmr + activity + exerciseKcal
         val tdee = daily.tdee
@@ -241,6 +265,6 @@ object EnergyEstimates {
             mode == MODE_TRAINING -> burned + goalKcal
             else -> target
         }
-        return Day(date, bmr, daily.resting.formula, activity, exercises, exerciseKcal, burned, need, mode, goalKcal, steps, walked) to daily
+        return Day(date, bmr, daily.resting.formula, activity, exercises, exerciseKcal, burned, need, mode, goalKcal, steps, walked, active, covered) to daily
     }
 }

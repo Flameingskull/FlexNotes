@@ -260,7 +260,11 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
             SectionLabel(stringResource(R.string.cal_sheet_burned))
             Figure(stringResource(R.string.tdee_bmr, formulaText(res, day.formula)), stringResource(R.string.tdee_kcal, kcalText(day.bmr)))
             Figure(
-                day.steps?.let {
+                day.active?.let {
+                    // Health Connect's active calories (#188), less what the day's logged exercise already counts.
+                    if (day.activeCovered >= 0.5) stringResource(R.string.cal_sheet_activity_active_less, kcalText(it), kcalText(day.activeCovered))
+                    else stringResource(R.string.cal_sheet_activity_active, kcalText(it))
+                } ?: day.steps?.let {
                     // A logged walk or run counts its own calories, so its steps are left out here (#181).
                     if (day.walkedSteps >= 0.5) stringResource(R.string.cal_sheet_activity_steps_less, stepsText(it), stepsText(day.walkedSteps))
                     else stringResource(R.string.cal_sheet_activity_steps, stepsText(it))

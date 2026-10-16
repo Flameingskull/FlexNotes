@@ -10,9 +10,16 @@ import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.permission.HealthPermission
+import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BodyFatRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.Record
+import androidx.health.connect.client.records.RestingHeartRateRecord
+import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
+import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
+import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -28,20 +35,27 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.Period
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
+import kotlin.reflect.KClass
 
 /**
- * Reading Google Health Connect (#184), so values other apps record on the phone (steps, #185; what was eaten, #186)
- * can be the primary source for what FlexNotes records and calculates. Health Connect runs on the phone, so this stays
- * local: read only, no internet permission, accounts or cloud.
+ * Reading Google Health Connect (#184), so values other apps record on the phone (steps, #185; what was eaten, #186;
+ * bodyweight and body fat, #187; active calories, #188; resting heart rate and sleep, #189) can be the primary source
+ * for what FlexNotes records and calculates. Health Connect runs on the phone, so this stays local: read only, no
+ * internet permission, accounts or cloud.
  *
- * For each type switched to Health Connect in Settings (`PortableSettings.hcSteps`, `hcIntake`), a sync reads the
- * daily totals of the last [DAYS] days (the history Health Connect allows by default) grouped by local day, so
- * Health Connect applies the user's app priority and a watch and a phone aren't counted twice. Each day's total is
- * kept as a body value from [SOURCE] (`Store.replaceHealthConnectDays`), replaced at each sync; typed values are never
- * touched, and which one counts follows `Sources.dayValues`.
+ * For each type switched to Health Connect in Settings ([Kind.chosen]), a sync reads the last [DAYS] days (the history
+ * Health Connect allows by default). Totals are grouped by local day, so Health Connect applies the user's app
+ * priority and a watch and a phone aren't counted twice; sleep is grouped by the day it ends. Bodyweight and body fat
+ * are readings, each kept at its own time. Everything is kept as body values from [SOURCE]
+ * (`Store.replaceHealthConnectDays`), replaced at each sync; typed values are never touched, and which one counts
+ * follows `Sources.dayValues`.
  *
  * A sync runs when FlexNotes comes to the screen (at most every [MIN_GAP_MS]), from Settings › Health Connect's Sync
  * now, and hourly in the background when the user allowed background reading.
@@ -61,6 +75,9 @@ object HealthConnect {
     /** The least time between two syncs started by FlexNotes coming to the screen. */
     const val MIN_GAP_MS = 10 * 60_000L
 
+    /** A night's sleep is dated by the day it ends: sleep from this hour the day before up to this hour (#189). */
+    const val SLEEP_DAY_STARTS = 18
+
     private const val WORK = "fitlens_health_connect"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -74,19 +91,60 @@ object HealthConnect {
     /** Whether Health Connect can be used on this phone. */
     enum class Status { AVAILABLE, NOT_INSTALLED, UPDATE_NEEDED, UNSUPPORTED }
 
-    /** A type of data FlexNotes reads, and the setting that makes Health Connect its primary source. */
-    enum class Kind(val permission: String, val metrics: Set<AggregateMetric<*>>) {
-        STEPS(HealthPermission.getReadPermission(StepsRecord::class), setOf(StepsRecord.COUNT_TOTAL)),
+    /**
+     * A type of data FlexNotes reads: the record it's read from, the daily totals asked for (none for readings, which
+     * are read one by one), and the setting that makes Health Connect its source.
+     */
+    enum class Kind(val record: KClass<out Record>, val metrics: Set<AggregateMetric<*>> = emptySet()) {
+        STEPS(StepsRecord::class, setOf(StepsRecord.COUNT_TOTAL)),
         INTAKE(
-            HealthPermission.getReadPermission(NutritionRecord::class),
+            NutritionRecord::class,
             setOf(NutritionRecord.ENERGY_TOTAL, NutritionRecord.PROTEIN_TOTAL, NutritionRecord.TOTAL_FAT_TOTAL, NutritionRecord.TOTAL_CARBOHYDRATE_TOTAL)
-        );
+        ),
+        WEIGHT(WeightRecord::class),
+        BODY_FAT(BodyFatRecord::class),
+        ACTIVE(ActiveCaloriesBurnedRecord::class, setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)),
+        RESTING_HR(RestingHeartRateRecord::class, setOf(RestingHeartRateRecord.BPM_AVG)),
+        SLEEP(SleepSessionRecord::class, setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL));
+
+        /** The read permission Health Connect asks the user for. */
+        val permission: String get() = HealthPermission.getReadPermission(record)
 
         /** Health Connect is chosen as this type's source. */
         fun chosen(p: PortableSettings): Boolean = when (this) {
             STEPS -> p.hcSteps && p.activityFromSteps
             INTAKE -> p.hcIntake
+            WEIGHT -> p.hcWeight
+            BODY_FAT -> p.hcBodyFat
+            ACTIVE -> p.hcActive
+            RESTING_HR -> p.hcRestingHr
+            SLEEP -> p.hcSleep
         }
+
+        /**
+         * [p] with Health Connect chosen ([on]) or not as this type's source. Steps are switched through `Steps`, which
+         * also starts or stops the phone's step counter, so they're left as they are here.
+         */
+        fun choose(p: PortableSettings, on: Boolean): PortableSettings = when (this) {
+            STEPS -> p
+            INTAKE -> p.copy(hcIntake = on)
+            WEIGHT -> p.copy(hcWeight = on)
+            BODY_FAT -> p.copy(hcBodyFat = on)
+            ACTIVE -> p.copy(hcActive = on)
+            RESTING_HR -> p.copy(hcRestingHr = on)
+            SLEEP -> p.copy(hcSleep = on)
+        }
+    }
+
+    /** Body values read from Health Connect; those only it gives are made as FlexNotes's own the first time. */
+    object Names {
+        const val BODYWEIGHT = "Bodyweight"
+        const val ACTIVE = "Active calories"
+        const val ACTIVE_UNIT = "kcal"
+        const val RESTING_HR = "Resting heart rate"
+        const val RESTING_HR_UNIT = "bpm"
+        const val SLEEP = "Sleep"
+        const val SLEEP_UNIT = "h"
     }
 
     /** What a sync did. */
@@ -100,6 +158,9 @@ object HealthConnect {
 
     /** The permissions to ask for when [kinds] are switched to Health Connect: theirs, and background reading. */
     fun permissionsFor(vararg kinds: Kind): Set<String> = kinds.map { it.permission }.toSet() + BACKGROUND
+
+    /** Some type is switched to Health Connect. */
+    fun anyChosen(p: PortableSettings): Boolean = Kind.entries.any { it.chosen(p) }
 
     /** The Health Connect permissions FlexNotes has, or none when Health Connect can't be used. */
     suspend fun granted(context: Context): Set<String> {
@@ -141,8 +202,7 @@ object HealthConnect {
     suspend fun schedule(context: Context) {
         val app = context.applicationContext
         val wm = WorkManager.getInstance(app)
-        val wanted = Kind.entries.any { it.chosen(Settings.currentPortable()) }
-        if (!wanted || BACKGROUND !in granted(app)) {
+        if (!anyChosen(Settings.currentPortable()) || BACKGROUND !in granted(app)) {
             wm.cancelUniqueWork(WORK)
             return
         }
@@ -151,8 +211,8 @@ object HealthConnect {
     }
 
     /**
-     * Reads the last [DAYS] days of every type switched to Health Connect and allowed, and keeps each day's totals.
-     * Unless [force]d, it does nothing within [MIN_GAP_MS] of the last sync. One sync at a time.
+     * Reads the last [DAYS] days of every type switched to Health Connect and allowed, and keeps them. Unless
+     * [force]d, it does nothing within [MIN_GAP_MS] of the last sync. One sync at a time.
      */
     suspend fun sync(context: Context, force: Boolean = false): Outcome = lock.withLock {
         Settings.awaitLoaded()
@@ -183,18 +243,34 @@ object HealthConnect {
         }
     }
 
-    /** [kind]'s daily totals from [from] to [to] (local days), as the series `Store` keeps; a day with none is null. */
+    /** [kind]'s values from [from] to [to] (local days), as the series `Store` keeps; a day with none has none. */
     private suspend fun read(context: Context, client: HealthConnectClient, kind: Kind, from: LocalDate, to: LocalDate): List<Store.HealthSeries> {
+        val dates = days(from, to)
+        when (kind) {
+            Kind.WEIGHT -> return listOf(
+                readings(context, client, WeightRecord::class, from, to, Names.BODYWEIGHT, "kg", dates) { it.time to it.weight.inKilograms }
+            )
+            Kind.BODY_FAT -> return listOf(
+                readings(context, client, BodyFatRecord::class, from, to, BodyFat.NAME, "%", dates) { it.time to it.percentage.value }
+            )
+            else -> {}
+        }
+        // Sleep is grouped from the evening before, so each night counts on the day it ends (#189).
+        val sleep = kind == Kind.SLEEP
+        val start = if (sleep) from.minusDays(1).atTime(SLEEP_DAY_STARTS, 0) else from.atStartOfDay()
+        val end = if (sleep) to.atTime(SLEEP_DAY_STARTS, 0) else to.plusDays(1).atStartOfDay()
         val groups = client.aggregateGroupByPeriod(
             AggregateGroupByPeriodRequest(
                 metrics = kind.metrics,
-                timeRangeFilter = TimeRangeFilter.between(from.atStartOfDay(), to.plusDays(1).atStartOfDay()),
+                timeRangeFilter = TimeRangeFilter.between(start, end),
                 timeRangeSlicer = Period.ofDays(1)
             )
         )
-        val byDate = groups.associate { it.startTime.toLocalDate().format(Dates.ISO) to it.result }
-        val dates = days(from, to)
-        fun series(name: String, unit: String, own: Boolean, value: (AggregationResult) -> Double?) = Store.HealthSeries(
+        val byDate = groups.associate { g ->
+            val day = g.startTime.toLocalDate().let { if (sleep) it.plusDays(1) else it }
+            day.format(Dates.ISO) to g.result
+        }
+        fun series(name: String, unit: String, own: Boolean, value: (AggregationResult) -> Double?) = Store.HealthSeries.daily(
             name, unit,
             dates.associateWith { d -> byDate[d]?.let { r -> value(r)?.takeIf { it > 0 }?.let { Store.HealthDay(it, comment(context, r)) } } },
             own
@@ -211,7 +287,63 @@ object HealthConnect {
                     }
                 }
             }
+            Kind.ACTIVE -> listOf(
+                series(Names.ACTIVE, Names.ACTIVE_UNIT, true) { it[ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL]?.inKilocalories }
+            )
+            Kind.RESTING_HR -> listOf(
+                series(Names.RESTING_HR, Names.RESTING_HR_UNIT, true) { it[RestingHeartRateRecord.BPM_AVG]?.toDouble() }
+            )
+            Kind.SLEEP -> listOf(
+                series(Names.SLEEP, Names.SLEEP_UNIT, true) { r -> r[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.let { it.seconds / 3600.0 } }
+            )
+            Kind.WEIGHT, Kind.BODY_FAT -> emptyList()
         }
+    }
+
+    /**
+     * Every [type] reading from [from] to [to] (#187), each kept on its own local date and time, in [unit]. [value]
+     * gives a reading's time and value.
+     */
+    private suspend fun <T : Record> readings(
+        context: Context, client: HealthConnectClient, type: KClass<T>, from: LocalDate, to: LocalDate,
+        name: String, unit: String, dates: List<String>, value: (T) -> Pair<Instant, Double>
+    ): Store.HealthSeries {
+        val found = mutableListOf<Reading>()
+        var page: String? = null
+        do {
+            val response = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = type,
+                    timeRangeFilter = TimeRangeFilter.between(from.atStartOfDay(), to.plusDays(1).atStartOfDay()),
+                    pageToken = page
+                )
+            )
+            response.records.forEach { r ->
+                val (at, v) = value(r)
+                found += Reading(at, v, commentFor(listOfNotNull(appLabel(context, r.metadata.dataOrigin.packageName))))
+            }
+            page = response.pageToken
+        } while (!page.isNullOrEmpty())
+        return Store.HealthSeries(name, unit, readingsByDate(found, dates, ZoneId.systemDefault()))
+    }
+
+    /** A reading from Health Connect: when, its value, and the comment it's kept with. */
+    internal data class Reading(val at: Instant, val value: Double, val comment: String)
+
+    private val TIME: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
+
+    /**
+     * [readings] on their local date and time in [zone], to the minute, for every one of [dates] (a date without any
+     * has none, so its old values go). One reading a minute is kept, so a weigh-in shared by two apps (a scale's app
+     * and a health app) counts once. Internal for `HealthConnectTest`.
+     */
+    internal fun readingsByDate(readings: List<Reading>, dates: List<String>, zone: ZoneId): Map<String, List<Store.HealthDay>> {
+        val byDate = readings.filter { it.value > 0 }
+            .sortedBy { it.at }
+            .map { r -> LocalDateTime.ofInstant(r.at, zone).withSecond(0).withNano(0) to r }
+            .distinctBy { it.first }
+            .groupBy({ it.first.toLocalDate().format(Dates.ISO) }) { (t, r) -> Store.HealthDay(r.value, r.comment, t.format(TIME)) }
+        return dates.associateWith { byDate[it].orEmpty() }
     }
 
     /** Every date from [from] to [to], ISO. Internal for `HealthConnectTest`. */
@@ -219,17 +351,19 @@ object HealthConnect {
         generateSequence(from) { it.plusDays(1) }.takeWhile { !it.isAfter(to) }.map { it.format(Dates.ISO) }.toList()
 
     /** A day's value is kept with "Health Connect" and the apps it came from, where the phone lets FlexNotes name them. */
-    private fun comment(context: Context, r: AggregationResult): String {
+    private fun comment(context: Context, r: AggregationResult): String =
+        commentFor(r.dataOrigins.mapNotNull { appLabel(context, it.packageName) }.distinct().sorted())
+
+    /** The name of the app [packageName], or null for FlexNotes itself or an app the phone won't name. */
+    private fun appLabel(context: Context, packageName: String): String? {
+        if (packageName == context.packageName) return null
         val pm = context.packageManager
-        val apps = r.dataOrigins.map { it.packageName }.filter { it != context.packageName }.mapNotNull { p ->
-            try {
-                @Suppress("DEPRECATION")
-                pm.getApplicationLabel(pm.getApplicationInfo(p, 0)).toString().takeIf { it.isNotBlank() }
-            } catch (e: PackageManager.NameNotFoundException) {
-                null
-            }
-        }.distinct().sorted()
-        return commentFor(apps)
+        return try {
+            @Suppress("DEPRECATION")
+            pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString().takeIf { it.isNotBlank() }
+        } catch (e: PackageManager.NameNotFoundException) {
+            null
+        }
     }
 
     /** "Health Connect" or "Health Connect · MacrosFirst". Internal for `HealthConnectTest`. */

@@ -709,15 +709,24 @@ object Store {
         if (_snapshot.value != null) refresh(Area.BODY)
     }
 
-    /** One measurement's daily totals from Health Connect (#184): date (ISO) → the day's total, or null for none. */
-    data class HealthSeries(val name: String, val unit: String, val byDate: Map<String, HealthDay?>, val own: Boolean = false)
+    /**
+     * One measurement's values from Health Connect (#184): date (ISO) → that day's values, none for a day without.
+     * Daily totals ([daily]) have one value a day; readings such as a scale's (#187) keep each one with its time.
+     */
+    data class HealthSeries(val name: String, val unit: String, val byDate: Map<String, List<HealthDay>>, val own: Boolean = false) {
+        companion object {
+            /** Daily totals: date → the day's total, or null for none. */
+            fun daily(name: String, unit: String, byDate: Map<String, HealthDay?>, own: Boolean = false) =
+                HealthSeries(name, unit, byDate.mapValues { listOfNotNull(it.value) }, own)
+        }
+    }
 
-    /** A day's total from Health Connect, in [HealthSeries.unit], and the comment it's kept with (the apps it came from). */
-    data class HealthDay(val value: Double, val comment: String?)
+    /** A value from Health Connect, in [HealthSeries.unit], the comment it's kept with (the apps it came from), and its time. */
+    data class HealthDay(val value: Double, val comment: String?, val time: String = Steps.TIME)
 
     /**
-     * Writes Health Connect's daily totals (#184) in one transaction, and refreshes the snapshot (when there is one,
-     * as this runs in the background too) if anything changed. Returns whether it did.
+     * Writes Health Connect's values (#184) in one transaction, and refreshes the snapshot (when there is one, as
+     * this runs in the background too) if anything changed. Returns whether it did.
      */
     suspend fun replaceHealthConnectDays(series: List<HealthSeries>): Boolean = withContext(Dispatchers.IO) {
         val changed = writeHealthDays(db, series)
@@ -725,12 +734,17 @@ object Store {
         changed
     }
 
+    /** A measurement's name compared loosely, so "Body Weight" is "Bodyweight" and "Body fat" is "Bodyfat". */
+    private fun looseName(name: String): String = name.filterNot { it.isWhitespace() }.lowercase()
+
     /**
      * [replaceHealthConnectDays]'s write on [db] (tests run it on their own database). For each series, the
-     * measurement is found by name whatever its capitals, or made ([HealthSeries.own]: as FlexNotes's own, after the
-     * others, like the intake values). On every synced date its Health Connect values are replaced by one value a
-     * day, converted to the unit the measurement is kept in; a date with nothing in Health Connect loses them. Typed,
-     * phone and FitNotes values are never touched, and an edited Health Connect value is the user's own (#166).
+     * measurement is found by name whatever its capitals and spaces, or made ([HealthSeries.own]: as FlexNotes's own,
+     * after the others, like the intake values). On every synced date its Health Connect values are replaced by that
+     * day's values (one total, or each reading at its time), converted to the unit the measurement is kept in; a date
+     * with nothing in Health Connect loses them. A day whose values haven't changed isn't touched, so a second sync
+     * adds nothing. Typed, phone and FitNotes values are never touched, and an edited Health Connect value is the
+     * user's own (#166).
      */
     internal fun writeHealthDays(db: Db, series: List<HealthSeries>): Boolean {
         var changed = false
@@ -738,18 +752,21 @@ object Store {
             val body = db.bodyDao
             val records = db.importDao
             series.filter { it.byDate.isNotEmpty() }.forEach { s ->
-                val name = body.definitionNames().firstOrNull { it.trim().equals(s.name, ignoreCase = true) } ?: s.name.also {
+                val name = body.definitionNames().firstOrNull { looseName(it) == looseName(s.name) } ?: s.name.also {
                     if (s.own) body.addOwn(it, s.unit, body.lastOrder() + 1) else body.ensure(it, s.unit, 999)
                 }
                 val stored = body.definition(name)?.unit?.takeIf { MeasureUnits.sameKind(it, s.unit) } ?: s.unit
                 val old = records.recordsFrom(name, Sources.HEALTH_CONNECT, s.byDate.keys.toList()).groupBy { it.date }
-                s.byDate.forEach { (date, day) ->
-                    val was = old[date].orEmpty()
-                    val value = day?.let { MeasureUnits.convert(it.value, s.unit, stored) }
-                    val same = value != null && was.size == 1 && abs(was[0].value - value) < 1e-6 && was[0].comment == day?.comment
-                    if (same || (value == null && was.isEmpty())) return@forEach
+                s.byDate.forEach { (date, values) ->
+                    val was = old[date].orEmpty().sortedWith(compareBy<MeasurementRecordRow>({ it.time }, { it.value }))
+                    val now = values.map { it.copy(value = MeasureUnits.convert(it.value, s.unit, stored)) }
+                        .sortedWith(compareBy<HealthDay>({ it.time }, { it.value }))
+                    val same = was.size == now.size && was.zip(now).all { (r, v) ->
+                        r.time == v.time && abs(r.value - v.value) < 1e-6 && r.comment == v.comment
+                    }
+                    if (same) return@forEach
                     was.forEach { records.deleteRecordById(it.id) }
-                    if (value != null) records.addRecord(name, stored, date, Steps.TIME, value, day?.comment, Sources.HEALTH_CONNECT)
+                    now.forEach { v -> records.addRecord(name, stored, date, v.time, v.value, v.comment, Sources.HEALTH_CONNECT) }
                     changed = true
                 }
             }

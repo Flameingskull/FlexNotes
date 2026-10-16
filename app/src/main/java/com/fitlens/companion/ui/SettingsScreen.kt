@@ -173,6 +173,11 @@ private val CATALOGUE = listOf(
     },
     SettingEntry(R.string.steps_use, SettingsSection.Profile, R.string.search_steps_kw) { stepsSourceText(res, prefs) },
     SettingEntry(R.string.hc_intake, SettingsSection.HealthConnect, R.string.search_hc_intake_kw) { onOff(prefs.hcIntake) },
+    SettingEntry(R.string.hc_active, SettingsSection.HealthConnect, R.string.search_hc_active_kw) { onOff(prefs.hcActive) },
+    SettingEntry(R.string.hc_weight, SettingsSection.HealthConnect, R.string.search_hc_weight_kw) { onOff(prefs.hcWeight) },
+    SettingEntry(R.string.hc_body_fat, SettingsSection.HealthConnect, R.string.search_hc_body_fat_kw) { onOff(prefs.hcBodyFat) },
+    SettingEntry(R.string.hc_resting_hr, SettingsSection.HealthConnect, R.string.search_hc_resting_hr_kw) { onOff(prefs.hcRestingHr) },
+    SettingEntry(R.string.hc_sleep, SettingsSection.HealthConnect, R.string.search_hc_sleep_kw) { onOff(prefs.hcSleep) },
     SettingEntry(R.string.hc_sync_now, SettingsSection.HealthConnect, R.string.search_hc_sync_kw),
     SettingEntry(R.string.tdee_title, SettingsSection.Profile, R.string.search_tdee_kw, R.string.prof_group_uses),
     SettingEntry(R.string.search_guides, SettingsSection.Help, R.string.search_guides_kw, R.string.help_group_guides),
@@ -488,7 +493,7 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
             SettingsActionRow(
                 title,
                 stringResource(R.string.settings_hc_summary),
-                value = stringResource(if (prefs.hcSteps || prefs.hcIntake) R.string.settings_value_on else R.string.settings_value_off)
+                value = stringResource(if (com.fitlens.companion.data.HealthConnect.anyChosen(prefs)) R.string.settings_value_on else R.string.settings_value_off)
             ) { open(SettingsSection.HealthConnect) }
         },
         mainRow(o, R.string.settings_help, R.string.settings_help_kw) { title ->

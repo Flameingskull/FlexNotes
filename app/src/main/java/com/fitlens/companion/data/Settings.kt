@@ -149,6 +149,19 @@ data class PortableSettings(
     val hcSteps: Boolean = false,
     /** What was eaten comes from Health Connect (#186) when it has values for the day, rather than what was typed. */
     val hcIntake: Boolean = false,
+    /** A scale's or watch's bodyweight readings are read from Health Connect into Bodyweight (#187). */
+    val hcWeight: Boolean = false,
+    /** Body fat readings are read from Health Connect into Body fat (#187). */
+    val hcBodyFat: Boolean = false,
+    /**
+     * Daily activity comes from Health Connect's active calories (#188), ahead of [activityFromSteps] and
+     * [profileLifestyle], once enough days have them.
+     */
+    val hcActive: Boolean = false,
+    /** Resting heart rate is read from Health Connect (#189). */
+    val hcRestingHr: Boolean = false,
+    /** Sleep is read from Health Connect (#189). */
+    val hcSleep: Boolean = false,
     /** The TDEE calculator's goal (#173), `Energy.Goal.encode`, or null for none chosen. */
     val calorieGoal: String? = null,
     /** The daily calorie target set from the calculator, or null. */
@@ -383,6 +396,11 @@ object Settings {
             P_ACTIVITY_STEPS to if (s.activityFromSteps) "1" else null,
             P_HC_STEPS to if (s.hcSteps) "1" else null,
             P_HC_INTAKE to if (s.hcIntake) "1" else null,
+            P_HC_WEIGHT to if (s.hcWeight) "1" else null,
+            P_HC_BODY_FAT to if (s.hcBodyFat) "1" else null,
+            P_HC_ACTIVE to if (s.hcActive) "1" else null,
+            P_HC_RESTING_HR to if (s.hcRestingHr) "1" else null,
+            P_HC_SLEEP to if (s.hcSleep) "1" else null,
             P_CALORIE_GOAL to s.calorieGoal?.takeIf { it.isNotBlank() },
             P_CALORIE_TARGET to s.calorieTargetKcal?.toString(),
             P_MACRO_PROTEIN to s.macroProteinG?.toString(),
@@ -475,6 +493,11 @@ object Settings {
     private const val P_ACTIVITY_STEPS = "activity_from_steps"
     private const val P_HC_STEPS = "hc_steps"
     private const val P_HC_INTAKE = "hc_intake"
+    private const val P_HC_WEIGHT = "hc_weight"
+    private const val P_HC_BODY_FAT = "hc_body_fat"
+    private const val P_HC_ACTIVE = "hc_active"
+    private const val P_HC_RESTING_HR = "hc_resting_hr"
+    private const val P_HC_SLEEP = "hc_sleep"
     private const val P_CALORIE_GOAL = "calorie_goal"
     private const val P_CALORIE_TARGET = "calorie_target_kcal"
     private const val P_MACRO_PROTEIN = "macro_protein_g"
@@ -592,6 +615,11 @@ object Settings {
         activityFromSteps = bool(get(P_ACTIVITY_STEPS)),
         hcSteps = bool(get(P_HC_STEPS)) && bool(get(P_ACTIVITY_STEPS)),
         hcIntake = bool(get(P_HC_INTAKE)),
+        hcWeight = bool(get(P_HC_WEIGHT)),
+        hcBodyFat = bool(get(P_HC_BODY_FAT)),
+        hcActive = bool(get(P_HC_ACTIVE)),
+        hcRestingHr = bool(get(P_HC_RESTING_HR)),
+        hcSleep = bool(get(P_HC_SLEEP)),
         calorieGoal = Energy.Goal.decode(get(P_CALORIE_GOAL))?.encode(),
         calorieTargetKcal = get(P_CALORIE_TARGET)?.toIntOrNull()?.takeIf { it in 500..10000 },
         macroProteinG = get(P_MACRO_PROTEIN)?.toIntOrNull()?.takeIf { it in 0..1000 },
@@ -647,6 +675,11 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     activityFromSteps = activityFromSteps,
     hcSteps = hcSteps,
     hcIntake = hcIntake,
+    hcWeight = hcWeight,
+    hcBodyFat = hcBodyFat,
+    hcActive = hcActive,
+    hcRestingHr = hcRestingHr,
+    hcSleep = hcSleep,
     calorieGoal = calorieGoal,
     calorieTargetKcal = calorieTargetKcal,
     macroProteinG = macroProteinG,

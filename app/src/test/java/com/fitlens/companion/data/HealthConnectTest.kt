@@ -45,7 +45,7 @@ class HealthConnectTest {
         importDao.recordsFrom(name, source, dates.toList()).sortedBy { it.date }
 
     private fun steps(vararg days: Pair<String, Double?>) =
-        Store.HealthSeries(Steps.NAME, Steps.UNIT, days.associate { (d, v) -> d to v?.let { Store.HealthDay(it, HealthConnect.NAME) } })
+        Store.HealthSeries.daily(Steps.NAME, Steps.UNIT, days.associate { (d, v) -> d to v?.let { Store.HealthDay(it, HealthConnect.NAME) } })
 
     @Test
     fun healthConnectCountsOnlyWhenItIsThePrimarySource() {
@@ -109,11 +109,76 @@ class HealthConnectTest {
     fun intakeGoesIntoTheMeasurementAlreadyThereWhateverItsCapitals() = withDb { db ->
         db.bodyDao.addOwn("calories eaten", "kcal", 1)
         val kcal = Intake.Kind.KCAL
-        Store.writeHealthDays(db, listOf(Store.HealthSeries(kcal.label, kcal.unit, mapOf("2026-10-16" to Store.HealthDay(2150.0, "Health Connect · MacrosFirst")), own = true)))
+        Store.writeHealthDays(db, listOf(Store.HealthSeries.daily(kcal.label, kcal.unit, mapOf("2026-10-16" to Store.HealthDay(2150.0, "Health Connect · MacrosFirst")), own = true)))
         val kept = db.values("calories eaten", Sources.HEALTH_CONNECT, "2026-10-16")
         assertEquals(1, kept.size)
         assertEquals(2150.0, kept[0].value, 1e-9)
         assertEquals("Health Connect · MacrosFirst", kept[0].comment)
         assertFalse(db.bodyDao.definitionNames().contains(kcal.label))
+    }
+
+    @Test
+    fun weightReadingsKeepTheirTimesInTheUsersUnitAndDoNotRepeat() = withDb { db ->
+        db.bodyDao.ensure("Body Weight", "lbs", 1)
+        fun weighIns(vararg r: Pair<String, Double>) = listOf(
+            Store.HealthSeries(HealthConnect.Names.BODYWEIGHT, "kg", mapOf("2026-10-16" to r.map { (t, kg) -> Store.HealthDay(kg, HealthConnect.NAME, t) }))
+        )
+        assertTrue(Store.writeHealthDays(db, weighIns("07:00:00" to 80.0, "21:30:00" to 81.0)))
+        val kept = db.values("Body Weight", Sources.HEALTH_CONNECT, "2026-10-16").sortedBy { it.time }
+        assertEquals(listOf("07:00:00", "21:30:00"), kept.map { it.time })
+        assertEquals(WeightUnits.convert(80.0, "kg", "lbs"), kept[0].value, 1e-6)
+        assertEquals("lbs", kept[0].unit)
+        // The same readings again add nothing; a changed one replaces the day's readings, still one per time.
+        assertFalse(Store.writeHealthDays(db, weighIns("07:00:00" to 80.0, "21:30:00" to 81.0)))
+        assertTrue(Store.writeHealthDays(db, weighIns("07:00:00" to 80.0, "21:30:00" to 80.5)))
+        assertEquals(2, db.values("Body Weight", Sources.HEALTH_CONNECT, "2026-10-16").size)
+        assertFalse(db.bodyDao.definitionNames().contains(HealthConnect.Names.BODYWEIGHT))
+    }
+
+    @Test
+    fun readingsAreDatedLocallyOncePerMinute() {
+        val utc = java.time.ZoneId.of("UTC")
+        fun at(iso: String) = java.time.Instant.parse(iso)
+        val readings = listOf(
+            HealthConnect.Reading(at("2026-10-15T23:59:30Z"), 80.0, "a"),
+            HealthConnect.Reading(at("2026-10-16T00:00:10Z"), 79.8, "a"),
+            // The same weigh-in shared by a second app, and an empty reading: neither is kept.
+            HealthConnect.Reading(at("2026-10-16T00:00:40Z"), 79.8, "b"),
+            HealthConnect.Reading(at("2026-10-16T08:00:00Z"), 0.0, "a")
+        )
+        val byDate = HealthConnect.readingsByDate(readings, listOf("2026-10-14", "2026-10-15", "2026-10-16"), utc)
+        assertTrue(byDate.getValue("2026-10-14").isEmpty())
+        assertEquals(listOf("23:59:00"), byDate.getValue("2026-10-15").map { it.time })
+        assertEquals(listOf(Store.HealthDay(79.8, "a", "00:00:00")), byDate.getValue("2026-10-16"))
+    }
+
+    private fun active(date: String, kcal: Double, source: String = Sources.HEALTH_CONNECT) =
+        MRecord(0, ActiveCalories.NAME, "kcal", date, Steps.TIME, kcal, null, source)
+
+    private fun bodySnapshot(vararg records: MRecord) = Snapshot(
+        LibraryPart(emptyMap(), emptyMap(), emptyList(), emptyList(), emptyMap()),
+        SetPart(emptyList(), false),
+        NotesPart(emptyMap(), emptyMap(), emptyMap()),
+        BodyPart(emptyList(), records.toList(), "kg"),
+        PhotoPart(emptyList()),
+        "kg",
+        java.io.File("photos")
+    )
+
+    @Test
+    fun activeCaloriesLeaveOutWhatLoggedExerciseCounts() {
+        val today = "2026-10-16"
+        val snap = bodySnapshot(
+            active("2026-10-13", 500.0), active("2026-10-14", 400.0), active("2026-10-15", 300.0),
+            active(today, 250.0), active(today, 900.0, "manual")
+        )
+        // Health Connect's value counts on a day that has one, and today is left out of the average.
+        assertEquals(250.0, ActiveCalories.on(snap, today)!!, 1e-9)
+        val avg = ActiveCalories.average(snap, today, today) { d -> if (d == "2026-10-13") 600.0 else 0.0 }!!
+        assertEquals(3, avg.days)
+        assertEquals((0.0 + 400.0 + 300.0) / 3, avg.perDay, 1e-9)
+        assertEquals(500.0 / 3, avg.leftOutPerDay, 1e-9)
+        // Too few days: the estimate keeps using steps or the activity level.
+        assertEquals(null, ActiveCalories.average(bodySnapshot(active("2026-10-15", 300.0)), today, today))
     }
 }

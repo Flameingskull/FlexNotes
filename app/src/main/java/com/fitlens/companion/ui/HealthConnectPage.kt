@@ -2,6 +2,7 @@ package com.fitlens.companion.ui
 
 import android.content.res.Resources
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -16,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.fitlens.companion.R
+import com.fitlens.companion.data.ActiveCalories
 import com.fitlens.companion.data.HealthConnect
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.ui.design.SettingsActionRow
@@ -103,7 +105,7 @@ internal fun HealthConnectMissingRows(status: HealthConnect.Status) {
 
 /** A type Health Connect refused, or that isn't allowed any more: a note, and Health Connect's settings to allow it. */
 @Composable
-internal fun HealthConnectNotAllowedRows(@androidx.annotation.StringRes what: Int) {
+internal fun HealthConnectNotAllowedRows(@StringRes what: Int) {
     val ctx = LocalContext.current
     SettingsNote(stringResource(R.string.hc_not_allowed, stringResource(what)), error = true)
     SettingsActionRow(stringResource(R.string.hc_open)) {
@@ -127,9 +129,44 @@ private fun outcomeText(res: Resources, o: HealthConnect.Outcome): String = res.
 )
 
 /**
+ * One type's source on Settings › Health Connect: FlexNotes ([own], the first choice) or Health Connect, asking for
+ * the type's permission first. When it's refused, or no longer allowed, a note says so and opens Health Connect.
+ */
+@Composable
+private fun HealthConnectSourceRow(
+    kind: HealthConnect.Kind,
+    access: HealthConnectAccess,
+    chosen: Boolean,
+    @StringRes title: Int,
+    @StringRes summary: Int,
+    own: String,
+    ownDescription: String,
+    hcDescription: String,
+    @StringRes what: Int
+) {
+    val ctx = LocalContext.current
+    SettingsChoiceRow(
+        stringResource(title),
+        listOf(own, stringResource(R.string.hc_source_hc)),
+        if (chosen) 1 else 0,
+        summary = stringResource(summary),
+        descriptions = listOf(ownDescription, hcDescription)
+    ) { i ->
+        if (i == 0) {
+            Settings.updatePortable { kind.choose(it, false) }
+            HealthConnect.syncSoon(ctx)
+        } else if (access.status == HealthConnect.Status.AVAILABLE) {
+            access.ask(kind)
+        }
+    }
+    if (access.refused == kind || (chosen && access.notAllowed(kind))) HealthConnectNotAllowedRows(what)
+}
+
+/**
  * Settings › Health Connect (#184): for each type, FlexNotes or Health Connect as the primary source (steps, #185,
- * with the phone's step counter as a third choice; what was eaten, #186), the permission each needs, when it last
- * synced, Sync now, Health Connect's own settings, and what's read and why (Health Connect's privacy link opens here).
+ * with the phone's step counter as a third choice; what was eaten, #186; active calories, #188; bodyweight and body
+ * fat, #187; resting heart rate and sleep, #189), the permission each needs, when it last synced, Sync now, Health
+ * Connect's own settings, and what's read and why (Health Connect's privacy link opens here).
  */
 @Composable
 internal fun HealthConnectPage() {
@@ -139,36 +176,49 @@ internal fun HealthConnectPage() {
     val device by Settings.device.collectAsState()
     val syncing by HealthConnect.syncing.collectAsState()
     val access = rememberHealthConnectAccess { kind ->
-        if (kind == HealthConnect.Kind.INTAKE) {
-            Settings.updatePortable { it.copy(hcIntake = true) }
+        // Steps are switched on their own row, which also stops the phone's step counter.
+        if (kind != HealthConnect.Kind.STEPS) {
+            Settings.updatePortable { kind.choose(it, true) }
             HealthConnect.syncSoon(ctx)
         }
     }
+    val typed = stringResource(R.string.hc_intake_typed)
+    val typedDesc = stringResource(R.string.hc_typed_desc)
 
     SettingsGroup(stringResource(R.string.hc_group_sources))
     HealthConnectMissingRows(access.status)
     StepsRows(prefs)
-    SettingsChoiceRow(
-        stringResource(R.string.hc_intake),
-        listOf(stringResource(R.string.hc_intake_typed), stringResource(R.string.hc_source_hc)),
-        if (prefs.hcIntake) 1 else 0,
-        summary = stringResource(R.string.hc_intake_summary),
-        descriptions = listOf(stringResource(R.string.hc_intake_typed_desc), stringResource(R.string.hc_intake_hc_desc))
-    ) { i ->
-        if (i == 0) {
-            Settings.updatePortable { it.copy(hcIntake = false) }
-            HealthConnect.syncSoon(ctx)
-        } else if (access.status == HealthConnect.Status.AVAILABLE) {
-            access.ask(HealthConnect.Kind.INTAKE)
-        }
-    }
-    if (access.refused == HealthConnect.Kind.INTAKE || (prefs.hcIntake && access.notAllowed(HealthConnect.Kind.INTAKE))) {
-        HealthConnectNotAllowedRows(R.string.hc_what_intake)
-    }
+    HealthConnectSourceRow(
+        HealthConnect.Kind.INTAKE, access, prefs.hcIntake, R.string.hc_intake, R.string.hc_intake_summary,
+        typed, stringResource(R.string.hc_intake_typed_desc), stringResource(R.string.hc_intake_hc_desc), R.string.hc_what_intake
+    )
+    HealthConnectSourceRow(
+        HealthConnect.Kind.ACTIVE, access, prefs.hcActive, R.string.hc_active, R.string.hc_active_summary,
+        stringResource(R.string.hc_active_own), stringResource(R.string.hc_active_own_desc),
+        stringResource(R.string.hc_active_hc_desc, ActiveCalories.MIN_DAYS), R.string.hc_what_active
+    )
+
+    SettingsGroup(stringResource(R.string.hc_group_body))
+    HealthConnectSourceRow(
+        HealthConnect.Kind.WEIGHT, access, prefs.hcWeight, R.string.hc_weight, R.string.hc_weight_summary,
+        typed, typedDesc, stringResource(R.string.hc_weight_hc_desc), R.string.hc_what_weight
+    )
+    HealthConnectSourceRow(
+        HealthConnect.Kind.BODY_FAT, access, prefs.hcBodyFat, R.string.hc_body_fat, R.string.hc_body_fat_summary,
+        typed, typedDesc, stringResource(R.string.hc_body_fat_hc_desc), R.string.hc_what_body_fat
+    )
+    HealthConnectSourceRow(
+        HealthConnect.Kind.RESTING_HR, access, prefs.hcRestingHr, R.string.hc_resting_hr, R.string.hc_resting_hr_summary,
+        typed, typedDesc, stringResource(R.string.hc_resting_hr_hc_desc), R.string.hc_what_resting_hr
+    )
+    HealthConnectSourceRow(
+        HealthConnect.Kind.SLEEP, access, prefs.hcSleep, R.string.hc_sleep, R.string.hc_sleep_summary,
+        typed, typedDesc, stringResource(R.string.hc_sleep_hc_desc), R.string.hc_what_sleep
+    )
 
     if (access.status == HealthConnect.Status.AVAILABLE) {
         SettingsGroup(stringResource(R.string.hc_group_sync))
-        val chosen = prefs.hcSteps || prefs.hcIntake
+        val chosen = HealthConnect.anyChosen(prefs)
         SettingsActionRow(
             stringResource(R.string.hc_sync_now),
             stringResource(R.string.hc_sync_now_summary, HealthConnect.DAYS),

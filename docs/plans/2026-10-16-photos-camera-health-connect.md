@@ -4,8 +4,9 @@
 > photos, in-app camera and Health Connect: plan across builds (2026-10-16)". Filed under rule 5, not in this plan:
 > #191 (write to Health Connect), #192 (full history). Build A done in 1.0.141 (#182, #183, with #180 from outside the plan; its first run, 1.0.140, failed CI and published nothing).
 > Build B done in 1.0.143 (#184, #185, #186: Settings › Health Connect, steps and food from Health Connect; its first run, 1.0.142, failed CI for a Guava classpath clash and published nothing).
-> Left: Build C (#187, #188, #189), Build D (#190).
-> Next command: `/safe-build` for Build C.
+> Build C done in 1.0.144 (#187, #188, #189: bodyweight and body fat readings, active calories as the activity source, resting heart rate and sleep).
+> Left: Build D (#190).
+> Next command: `/safe-build` for Build D (#190, with the database change).
 >
 > Issue map: A1 #182 · A2 #183 · B1 #184 · B2 #185 · B3 #186 · C1 #187 · C2 #188 · C3 #189 · D1 #190.
 
