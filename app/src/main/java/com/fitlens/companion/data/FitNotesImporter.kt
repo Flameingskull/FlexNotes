@@ -33,10 +33,12 @@ class ImportPlan {
     var recordsSkipped = 0
     /** Values imported earlier without a unit FlexNotes understands, converted and given their unit by this import. */
     var unitsFixed = 0
+    /** Cardio sets an earlier import added with FitNotes's distance as logged, converted to the user's unit (#180). */
+    var distancesFixed = 0
 
     val nothingNew: Boolean
         get() = categoriesAdded + exercisesAdded + setsAdded + commentsAdded + timesAdded + measurementsAdded + recordsAdded +
-            unitsFixed == 0
+            unitsFixed + distancesFixed == 0
 
     /** What the import adds, one line each. */
     fun addedLines(res: Resources): List<String> = buildList {
@@ -57,6 +59,7 @@ class ImportPlan {
         count(R.plurals.imp_records, recordsAdded)
         count(R.plurals.imp_measurements, measurementsAdded)
         count(R.plurals.imp_units_fixed, unitsFixed)
+        count(R.plurals.imp_distances_fixed, distancesFixed)
     }
 
     /** What the import skips because FlexNotes already has it (or the user removed it in FlexNotes). */
@@ -208,12 +211,17 @@ object FitNotesImporter {
      * Opens the staged backup and merges it into [db] in one transaction. With [apply] = false every change is rolled
      * back (a dry run), so the plan is exactly what a real import would do.
      */
-    internal fun runMerge(file: File, apply: Boolean, db: Db = Store.db): ImportPlan {
+    internal fun runMerge(
+        file: File,
+        apply: Boolean,
+        db: Db = Store.db,
+        distanceUnit: String = Settings.portable.value.distanceUnit
+    ): ImportPlan {
         val src = SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY)
         try {
             return try {
                 db.transaction {
-                    val plan = merge(src, db)
+                    val plan = merge(src, db, distanceUnit)
                     if (!apply) throw DryRun(plan)
                     plan
                 }
@@ -260,7 +268,11 @@ object FitNotesImporter {
      * categories and exercises by name, and skips sets, comments, times and body records that are already present.
      * The caller runs it inside one transaction on [db], off the main thread.
      */
-    internal fun merge(src: SQLiteDatabase, db: Db): ImportPlan {
+    /**
+     * Merges the FitNotes backup [src] into [db]. [distanceUnit] is the user's distance unit, for exercises without
+     * their own (#7, #180).
+     */
+    internal fun merge(src: SQLiteDatabase, db: Db, distanceUnit: String = DistanceUnits.KM): ImportPlan {
         val plan = ImportPlan()
         val w = db.importDao
         val workouts = db.workoutDao
@@ -309,8 +321,11 @@ object FitNotesImporter {
         // ---------- Exercises ----------
         val exercises = owned(w.exercises())
         val exMap = HashMap<Long, Long>()
+        // FitNotes's cardio exercises (distance and time), whose sets carry their distance unit (#180).
+        val cardio = HashSet<Long>()
         src.each("SELECT _id, name, category_id, exercise_type_id, notes FROM exercise ORDER BY _id") { c ->
             val fnId = c.lng(0)
+            if (c.int(3) == FITNOTES_CARDIO) cardio.add(fnId)
             val name = c.strOr(1).trim()
             val key = Workouts.nameKey(name)
             if (key.isEmpty()) return@each
@@ -336,12 +351,23 @@ object FitNotesImporter {
             present[k] = (present[k] ?: 0) + 1
             workoutDates.add(s.date.take(10))
         }
-        val setSqlWithComments = """
+        // Each FitNotes cardio set keeps its distance in the unit it was logged in (`training_log.unit`); FlexNotes keeps
+        // an exercise's distances in its own unit or the user's (#7). Converted here, so nothing is fixed by hand (#180).
+        val ownDistanceUnits = w.exerciseDistanceUnits().associate { it.id to it.distance_unit }
+        // Sets an earlier import added as logged, by FitNotes id: a re-import converts them instead of adding them again.
+        val earlier = w.importedDistances(Sources.FITNOTES).associateBy { it.fitnotes_id }
+        val setSqlWithUnits = """
             SELECT t._id, t.exercise_id, t.date, t.metric_weight, t.reps, t.distance, t.duration_seconds, t.is_personal_record,
-              (SELECT group_concat(cm.comment, ' / ') FROM Comment cm WHERE cm.owner_type_id = 1 AND cm.owner_id = t._id)
+              (SELECT group_concat(cm.comment, ' / ') FROM Comment cm WHERE cm.owner_type_id = 1 AND cm.owner_id = t._id),
+              t.unit
             FROM training_log t ORDER BY t.date, t._id
         """.trimIndent()
-        val setSqlPlain = "SELECT _id, exercise_id, date, metric_weight, reps, 0, 0, 0, NULL FROM training_log ORDER BY date, _id"
+        val setSqlWithComments = """
+            SELECT t._id, t.exercise_id, t.date, t.metric_weight, t.reps, t.distance, t.duration_seconds, t.is_personal_record,
+              (SELECT group_concat(cm.comment, ' / ') FROM Comment cm WHERE cm.owner_type_id = 1 AND cm.owner_id = t._id), NULL
+            FROM training_log t ORDER BY t.date, t._id
+        """.trimIndent()
+        val setSqlPlain = "SELECT _id, exercise_id, date, metric_weight, reps, 0, 0, 0, NULL, NULL FROM training_log ORDER BY date, _id"
         val mergeSet: (Cursor) -> Unit = mergeSet@{ c ->
             val exId = exMap[c.lng(1)]
             val date = c.strOr(2).take(10)
@@ -349,23 +375,42 @@ object FitNotesImporter {
                 plan.setsSkipped++
                 return@mergeSet
             }
-            val k = Workouts.setKey(exId, date, c.dbl(3), c.int(4), c.dbl(5), c.int(6))
+            val logged = c.dbl(5)
+            val metres = if (logged > 0 && c.lng(1) in cardio && !c.isNull(9)) fitNotesDistanceMetres(c.int(9)) else null
+            val distance = if (metres == null) logged else DistanceUnits.fromMetres(logged * metres, ownDistanceUnits[exId] ?: distanceUnit)
+            val k = Workouts.setKey(exId, date, c.dbl(3), c.int(4), distance, c.int(6))
             val n = present[k] ?: 0
             if (n > 0) {
                 present[k] = n - 1
                 plan.setsSkipped++
                 return@mergeSet
             }
+            val asLogged = Workouts.setKey(exId, date, c.dbl(3), c.int(4), logged, c.int(6))
+            if (asLogged != k) {
+                // Imported before as logged: convert that set rather than add the same one again.
+                val old = earlier[c.lng(0)]
+                if (old != null && old.exercise_id == exId && Workouts.setKey(exId, date, c.dbl(3), c.int(4), old.distance, c.int(6)) == asLogged) {
+                    w.setDistance(old.id, distance)
+                    present[asLogged] = ((present[asLogged] ?: 0) - 1).coerceAtLeast(0)
+                    plan.distancesFixed++
+                    plan.setsSkipped++
+                    return@mergeSet
+                }
+                if (consumeSkip(Workouts.RULE_SET, asLogged)) {
+                    plan.setsSkipped++
+                    return@mergeSet
+                }
+            }
             if (consumeSkip(Workouts.RULE_SET, k)) {
                 plan.setsSkipped++
                 return@mergeSet
             }
-            w.addSet(exId, date, c.dbl(3), c.int(4), c.dbl(5), c.int(6), c.int(7), c.str(8), Sources.FITNOTES, c.lng(0))
+            w.addSet(exId, date, c.dbl(3), c.int(4), distance, c.int(6), c.int(7), c.str(8), Sources.FITNOTES, c.lng(0))
             plan.setsAdded++
             if (workoutDates.add(date)) plan.workoutsAdded++
         }
-        // On FitNotes versions without these columns the first query fails before reading any row.
-        if (!src.each(setSqlWithComments, mergeSet)) src.each(setSqlPlain, mergeSet)
+        // On FitNotes versions without these columns the query fails before reading any row, so the next one is tried.
+        if (!src.each(setSqlWithUnits, mergeSet) && !src.each(setSqlWithComments, mergeSet)) src.each(setSqlPlain, mergeSet)
 
         // ---------- Workout comments and times ----------
         val comments = HashSet<String>()
@@ -580,6 +625,22 @@ object FitNotesImporter {
     }
 
     /** Lower-case FitNotes measurement name → custom metric that takes its values. */
+    /**
+     * Metres in one of FitNotes's distance units, by the id a set keeps in `training_log.unit` (#180): 0 km, 1 miles,
+     * 2 metres, 3 yards. Metres is confirmed from a real backup; the others follow FitNotes's order of units. An
+     * unknown id gives null, and the distance is kept as logged.
+     */
+    internal fun fitNotesDistanceMetres(unit: Int): Double? = when (unit) {
+        0 -> 1000.0
+        1 -> 1609.344
+        2 -> 1.0
+        3 -> 0.9144
+        else -> null
+    }
+
+    /** FitNotes's exercise type for distance and time (cardio). */
+    private const val FITNOTES_CARDIO = 1
+
     /**
      * The unit a FitNotes measurement's values are in: its [short] name if FlexNotes knows it ("in", "kg"), else its
      * [long] name ("Inches"). With neither, a weight or length is told apart by the unit of the FlexNotes measurement it

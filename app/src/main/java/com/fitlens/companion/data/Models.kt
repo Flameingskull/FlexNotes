@@ -420,6 +420,21 @@ object DistanceUnits {
 
     /** A known unit, or null. */
     fun of(unit: String?): String? = unit?.trim()?.lowercase()?.takeIf { it in ALL }
+
+    /** Metres in one [unit] (km, mi or m), or null for another. */
+    fun metresPer(unit: String?): Double? = when (of(unit)) {
+        KM -> 1000.0
+        MI -> 1609.344
+        M -> 1.0
+        else -> null
+    }
+
+    /**
+     * [metres] in [unit], to six decimal places so a conversion doesn't leave float noise (5 mi is 8.04672 km). An
+     * unknown unit is taken as km, the default.
+     */
+    fun fromMetres(metres: Double, unit: String?): Double =
+        Math.round(metres / (metresPer(unit) ?: 1000.0) * 1_000_000.0) / 1_000_000.0
 }
 
 /** Length units for body measurements (#7): values keep the unit they were logged in and are shown in the user's. */

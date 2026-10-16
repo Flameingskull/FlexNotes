@@ -2367,6 +2367,10 @@
         <item quantity="one">%1$d earlier imported body value converted to your units</item>
         <item quantity="other">%1$d earlier imported body values converted to your units</item>
     </plurals>
+    <plurals name="imp_distances_fixed">
+        <item quantity="one">%1$d earlier imported cardio distance converted to your unit</item>
+        <item quantity="other">%1$d earlier imported cardio distances converted to your unit</item>
+    </plurals>
     <plurals name="imp_records">
         <item quantity="one">%1$d body tracker record</item>
         <item quantity="other">%1$d body tracker records</item>

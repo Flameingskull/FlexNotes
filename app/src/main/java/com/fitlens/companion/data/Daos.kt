@@ -701,6 +701,12 @@ data class LibraryOrigin(val id: Long, val name: String, val source: String, val
 /** The values that tell one logged set from another (`Workouts.setKey`). */
 data class SetValues(val exercise_id: Long, val date: String, val weight: Double, val reps: Int, val distance: Double, val duration: Long)
 
+/** An exercise's own distance unit (#7). */
+data class ExerciseDistanceUnit(val id: Long, val distance_unit: String)
+
+/** A set an earlier FitNotes import added, for putting its distance right (#180). */
+data class ImportedDistance(val id: Long, val exercise_id: Long, val distance: Double, val fitnotes_id: Long)
+
 /** A custom metric and the FitNotes measurement name it takes values from. */
 data class NameLink(val name: String, val link: String?)
 
@@ -734,6 +740,19 @@ interface ImportDao {
 
     @Query("SELECT exercise_id, date, weight, reps, distance, duration FROM workout_set")
     fun setValues(): List<SetValues>
+
+    @Query("SELECT id, distance_unit FROM exercise WHERE distance_unit IS NOT NULL")
+    fun exerciseDistanceUnits(): List<ExerciseDistanceUnit>
+
+    /** Sets from FitNotes with a distance, for re-imports that convert distances earlier ones kept as logged (#180). */
+    @Query(
+        "SELECT id, exercise_id, distance, fitnotes_id FROM workout_set " +
+            "WHERE source = :source AND fitnotes_id IS NOT NULL AND distance > 0"
+    )
+    fun importedDistances(source: String): List<ImportedDistance>
+
+    @Query("UPDATE workout_set SET distance = :distance WHERE id = :id")
+    fun setDistance(id: Long, distance: Double)
 
     /** An imported set. Its position and superset are 0, so the database's triggers place it (#70, #18). */
     @Query(

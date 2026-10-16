@@ -385,4 +385,104 @@ class FitNotesImporterTest {
         assertEquals(0 to 1, runBlocking(Dispatchers.IO) { FitNotesImporter.mergeBodyCsv(lines, flexnotes) })
         assertEquals(0, db.count("SELECT COUNT(*) FROM mrecord"))
     }
+    /**
+     * A backup whose sets keep FitNotes's distance unit (#180): Run (cardio, FitNotes type 1) with 5 km, 3 miles,
+     * 400 m and a distance in an unknown unit; and a loaded carry (type 2) whose unit is its weight's, never converted.
+     */
+    private fun withCardio() {
+        backup.delete()
+        val schema = fitNotesSchema.map {
+            if (it.startsWith("CREATE TABLE training_log")) {
+                "CREATE TABLE training_log(_id INTEGER PRIMARY KEY, exercise_id INTEGER, date TEXT, metric_weight REAL, " +
+                    "reps INTEGER, unit INTEGER, distance REAL, duration_seconds INTEGER, is_personal_record INTEGER)"
+            } else {
+                it
+            }
+        }
+        OldSchemas.create(backup, 1, schema) { b ->
+            b.row("Category", "_id" to 3L, "name" to "Cardio", "colour" to 0, "sort_order" to 3)
+            b.row("exercise", "_id" to 20L, "name" to "Run", "category_id" to 3L, "exercise_type_id" to 1)
+            b.row("exercise", "_id" to 21L, "name" to "Farmer's Walk", "category_id" to 3L, "exercise_type_id" to 2)
+            fun set(id: Long, ex: Long, unit: Int, distance: Double, weight: Double = 0.0) = b.row(
+                "training_log", "_id" to id, "exercise_id" to ex, "date" to "2026-02-01", "metric_weight" to weight,
+                "reps" to 0, "unit" to unit, "distance" to distance, "duration_seconds" to 1500, "is_personal_record" to 0
+            )
+            set(301L, 20L, 0, 5.0)
+            set(302L, 20L, 1, 3.0)
+            set(303L, 20L, 2, 400.0)
+            set(304L, 20L, 9, 2.0)
+            set(305L, 21L, 1, 40.0, weight = 32.0)
+        }
+    }
+
+    private fun importCardio(unit: String = DistanceUnits.KM): ImportPlan =
+        runBlocking(Dispatchers.IO) { FitNotesImporter.runMerge(backup, true, flexnotes, unit) }
+
+    private fun runDistances(): List<Double> = db.query(
+        "SELECT s.distance FROM workout_set s JOIN exercise e ON e.id = s.exercise_id WHERE e.name = 'Run' ORDER BY s.fitnotes_id"
+    ).use { c -> buildList { while (c.moveToNext()) add(c.getDouble(0)) } }
+
+    @Test
+    fun cardioDistancesAreConvertedToTheUsersUnit() {
+        withCardio()
+        assertEquals(5, importCardio().setsAdded)
+        // 5 km, 3 miles in km, 400 m in km; an unknown unit keeps the figure as logged.
+        assertEquals(listOf(5.0, 4.828032, 0.4, 2.0), runDistances())
+        // The carry's unit is its weight's, so its distance is kept.
+        assertEquals(1, db.count("SELECT COUNT(*) FROM workout_set WHERE distance = 40 AND weight = 32"))
+    }
+
+    @Test
+    fun anExercisesOwnDistanceUnitWins() {
+        withCardio()
+        db.row("exercise", "name" to "Run", "category_id" to 0L, "source" to Sources.FLEXNOTES, "distance_unit" to DistanceUnits.MI)
+        importCardio(DistanceUnits.KM)
+        assertEquals(listOf(3.106856, 3.0, 0.248548, 2.0), runDistances())
+    }
+
+    @Test
+    fun theSameUnitOnBothSidesKeepsTheFigure() {
+        withCardio()
+        importCardio(DistanceUnits.M)
+        assertEquals(listOf(5000.0, 4828.032, 400.0, 2.0), runDistances())
+    }
+
+    @Test
+    fun reImportingConvertedDistancesAddsNothing() {
+        withCardio()
+        importCardio()
+        val again = importCardio()
+        assertTrue(again.nothingNew)
+        assertEquals(5, again.setsSkipped)
+        assertEquals(4, runDistances().size)
+    }
+
+    @Test
+    fun reImportingConvertsDistancesAnEarlierImportKeptAsLogged() {
+        withCardio()
+        // An earlier build imported Run's sets with FitNotes's figures as they were logged.
+        val run = db.row("exercise", "name" to "Run", "category_id" to 0L, "source" to Sources.FITNOTES, "fitnotes_id" to 20L)
+        for ((id, d) in listOf(301L to 5.0, 302L to 3.0, 303L to 400.0, 304L to 2.0)) {
+            db.row(
+                "workout_set", "exercise_id" to run, "date" to "2026-02-01", "weight" to 0.0, "reps" to 0, "distance" to d,
+                "duration" to 1500, "source" to Sources.FITNOTES, "fitnotes_id" to id
+            )
+        }
+        val plan = importCardio()
+        // Miles and metres are put right in place; km and the unknown unit were already right.
+        assertEquals(2, plan.distancesFixed)
+        // Only the carry's set is new.
+        assertEquals(1, plan.setsAdded)
+        assertEquals(listOf(5.0, 4.828032, 0.4, 2.0), runDistances())
+        assertTrue(importCardio().nothingNew)
+    }
+
+    @Test
+    fun fitNotesDistanceUnitsInMetres() {
+        assertEquals(1000.0, FitNotesImporter.fitNotesDistanceMetres(0)!!, 0.0)
+        assertEquals(1609.344, FitNotesImporter.fitNotesDistanceMetres(1)!!, 0.0)
+        assertEquals(1.0, FitNotesImporter.fitNotesDistanceMetres(2)!!, 0.0)
+        assertEquals(0.9144, FitNotesImporter.fitNotesDistanceMetres(3)!!, 0.0)
+        assertEquals(null, FitNotesImporter.fitNotesDistanceMetres(9))
+    }
 }
