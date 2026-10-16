@@ -80,6 +80,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.ui.design.SegmentedSwitch
+import com.fitlens.companion.data.PhotoExport
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
 
 /** Filter / group key for photos without a pose. */
 private const val UNSET = "Unset"
@@ -139,6 +145,21 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
     var poseDialog by state.saved("poseDialog", false)
     var dateDialog by state.saved("dateDialog", false)
     var deleteDialog by state.saved("deleteDialog", false)
+    // Export as image files (#195): what to export, then the folder; the ids wait here while the folder is picked.
+    var exportSheet by state.saved("exportSheet", false)
+    val exportIds = state.savedIds("exportIds")
+    val ctx = LocalContext.current
+    val pickExportFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        val photos = exportIds.mapNotNull { snap.photosById[it] }
+        exportIds.clear()
+        if (tree != null && photos.isNotEmpty()) startPhotoExport(ctx, tree, photos)
+    }
+    fun export(ids: List<Long>) {
+        if (ids.isEmpty()) return
+        exportIds.clear()
+        exportIds.addAll(ids)
+        pickExportFolder.launch(null)
+    }
     // Take photo / Choose from phone (#182): the camera dates its shot today, the picker each photo by its own date.
     val addPhoto = rememberAddPhotoActions(nav, date = null)
     val importFolder = rememberFolderPhotoImporter()
@@ -191,6 +212,7 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
                         add(MenuAction(stringResource(R.string.ph_check_dates_n, snap.reviewPhotos.size)) { nav.push(Screen.Review) })
                     }
                     if (snap.photos.isNotEmpty()) add(MenuAction(stringResource(R.string.ph_redate_menu)) { redatePhotos(res) })
+                    if (snap.datedPhotos.isNotEmpty()) add(MenuAction(stringResource(R.string.ph_export_menu)) { exportSheet = true })
                     add(MenuAction(stringResource(R.string.ph_media_settings)) { nav.push(Screen.SettingsPage(SettingsSection.Media)) })
                 }
             )
@@ -214,6 +236,11 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
                 overflow = listOf(
                     MenuAction(stringResource(R.string.ph_set_pose_menu)) { poseDialog = true },
                     MenuAction(stringResource(R.string.ph_change_date_menu)) { dateDialog = true },
+                    MenuAction(stringResource(R.string.ph_export_selected)) {
+                        val ids = selected.sortedBy { snap.photosById[it]?.date ?: "" }
+                        selected.clear()
+                        export(ids)
+                    },
                     MenuAction(if (allShown) stringResource(R.string.ph_deselect_all) else stringResource(R.string.ph_select_all_shown, orderedIds.size)) { toggleAll(orderedIds) }
                 )
             )
@@ -373,6 +400,8 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
             AppScope.scope.launch { Store.setPhotoDate(ids, d) }
         }
     }
+    if (exportSheet) ExportPhotosSheet(snap.datedPhotos, onDismiss = { exportSheet = false }) { photos -> export(photos.map { it.id }) }
+    PhotoExportProgressSheet()
     if (deleteDialog) ConfirmSheet(
         title = pluralStringResource(R.plurals.ph_delete_n, selected.size, selected.size),
         message = stringResource(R.string.ph_delete_body),
@@ -477,5 +506,99 @@ fun ReviewScreen(snap: Snapshot, nav: Nav) {
         PickDateDialog(p.date, onDismiss = { editing = null }) { d ->
             AppScope.scope.launch { Store.setPhotoDate(listOf(p.id), d) }
         }
+    }
+}
+
+/** Starts exporting [photos] into the folder [tree] (#195), each described by its pose, date and comment. */
+private fun startPhotoExport(ctx: android.content.Context, tree: android.net.Uri, photos: List<Photo>) {
+    val res = ctx.resources
+    val started = PhotoExport.start(ctx, tree, photos, describe = { p ->
+        listOfNotNull(
+            res.getString(R.string.ph_export_description),
+            if (p.pose.isBlank()) null else poseText(res, p.pose),
+            p.date?.let { Dates.medium(it) },
+            p.note?.trim()?.takeIf { it.isNotEmpty() }
+        ).joinToString(" · ")
+    }) { r -> UiEvents.show(exportResultText(res, r)) }
+    if (!started) UiEvents.show(res.getString(R.string.ph_export_busy))
+}
+
+/** "Exported 12 photos. 1 skipped: its file is missing." (#195) */
+private fun exportResultText(res: Resources, r: PhotoExport.Result): String = buildList {
+    add(res.getQuantityString(if (r.cancelled) R.plurals.ph_export_stopped else R.plurals.ph_export_done, r.exported, r.exported))
+    if (r.skipped > 0) add(res.getQuantityString(R.plurals.ph_export_skipped, r.skipped, r.skipped))
+    if (r.failed > 0) add(res.getQuantityString(R.plurals.ph_export_failed, r.failed, r.failed))
+}.joinToString(" ")
+
+/**
+ * What to export as image files (#195): every photo, or those dated in a range. Choose folder then asks where; the
+ * selection bar's Export exports the selected photos the same way.
+ */
+@Composable
+private fun ExportPhotosSheet(photos: List<Photo>, onDismiss: () -> Unit, onExport: (List<Photo>) -> Unit) {
+    var range by rememberSaveable { mutableStateOf(false) }
+    val first = photos.firstNotNullOfOrNull { it.date?.take(10) } ?: Dates.today()
+    var from by rememberSaveable { mutableStateOf(first) }
+    var to by rememberSaveable { mutableStateOf(Dates.today()) }
+    var picking by rememberSaveable { mutableStateOf<Int?>(null) }
+    val chosen = remember(photos, range, from, to) {
+        if (range) PhotoExport.inRange(photos, minOf(from, to), maxOf(from, to)) else photos.sortedBy { it.date }
+    }
+    FitSheet(
+        title = stringResource(R.string.ph_export_title),
+        onDismiss = onDismiss,
+        confirmLabel = stringResource(R.string.ph_export_choose_folder),
+        confirmEnabled = chosen.isNotEmpty(),
+        onConfirm = { onExport(chosen); onDismiss() }
+    ) {
+        Text(
+            stringResource(R.string.ph_export_intro),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        SegmentedSwitch(
+            options = listOf(stringResource(R.string.ph_export_all), stringResource(R.string.ph_export_range)),
+            selected = if (range) 1 else 0,
+            onSelect = { range = it == 1 }
+        )
+        if (range) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                GlassOutlinedButton(onClick = { picking = 0 }, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.ph_export_from, Dates.medium(from)))
+                }
+                GlassOutlinedButton(onClick = { picking = 1 }, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.ph_export_to, Dates.medium(to)))
+                }
+            }
+        }
+        Text(pluralStringResource(R.plurals.ph_export_count, chosen.size, chosen.size), style = MaterialTheme.typography.bodyLarge)
+    }
+    picking?.let { which ->
+        PickDateDialog(if (which == 0) from else to, onDismiss = { picking = null }) { d -> if (which == 0) from = d else to = d }
+    }
+}
+
+/** The export running (#195): how far it's got, Stop, and Hide to let it carry on while the app is used. */
+@Composable
+private fun PhotoExportProgressSheet() {
+    val progress by PhotoExport.progress.collectAsState()
+    val p = progress
+    // Hide lasts for the run it hid; the next export shows its progress again.
+    var hidden by remember(p == null) { mutableStateOf(false) }
+    if (p == null || hidden) return
+    FitSheet(
+        title = stringResource(R.string.ph_export_running),
+        onDismiss = { hidden = true },
+        dismissLabel = stringResource(R.string.ph_export_hide),
+        secondaryLabel = stringResource(R.string.ph_export_stop),
+        onSecondary = { PhotoExport.cancel() }
+    ) {
+        Text(stringResource(R.string.ph_export_progress, p.done, p.total), style = MaterialTheme.typography.bodyLarge)
+        LinearProgressIndicator(
+            progress = { if (p.total == 0) 0f else p.done.toFloat() / p.total },
+            modifier = Modifier.fillMaxWidth().height(6.dp),
+            color = Brand.Gold,
+            trackColor = Brand.Hairline
+        )
     }
 }

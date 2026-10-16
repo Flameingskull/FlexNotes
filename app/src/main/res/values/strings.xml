@@ -1712,6 +1712,42 @@
     <string name="ph_check_dates_n">Check photo dates (%1$d)</string>
     <string name="ph_media_settings">Photo and media settings</string>
     <string name="ph_redate_menu">Re-read photo dates</string>
+    <!-- Export photos as image files (#195) -->
+    <string name="ph_export_menu">Export as image files</string>
+    <string name="ph_export_selected">Export as image files</string>
+    <string name="ph_export_title">Export photos</string>
+    <string name="ph_export_intro">Saves copies as ordinary image files in a folder you choose, named by date and pose (2026-10-16_front.jpg). Each keeps its FlexNotes date and time, pose and comment in its details. Files already in the folder are never replaced, and your photos in FlexNotes don't change.</string>
+    <string name="ph_export_all">All photos</string>
+    <string name="ph_export_range">Date range</string>
+    <string name="ph_export_from">From %1$s</string>
+    <string name="ph_export_to">To %1$s</string>
+    <plurals name="ph_export_count">
+        <item quantity="one">%1$d photo to export</item>
+        <item quantity="other">%1$d photos to export</item>
+    </plurals>
+    <string name="ph_export_choose_folder">Choose folder</string>
+    <string name="ph_export_running">Exporting photos</string>
+    <string name="ph_export_progress">%1$d of %2$d done</string>
+    <string name="ph_export_hide">Hide</string>
+    <string name="ph_export_stop">Stop</string>
+    <string name="ph_export_busy">An export is already running.</string>
+    <string name="ph_export_description">FlexNotes progress photo</string>
+    <plurals name="ph_export_done">
+        <item quantity="one">Exported %1$d photo.</item>
+        <item quantity="other">Exported %1$d photos.</item>
+    </plurals>
+    <plurals name="ph_export_stopped">
+        <item quantity="one">Export stopped after %1$d photo.</item>
+        <item quantity="other">Export stopped after %1$d photos.</item>
+    </plurals>
+    <plurals name="ph_export_skipped">
+        <item quantity="one">%1$d skipped: its file is missing.</item>
+        <item quantity="other">%1$d skipped: their files are missing.</item>
+    </plurals>
+    <plurals name="ph_export_failed">
+        <item quantity="one">%1$d couldn't be written to the folder.</item>
+        <item quantity="other">%1$d couldn't be written to the folder.</item>
+    </plurals>
     <string name="ph_redate_busy">Re-reading photo dates…</string>
     <string name="ph_redate_none">Every photo date already matches its metadata. Dates you set by hand weren\'t checked.</string>
     <plurals name="ph_redated">
