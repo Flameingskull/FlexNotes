@@ -3,7 +3,7 @@
 > **Status (2026-10-16): In progress.** Step 0 done: issues #182–#190 filed and imported; tracker plan item "Day
 > photos, in-app camera and Health Connect: plan across builds (2026-10-16)". Filed under rule 5, not in this plan:
 > #191 (write to Health Connect), #192 (full history). Build A done in 1.0.141 (#182, #183, with #180 from outside the plan; its first run, 1.0.140, failed CI and published nothing).
-> Build B done in 1.0.142 (#184, #185, #186: Settings › Health Connect, steps and food from Health Connect).
+> Build B done in 1.0.143 (#184, #185, #186: Settings › Health Connect, steps and food from Health Connect; its first run, 1.0.142, failed CI for a Guava classpath clash and published nothing).
 > Left: Build C (#187, #188, #189), Build D (#190).
 > Next command: `/safe-build` for Build C.
 >
