@@ -92,9 +92,9 @@ fun ImportSummary.level(): ResultLevel = if (ok) ResultLevel.Success else Result
 class PendingPhotoImport(
     val uris: List<Uri>,
     val forcedDate: String? = null,
-    val onDone: (PhotoImportResult) -> Unit = {},
     /** The pose, when it was already chosen (the camera, #183): no pose question is asked. */
-    val pose: String? = null
+    val pose: String? = null,
+    val onDone: (PhotoImportResult) -> Unit = {}
 )
 
 /** Every bulk photo import goes through here, so each one asks for a pose first (see [PhotoImportHost]). */
@@ -150,7 +150,7 @@ fun PhotoImportHost() {
 @Composable
 fun rememberPhotoImporter(forcedDate: String? = null, onDone: (PhotoImportResult) -> Unit = {}): () -> Unit {
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
-        if (uris.isNotEmpty()) PhotoImports.request(PendingPhotoImport(uris, forcedDate, onDone))
+        if (uris.isNotEmpty()) PhotoImports.request(PendingPhotoImport(uris, forcedDate, onDone = onDone))
     }
     return { launcher.launch(arrayOf("image/*")) }
 }
@@ -181,7 +181,7 @@ fun rememberFolderPhotoImporter(onDone: (PhotoImportResult) -> Unit = {}): () ->
             UiEvents.busy.value = ctx.getString(R.string.ia_scanning)
             val uris = try { PhotoImporter.listFolderImages(ctx, tree) } finally { UiEvents.busy.value = null }
             if (uris.isEmpty()) UiEvents.show(ctx.getString(R.string.ia_no_images))
-            else PhotoImports.request(PendingPhotoImport(uris, null, onDone))
+            else PhotoImports.request(PendingPhotoImport(uris, null, onDone = onDone))
         }
     }
     return { launcher.launch(null) }

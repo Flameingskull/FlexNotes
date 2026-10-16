@@ -32,6 +32,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -93,6 +94,7 @@ private val TIMERS = listOf(0, 3, 10)
  * up. A shot is reviewed (Retake or Use photo) and then goes through the same import as Choose from phone, on [date]
  * (null: today) with its pose. Nothing is written to the phone's gallery.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CameraScreen(snap: Snapshot, nav: Nav, date: String?) {
     val ctx = LocalContext.current
