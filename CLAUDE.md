@@ -61,11 +61,14 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
 - `.flexnotes` backups are for FlexNotes only. There's no export back to FitNotes.
 - **Local only:** no accounts, cloud services, online subscriptions or internet permission. Android's Google
   auto-backup stays disabled (`data_extraction_rules.xml`). Automatic backups go only to a folder the user chooses.
+  **Health Connect (owner, 2026-10-16)** runs on the phone, so it fits this rule: FlexNotes may read from it (read
+  only for now), as an optional primary source per data type. Plan: `docs/plans/2026-10-16-photos-camera-health-connect.md`.
 - Android APKs only for now, working across phone screen sizes. A self-hosted Docker web version may come later.
 - Recommended next build after 1.0.8: #38 and #50, to unblock the settings and analysis groups.
 - **Navigation matches FitNotes (owner decision, 2026-09-26):** no bottom tab bar. The day log is home; its top bar
-  has Calendar, + (the exercise library, whose title switches to each routine) and a ⋮ menu (Analysis, Body tracker,
-  Photos, Settings). See the owner decision comment on #79.
+  has Calendar, Add photos (a camera icon: Take photo / Choose from phone, owner 2026-10-16, #182), + (the exercise
+  library, whose title switches to each routine) and a ⋮ menu (Analysis, Body tracker, Photos, Settings). See the
+  owner decision comment on #79.
 - **Exercises, workouts and routines (owner decisions, 2026-09-26, revised 2026-09-28):** an **exercise** is one
   movement. A user-made **workout / routine is one function**: a set of exercises grouped by day, with days the user
   names simply (weekdays, or "Push Day", "Pull Day", "Leg Day"). The separate Saved workouts and Routines pages built in

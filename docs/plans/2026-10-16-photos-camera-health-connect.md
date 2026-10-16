@@ -2,7 +2,7 @@
 
 > **Status (2026-10-16): In progress.** Step 0 done: issues #182–#190 filed and imported; tracker plan item "Day
 > photos, in-app camera and Health Connect: plan across builds (2026-10-16)". Filed under rule 5, not in this plan:
-> #191 (write to Health Connect), #192 (full history). Build A (#182, #183) is being built in 1.0.140.
+> #191 (write to Health Connect), #192 (full history). Build A done in 1.0.140 (#182, #183, with #180 from outside the plan).
 > Left: Build B (#184, #185, #186), Build C (#187, #188, #189), Build D (#190).
 > Next command: `/safe-build` for Build B.
 >

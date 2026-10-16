@@ -1,32 +1,43 @@
 ## Overview
 
-This update makes the calorie estimate from your steps more accurate and makes falls easier to read. A walk or run you
-log as a workout is no longer counted a second time through your phone's steps. The red used for falls is now a
-little brighter, so it reads clearly on every card.
+This update makes progress photos quicker to take. FlexNotes now has its own camera, opened from a new camera button
+at the top of the day log. You can line each shot up with your last photo in the same pose. Shots go straight onto
+that day, with their pose, and never into your phone's gallery. Cardio distances imported from FitNotes also now
+arrive in your own distance unit.
 
 Install it over the current app as usual. Everything you've logged is kept, and the database doesn't change.
 
+## What's new
+
+- **Add photos from the top of the day log.** A camera button now sits between Calendar and +. It offers **Take
+  photo** or **Choose from phone**, both dated to the day you're looking at. It replaces "Add photos to this day" in
+  the ⋮ menu. The Add photo tile in the day's photo strip and the + on the Photos screen offer the same choice.
+- **FlexNotes's own camera.** Take photo opens a viewfinder inside FlexNotes:
+  - choose the pose (Front, Side, Back or Other) before the shot;
+  - turn on a faint outline of your last photo in that pose, so your shots line up from week to week;
+  - set a self-timer of 3 or 10 seconds for full-body shots, and tap the shutter again to cancel it;
+  - switch between the front and back cameras.
+- **Retake or Use photo.** After each shot you can retake it or keep it. A kept photo is saved like any imported
+  photo, on that day with its pose. It's included in your backups, and nothing is written to your gallery.
+- **The camera permission is asked for only when the camera opens.** If you refuse it, the camera explains why it's
+  needed and offers your phone's settings. Once you allow it there, you go straight back to the viewfinder.
+
 ## Improved
 
-- **Logged walks and runs aren't counted twice.** With Daily activity from my steps on, a walk or run you log while
-  carrying your phone was counted twice: once as the exercise's own calories and again in the day's steps. Now the
-  steps that walk or run took come off the day's steps, worked out from its distance and your stride (a longer stride
-  for a run). The day's calories and your average daily total (TDEE) both use this.
-- **What was left out is shown.** The calories sheet on the day log shows the day's steps and how many were left out
-  for logged walks and runs. The TDEE calculator says when its average steps leave them out.
-- **Clearer falls.** The red for a value that went down, and for graph lines, is slightly brighter. It now meets the
-  standard contrast for text on every card and surface, as the gold, ivory and green already did. The PDF report and
-  progress videos use the same red.
-- **Contrast is checked on every build.** Each new version now checks every text and control colour against every
-  background it's drawn on, so a hard-to-read colour can't ship unnoticed.
+- **Cardio distances from FitNotes in your unit.** FitNotes keeps each cardio set's distance in the unit you logged
+  it in. The import now reads that unit and converts the distance to the exercise's distance unit, or your own, so a
+  3-mile run shows as 4.83 km if you use kilometres. Importing the same backup again adds nothing. Runs an earlier
+  import brought in without converting are put right in place.
+- **Top bar on small screens.** On a narrow phone with a large font, a top bar icon that would crowd the title moves
+  into the ⋮ menu instead.
 
 ## Known limitations
 
-- A walk or run counts as one when the exercise's activity is set to Walking or Running, or when it has a distance and
-  a time at walking or running pace. Other exercises, such as a hike logged only as a time, are counted as before.
-- If you logged a walk without carrying your phone, its steps are still taken off, so that day's activity can be
-  slightly lower than it should be.
-- Cardio distances from FitNotes are still imported as logged, without converting between kilometres and miles
-  (#180). That fix needs a FitNotes backup with cardio sets to confirm where FitNotes keeps the distance unit.
+- FitNotes's distance unit for metres is confirmed from a real backup. Kilometres, miles and yards follow FitNotes's
+  order of units. If a run imported from FitNotes shows the wrong distance, please report it with the unit you logged
+  it in. Distances on exercises that aren't cardio in FitNotes, such as a loaded carry, are still imported as logged.
+- The photo outline uses your latest photo in the chosen pose. It doesn't adjust for a different camera or distance.
+- Health Connect (steps, food and macros, bodyweight, active calories, sleep and workouts from other apps) is planned
+  for the next updates (#184 to #190).
 - The rest of the accessibility checks (TalkBack, switch access and whole screens on a small phone) still need a phone
   (#157).
