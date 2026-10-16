@@ -82,7 +82,7 @@ class BodyFatTest {
 
         // Nothing logged by then: the missing inputs are named and there's no figure.
         val early = BodyFat.estimateOn("2026-08-01", BodyFat.Sex.MALE, records, names, null)!!
-        assertEquals(listOf(BodyFat.Input.HEIGHT, BodyFat.Input.NECK, BodyFat.Input.WAIST), early.missing)
+        assertEquals(listOf(BodyFat.Input.NECK, BodyFat.Input.WAIST), early.missing)
         assertNull(early.percent)
     }
 

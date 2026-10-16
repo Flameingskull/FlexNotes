@@ -172,7 +172,7 @@ that stop being true. The repository is public: no personal data, secrets or `FI
 - 2026-10-16: `area: photos` label created (for #195); tracker `area` is an array of the label suffixes. Write issue bodies with the Write tool to a temp file and pass `--body-file`: long Git Bash heredocs with apostrophes failed to parse.
 - 2026-10-16 (1.0.142, #184): Health Connect values are body values with source `health_connect`, one per day, replaced by `Store.writeHealthDays`. Anything that sums a day's values must go through `Sources.dayValues(day, hcPrimary)`; anything that edits/replaces "the user's" values must leave `health_connect` rows out (`Intake.ownRecordsOn`, `ImportDao.firstRecordOn`). New HC types: add a `HealthConnect.Kind`, its manifest `READ_*` permission and a `PortableSettings.hc*` flag.
 
-- **A new `Db.VERSION` no longer needs a second CI run for its schema (1.0.146).** `app/build.gradle.kts` makes the
+- **A new `Db.VERSION` no longer needs a second CI run for its schema (1.0.147).** `app/build.gradle.kts` makes the
   debug asset merges depend on `kspDebugKotlin`, so `MigrationTestHelper` finds the freshly exported `<N>.json`.
   Still commit that JSON from `ci-logs` after the release, so later migrations are checked against it.
 - **Remembering imported external records:** an import rule per record id (`HealthSessions.RULE`) keeps a deleted or

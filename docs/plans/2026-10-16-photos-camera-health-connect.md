@@ -5,7 +5,7 @@
 > #191 (write to Health Connect), #192 (full history). Build A done in 1.0.141 (#182, #183, with #180 from outside the plan; its first run, 1.0.140, failed CI and published nothing).
 > Build B done in 1.0.143 (#184, #185, #186: Settings › Health Connect, steps and food from Health Connect; its first run, 1.0.142, failed CI for a Guava classpath clash and published nothing).
 > Build C done in 1.0.144 (#187, #188, #189: bodyweight and body fat readings, active calories as the activity source, resting heart rate and sleep).
-> Build D done in 1.0.146 (#190: exercise sessions as cardio sets, database v23; its first run, 1.0.145, failed CI for unescaped apostrophes in strings), with #194 and the first slice of
+> Build D done in 1.0.147 (#190: exercise sessions as cardio sets, database v23; its first runs, 1.0.145 and 1.0.146, failed CI: unescaped apostrophes in strings, then a wrong test expectation), with #194 and the first slice of
 > #195 from outside the plan. Nothing remains.
 >
 > Issue map: A1 #182 · A2 #183 · B1 #184 · B2 #185 · B3 #186 · C1 #187 · C2 #188 · C3 #189 · D1 #190.
