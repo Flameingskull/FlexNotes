@@ -171,6 +171,14 @@ Keeping it in step: after changing an issue's labels, make its item agree; after
 issue closes, set the item to `shipped` (features) or `done` (bugs). `tracker_ready` then answers "what can we start
 now", ranked by how much each item unblocks.
 
+**Parity rule (owner, 2026-10-22): the tracker and GitHub issues must always match.** Every open issue has exactly
+one tracker item, and every open tracker bug or feature has an open issue: nothing lost, nothing duplicated. Each build
+skill (`/new-build`, `/safe-build`, `/slice-build`) runs the parity check at its start and again before its push:
+list open issues (`gh issue list --state open --json number,title,labels`) and open tracker items (`bug`, `feature`,
+with `full`); import any issue without an item (match by issue number, either repo name); archive duplicates, keeping
+the item whose origin is `Flameingskull/FlexNotes#N`; and set items whose issue has closed to `shipped` or `done`.
+A tracker bug or feature with no issue gets one filed (rule 5) and is re-imported, never left tracker-only.
+
 **Making a new build:** the owner runs `/new-build` (`.claude/skills/new-build/SKILL.md`). With no arguments it asks
 which items to include; `/new-build auto` builds everything `ready`; `/new-build 12 15` builds those issues.
 **Budget-limited builds:** `/safe-build` (`.claude/skills/safe-build/SKILL.md`) gets the most high-quality

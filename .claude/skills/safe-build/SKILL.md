@@ -50,6 +50,9 @@ knowledge carries over, so each extra item costs much less than the first.
 - Work in the repository root. `git status` must be clean (local commits not yet pushed are fine). If it isn't, stop
   and show the owner what's uncommitted.
 - `git pull --ff-only origin main`, and check `gh auth status`.
+- **Tracker parity check** (CLAUDE.md, "Parity rule"): list open issues and open tracker `bug`/`feature` items;
+  import any issue without an item, archive duplicates (keep the `Flameingskull/FlexNotes#N` origin), set items whose
+  issue closed to `shipped`/`done`, and file an issue for any tracker-only item. Run it again just before the push.
 - Work out this build's version: the latest release number + 1 (or the run number + `BUILD_OFFSET`). Check whether
   the README refresh is due (step 5).
 

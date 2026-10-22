@@ -22,6 +22,9 @@ instructions.
   release, and set the plan item's `progress`; mark it `completed` only when every issue it depends on has shipped.
 - Work in the repository root. `git status` must be clean; if not, stop and show the owner what's uncommitted.
 - `git pull --ff-only origin main`, and check `gh auth status`.
+- **Tracker parity check** (CLAUDE.md, "Parity rule"): list open issues and open tracker `bug`/`feature` items;
+  import any issue without an item, archive duplicates (keep the `Flameingskull/FlexNotes#N` origin), set items whose
+  issue closed to `shipped`/`done`, and file an issue for any tracker-only item. Run it again just before the push.
 
 ## 2. Triage (in parallel)
 Launch the **bug-manager** and **feature-manager** agents at the same time. Ask each one to triage its list: label and
