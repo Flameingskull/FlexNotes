@@ -38,6 +38,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import com.fitlens.companion.data.MeasureUnits
 import com.fitlens.companion.data.MeasurementDef
+import com.fitlens.companion.data.Medications
 import com.fitlens.companion.data.WeightUnits
 import com.fitlens.companion.ui.design.DropdownPill
 import com.fitlens.companion.data.Snapshot
@@ -52,16 +53,22 @@ import kotlinx.coroutines.launch
  * on a screen of its own. Turn each on or off (off hides it from the body tracker, the day log and the pickers, and
  * keeps its values), set its unit and goal, create, edit or delete custom measurements, and add the standard set for
  * people who don't import from FitNotes. Choices made here survive FitNotes imports.
+ *
+ * On Medications ([medications], with [snap] the [Snapshot.medicationView]) it edits the medications the same way
+ * (#200). Every row's ⋮ moves it between the two (#199); the measurements other features read by name can't move.
  */
 @Composable
-internal fun MeasurementsEditor(snap: Snapshot) {
+internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
     val res = LocalContext.current.resources
     var creating by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<MeasurementDef?>(null) }
     var deleting by remember { mutableStateOf<MeasurementDef?>(null) }
     var goalFor by remember { mutableStateOf<MeasurementDef?>(null) }
     val all = remember(snap.bodyKey) { snap.allMeasurements }
-    val missing = remember(snap.bodyKey) { StandardMeasurements.missing(snap.measurementDefs.map { it.name }) }
+    val missing = remember(snap.bodyKey) {
+        if (medications) emptyList()
+        else StandardMeasurements.missing(snap.measurementDefs.map { it.name }).filterNot { snap.inOtherHalf(it.first) }
+    }
 
     Column(Modifier.fillMaxSize()) {
         LazyColumn(contentPadding = PaddingValues(bottom = Spacing.xxl)) {
@@ -69,7 +76,7 @@ internal fun MeasurementsEditor(snap: Snapshot) {
                 Column(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
                     // FitNotes's words at the top of Measurements (#144).
                     Text(
-                        stringResource(R.string.ms_intro),
+                        stringResource(if (medications) R.string.md_intro else R.string.ms_intro),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     GlassOutlinedButton(
@@ -77,7 +84,7 @@ internal fun MeasurementsEditor(snap: Snapshot) {
                         modifier = Modifier.padding(top = Spacing.sm).heightIn(min = Spacing.touch)
                     ) {
                         Icon(Icons.Filled.Add, contentDescription = null, tint = Brand.Gold)
-                        Text(stringResource(R.string.ms_new))
+                        Text(stringResource(if (medications) R.string.md_new else R.string.ms_new))
                     }
                     if (missing.isNotEmpty()) {
                         GlassOutlinedButton(
@@ -89,7 +96,10 @@ internal fun MeasurementsEditor(snap: Snapshot) {
                 HorizontalDivider(color = Brand.Hairline)
             }
             if (all.isEmpty()) {
-                item { EmptyState(stringResource(R.string.body_empty_title), stringResource(R.string.ms_empty_body)) }
+                item {
+                    if (medications) EmptyState(stringResource(R.string.md_empty_title), stringResource(R.string.md_empty_edit))
+                    else EmptyState(stringResource(R.string.body_empty_title), stringResource(R.string.ms_empty_body))
+                }
             }
             items(all, key = { it.name }) { m ->
                 // As FitNotes lists them (#144): the name in bold, its unit in full, its goal, then the tracking checkbox.
@@ -131,11 +141,17 @@ internal fun MeasurementsEditor(snap: Snapshot) {
                             stateDescription = res.getString(if (m.enabled) R.string.ms_on else R.string.ms_off)
                         }
                     )
-                    if (m.custom) {
+                    val canMove = medications || Medications.canBeMedication(m.name)
+                    if (m.custom || canMove) {
                         OverflowMenu(
-                            listOf(
-                                MenuAction(stringResource(R.string.lib_edit)) { editing = m },
-                                MenuAction(stringResource(R.string.lib_delete)) { deleting = m }
+                            listOfNotNull(
+                                if (m.custom) MenuAction(stringResource(R.string.lib_edit)) { editing = m } else null,
+                                if (canMove) {
+                                    MenuAction(stringResource(if (medications) R.string.md_move_to_body else R.string.md_move_to_meds)) {
+                                        moveMeasurement(res, m, toMedications = !medications)
+                                    }
+                                } else null,
+                                if (m.custom) MenuAction(stringResource(R.string.lib_delete)) { deleting = m } else null
                             ),
                             description = stringResource(R.string.ms_options_for, m.name)
                         )
@@ -147,7 +163,7 @@ internal fun MeasurementsEditor(snap: Snapshot) {
     }
 
     goalFor?.let { m -> MeasurementGoalSheet(m) { goalFor = null } }
-    if (creating) CustomMetricEditor(snap, null) { creating = false }
+    if (creating) CustomMetricEditor(snap, null, medication = medications) { creating = false }
     editing?.let { m -> CustomMetricEditor(snap, m) { editing = null } }
     deleting?.let { m ->
         val manual = Store.manualCount(snap, m.name)
@@ -157,6 +173,20 @@ internal fun MeasurementsEditor(snap: Snapshot) {
                 stringResource(R.string.ms_delete_fitnotes),
             onDismiss = { deleting = null }
         ) { AppScope.scope.launch { Store.deleteCustomMetric(m.name) } }
+    }
+}
+
+/**
+ * Moves [m] to Medications or back to the Body tracker (#199), with Undo. Nothing is copied: its whole history
+ * follows it, and switching back returns it.
+ */
+internal fun moveMeasurement(res: Resources, m: MeasurementDef, toMedications: Boolean) {
+    AppScope.scope.launch {
+        Store.setMedication(m.name, m.unit, toMedications)
+        UiEvents.show(
+            res.getString(if (toMedications) R.string.md_moved_to_meds else R.string.md_moved_to_body, m.name),
+            res.getString(R.string.bm_undo)
+        ) { AppScope.scope.launch { Store.setMedication(m.name, m.unit, !toMedications) } }
     }
 }
 

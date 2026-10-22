@@ -249,7 +249,12 @@ data class MeasurementDef(
      * The unit this measurement is shown in when it differs from the global weight or length unit (#7), or null.
      * Only a unit of the same kind applies; values stay stored in [unit].
      */
-    val displayUnit: String? = null
+    val displayUnit: String? = null,
+    /**
+     * A medication (#199): shown only on the Medications screen, never in a body view, graph, estimate, export or
+     * Health Connect write. Its values stay in the same table, so switching moves the whole history without a copy.
+     */
+    val medication: Boolean = false
 ) {
     /** Lower-case FitNotes name this custom metric takes its values from. */
     val matchKey: String get() = (link?.takeIf { it.isNotBlank() } ?: name).trim().lowercase()

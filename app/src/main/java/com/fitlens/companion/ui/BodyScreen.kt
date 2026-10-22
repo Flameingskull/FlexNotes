@@ -102,9 +102,17 @@ fun <T> inRange(items: List<T>, range: Long, dateOf: (T) -> String): List<T> {
  * ([MeasurementsEditor]: tracking, units, goals, custom measurements), so there's no separate Measurements screen.
  * [startEditing] opens it in edit mode. The Reorder toggle shows drag handles on TRACK, saved once per drag (#170).
  */
+@Composable
+fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) = BodyTracker(snap, nav, startEditing, medications = false)
+
+/**
+ * The Body tracker's layout for either half of the split (#199, #200): [snap] is the body area, or the
+ * [Snapshot.medicationView] for the Medications screen, so the same tabs, panes and sheets serve both and each shows
+ * only its own measurements.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
+internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medications: Boolean) {
     val res = LocalContext.current.resources
     // Every enabled measurement, logged or not, as FitNotes lists them.
     val measurements = snap.allMeasurements.filter { it.enabled }
@@ -119,17 +127,24 @@ fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
 
     Column(Modifier.fillMaxSize()) {
         FitTopBar(
-            title = stringResource(if (editing) R.string.body_measurements else R.string.body_title),
+            title = stringResource(
+                when {
+                    medications && editing -> R.string.md_edit_title
+                    medications -> R.string.md_title
+                    editing -> R.string.body_measurements
+                    else -> R.string.body_title
+                }
+            ),
             onBack = if (editing) ({ editing = false }) else LocalNavBack.current,
             actions = if (editing) {
-                listOf(TopBarAction(Icons.Filled.Check, stringResource(R.string.body_edit_done)) { editing = false })
+                listOf(TopBarAction(Icons.Filled.Check, stringResource(if (medications) R.string.md_edit_done else R.string.body_edit_done)) { editing = false })
             } else {
                 listOf(
-                    TopBarAction(Icons.Filled.Add, stringResource(R.string.day_log_value)) { adding = true },
-                    TopBarAction(Icons.Filled.Edit, stringResource(R.string.body_edit_measurements)) { editing = true }
+                    TopBarAction(Icons.Filled.Add, stringResource(if (medications) R.string.md_log else R.string.day_log_value)) { adding = true },
+                    TopBarAction(Icons.Filled.Edit, stringResource(if (medications) R.string.md_edit else R.string.body_edit_measurements)) { editing = true }
                 )
             },
-            overflow = if (editing) emptyList() else listOf(
+            overflow = if (editing || medications) emptyList() else listOf(
                 MenuAction(stringResource(R.string.tdee_title)) { nav.push(Screen.Tdee) }
             ),
             trailing = {
@@ -137,7 +152,11 @@ fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
             }
         )
         if (editing) {
-            MeasurementsEditor(snap)
+            MeasurementsEditor(snap, medications)
+        } else if (measurements.isEmpty() && medications) {
+            EmptyState(stringResource(R.string.md_empty_title), stringResource(R.string.md_empty_body)) {
+                TextButton(onClick = { editing = true }) { Text(stringResource(R.string.md_add)) }
+            }
         } else if (measurements.isEmpty()) {
             EmptyState(stringResource(R.string.body_empty_title), stringResource(R.string.body_empty_body)) {
                 Row {
@@ -168,7 +187,7 @@ fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) {
                                 onMoveUp = if (i > 0) ({ dragOrder.step(names, n, -1) }) else null,
                                 onMoveDown = if (i < order.lastIndex) ({ dragOrder.step(names, n, 1) }) else null,
                                 onMoveEnd = { save() }
-                            ) { nav.push(Screen.BodyMeasurement(m.name)) }
+                            ) { nav.push(if (medications) Screen.Medication(m.name) else Screen.BodyMeasurement(m.name)) }
                             HorizontalDivider(color = Brand.Hairline)
                         }
                     }

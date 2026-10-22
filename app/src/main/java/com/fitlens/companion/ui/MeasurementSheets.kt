@@ -31,6 +31,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import com.fitlens.companion.data.BodyFat
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MRecord
+import com.fitlens.companion.data.Medications
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Store
@@ -73,7 +74,7 @@ fun MeasurementEntrySheet(
     val names = remember(snap.bodyKey) {
         (snap.usedMeasurements.map { it.name } + snap.measurementDefs.filter { it.enabled }.map { it.name }).distinct()
     }
-    var name by remember(existing?.id) { mutableStateOf(existing?.name ?: initialName ?: names.firstOrNull() ?: "Bodyweight") }
+    var name by remember(existing?.id) { mutableStateOf(existing?.name ?: initialName ?: names.firstOrNull() ?: if (snap.showsMedications) "" else "Bodyweight") }
     var value by remember(existing?.id) { mutableStateOf(existing?.value?.let { fmtNum(it) } ?: "") }
     var comment by remember(existing?.id) { mutableStateOf(existing?.comment ?: "") }
     var theDate by remember(existing?.id) { mutableStateOf(existing?.date ?: date) }
@@ -111,11 +112,25 @@ fun MeasurementEntrySheet(
             UiEvents.show(res.getString(R.string.bm_enter_number))
             return
         }
+        // A value goes into the half of the split this sheet shows (#199): a name from the other half is refused rather
+        // than quietly logged where this screen can't show it.
+        val medication = snap.showsMedications
+        if (existing == null && snap.inOtherHalf(n)) {
+            UiEvents.show(res.getString(if (medication) R.string.md_is_body else R.string.md_is_medication, n))
+            return
+        }
+        // A new name typed on Medications becomes a medication first, so its value never lands on the Body tracker.
+        val newMedication = existing == null && medication && snap.medications.none { it.name == n }
+        if (newMedication && !Medications.canBeMedication(n)) {
+            UiEvents.show(res.getString(R.string.md_refused, n))
+            return
+        }
         // The time typed in, or now when it can't be read.
         val time = runCatching { LocalTime.parse(timeText.trim()) }.getOrNull()?.format(HHMMSS) ?: LocalTime.now().format(HHMMSS)
         val c = comment.trim().ifBlank { null }
         val d = theDate
         AppScope.scope.launch {
+            if (newMedication) Store.setMedication(n, unit, true)
             if (existing == null) Store.addManualRecord(n, unit, d, time, v, c)
             else Store.updateRecord(existing.id, d, time, v, c)
         }
@@ -123,7 +138,11 @@ fun MeasurementEntrySheet(
     }
 
     FitSheet(
-        title = if (existing == null) stringResource(R.string.mse_log) else stringResource(R.string.mse_edit, existing.name),
+        title = when {
+            existing != null -> stringResource(R.string.mse_edit, existing.name)
+            snap.showsMedications -> stringResource(R.string.md_log)
+            else -> stringResource(R.string.mse_log)
+        },
         onDismiss = onDismiss,
         dismissLabel = stringResource(R.string.cancel),
         confirmLabel = stringResource(R.string.type_save),
@@ -137,7 +156,7 @@ fun MeasurementEntrySheet(
             }
             OutlinedTextField(
                 value = name, onValueChange = { name = it },
-                label = { Text(stringResource(R.string.mse_measurement)) }, singleLine = true, modifier = Modifier.fillMaxWidth()
+                label = { Text(stringResource(if (snap.showsMedications) R.string.md_medication else R.string.mse_measurement)) }, singleLine = true, modifier = Modifier.fillMaxWidth()
             )
         }
         OutlinedTextField(

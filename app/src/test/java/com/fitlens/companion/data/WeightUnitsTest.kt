@@ -42,7 +42,7 @@ class WeightUnitsTest {
         // Other units are untouched, and the stored rows are the same objects.
         assertEquals(90.0, lbs.records[1].value, 0.0)
         assertEquals("cm", lbs.records[1].unit)
-        assertSame(kg.rawRecords, lbs.rawRecords)
+        assertSame(kg.allRecords, lbs.allRecords)
         assertSame(kg, kg.withUnits("kg", "cm"))
         assertEquals(80.0, lbs.withUnits("kg", "cm").records[0].value, 1e-9)
     }

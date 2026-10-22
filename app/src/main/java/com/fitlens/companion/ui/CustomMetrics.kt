@@ -20,6 +20,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import com.fitlens.companion.data.Medications
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -39,23 +43,63 @@ import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Store
 import kotlinx.coroutines.launch
 
-/** Creates or edits a custom measurement (#3), from the Measurements screen (#88). */
+/**
+ * Creates or edits a custom measurement (#3), from the Measurements screen (#88), or a medication from Medications
+ * ([medication], #200). "This is a medication" moves it between the two (#199), except for the names other features
+ * read ([Medications.canBeMedication]).
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, onDismiss: () -> Unit) {
+internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, medication: Boolean = false, onDismiss: () -> Unit) {
     var name by remember { mutableStateOf(existing?.name ?: "") }
     var unit by remember { mutableStateOf(existing?.unit ?: "") }
     var link by remember { mutableStateOf(existing?.link ?: "") }
+    var isMedication by remember { mutableStateOf(existing?.medication ?: medication) }
+    val allowed = Medications.canBeMedication(name)
     val fitNotes = snap.fitNotesMeasurementNames
     val res = LocalContext.current.resources
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (existing == null) stringResource(R.string.cm_new) else stringResource(R.string.mse_edit, existing.name)) },
+        title = {
+            Text(
+                when {
+                    existing != null -> stringResource(R.string.mse_edit, existing.name)
+                    isMedication -> stringResource(R.string.md_new)
+                    else -> stringResource(R.string.cm_new)
+                }
+            )
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.rb_sort_name)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                OutlinedTextField(value = unit, onValueChange = { unit = it }, label = { Text(stringResource(R.string.cm_unit)) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(
+                    value = unit, onValueChange = { unit = it },
+                    label = { Text(stringResource(if (isMedication) R.string.md_unit else R.string.cm_unit)) },
+                    singleLine = true, modifier = Modifier.fillMaxWidth()
+                )
+                // A dose's unit is free text (#200); these are the usual ones.
+                if (isMedication) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Medications.UNITS.forEach { u -> FilterChip(selected = unit == u, onClick = { unit = u }, label = { Text(u) }) }
+                    }
+                }
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 48.dp)
+                        .toggleable(value = isMedication && allowed, enabled = allowed, role = Role.Switch) { isMedication = it },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text(stringResource(R.string.md_switch), style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            stringResource(if (allowed || name.isBlank()) R.string.md_switch_note else R.string.md_switch_refused),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(checked = isMedication && allowed, onCheckedChange = null, enabled = allowed)
+                }
                 Text(stringResource(R.string.cm_fill_from), style = MaterialTheme.typography.labelLarge)
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     FilterChip(selected = link.isBlank(), onClick = { link = "" }, label = { Text(stringResource(R.string.cm_same_name)) })
@@ -70,7 +114,8 @@ internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, onDis
         confirmButton = {
             TextButton(onClick = {
                 val n = name.trim()
-                val clash = snap.customMetrics.any { it.name.equals(n, true) && it.name != existing?.name }
+                // Custom names are unique across body measurements and medications (#199).
+                val clash = snap.allCustomNames.any { it.equals(n, true) && it != existing?.name }
                 when {
                     n.isBlank() -> UiEvents.show(res.getString(R.string.cm_enter_name))
                     clash -> UiEvents.show(res.getString(R.string.cm_clash, n))
@@ -78,7 +123,8 @@ internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, onDis
                         val u = unit.trim()
                         val l = link.ifBlank { null }
                         val orig = existing?.name
-                        AppScope.scope.launch { Store.saveCustomMetric(orig, n, u, l) }
+                        val med = isMedication && Medications.canBeMedication(n)
+                        AppScope.scope.launch { Store.saveCustomMetric(orig, n, u, l, medication = med) }
                         onDismiss()
                     }
                 }

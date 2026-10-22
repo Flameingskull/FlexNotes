@@ -778,6 +778,7 @@
     <string name="day_add_photos">Add photos to this day</string>
     <string name="day_menu_analysis">Analysis</string>
     <string name="day_menu_body">Body tracker</string>
+    <string name="day_menu_medications">Medications</string>
     <string name="day_menu_photos">Photos</string>
     <string name="day_menu_settings">Settings</string>
     <string name="day_superset_heading">SUPERSET %1$s</string>
@@ -1623,6 +1624,30 @@
     <string name="cm_link_note">Uses every value of FitNotes “%1$s”. You can still add values by hand.</string>
     <string name="cm_enter_name">Enter a name</string>
     <string name="cm_clash">A custom metric called %1$s already exists</string>
+    <!-- Medications (#199, #200) -->
+    <string name="md_title">Medications</string>
+    <string name="md_edit_title">Edit medications</string>
+    <string name="md_edit">Edit medications</string>
+    <string name="md_edit_done">Done editing medications</string>
+    <string name="md_log">Log a dose</string>
+    <string name="md_add">Add a medication</string>
+    <string name="md_new">New medication</string>
+    <string name="md_medication">Medication</string>
+    <string name="md_unit">Unit (e.g. mg, mL, IU, tablets)</string>
+    <string name="md_empty_title">No medications yet</string>
+    <string name="md_empty_body">Add a medication, or mark a measurement on the Body tracker as one and it moves here with every value logged so far.</string>
+    <string name="md_empty_edit">Create one with New medication, or open a measurement\'s ⋮ on the Body tracker and choose Move to Medications.</string>
+    <string name="md_intro">Medications are shown only here, never on the Body tracker, the day log or body graphs. Each value is kept once: moving a medication back to the Body tracker takes its whole history with it.</string>
+    <string name="md_switch">This is a medication</string>
+    <string name="md_switch_note">Shown on Medications instead of the Body tracker, with every value logged so far.</string>
+    <string name="md_switch_refused">Bodyweight, body fat, height, food, steps and Health Connect values stay on the Body tracker, because other features use them.</string>
+    <string name="md_move_to_meds">Move to Medications</string>
+    <string name="md_move_to_body">Move to Body tracker</string>
+    <string name="md_moved_to_meds">%1$s moved to Medications</string>
+    <string name="md_moved_to_body">%1$s moved to the Body tracker</string>
+    <string name="md_is_body">%1$s is a body measurement. Move it to Medications from the Body tracker first.</string>
+    <string name="md_is_medication">%1$s is a medication. Log it on the Medications screen.</string>
+    <string name="md_refused">%1$s can\'t be a medication: other features use it on the Body tracker.</string>
     <!-- Body fat calculator (#94) -->
     <string name="bf_comment">Calculated (US Navy formula, %1$s) from %2$s</string>
     <string name="bf_title">Calculate body fat</string>

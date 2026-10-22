@@ -200,6 +200,7 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                 MenuAction(stringResource(R.string.day_delete_workout), enabled = hasWorkout) { deleteWorkout = true },
                 MenuAction(stringResource(R.string.day_menu_analysis)) { nav.push(Screen.Analysis) },
                 MenuAction(stringResource(R.string.day_menu_body)) { nav.push(Screen.Body) },
+                MenuAction(stringResource(R.string.day_menu_medications)) { nav.push(Screen.Medications) },
                 MenuAction(stringResource(R.string.day_menu_photos)) { nav.push(Screen.Photos) },
                 MenuAction(stringResource(R.string.day_menu_settings)) { nav.push(Screen.SettingsHome) }
             )

@@ -267,7 +267,9 @@ data class MeasurementRow(
     @ColumnInfo(defaultValue = "0") val custom: Int,
     val link: String?,
     @ColumnInfo(defaultValue = "0") val edited: Int,
-    val display_unit: String?
+    val display_unit: String?,
+    /** A medication (#199), shown only on the Medications screen. */
+    @ColumnInfo(defaultValue = "0") val medication: Int = 0
 )
 
 @Entity(tableName = "mrecord", indices = [Index(value = ["date"], name = "idx_mr_date")])

@@ -63,7 +63,7 @@ fun FitNotesImportPage(snap: Snapshot) {
             val at = lastAt?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")) } ?: ""
             val workouts = snap.setsByDate.size
             val sets = snap.sets.size
-            val records = snap.records.size
+            val records = snap.storedRecordCount
             stringResource(R.string.import_last, lastName, at) + "\n" + listOf(
                 pluralStringResource(R.plurals.restore_workouts, workouts, workouts),
                 pluralStringResource(R.plurals.import_sets, sets, sets),

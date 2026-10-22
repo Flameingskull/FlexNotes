@@ -39,6 +39,7 @@ import com.fitlens.companion.data.BodyFat
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MRecord
+import com.fitlens.companion.data.Medications
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.data.fmtNum
@@ -154,7 +155,14 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
             // The measurement itself is set up where it's shown (#167): its goal, and for one of your own, its details.
             overflow = listOfNotNull(
                 MenuAction(stringResource(R.string.goal_generic), enabled = def != null) { editingGoal = true },
-                if (def?.custom == true) MenuAction(stringResource(R.string.bm_edit_metric)) { editingMetric = true } else null
+                if (def?.custom == true) MenuAction(stringResource(R.string.bm_edit_metric)) { editingMetric = true } else null,
+                // Moved where it's shown (#199): the whole history goes with it, so this screen closes.
+                if (def != null && (snap.showsMedications || Medications.canBeMedication(name))) {
+                    MenuAction(stringResource(if (snap.showsMedications) R.string.md_move_to_body else R.string.md_move_to_meds)) {
+                        moveMeasurement(res, def, toMedications = !snap.showsMedications)
+                        nav.pop()
+                    }
+                } else null
             )
         )
         FitTabRow(

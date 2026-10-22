@@ -186,21 +186,50 @@ class NotesPart internal constructor(
  * The body area: measurement definitions and values, with the lists the body screens use. Values in a weight unit
  * are shown in [weightUnit] (#117) and lengths in [lengthUnit] (#7): [rawDefs] and [rawRecords] are as stored, the
  * rest is converted.
+ *
+ * Medications (#199) are measurements marked `medication`: this part holds only the body measurements, and
+ * [medications] holds the medications as a part of the same shape, so the Medications screens reuse the body screens'
+ * panes while every body view, graph, estimate, export and Health Connect write leaves them out. A value is stored
+ * once and shown in exactly one of the two.
  */
 class BodyPart internal constructor(
-    internal val rawDefs: List<MeasurementDef>,
-    internal val rawRecords: List<MRecord>,
+    private val allDefs: List<MeasurementDef>,
+    internal val allRecords: List<MRecord>,
     val weightUnit: String,
-    val lengthUnit: String = LengthUnits.CM
+    val lengthUnit: String = LengthUnits.CM,
+    /** True for the [medications] part. */
+    val forMedications: Boolean = false
 ) {
+    private val medicationNames: Set<String> = allDefs.filter { it.medication }.mapTo(HashSet()) { it.name }
+    internal val rawDefs: List<MeasurementDef> = allDefs.filter { it.medication == forMedications }
+    internal val rawRecords: List<MRecord> = allRecords.filter { (it.name in medicationNames) == forMedications }
     val measurementDefs: List<MeasurementDef> = rawDefs.map { MeasureUnits.shown(it, weightUnit, lengthUnit) }
     // A measurement's own display unit (#7) applies to its values too.
     private val overrides: Map<String, String> = rawDefs.mapNotNull { d -> d.displayUnit?.let { d.name to it } }.toMap()
     val records: List<MRecord> = rawRecords.map { MeasureUnits.shown(it, weightUnit, lengthUnit, overrides[it.name]) }
 
+    /** Lower-case names in the other half of the split, so a name typed in one half never lands in the other. */
+    private val otherNames: Set<String> by lazy {
+        (allDefs.filter { it.medication != forMedications }.map { it.name } +
+            allRecords.filter { (it.name in medicationNames) != forMedications }.map { it.name })
+            .mapTo(HashSet()) { it.trim().lowercase() }
+    }
+
+    /** Whether [name] is a measurement of the other half (#199): a medication here, or a body measurement in [medications]. */
+    fun inOtherHalf(name: String): Boolean = name.trim().lowercase() in otherNames
+
+    /** Every custom measurement's name, body or medication: names a new custom one mustn't take. */
+    val allCustomNames: List<String> get() = allDefs.filter { it.custom }.map { it.name }
+
+    /** The medications (#199), from the same rows: the other half of the split. Built once, on first use. */
+    val medications: BodyPart by lazy {
+        if (forMedications) this else BodyPart(allDefs, allRecords, weightUnit, lengthUnit, forMedications = true)
+    }
+
     /** The same values shown in other units: converted from memory, never re-read. */
     internal fun withUnits(weight: String, length: String): BodyPart =
-        if (weight == weightUnit && length == lengthUnit) this else BodyPart(rawDefs, rawRecords, weight, length)
+        if (weight == weightUnit && length == lengthUnit) this
+        else BodyPart(allDefs, allRecords, weight, length, forMedications)
 
     val recordsByDate: Map<String, List<MRecord>> = records.groupBy { it.date }
     val recordsByName: Map<String, List<MRecord>> =
@@ -398,6 +427,26 @@ class Snapshot internal constructor(
     /** FitNotes measurement names a custom metric can be linked to. */
     val fitNotesMeasurementNames: List<String> get() = body.fitNotesMeasurementNames
     val bodyweightName: String? get() = body.bodyweightName
+
+    /**
+     * This snapshot with the medications as its body area (#199, #200): the body screens' panes, sheets and lookups
+     * (`recordsByName`, `allMeasurements`, `valueOn` …) read medications through it, so the Medications screens reuse
+     * them unchanged. Every other screen reads the body area, which never holds a medication.
+     */
+    val medicationView: Snapshot get() = if (bodyData.forMedications) this else Snapshot(
+        libraryData, setData, notesData, body.medications, photoData, weightUnit, photoDir, weekStart, globalDistanceUnit,
+        reads, dateList
+    )
+    /** Whether this is the [medicationView] (#200): what the shared body panes and sheets save into. */
+    val showsMedications: Boolean get() = body.forMedications
+    /** Whether [name] belongs to the other half (#199): a medication in the body area, or a body measurement here. */
+    fun inOtherHalf(name: String): Boolean = body.inOtherHalf(name)
+    /** Every custom measurement's name, body or medication (#199). */
+    val allCustomNames: List<String> get() = body.allCustomNames
+    /** Every medication (#199), in the user's order. */
+    val medications: List<MeasurementDef> get() = body.medications.allMeasurements
+    /** Every stored body value and medication dose, for counts that mean "everything" (backups, imports). */
+    val storedRecordCount: Int get() = body.allRecords.size
 
     val photos: List<Photo> get() = photoPart.photos
     val datedPhotos: List<Photo> get() = photoPart.datedPhotos
@@ -838,7 +887,11 @@ object Store {
      * Creates or edits a custom metric. FitNotes values for the linked measurement (or the same name, ignoring case)
      * are moved under it now, and every later backup import fills it in the same way.
      */
-    suspend fun saveCustomMetric(original: String?, name: String, unit: String, link: String?) = withContext(Dispatchers.IO) {
+    suspend fun saveCustomMetric(
+        original: String?, name: String, unit: String, link: String?,
+        /** Marks it as a medication (#199, #200), or keeps what it was when null. */
+        medication: Boolean? = null
+    ) = withContext(Dispatchers.IO) {
         val body = db.bodyDao
         db.transaction {
             val old = original?.let { o -> body.definition(o)?.toModel() }
@@ -859,7 +912,8 @@ object Store {
                     goal_type = existing?.goalType ?: 0, goal_value = existing?.goalValue ?: 0.0,
                     enabled = 1, custom = 1, link = link?.takeIf { it.isNotBlank() }, edited = 0,
                     // Keeps the metric's own display unit (#7) while it's still the same kind of unit.
-                    display_unit = (existing ?: old)?.displayUnit?.takeIf { MeasureUnits.sameKind(it, keptUnit) }
+                    display_unit = (existing ?: old)?.displayUnit?.takeIf { MeasureUnits.sameKind(it, keptUnit) },
+                    medication = if (medication ?: (existing ?: old)?.medication == true) 1 else 0
                 )
             )
             body.claimImportedRecords(name, (link?.takeIf { it.isNotBlank() } ?: name).trim().lowercase())
@@ -891,6 +945,22 @@ object Store {
             val stored = body.definition(name)?.unit
                 ?: body.recordUnit(name)?.also { body.ensure(name, it, 999) }
             body.setDisplayUnit(name, unit?.takeIf { MeasureUnits.sameKind(it, stored) })
+        }
+        refresh(Area.BODY)
+    }
+
+    /**
+     * Marks [name] as a medication or back as a body measurement (#199). Its values aren't copied or moved: the
+     * whole history follows the flag to the Medications screen and back. Refused for the measurements other
+     * features read by name ([Medications.canBeMedication]).
+     */
+    suspend fun setMedication(name: String, unit: String, medication: Boolean) = withContext(Dispatchers.IO) {
+        if (medication && !Medications.canBeMedication(name)) return@withContext
+        val body = db.bodyDao
+        db.transaction {
+            // A measurement known only from its values gets its row in the unit those values are stored in.
+            if (body.definition(name) == null) body.ensure(name, body.recordUnit(name) ?: unit, 999)
+            body.setMedication(name, if (medication) 1 else 0)
         }
         refresh(Area.BODY)
     }

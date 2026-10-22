@@ -144,6 +144,10 @@ interface BodyDao {
     @Query("UPDATE measurement SET enabled = :enabled, edited = 1 WHERE name = :name")
     fun setEnabled(name: String, enabled: Int)
 
+    /** Marks [name] as a medication or a body measurement (#199). Its values stay where they are. */
+    @Query("UPDATE measurement SET medication = :medication WHERE name = :name")
+    fun setMedication(name: String, medication: Int)
+
     @Query("UPDATE measurement SET display_unit = :unit WHERE name = :name")
     fun setDisplayUnit(name: String, unit: String?)
 
@@ -924,7 +928,7 @@ internal fun RoutineDaySetRow.toModel() =
     PlannedSet(weight, reps, distance, duration.toInt(), set_type, rest_seconds, metric)
 
 internal fun MeasurementRow.toModel() =
-    MeasurementDef(name, unit, sort_order, goal_type, goal_value, enabled != 0, custom != 0, link, display_unit)
+    MeasurementDef(name, unit, sort_order, goal_type, goal_value, enabled != 0, custom != 0, link, display_unit, medication != 0)
 
 internal fun MeasurementRecordRow.toModel() = MRecord(id, name, unit, date, time, value, comment, source)
 

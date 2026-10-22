@@ -1,35 +1,31 @@
 ## Overview
 
-Graphs are now easier to read at a glance. They still start from FlexNotes's black and gold, with a red line over
-gold, and now use a wider set of colours wherever that helps you read the data: compared exercises, donut slices,
-bars and pinned graphs each get a clearly different colour, and every point shows whether it went up or down and
-whether that was better or worse.
-
-Install this update over the current app as usual. Everything you've logged is kept, and the database doesn't change.
+FlexNotes now has a proper place for medications. Many of you have been logging prescriptions and supplements on the
+Body tracker as custom measurements. Any measurement can now be marked as a medication, and it moves to a new
+**Medications** screen with every value you have logged so far. Medications stay off the Body tracker, the day log
+and every body graph, so nothing is shown twice.
 
 ## What's new
 
-- **Better or worse at every point.** On a single-line graph, each point is now a small triangle pointing up or
-  down, green if the move was better and red if it was worse. Bar graphs colour the top of each bar the same way.
-  "Better" follows the graph: a faster pace counts as better, and a body measurement with a goal is judged against
-  its goal.
-- **Best and latest marked.** The best value in view gets a gold star, and the latest value an ivory ring.
-- **A small key under the graph** explains the marks: Better, Worse, Best and Latest.
+- **Medications screen.** Open it from the day log's ⋮ menu, just below Body tracker. It works like the Body
+  tracker: Track lists each medication with its latest dose, History lists every dose newest first, and Graph shows
+  any medication over time. Tap a medication for its own Track, History and Graph tabs.
+- **Log a dose anywhere on the screen.** Use + to log a dose for any day and time, with a comment. Tap a dose to
+  edit or move it, or long-press to delete it with Undo.
+- **Mark a measurement as a medication.** On the Body tracker, open the pencil and choose **Move to Medications**
+  from a measurement's ⋮ menu, or turn on **This is a medication** when you create or edit your own measurement. The
+  whole history moves with it, and **Move to Body tracker** brings it back. Both offer Undo.
+- **New medication.** Create medications straight from the Medications screen's pencil, with suggested units such
+  as mg, mcg, mL, IU and tablets. Any other unit can be typed.
 
 ## Improved
 
-- **More distinct colours.** Graphs with several lines, donut slices and side-by-side bars now take eight clearly
-  different colours: red, gold, blue, mint, ivory, pink, green and sky blue. Before, gold and light gold were hard
-  to tell apart, and from the fifth donut slice the colours repeated, only fainter. The new colours are checked
-  for contrast on the dark background and for the most common kinds of colour blindness.
-- **Trend line in its own colour.** On a single-line graph, the dashed trend is now sky blue instead of the same
-  red as the line, so it stands out. Shared graph images use it too.
-- **Pinned graphs in their own colours.** Each card on **Analysis → Overview** draws its line in a different colour,
-  so you can tell the cards apart at a glance.
-- **Donut selection.** The ring around the chosen slice is now ivory, so it still shows on a gold slice.
+- **Kept apart.** Medications never appear in body graphs or overlays, energy estimates, body exports, the PDF
+  report's body section, the calendar or timeline, or anything written to Health Connect.
+- **Protected values.** Bodyweight, body fat, height, food, steps and the values that come from Health Connect stay
+  on the Body tracker, because other features rely on them.
 
 ## Known limitations
 
-- Pinned cards take their colour from their place in the list, so moving a card changes its colour.
-- Without a goal, a higher body measurement counts as better, just as the app's change figures do. Set a goal on a
-  measurement, such as losing bodyweight, to have its points judged by that goal instead.
+- Dose schedules, today's doses with a Taken tick, reminders, dose changes and a Medications PDF for your doctor are
+  planned for the next builds.

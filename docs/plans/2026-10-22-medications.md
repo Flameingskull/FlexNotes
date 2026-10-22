@@ -4,8 +4,10 @@
 > tracker plan item "Medications: plan across builds (2026-10-22)". Parity fix done (duplicate #157 item archived);
 > parity rule added to CLAUDE.md and the build skills. All 16 suggestions picked: #207–#222, in the follow-up plan
 > `docs/plans/2026-10-22-health-and-medications-follow-ups.md`.
-> Left: Build A (#199, #200), Build B (#201, #202), Build C (#203, #204), Build D (#205); epic #206 closes with the last.
-> Next: `/safe-build 199 200` (tracker items for #199 and #200).
+> Build A done in 1.0.152 (#199, #200: the medication flag, database v24, the body split through `BodyPart` and
+> `Snapshot.medicationView`, and the Medications screen reusing the Body tracker's panes).
+> Left: Build B (#201, #202), Build C (#203, #204), Build D (#205); epic #206 closes with the last.
+> Next: `/safe-build 201 202` (tracker items for #201 and #202).
 >
 > Issue map: Epic #206 · M1 #199 · M2 #200 · M3 #201 · M4 #202 · M5 #203 · M6 #204 · M7 #205.
 

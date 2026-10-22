@@ -101,7 +101,7 @@ object Backups {
             if (!includePhotos) put("dataOnly", true)
             if (snap != null) {
                 put("workouts", snap.setsByDate.size)
-                put("records", snap.records.size)
+                put("records", snap.storedRecordCount)
                 snap.allDates.lastOrNull()?.let { put("firstDate", it) }
                 snap.allDates.firstOrNull()?.let { put("lastDate", it) }
             }
@@ -552,7 +552,7 @@ object Backups {
         val days = autoDays()
         if (days <= 0 || autoFolder() == null) return null
         val snap = Store.snapshot.value ?: return null
-        if (snap.photos.isEmpty() && snap.records.isEmpty() && snap.sets.isEmpty()) return null
+        if (snap.photos.isEmpty() && snap.storedRecordCount == 0 && snap.sets.isEmpty()) return null
         val last = lastAutoBackup() ?: 0L
         val dueAfter = days * 24L * 3600_000L - 3600_000L // an hour's grace so daily backups don't drift
         if (System.currentTimeMillis() - last < dueAfter) return null

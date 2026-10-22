@@ -251,6 +251,24 @@ class ExportedSchemaTest {
     }
 
     @Test
+    fun aV23DatabaseGainsTheMedicationFlagAndKeepsEveryValue() {
+        // A database as 1.0.145 to 1.0.151 left it, made from the committed 23.json, upgraded to v24 (#199).
+        helper.createDatabase(Db.NAME, 23).use { db ->
+            db.row("measurement", "name" to "Bodyweight", "unit" to "kg", "sort_order" to 0)
+            db.row("measurement", "name" to "Creatine", "unit" to "g", "sort_order" to 1, "custom" to 1)
+            db.row("mrecord", "id" to 1L, "name" to "Bodyweight", "unit" to "kg", "date" to "2026-10-01", "value" to 80.0, "source" to "manual")
+            db.row("mrecord", "id" to 2L, "name" to "Creatine", "unit" to "g", "date" to "2026-10-01", "value" to 5.0, "comment" to "Morning", "source" to "manual")
+        }
+        val db = helper.runMigrationsAndValidate(Db.NAME, Db.VERSION, true, *migrations)
+        // Nothing becomes a medication on its own, and every value stays where it was.
+        assertEquals(2, db.count("SELECT COUNT(*) FROM measurement WHERE medication = 0"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE id = 2 AND value = 5.0 AND comment = 'Morning'"))
+        assertEquals(2, db.count("SELECT COUNT(*) FROM mrecord"))
+        db.execSQL("UPDATE measurement SET medication = 1 WHERE name = 'Creatine'")
+        assertEquals(1, db.count("SELECT COUNT(*) FROM measurement WHERE medication = 1"))
+    }
+
+    @Test
     fun theExportedSchemaIsWhatTheAppOpens() {
         // A database made from the committed JSON opens in the app: same tables, same identity hash.
         helper.createDatabase(Db.NAME, Db.VERSION).close()
