@@ -298,7 +298,7 @@ class Db(context: Context) : Closeable {
                 if (hasTable(db, "measurement")) addColumn(db, "measurement", "medication", "INTEGER NOT NULL DEFAULT 0")
             }
             if (oldVersion < 25) {
-                // ---- 1.0.153: medication schedules (#201, #202, #204) ----------------------------------------------------
+                // ---- 1.0.154: medication schedules (#201, #202, #204) ----------------------------------------------------
                 // Two nullable columns tie a taken dose's value to its dose. The six new `med_*` tables are created by
                 // the rebuild that follows (`reconcile` creates every table Room knows and the old file lacks), so they
                 // are exactly as Room makes them. Every value keeps its row; replays safely (#77).

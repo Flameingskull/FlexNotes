@@ -87,8 +87,11 @@ ksp {
 // KSP writes a new Db.VERSION's schema while compiling, but the debug assets that carry app/schemas could be merged
 // first, so MigrationTestHelper couldn't find it and the first run of a schema change failed (1.0.130). Merging them
 // after KSP lets that run pass; the exported file is still committed from ci-logs afterwards.
+// Debug and release KSP both write a new version's schema file; run in parallel, one read the other's half-written
+// file and failed with "Empty schema file" (1.0.153). Release runs after debug, so each sees a whole file.
 tasks.configureEach {
     if (name.startsWith("merge") && name.contains("Debug") && name.endsWith("Assets")) dependsOn("kspDebugKotlin")
+    if (name == "kspReleaseKotlin") mustRunAfter("kspDebugKotlin")
 }
 
 dependencies {

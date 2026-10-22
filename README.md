@@ -70,7 +70,7 @@ custom metrics.
   fat and workouts to Health Connect ([#191](https://github.com/Flameingskull/FlexNotes/issues/191)). 1.0.150 checks what every shared control tells TalkBack on
   each build, and 1.0.151 gave graphs a wider, colour-blind-checked palette ([#198](https://github.com/Flameingskull/FlexNotes/issues/198)). From 1.0.152 FlexNotes
   has **Medications**: any measurement can be marked as a medication and moves to its own screen with its whole
-  history ([#199](https://github.com/Flameingskull/FlexNotes/issues/199), [#200](https://github.com/Flameingskull/FlexNotes/issues/200)), and 1.0.153 adds dose schedules made of on and off cycles,
+  history ([#199](https://github.com/Flameingskull/FlexNotes/issues/199), [#200](https://github.com/Flameingskull/FlexNotes/issues/200)), and 1.0.154 adds dose schedules made of on and off cycles,
   started from any date, with today's doses ticked off as they're taken ([#201](https://github.com/Flameingskull/FlexNotes/issues/201), [#202](https://github.com/Flameingskull/FlexNotes/issues/202)). Next
   come dose reminders through notifications, dose changes and a Medications PDF for a doctor
   ([epic #206](https://github.com/Flameingskull/FlexNotes/issues/206)), then the health follow-ups (#207 to #222), the accessibility
