@@ -292,7 +292,11 @@ data class MRecord(
     val time: String,
     val value: Double,
     val comment: String?,
-    val source: String
+    val source: String,
+    /** The scheduled dose it was taken for (#202), or null. */
+    val doseId: Long? = null,
+    /** When that dose was due, `yyyy-MM-dd HH:mm` (#202). */
+    val due: String? = null
 )
 
 object Poses {

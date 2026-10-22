@@ -198,7 +198,9 @@ class BodyPart internal constructor(
     val weightUnit: String,
     val lengthUnit: String = LengthUnits.CM,
     /** True for the [medications] part. */
-    val forMedications: Boolean = false
+    val forMedications: Boolean = false,
+    /** Medication schedules, their runs, skips and dose changes (#201, #202), shared by both halves. */
+    val plan: MedPlan = MedPlan.EMPTY
 ) {
     private val medicationNames: Set<String> = allDefs.filter { it.medication }.mapTo(HashSet()) { it.name }
     internal val rawDefs: List<MeasurementDef> = allDefs.filter { it.medication == forMedications }
@@ -223,13 +225,13 @@ class BodyPart internal constructor(
 
     /** The medications (#199), from the same rows: the other half of the split. Built once, on first use. */
     val medications: BodyPart by lazy {
-        if (forMedications) this else BodyPart(allDefs, allRecords, weightUnit, lengthUnit, forMedications = true)
+        if (forMedications) this else BodyPart(allDefs, allRecords, weightUnit, lengthUnit, forMedications = true, plan = plan)
     }
 
     /** The same values shown in other units: converted from memory, never re-read. */
     internal fun withUnits(weight: String, length: String): BodyPart =
         if (weight == weightUnit && length == lengthUnit) this
-        else BodyPart(allDefs, allRecords, weight, length, forMedications)
+        else BodyPart(allDefs, allRecords, weight, length, forMedications, plan)
 
     val recordsByDate: Map<String, List<MRecord>> = records.groupBy { it.date }
     val recordsByName: Map<String, List<MRecord>> =
@@ -443,6 +445,8 @@ class Snapshot internal constructor(
     fun inOtherHalf(name: String): Boolean = body.inOtherHalf(name)
     /** Every custom measurement's name, body or medication (#199). */
     val allCustomNames: List<String> get() = body.allCustomNames
+    /** Medication schedules, runs, skips and dose changes (#201, #202). */
+    val medPlan: MedPlan get() = body.plan
     /** Every medication (#199), in the user's order. */
     val medications: List<MeasurementDef> get() = body.medications.allMeasurements
     /** Every stored body value and medication dose, for counts that mean "everything" (backups, imports). */
@@ -676,7 +680,7 @@ object Store {
     }
 
     private fun loadBody(r: SnapshotDao, weightUnit: String): BodyPart =
-        BodyPart(r.measurements().map { it.toModel() }, r.records().map { it.toModel() }, weightUnit)
+        BodyPart(r.measurements().map { it.toModel() }, r.records().map { it.toModel() }, weightUnit, plan = MedSchedules.load(db.medDao))
 
     // ---------- Photo edits ----------
 

@@ -1,31 +1,31 @@
 ## Overview
 
-FlexNotes now has a proper place for medications. Many of you have been logging prescriptions and supplements on the
-Body tracker as custom measurements. Any measurement can now be marked as a medication, and it moves to a new
-**Medications** screen with every value you have logged so far. Medications stay off the Body tracker, the day log
-and every body graph, so nothing is shown twice.
+Medications now have schedules. Build a schedule the way you build a workout, from on and off phases, start it on any
+date, and the Medications screen shows today's doses so you can tick each one off as you take it.
 
 ## What's new
 
-- **Medications screen.** Open it from the day log's ⋮ menu, just below Body tracker. It works like the Body
-  tracker: Track lists each medication with its latest dose, History lists every dose newest first, and Graph shows
-  any medication over time. Tap a medication for its own Track, History and Graph tabs.
-- **Log a dose anywhere on the screen.** Use + to log a dose for any day and time, with a comment. Tap a dose to
-  edit or move it, or long-press to delete it with Undo.
-- **Mark a measurement as a medication.** On the Body tracker, open the pencil and choose **Move to Medications**
-  from a measurement's ⋮ menu, or turn on **This is a medication** when you create or edit your own measurement. The
-  whole history moves with it, and **Move to Body tracker** brings it back. Both offer Undo.
-- **New medication.** Create medications straight from the Medications screen's pencil, with suggested units such
-  as mg, mcg, mL, IU and tablets. Any other unit can be typed.
+- **Dose schedules.** On the Medications screen, choose **New schedule**. A schedule is made of phases, each **on**
+  or **off** and lasting days, weeks, months or years, for example 8 weeks on and 4 weeks off. Months and years
+  follow the calendar. Turn on **Repeat the cycle** to start again after the last phase.
+- **Doses in each on phase.** Add the medication, amount, unit and time, and whether it's taken every day, on chosen
+  days of the week, or every few days, with an optional comment. Phases and doses can be duplicated, edited, deleted
+  and put in order with the Reorder button.
+- **Start, pause and end.** Start a schedule from any date, pause it (its cycle waits for you), resume it, or end it
+  with today's doses kept. Several schedules can run at once, and each change can be undone.
+- **Today's doses.** The Track tab now opens with **TODAY**: every dose due today, with a done box like a set's,
+  where each schedule is in its cycle ("On · day 12 of 56", "Off · on again 3 Dec"), and doses marked **Missed** or
+  **Skipped**. Ticking a dose logs it once as an ordinary medication value, with Undo. Tap a dose to mark it taken or
+  skip it.
 
 ## Improved
 
-- **Kept apart.** Medications never appear in body graphs or overlays, energy estimates, body exports, the PDF
-  report's body section, the calendar or timeline, or anything written to Health Connect.
-- **Protected values.** Bodyweight, body fat, height, food, steps and the values that come from Health Connect stay
-  on the Body tracker, because other features rely on them.
+- **Your history stays yours.** Taken doses are normal medication values, so they appear in History and on graphs,
+  and stay even if a schedule is later deleted.
+- **README refreshed** on GitHub to describe Medications and the latest features.
 
 ## Known limitations
 
-- Dose schedules, today's doses with a Taken tick, reminders, dose changes and a Medications PDF for your doctor are
-  planned for the next builds.
+- Reminders through notifications, changing a dose for one day or the rest of a schedule, and a Medications PDF for
+  your doctor come in the next builds.
+- Today's list shows today only. Earlier doses can still be logged by hand from the + button.

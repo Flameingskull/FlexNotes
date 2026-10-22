@@ -6,8 +6,11 @@
 > `docs/plans/2026-10-22-health-and-medications-follow-ups.md`.
 > Build A done in 1.0.152 (#199, #200: the medication flag, database v24, the body split through `BodyPart` and
 > `Snapshot.medicationView`, and the Medications screen reusing the Body tracker's panes).
-> Left: Build B (#201, #202), Build C (#203, #204), Build D (#205); epic #206 closes with the last.
-> Next: `/safe-build 201 202` (tracker items for #201 and #202).
+> Build B done in 1.0.153 (#201, #202: database v25, `MedSchedules.kt`, the schedule editor, runs with pauses, and
+> TODAY on the Track tab; v25 also holds `med_dose_change` for #204, so Build C needs no migration). README refreshed.
+> Deviation: schedules are listed in a SCHEDULES section on the Track tab rather than a title switcher.
+> Left: Build C (#203, #204), Build D (#205); epic #206 closes with the last.
+> Next: `/safe-build 203 204` (tracker items for #203 and #204).
 >
 > Issue map: Epic #206 · M1 #199 · M2 #200 · M3 #201 · M4 #202 · M5 #203 · M6 #204 · M7 #205.
 

@@ -67,8 +67,14 @@ custom metrics.
   active calories, resting heart rate, sleep and other apps' workouts ([#184](https://github.com/Flameingskull/FlexNotes/issues/184) to [#190](https://github.com/Flameingskull/FlexNotes/issues/190)). 1.0.147 and
   1.0.148 export progress photos as image files, by hand or with each automatic backup ([#195](https://github.com/Flameingskull/FlexNotes/issues/195)), and 1.0.148
   can read Health Connect's older data too ([#192](https://github.com/Flameingskull/FlexNotes/issues/192)). 1.0.149 can write your bodyweight, body
-  fat and workouts to Health Connect ([#191](https://github.com/Flameingskull/FlexNotes/issues/191)). Next come the accessibility checks that need a real phone
-  ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)) and the
+  fat and workouts to Health Connect ([#191](https://github.com/Flameingskull/FlexNotes/issues/191)). 1.0.150 checks what every shared control tells TalkBack on
+  each build, and 1.0.151 gave graphs a wider, colour-blind-checked palette ([#198](https://github.com/Flameingskull/FlexNotes/issues/198)). From 1.0.152 FlexNotes
+  has **Medications**: any measurement can be marked as a medication and moves to its own screen with its whole
+  history ([#199](https://github.com/Flameingskull/FlexNotes/issues/199), [#200](https://github.com/Flameingskull/FlexNotes/issues/200)), and 1.0.153 adds dose schedules made of on and off cycles,
+  started from any date, with today's doses ticked off as they're taken ([#201](https://github.com/Flameingskull/FlexNotes/issues/201), [#202](https://github.com/Flameingskull/FlexNotes/issues/202)). Next
+  come dose reminders through notifications, dose changes and a Medications PDF for a doctor
+  ([epic #206](https://github.com/Flameingskull/FlexNotes/issues/206)), then the health follow-ups (#207 to #222), the accessibility
+  checks that need a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)) and the
   [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
   Imports always merge and never overwrite FlexNotes data. There's no export back to FitNotes.
@@ -92,7 +98,8 @@ custom metrics.
 - **Every update installs over the last one** and keeps your data. Database changes are always migrated, never reset.
 - **Android phones** (Android 10 or newer), across phone screen sizes. A self-hosted web version may come later.
 - **The FlexNotes look:** luxury black and vibrant gold. Cards, bars and buttons are smoked glass with fine gold
-  rims, graphs are red over a translucent gold fill, rises show in green and falls in red, and all text is ivory or
+  rims, graphs start from a red line over a translucent gold fill and use a wider, colour-blind-checked palette where
+  several series or slices need telling apart, rises show in green and falls in red, and all text is ivory or
   gold, never black. Everything is set in **Manrope**, a clean, highly legible typeface bundled with the app, on one
   calm type scale, with FitNotes-style uppercase section headings over a fine gold rule. Text wraps between words,
   never inside one. The FlexNotes character stands
@@ -195,6 +202,19 @@ custom metrics.
   time or comment, or delete it; a long press deletes it at once, with **Undo**. Values imported from FitNotes can be
   changed and deleted too, and a later import keeps your change: an edited value isn't doubled and a deleted one
   doesn't come back. If a value you typed later arrives in a FitNotes backup, the FitNotes copy is skipped.
+- **Medications:** from the day log's ⋮ menu. Any measurement can be marked as a medication, from its ⋮ on the
+  Body tracker or with **This is a medication** in its editor, and it moves to the Medications screen with every
+  value logged so far (**Move to Body tracker** brings it back, with Undo). Medications are kept off the Body
+  tracker, the day log, body graphs, energy estimates, body exports and Health Connect, so nothing shows twice. The
+  screen works like the Body tracker, with **Track**, **History** and **Graph** and doses logged, edited or deleted in
+  place, and suggested units such as mg, mL, IU and tablets. Bodyweight, body fat, height, food, steps and Health
+  Connect's values stay body measurements, because other features use them.
+- **Dose schedules:** a schedule is built like a workout, from **on** and **off** phases lasting days, weeks, months
+  or years (calendar months and years), each on phase holding its doses: medication, amount, time, and every day,
+  chosen weekdays or every few days. The cycle can repeat. Start a schedule from any date, then pause, resume or end
+  it; several can run at once. The Medications screen's **TODAY** lists the doses due, each with a done box like a
+  set's, where each schedule is in its cycle ("On · day 12 of 56", "Off · on again 3 Dec"), and missed or skipped
+  doses. Ticking a dose logs it as an ordinary medication value, once, with Undo; tapping it offers Taken or Skip.
 - **Measurements:** the Body tracker's pencil switches it to editing measurements: an on/off switch for each, its
   unit and goal, the standard set (bodyweight and eight tape measurements), and your own, such as sleep, with their
   own unit. **Body fat** and **Height** are there for everyone. You can link one to a FitNotes measurement so imports
@@ -274,7 +294,7 @@ custom metrics.
     and Progress Photos & Media can also be reset on their own, from **Reset this section** in each page's ⋮ menu.
 - **Getting around:** as in FitNotes, there's no tab bar. The **day log** is home, and its top bar has **Calendar**,
   a **camera** (Take photo or Choose from phone, for that day), **+** (the exercise library and workout switcher), the rest countdown while you rest, and a **⋮** menu with the
-  day's workout actions, then Analysis, Body tracker, Photos and Settings. Each of those slides in on top of the log,
+  day's workout actions, then Analysis, Body tracker, Medications, Photos and Settings. Each of those slides in on top of the log,
   and Back returns you to it. Rotating the phone, or Android closing FlexNotes in the background, keeps your place:
   the screen you were on and the ones under it, with their open sheets, selections and filters. Choices such as a
   period, a pose or a sort order sit in compact dropdowns, so the data gets the screen; the controls you use
@@ -479,8 +499,11 @@ The first time FlexNotes opens, a short guided setup walks through the steps bel
   imported.
 - Calories are estimates from your profile and what you log. Intake is typed as each day's totals (there's no food
   database or barcode scanning). Steps come from the phone's own step counter or from Health Connect.
-- FlexNotes reads Health Connect but doesn't write to it yet ([#191](https://github.com/Flameingskull/FlexNotes/issues/191)). Without the **Older data** permission,
-  only the last 30 days are read.
+- FlexNotes writes only bodyweight, body fat and workouts to Health Connect, each switched on separately. Without the
+  **Older data** permission, only the last 30 days are read.
+- Medication reminders through notifications, dose changes and the doctor's PDF are still to come
+  ([epic #206](https://github.com/Flameingskull/FlexNotes/issues/206)). FlexNotes never gives drug interaction or dosing advice: that would need an
+  online, licensed database.
 - Some storage providers don't let apps set a file's modified date, so exported photo files can show the export time
   there; their photo details always carry the date taken. Formats whose details can't be written, such as HEIC, are
   exported unchanged.

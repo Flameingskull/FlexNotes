@@ -111,6 +111,9 @@ sealed interface Screen {
     /** One medication (#200): Track, History and Graph, as [BodyMeasurement]; [page] is the tab it opens on. */
     @Serializable
     data class Medication(val name: String, val page: Int = 0) : Screen
+    /** Creating ([id] 0) or editing a medication schedule (#201), and starting or pausing its run (#202). */
+    @Serializable
+    data class MedSchedule(val id: Long) : Screen
     /**
      * Creating ([id] 0) or editing a workout (#106, FitNotes's routine): exercises grouped by user-named days. Reached
      * from the library's title switcher and the day log's Add workout.
@@ -581,6 +584,7 @@ private fun ScreenContent(s: Snapshot, nav: Nav, screen: Screen) {
         Screen.Measurements -> BodyScreen(s, nav, startEditing = true)
         Screen.Medications -> MedicationsScreen(s, nav)
         is Screen.Medication -> MedicationScreen(s, nav, screen.name, screen.page)
+        is Screen.MedSchedule -> ScheduleEditorScreen(s, nav, screen.id)
         Screen.Analysis -> AnalysisScreen(s, nav)
         is Screen.WorkoutEditor -> WorkoutEditorScreen(s, nav, screen.id)
         Screen.Photos -> PhotosScreen(s, nav)

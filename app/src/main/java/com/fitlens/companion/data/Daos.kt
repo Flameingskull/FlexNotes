@@ -927,9 +927,121 @@ internal fun WorkoutSetRow.toModel() = SetRow(
 internal fun RoutineDaySetRow.toModel() =
     PlannedSet(weight, reps, distance, duration.toInt(), set_type, rest_seconds, metric)
 
+/** Medication schedules (#201, #202, #204): the snapshot's loads and every `MedSchedules` write. */
+@Dao
+interface MedDao {
+    @Query("SELECT * FROM med_schedule ORDER BY sort_order, id")
+    fun schedules(): List<MedScheduleRow>
+
+    @Query("SELECT * FROM med_phase ORDER BY schedule_id, position, id")
+    fun phases(): List<MedPhaseRow>
+
+    @Query("SELECT * FROM med_dose ORDER BY phase_id, position, id")
+    fun doses(): List<MedDoseRow>
+
+    @Query("SELECT * FROM med_activation ORDER BY start, id")
+    fun activations(): List<MedActivationRow>
+
+    @Query("SELECT * FROM med_dose_status")
+    fun statuses(): List<MedDoseStatusRow>
+
+    @Query("SELECT * FROM med_dose_change ORDER BY from_date, id")
+    fun changes(): List<MedDoseChangeRow>
+
+    @Query("SELECT IFNULL(MAX(sort_order), -1) + 1 FROM med_schedule")
+    fun nextScheduleOrder(): Int
+
+    @Insert
+    fun addSchedule(row: MedScheduleRow): Long
+
+    @Query("UPDATE med_schedule SET name = :name, notes = :notes, repeats = :repeats WHERE id = :id")
+    fun updateSchedule(id: Long, name: String, notes: String?, repeats: Int)
+
+    @Query("DELETE FROM med_schedule WHERE id = :id")
+    fun deleteSchedule(id: Long)
+
+    @Query("SELECT id FROM med_phase WHERE schedule_id = :scheduleId")
+    fun phaseIds(scheduleId: Long): List<Long>
+
+    @Insert
+    fun addPhase(row: MedPhaseRow): Long
+
+    @Query("UPDATE med_phase SET position = :position, active = :active, length = :length, unit = :unit WHERE id = :id")
+    fun updatePhase(id: Long, position: Int, active: Int, length: Int, unit: String)
+
+    @Query("DELETE FROM med_phase WHERE id = :id")
+    fun deletePhase(id: Long)
+
+    @Query("SELECT id FROM med_dose WHERE phase_id IN (SELECT id FROM med_phase WHERE schedule_id = :scheduleId)")
+    fun doseIdsOfSchedule(scheduleId: Long): List<Long>
+
+    @Insert
+    fun addDose(row: MedDoseRow): Long
+
+    @Query(
+        "UPDATE med_dose SET phase_id = :phaseId, position = :position, medication = :medication, amount = :amount, " +
+            "unit = :unit, time = :time, days = :days, comment = :comment WHERE id = :id"
+    )
+    fun updateDose(
+        id: Long, phaseId: Long, position: Int, medication: String, amount: Double, unit: String, time: String,
+        days: String, comment: String?
+    )
+
+    @Query("DELETE FROM med_dose WHERE id = :id")
+    fun deleteDose(id: Long)
+
+    @Query("DELETE FROM med_dose_status WHERE dose_id = :doseId")
+    fun deleteStatusesOf(doseId: Long)
+
+    @Query("DELETE FROM med_dose_change WHERE dose_id = :doseId")
+    fun deleteChangesOf(doseId: Long)
+
+    @Insert
+    fun addActivation(row: MedActivationRow): Long
+
+    @Query("UPDATE med_activation SET start = :start, pauses = :pauses, ended_on = :endedOn WHERE id = :id")
+    fun updateActivation(id: Long, start: String, pauses: String, endedOn: String?)
+
+    @Query("DELETE FROM med_activation WHERE id = :id")
+    fun deleteActivation(id: Long)
+
+    @Query("DELETE FROM med_activation WHERE schedule_id = :scheduleId")
+    fun deleteActivationsOf(scheduleId: Long)
+
+    @Query("DELETE FROM med_dose_change WHERE activation_id = :activationId")
+    fun deleteChangesOfActivation(activationId: Long)
+
+    @Query("INSERT OR REPLACE INTO med_dose_status(dose_id, due, status) VALUES(:doseId, :due, :status)")
+    fun setStatus(doseId: Long, due: String, status: String)
+
+    @Query("DELETE FROM med_dose_status WHERE dose_id = :doseId AND due = :due")
+    fun clearStatus(doseId: Long, due: String)
+
+    @Query("SELECT id FROM mrecord WHERE dose_id = :doseId AND due = :due LIMIT 1")
+    fun takenRecord(doseId: Long, due: String): Long?
+
+    @Query(
+        "INSERT INTO mrecord(name, unit, date, time, value, comment, source, dose_id, due) " +
+            "VALUES(:name, :unit, :date, :time, :value, :comment, 'manual', :doseId, :due)"
+    )
+    fun addTaken(name: String, unit: String, date: String, time: String, value: Double, comment: String?, doseId: Long, due: String): Long
+
+    @Query("INSERT OR IGNORE INTO measurement(name, unit, sort_order, medication) VALUES(:name, :unit, 999, 1)")
+    fun ensureMedication(name: String, unit: String)
+
+    @Query("DELETE FROM mrecord WHERE dose_id = :doseId AND due = :due")
+    fun deleteTaken(doseId: Long, due: String)
+
+    @Insert
+    fun addChange(row: MedDoseChangeRow): Long
+
+    @Query("DELETE FROM med_dose_change WHERE id = :id")
+    fun deleteChange(id: Long)
+}
+
 internal fun MeasurementRow.toModel() =
     MeasurementDef(name, unit, sort_order, goal_type, goal_value, enabled != 0, custom != 0, link, display_unit, medication != 0)
 
-internal fun MeasurementRecordRow.toModel() = MRecord(id, name, unit, date, time, value, comment, source)
+internal fun MeasurementRecordRow.toModel() = MRecord(id, name, unit, date, time, value, comment, source, dose_id, due)
 
 internal fun PhotoRow.toModel() = Photo(id, file, date, taken_at, date_source, pose, note, original_name)

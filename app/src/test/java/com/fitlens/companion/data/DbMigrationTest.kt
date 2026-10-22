@@ -126,7 +126,8 @@ class DbMigrationTest {
             assertEquals(Db.VERSION, db.version)
             listOf(
                 "workout_set", "exercise", "routine", "routine_day", "routine_day_exercise", "routine_day_set",
-                "workout_origin", "exercise_comment", "saved_workout", "workout_rest", "exercise_type"
+                "workout_origin", "exercise_comment", "saved_workout", "workout_rest", "exercise_type",
+                "med_schedule", "med_phase", "med_dose", "med_activation", "med_dose_status", "med_dose_change"
             ).forEach { assertTrue("missing table $it", db.hasTable(it)) }
         }
     }

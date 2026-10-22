@@ -25,7 +25,7 @@ class Db(context: Context) : Closeable {
     companion object {
         const val NAME = "fitlens.db"
         /** 21: Room takes over the file (#36). 22: an exercise's own activity for its calories (#174). */
-        const val VERSION = 24
+        const val VERSION = 25
 
         /** The most ids one query binds, inside the 999-variable limit of older phones' SQLite. */
         const val MAX_IDS = 500
@@ -297,6 +297,16 @@ class Db(context: Context) : Closeable {
                 // medication. Values stay in `mrecord` either way. Replays safely (#77); the rebuild keeps every row.
                 if (hasTable(db, "measurement")) addColumn(db, "measurement", "medication", "INTEGER NOT NULL DEFAULT 0")
             }
+            if (oldVersion < 25) {
+                // ---- 1.0.153: medication schedules (#201, #202, #204) ----------------------------------------------------
+                // Two nullable columns tie a taken dose's value to its dose. The six new `med_*` tables are created by
+                // the rebuild that follows (`reconcile` creates every table Room knows and the old file lacks), so they
+                // are exactly as Room makes them. Every value keeps its row; replays safely (#77).
+                if (hasTable(db, "mrecord")) {
+                    addColumn(db, "mrecord", "dose_id", "INTEGER")
+                    addColumn(db, "mrecord", "due", "TEXT")
+                }
+            }
         }
 
         /**
@@ -513,6 +523,7 @@ class Db(context: Context) : Closeable {
     val goalDao: GoalDao get() = opened().goalDao()
     val workoutDao: WorkoutDao get() = opened().workoutDao()
     val routineDao: RoutineDao get() = opened().routineDao()
+    val medDao: MedDao get() = opened().medDao()
     val importDao: ImportDao get() = opened().importDao()
     val maintenanceDao: MaintenanceDao get() = opened().maintenanceDao()
 

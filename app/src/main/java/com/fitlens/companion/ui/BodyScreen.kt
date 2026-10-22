@@ -122,6 +122,8 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     var editing by rememberSaveable { mutableStateOf(startEditing) }
     var adding by rememberSaveable { mutableStateOf(false) }
     var open by rememberSaveable { mutableStateOf<Long?>(null) }
+    // The dose due today whose sheet is open (#202), by dose id and due time.
+    var openDose by rememberSaveable { mutableStateOf<String?>(null) }
     val pager = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
 
@@ -155,7 +157,10 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
             MeasurementsEditor(snap, medications)
         } else if (measurements.isEmpty() && medications) {
             EmptyState(stringResource(R.string.md_empty_title), stringResource(R.string.md_empty_body)) {
-                TextButton(onClick = { editing = true }) { Text(stringResource(R.string.md_add)) }
+                Row {
+                    TextButton(onClick = { editing = true }) { Text(stringResource(R.string.md_add)) }
+                    TextButton(onClick = { nav.push(Screen.MedSchedule(0L)) }) { Text(stringResource(R.string.md_new_schedule)) }
+                }
             }
         } else if (measurements.isEmpty()) {
             EmptyState(stringResource(R.string.body_empty_title), stringResource(R.string.body_empty_body)) {
@@ -173,6 +178,8 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
             HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
                 when (page) {
                     0 -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+                        // Medications: today's doses and the schedules come first (#201, #202).
+                        if (medications) medicationTrackHeader(snap, nav) { d -> openDose = "${d.dose.id}|${d.due}" }
                         val order = dragOrder.of(names)
                         val byName = measurements.associateBy { it.name }
                         fun save() = dragOrder.end(names) { final ->
@@ -209,6 +216,9 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     // Back leaves edit mode first.
     androidx.activity.compose.BackHandler(enabled = editing) { editing = false }
     if (adding) MeasurementEntrySheet(snap, Dates.today()) { adding = false }
+    openDose?.let { key ->
+        com.fitlens.companion.data.MedSchedules.dueOn(snap.medPlan, Dates.today()).firstOrNull { "${it.dose.id}|${it.due}" == key }
+    }?.let { d -> DueDoseSheet(snap, d, onDismiss = { openDose = null }) }
     open?.let { id -> snap.records.firstOrNull { it.id == id } }?.let { r ->
         MeasurementEntrySheet(snap, r.date, existing = r) { open = null }
     }

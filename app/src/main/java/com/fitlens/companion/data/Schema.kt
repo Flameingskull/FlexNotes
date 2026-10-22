@@ -26,7 +26,9 @@ import androidx.room.RoomDatabase
         ImportRuleRow::class, ExerciseGoalRow::class, ExerciseTypeRow::class,
         SavedWorkoutRow::class, SavedWorkoutExerciseRow::class, SavedWorkoutSetRow::class,
         RoutineRow::class, RoutineDayRow::class, WorkoutOriginRow::class, RoutineDayExerciseRow::class, RoutineDaySetRow::class,
-        PhotoRow::class, MetaRow::class
+        PhotoRow::class, MetaRow::class,
+        MedScheduleRow::class, MedPhaseRow::class, MedDoseRow::class, MedActivationRow::class, MedDoseStatusRow::class,
+        MedDoseChangeRow::class
     ]
 )
 abstract class FlexNotesDatabase : RoomDatabase() {
@@ -39,6 +41,7 @@ abstract class FlexNotesDatabase : RoomDatabase() {
     abstract fun routineDao(): RoutineDao
     abstract fun importDao(): ImportDao
     abstract fun maintenanceDao(): MaintenanceDao
+    abstract fun medDao(): MedDao
 }
 
 // ---- Workout data. `source` is 'fitnotes' (imported) or 'fitlens' (made or edited in FlexNotes) -------------------
@@ -281,7 +284,78 @@ data class MeasurementRecordRow(
     @ColumnInfo(defaultValue = "''") val time: String,
     val value: Double,
     val comment: String?,
-    val source: String
+    val source: String,
+    /** The scheduled dose this value was taken for (#202), or null for a value logged by hand. */
+    val dose_id: Long? = null,
+    /** When that dose was due, `yyyy-MM-dd HH:mm` (#202), so ticking it twice never logs it twice. */
+    val due: String? = null
+)
+
+// ---- Medication schedules (#201, #202, #204) ----------------------------------------------------------------------
+
+/** A dose schedule: on and off phases that run in order, the whole cycle again when [repeats] is 1. */
+@Entity(tableName = "med_schedule")
+data class MedScheduleRow(
+    @PrimaryKey(autoGenerate = true) val id: Long,
+    val name: String,
+    val notes: String?,
+    @ColumnInfo(defaultValue = "0") val repeats: Int,
+    @ColumnInfo(defaultValue = "0") val sort_order: Int
+)
+
+/** One phase: on ([active] 1, holding doses) or off, [length] days, weeks, months or years ([unit] d, w, m, y). */
+@Entity(tableName = "med_phase")
+data class MedPhaseRow(
+    @PrimaryKey(autoGenerate = true) val id: Long,
+    val schedule_id: Long,
+    @ColumnInfo(defaultValue = "0") val position: Int,
+    @ColumnInfo(defaultValue = "1") val active: Int,
+    @ColumnInfo(defaultValue = "1") val length: Int,
+    @ColumnInfo(defaultValue = "'w'") val unit: String
+)
+
+/** One dose in an on phase: which medication, how much, at what time and on which days (`MedDays`). */
+@Entity(tableName = "med_dose")
+data class MedDoseRow(
+    @PrimaryKey(autoGenerate = true) val id: Long,
+    val phase_id: Long,
+    @ColumnInfo(defaultValue = "0") val position: Int,
+    val medication: String,
+    @ColumnInfo(defaultValue = "0") val amount: Double,
+    @ColumnInfo(defaultValue = "''") val unit: String,
+    @ColumnInfo(defaultValue = "'08:00'") val time: String,
+    @ColumnInfo(defaultValue = "''") val days: String,
+    val comment: String?
+)
+
+/** A schedule running from [start]; [pauses] lists `from/to` ranges (an open one ends `/`), [ended_on] the first day without doses. */
+@Entity(tableName = "med_activation")
+data class MedActivationRow(
+    @PrimaryKey(autoGenerate = true) val id: Long,
+    val schedule_id: Long,
+    val start: String,
+    @ColumnInfo(defaultValue = "''") val pauses: String,
+    val ended_on: String?
+)
+
+/** A dose that was skipped (#202, #203): its dose and due time. A taken dose is its value in `mrecord`. */
+@Entity(tableName = "med_dose_status", indices = [Index(value = ["dose_id", "due"], name = "idx_med_status", unique = true)])
+data class MedDoseStatusRow(
+    @PrimaryKey(autoGenerate = true) val id: Long,
+    val dose_id: Long,
+    val due: String,
+    @ColumnInfo(defaultValue = "'skipped'") val status: String
+)
+
+/** A changed amount (#204) for one activation's dose from [from_date], to [to_date] or the end when null. */
+@Entity(tableName = "med_dose_change")
+data class MedDoseChangeRow(
+    @PrimaryKey(autoGenerate = true) val id: Long,
+    val activation_id: Long,
+    val dose_id: Long,
+    val from_date: String,
+    val to_date: String?,
+    val amount: Double
 )
 
 // ---- Photos and settings --------------------------------------------------------------------------------------------

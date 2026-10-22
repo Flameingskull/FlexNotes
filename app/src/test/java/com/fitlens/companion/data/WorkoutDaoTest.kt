@@ -269,6 +269,44 @@ class ExportedSchemaTest {
     }
 
     @Test
+    fun aV24DatabaseGainsMedicationSchedulesAndKeepsEveryValue() {
+        // A database as 1.0.152 left it, made from the committed 24.json, upgraded to v25 (#201, #202).
+        helper.createDatabase(Db.NAME, 24).use { db ->
+            db.row("measurement", "name" to "Creatine", "unit" to "g", "sort_order" to 1, "custom" to 1, "medication" to 1)
+            db.row("mrecord", "id" to 1L, "name" to "Creatine", "unit" to "g", "date" to "2026-10-01", "value" to 5.0, "source" to "manual")
+        }
+        val db = helper.runMigrationsAndValidate(Db.NAME, Db.VERSION, true, *migrations)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE id = 1 AND value = 5.0 AND dose_id IS NULL AND due IS NULL"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM measurement WHERE medication = 1"))
+        db.row("med_schedule", "name" to "Cycle")
+        assertEquals(1, db.count("SELECT COUNT(*) FROM med_schedule WHERE repeats = 0"))
+    }
+
+    @Test
+    fun aDoseIsTakenOnceAndASkipReplacesItself() = Db(app).use { h ->
+        runBlocking(Dispatchers.IO) {
+            val m = h.medDao
+            val schedule = m.addSchedule(MedScheduleRow(0L, "Cycle", null, 1, m.nextScheduleOrder()))
+            val phase = m.addPhase(MedPhaseRow(0L, schedule, 0, 1, 8, "w"))
+            val dose = m.addDose(MedDoseRow(0L, phase, 0, "Creatine", 5.0, "g", "08:00", "", null))
+            m.ensureMedication("Creatine", "g")
+            m.ensureMedication("Creatine", "mg")
+            assertEquals(1, h.snapshotDao.measurements().count { it.name == "Creatine" && it.medication == 1 && it.unit == "g" })
+            assertNull(m.takenRecord(dose, "2026-10-22 08:00"))
+            val taken = m.addTaken("Creatine", "g", "2026-10-22", "08:05:00", 5.0, null, dose, "2026-10-22 08:00")
+            assertEquals(taken, m.takenRecord(dose, "2026-10-22 08:00"))
+            m.setStatus(dose, "2026-10-23 08:00", MedSchedules.SKIPPED)
+            m.setStatus(dose, "2026-10-23 08:00", MedSchedules.SKIPPED)
+            assertEquals(1, m.statuses().size)
+            val plan = MedSchedules.load(m)
+            assertTrue(plan.isSkipped(dose, "2026-10-23 08:00"))
+            assertEquals(listOf("Creatine"), plan.schedules.single().phases.single().doses.map { it.medication })
+            m.deleteTaken(dose, "2026-10-22 08:00")
+            assertNull(m.takenRecord(dose, "2026-10-22 08:00"))
+        }
+    }
+
+    @Test
     fun theExportedSchemaIsWhatTheAppOpens() {
         // A database made from the committed JSON opens in the app: same tables, same identity hash.
         helper.createDatabase(Db.NAME, Db.VERSION).close()
