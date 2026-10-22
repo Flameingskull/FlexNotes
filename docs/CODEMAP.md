@@ -5,7 +5,7 @@ Source root: `app/src/main/java/com/fitlens/companion/` (paths below are relativ
 **Keep it current:** any build that adds, moves or renames a file, or changes a pattern below, updates this map in the
 same commit.
 
-Last updated: 1.0.149.
+Last updated: 1.0.150.
 
 ## How data flows
 
@@ -234,6 +234,12 @@ Last updated: 1.0.149.
 - **Contrast checks (#157):** `ui/ContrastTest.kt` checks every `Brand` text colour (rises and falls included) against
   every background at 4.5:1, text on coloured containers, and `Brand.Outline` at 3:1. A new text colour or background
   joins its lists.
+- **TalkBack checks (#157):** `ui/AccessibilityTest.kt` reads the semantics tree of the same samples and fails on a
+  control with nothing to say in words (only "−"), two controls that say the same thing, a checkbox, switch, radio
+  button or tab that doesn't announce its state, or a radio button or tab outside a `selectableGroup`. It also pins
+  the readings #41 set up: section labels are headings, a settings row reads as one sentence, a number row's value is
+  a polite live region, and a set row's done toggle is a "Mark done" custom action. A new component adds its sample
+  here too.
 - **Screenshot tests (#95):** `ui/ScreenshotTest.kt` draws the shared design components with Roborazzi on
   Robolectric's native graphics at 360dp and 411dp, font scale 1.0 and 2.0, with made-up data. Goldens are in
   `app/src/test/screenshots/`: an existing one is verified (a change fails the build; diffs land in

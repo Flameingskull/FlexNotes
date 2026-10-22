@@ -36,7 +36,8 @@ import com.fitlens.companion.ui.design.Trend
 
 /**
  * The design components with made-up data, drawn by [ScreenshotTest] (#95) and checked at phone sizes by
- * [PhoneSizeTest] (#157). One sample per component family; add new components here so both cover them.
+ * [PhoneSizeTest] and [AccessibilityTest] (#157). One sample per component family; add new components here so all
+ * three cover them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 object DesignSamples {

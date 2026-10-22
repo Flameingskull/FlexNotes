@@ -352,7 +352,8 @@ fun SettingsNumberRow(
             .padding(start = Spacing.lg, end = Spacing.sm, top = Spacing.sm, bottom = Spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RowText(title, summary, Modifier.weight(1f))
+        // TalkBack reads the title and its explanation as one sentence, then the − / value / + controls (#157).
+        RowText(title, summary, Modifier.weight(1f).semantics(mergeDescendants = true) {})
         Spacer(Modifier.width(Spacing.sm))
         NumberButton("−", stringResource(R.string.settings_number_decrease, title), value > range.first) {
             onChange((value - 1).coerceIn(range))

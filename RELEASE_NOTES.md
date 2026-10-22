@@ -1,39 +1,26 @@
 ## Overview
 
-FlexNotes can now write to Health Connect as well as read from it. Your bodyweight, body fat and workouts can be
-shared with other health and fitness apps on your phone. Each type is off until you switch it on.
+A small update for people who use FlexNotes with TalkBack, Android's screen reader. Number settings now read in a
+clearer order, and every build now checks automatically what FlexNotes's shared controls tell TalkBack, so those
+readings can't quietly break in a later update.
 
 Install this update over the current app as usual. Everything you've logged is kept, and the database doesn't change.
 
-## What's new
-
-- **Write to Health Connect.** Settings › Health Connect has a new section, **Write to Health Connect**, with three
-  switches: **Write bodyweight**, **Write body fat** and **Write workouts**. When you switch one on, Health Connect
-  asks whether FlexNotes may write that type. Nothing is written until you allow it.
-- **Bodyweight and body fat.** Every Bodyweight and Body fat value you've logged or imported is written at the
-  time it was logged. Bodyweight is converted to kilograms, as Health Connect stores it. A value without a time
-  counts at noon.
-- **Workouts.** Each day you've logged sets becomes a strength training session in Health Connect, called
-  FlexNotes workout. It runs from the workout timer's start to its end, and its notes list the day's exercises in
-  order. Health Connect needs a start and an end, so days without both are left out.
-- **Kept up to date, never doubled.** Each value is written once. If you edit it in FlexNotes, the copy in Health
-  Connect is replaced. If you delete it, it's deleted there too. This happens at the next sync: when FlexNotes opens,
-  from **Sync now**, and every hour.
-
 ## Improved
 
-- **No loops.** Values and sessions FlexNotes read from Health Connect are never written back. When FlexNotes reads
-  bodyweight, body fat or exercise sessions, it skips the ones it wrote itself, so nothing appears twice in your
-  Body tracker or day log.
-- **Writing works in the background.** The hourly sync now also runs to keep what's written up to date, even if
-  you haven't allowed background reading.
-- **Clearer privacy note.** The privacy note in Settings › Health Connect now lists exercise sessions among the
-  types FlexNotes can read, and says what it writes. Everything stays on your phone: FlexNotes still has no internet
-  permission.
+- **Number settings read as one sentence.** On a setting with − and + buttons, such as **Photos per day**, TalkBack
+  now reads the setting's name and its explanation together, then the −, the value and the +. Before, the name and
+  the explanation were two separate stops.
+
+## Behind the scenes
+
+- **TalkBack checks on every build.** Each build now fails if a shared control has nothing to say in words (only
+  "−" or "+"), if two controls on the same screen say the same thing, or if a checkbox, radio button or tab doesn't
+  announce whether it's on or chosen. The checks also confirm that section labels are headings TalkBack can jump
+  between, that each settings row reads as one sentence, that a number's new value is announced, and that a set's
+  **Mark done** action stays reachable.
 
 ## Known limitations
 
-- Switching a type off stops writing it, but what was already written stays in Health Connect. You can delete it
-  in Health Connect's own settings.
-- Every workout is written as strength training, even a day of only cardio exercises.
-- Health Connect sessions show when the workout ran, not each set. Your sets, weights and reps stay in FlexNotes.
+- These checks cover what FlexNotes hands to TalkBack, not how it sounds. Listening with TalkBack, the largest font
+  size, a 320dp-wide phone and switch access on a real phone is still to do (#157).
