@@ -27,7 +27,9 @@ custom metrics.
   compare side by side, overlay with a body measurement and pin to an overview, and strength relative to your
   bodyweight), tracks goals, and imports and shows your FitNotes history. It also manages progress photos, tracks body
   measurements (with body fat calculated from them) and custom metrics, shows the nearest progress photo beside a
-  graph point, makes slideshows, videos and PDF reports that remember your options, and backs everything up locally. Every
+  graph point, makes slideshows, videos and PDF reports that remember your options, exports photos as ordinary image files, reads
+  steps, food, body values, sleep and other apps' workouts from Health Connect on the phone, and backs everything up
+  locally. Every
   exercise, set and workout records whether it came from FitNotes or was created in FlexNotes, so the two histories sit
   side by side without colliding.
 - **In progress:** FitNotes is the guide for every screen that does what a FitNotes screen does, so moving across
@@ -60,9 +62,12 @@ custom metrics.
   daily steps with the phone's step counter for the calorie estimate ([#175](https://github.com/Flameingskull/FlexNotes/issues/175)), and 1.0.139 stops
   logged walks and runs being counted twice ([#181](https://github.com/Flameingskull/FlexNotes/issues/181)). 1.0.141 adds FlexNotes's own camera for progress
   photos, from a camera button on the day log ([#182](https://github.com/Flameingskull/FlexNotes/issues/182), [#183](https://github.com/Flameingskull/FlexNotes/issues/183)), and converts imported FitNotes
-  cardio distances into your unit ([#180](https://github.com/Flameingskull/FlexNotes/issues/180)). Next comes **Health Connect**, read only and on the phone:
-  steps, food and macros from apps such as MacrosFirst, bodyweight, active calories, sleep and other apps' workouts
-  ([#184](https://github.com/Flameingskull/FlexNotes/issues/184) to [#190](https://github.com/Flameingskull/FlexNotes/issues/190)), then the accessibility checks that need a real phone
+  cardio distances into your unit ([#180](https://github.com/Flameingskull/FlexNotes/issues/180)). From 1.0.143 to 1.0.147 FlexNotes learned to read **Health
+  Connect**, on the phone and read only: steps, food and macros from apps such as MacrosFirst, bodyweight, body fat,
+  active calories, resting heart rate, sleep and other apps' workouts ([#184](https://github.com/Flameingskull/FlexNotes/issues/184) to [#190](https://github.com/Flameingskull/FlexNotes/issues/190)). 1.0.147 and
+  1.0.148 export progress photos as image files, by hand or with each automatic backup ([#195](https://github.com/Flameingskull/FlexNotes/issues/195)), and 1.0.148
+  can read Health Connect's older data too ([#192](https://github.com/Flameingskull/FlexNotes/issues/192)). Next come writing to Health Connect
+  ([#191](https://github.com/Flameingskull/FlexNotes/issues/191)), the accessibility checks that need a real phone
   ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)) and the
   [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
@@ -230,7 +235,7 @@ custom metrics.
   estimated 1RM formula and settings, and **Progress Photos & Media** (the pose for new photos, how the gallery is
   grouped, remembered slideshow and video options, and the PDF report's page style and photos per day). **DATA**
   has Backup, Restore, Automatic Backup, Spreadsheet Export, Calculate Personal Records, Delete Workout History,
-  **Reset Settings to Defaults** and Import From FitNotes, and **OTHER** has Help (short guides inside the app),
+  **Reset Settings to Defaults**, Import From FitNotes and **Health Connect**, and **OTHER** has Help (short guides inside the app),
   Feedback, Change Log (this update's notes, which also appear once after each update), Show Setup Again, Privacy
   Policy and About (version, privacy, licences, and **Save speed**: how long saving a set takes on your phone).
   On/off settings are checkboxes, and the search field filters the list so a setting can be changed right there.
@@ -246,6 +251,13 @@ custom metrics.
   exercise can keep its own weight unit, and any body measurement its own unit. Settings that belong to the phone,
   such as backup folders and schedules, stay on the phone and are never replaced by a restore. Preferences such as
   your units, chart types, comparisons, pinned graphs and photo and media options travel with your backups.
+- **Health Connect** (in **Settings → Health Connect**): for each kind of data, choose FlexNotes
+  or Health Connect as its source. Steps, food and macros (from apps such as MacrosFirst), active calories,
+  bodyweight and body fat readings, resting heart rate and sleep come in as body values marked Health Connect, and
+  runs, rides, swims and other sessions from your watch or fitness app become cardio sets in the day log, each added
+  once and left as you edit it. FlexNotes syncs when it opens, from **Sync now**, and hourly in the background if
+  you allow it. Health Connect lets apps read the last 30 days; **Older data** asks, with an explanation first, to
+  read everything before that once. Values you type are never replaced, and nothing is written to Health Connect.
 - **Data tools** (in Settings):
   - **CSV export:** workouts (with set and exercise comments) or body data for any date range, in kilograms or
     pounds, saved to a file or shared, for spreadsheets. The columns are listed on the page, with a custom metric's
@@ -289,7 +301,8 @@ custom metrics.
     value before (coloured by your goal), or "Tap to record a value". **History** shows every value, newest day first,
     for all measurements or one. **Graph** shows one measurement with its range, trend line, goal line, photo days and
     stats. Tap a measurement to log a value: the day, the value with − and + buttons, the time and a comment, with its
-    own History and Graph (Body fat adds **Calculate from measurements**). **+** logs any measurement, the pencil
+    own History and Graph (Body fat adds **Calculate from measurements**, and a new Body fat value starts from the
+    figure your latest neck, waist, hips and height give, with the measurements it used listed underneath). **+** logs any measurement, the pencil
     edits the measurements in place (each with its unit, goal and a tracking checkbox), and **Reorder** drags them
     into the order every screen uses.
   - **Exercise library:** as in FitNotes, it opens on **All exercises** with the search field always at the top,
@@ -351,7 +364,10 @@ custom metrics.
     sets the pose or date of all of them. The viewer shows each photo edge to edge on black; tap it to fade the
     controls away, swipe for the next, and open the details for the pose, the date and that day's body values. The
     **before/after compare** sits side by side on black, with the change in each body value, and can be shared or
-    saved as an image.
+    saved as an image. **⋮ → Export as image files** (or Export in the selection menu) saves copies of all your
+    photos, a date range or the selection into a folder you choose, named by date and pose (such as
+    `2026-10-16_front.jpg`), with the FlexNotes date and time, pose and comment in each file's photo details. Nothing
+    in the folder is replaced or deleted.
 - **Slideshow and video:** plays your photos in date order with overlays: the date, a day or week counter, the pose,
   chosen measurements (with the change since the start) and a moving progress chart. Every option is in one options
   sheet, and FlexNotes remembers them for next time (the dates always start at all photos; **Settings → Progress Photos
@@ -367,7 +383,9 @@ custom metrics.
   - **Automatic backups:** daily or weekly to a folder you choose (for example Documents or an SD card), so they
     survive uninstalling. You choose how many to keep (the newest 3, 5 or 10). They run in the background through Android's job scheduler,
     even when FlexNotes is closed, whenever the battery isn't low. Optionally, **Back up after changes** saves a backup
-    when you leave FlexNotes after changing something, at most once an hour.
+    when you leave FlexNotes after changing something, at most once an hour. **Copy photos as image files** (off
+    until you turn it on) also saves new or changed photos as ordinary image files in a *Photos* folder inside the
+    backup folder, named and labelled as in the photo export.
   - **Status and alerts:** a status card shows the last successful backup, the next scheduled one, the folder and
     its free space, each with a tick or a warning sign. Folder rows show the folder's name, or Not set, with Choose
     or Change. If the folder can't be reached (the SD card was removed or access was lost), the row says so and a
@@ -381,7 +399,9 @@ FlexNotes only *reads* FitNotes backups and never changes your FitNotes data. Fl
 FlexNotes only.
 
 **Permissions:** FlexNotes asks for notifications (Android 13+) only when you set up automatic backups or start a
-timer, physical activity only when you turn on step counting, and the camera only when you open FlexNotes's camera. Switching on a setting that needs them gives a one-line reason first, and if notifications
+timer, physical activity only when you turn on step counting, the camera only when you open FlexNotes's camera, and
+Health Connect's read permissions only for the kinds of data you switch to it (older data and background reading
+are asked for separately). Switching on a setting that needs them gives a one-line reason first, and if notifications
 are off, the setting still works in the app and offers a way to turn them on. It also uses vibration and a foreground service for the timers, which Android grants
 without asking. Photos and folders are accessed through Android's file pickers, and only the ones you choose.
 
@@ -455,8 +475,12 @@ The first time FlexNotes opens, a short guided setup walks through the steps bel
 - Sets are reordered with buttons (and TalkBack actions), not by dragging. Routines from FitNotes backups aren't
   imported.
 - Calories are estimates from your profile and what you log. Intake is typed as each day's totals (there's no food
-  database or barcode scanning). Steps come from the phone's own step counter; Health Connect is planned
-  ([#184](https://github.com/Flameingskull/FlexNotes/issues/184)).
+  database or barcode scanning). Steps come from the phone's own step counter or from Health Connect.
+- FlexNotes reads Health Connect but doesn't write to it yet ([#191](https://github.com/Flameingskull/FlexNotes/issues/191)). Without the **Older data** permission,
+  only the last 30 days are read.
+- Some storage providers don't let apps set a file's modified date, so exported photo files can show the export time
+  there; their photo details always carry the date taken. Formats whose details can't be written, such as HEIC, are
+  exported unchanged.
 - For FitNotes cardio distances, the metres unit is confirmed from a real backup; kilometres, miles and yards follow
   FitNotes's order of units. Distances on exercises that aren't cardio in FitNotes (a loaded carry) stay as logged.
 - Graphs use compact dropdowns rather than FitNotes's 1m / 3m / 6m / 1y / all buttons, so the graph gets the room

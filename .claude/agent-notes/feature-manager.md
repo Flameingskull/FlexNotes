@@ -177,3 +177,4 @@ that stop being true. The repository is public: no personal data, secrets or `FI
   Still commit that JSON from `ci-logs` after the release, so later migrations are checked against it.
 - **Remembering imported external records:** an import rule per record id (`HealthSessions.RULE`) keeps a deleted or
   edited import from coming back, without hooking every delete path.
+- (1.0.148) On the owner's PC the Bash tool's heredocs can drop backslashes, so a script that writes `\'` or `\t` into Kotlin or `strings.xml` silently loses the escape. Write such text with the Edit or Write tool, then grep `strings.xml` for an apostrophe without a backslash before pushing (unescaped apostrophes failed CI in 1.0.145).

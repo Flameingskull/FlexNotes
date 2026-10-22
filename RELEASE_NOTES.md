@@ -1,45 +1,40 @@
 ## Overview
 
-This update brings three things: runs, rides and other sessions from your watch now appear in the day log; a new
-Body fat value starts from the figure your latest measurements give; and you can export your progress photos as
-ordinary image files.
+This update finishes the photo export: your automatic backups can now also keep your progress photos as ordinary
+image files. FlexNotes can also read your older Health Connect data, not only the last 30 days.
 
-Install this update over the current app as usual. Everything you've logged is kept. The database gains one column,
-which records where a set imported from Health Connect came from, and every existing set is kept as it is.
+Install this update over the current app as usual. Everything you've logged is kept, and the database doesn't change.
 
 ## What's new
 
-- **Exercise sessions from Health Connect.** In Settings › Health Connect, under Workouts, choose Health Connect for
-  Exercise sessions. Each run, ride, swim, walk or other session your watch or fitness app recorded in the last 30
-  days becomes one cardio set on its day, with its time and distance, under the matching exercise in the Cardio
-  category, such as Outdoor Run, Cycling or Swimming. If that exercise is missing, FlexNotes creates it. The session's
-  title goes in the exercise comment, and the set's comment names the app it came from. Distances are in your unit.
-- **Each session is added once.** Syncing again never adds a session twice. If you edit, move or delete an imported
-  set, it stays as you left it, and a session deleted in Health Connect stays in FlexNotes. Strength sessions are
-  left out, as you log those set by set.
-- **Body fat starts from your measurements.** When you log a new Body fat value, on its Track tab or in the Log
-  value sheet, the field is filled with the figure the US Navy formula gives from your latest neck, waist, hips
-  (women) and height on or before that day. If no Height is logged, your profile height is used. The comment
-  records how it was calculated. A line underneath names the measurements and dates used, and flags any over 14 days
-  old. You can change the figure, and nothing is saved until you press Save.
-- **Export photos as image files.** In Photos, ⋮ › Export as image files saves copies of all your photos, or those
-  in a date range, into a folder you choose. Selected photos can be exported from the selection bar's menu too. Files
-  are named by date and pose, such as 2026-10-16_front.jpg, with _2, _3 for more than one. Each copy keeps its
-  FlexNotes date and time, pose and comment in its photo details. You can follow the progress, stop the export, or
-  hide it while it runs.
+- **Copy photos as image files with your backups.** In Settings › Backups, turn on **Copy photos as image files**.
+  Each automatic backup, and **Back up now**, then also saves your progress photos as ordinary image files in a
+  Photos folder inside your backup folder. They have the same names and photo details as Photos › Export as image
+  files: named by date and pose, such as 2026-10-16_front.jpg, with the FlexNotes date and time, pose and comment
+  in each file. The setting is off until you turn it on.
+- **Only new or changed photos are copied.** The first backup copies every photo. After that, each backup copies
+  only photos you've added, or whose date, pose or comment you've changed. A changed photo replaces its own earlier
+  copy when the file name still fits. If you move it to another date or pose, it gets a new file and the old one
+  stays. A long first copy that's interrupted carries on at the next backup.
+- **Older Health Connect data.** Health Connect lets apps read the last 30 days. In Settings › Health Connect,
+  under Sync, **Older data** explains what it does, then Health Connect asks whether FlexNotes may read further
+  back. If you allow it, FlexNotes reads the whole history of each kind of data you take from Health Connect once,
+  in the background, and then keeps it up to date. If you don't, nothing changes.
 
 ## Improved
 
-- When the measurements can't give a Body fat figure, the line under the field says which ones are missing or what
-  looks wrong, and the value starts from your last logged one as before.
-- Files already in the export folder are never replaced or deleted, and your photos and backups in FlexNotes don't
-  change.
+- The backup message says how many photos were copied, and how many couldn't be. A photo that couldn't be copied is
+  tried again at the next backup, and a problem with the photos never stops the backup itself.
+- If you take back the older-data permission in Health Connect and allow it again later, FlexNotes reads the history
+  again.
 
 ## Known limitations
 
-- Automatic backups don't copy photos as image files yet. That's the next part of the export work (#195).
-- Some storage providers don't let apps set a file's modified date, so an exported file may show the export time
-  there. Its photo details always carry the date it was taken.
-- Photos in formats whose details can't be written, such as HEIC, are exported unchanged.
-- Only the last 30 days are read from Health Connect, which is what it allows by default. Reading the full history
-  is planned (#192), and FlexNotes doesn't write to Health Connect yet (#191).
+- Photos are copied only into the automatic backup folder. Files you delete there are copied again only if the photo
+  changes in FlexNotes, and nothing in that folder is ever deleted, even when you delete a photo in FlexNotes.
+- Some storage providers don't let apps set a file's modified date, so a copied file may show the time it was
+  copied. Its photo details always carry the date it was taken. Photos in formats whose details can't be written,
+  such as HEIC, are copied unchanged.
+- Older Health Connect data is read back to 2010. Not every phone's Health Connect offers older data. Where it
+  isn't offered, the last 30 days are still read.
+- FlexNotes reads Health Connect but doesn't write to it yet (#191).
