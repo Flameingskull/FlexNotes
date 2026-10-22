@@ -361,6 +361,7 @@
     <string name="search_backup_keep_kw">how many old delete</string>
     <string name="search_backup_after">Back up after changes</string>
     <string name="search_backup_after_kw">automatic leave hour</string>
+    <string name="search_backup_photos_kw">photos images pictures jpg export folder copy</string>
     <string name="search_safety_copy">Safety copy</string>
     <string name="search_safety_copy_kw">undo restore</string>
     <string name="search_pdf_report">PDF progress report</string>
@@ -550,6 +551,8 @@
     <string name="backup_keep_summary">Older automatic backups in the folder are deleted. Backups you save yourself are never touched.</string>
     <string name="backup_after">Back up after changes</string>
     <string name="backup_after_summary">When you leave FlexNotes after changing something, a backup is saved in the background, at most once an hour.</string>
+    <string name="backup_photos">Copy photos as image files</string>
+    <string name="backup_photos_summary">With each automatic backup, new or changed progress photos are also saved as ordinary image files in a Photos folder inside the backup folder, named by date and pose, with the date, pose and comment in their details. Files already there are never deleted.</string>
     <string name="backup_group_status">Status</string>
     <string name="backup_last_ok">Last successful backup: %1$s</string>
     <string name="backup_none_yet">No automatic backup yet.</string>
@@ -2364,6 +2367,15 @@
     <string name="bk_safety_unreadable">Couldn\'t read the safety copy.</string>
     <string name="bk_choose_folder">Choose a backup folder first.</string>
     <string name="bk_folder_write">Couldn\'t write to the backup folder.</string>
+    <plurals name="bk_photos_copied">
+        <item quantity="one">%1$d photo copied as an image file.</item>
+        <item quantity="other">%1$d photos copied as image files.</item>
+    </plurals>
+    <plurals name="bk_photos_not_copied">
+        <item quantity="one">%1$d photo couldn\'t be copied; it\'s tried again next time.</item>
+        <item quantity="other">%1$d photos couldn\'t be copied; they\'re tried again next time.</item>
+    </plurals>
+    <string name="bk_photos_copy_failed">Photos weren\'t copied as image files (%1$s); they\'re tried again next time.</string>
     <plurals name="bk_auto_saved">
         <item quantity="one">Automatic backup saved (%1$d photo).</item>
         <item quantity="other">Automatic backup saved (%1$d photos).</item>

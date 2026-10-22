@@ -39,6 +39,9 @@ data class DeviceSettings(
     val autoBackupError: String? = null,
     val backupAfterChanges: Boolean = false,
     val backupDirty: Boolean = false,
+    /** Automatic backups also copy new or changed photos as image files into the backup folder's `Photos` folder
+     *  (#195). Off until the user turns it on in Settings › Backups. */
+    val backupPhotos: Boolean = false,
     val lastImportName: String? = null,
     val lastImportAt: Long? = null,
     val lastImportModified: Long? = null,
@@ -448,6 +451,7 @@ object Settings {
     private const val D_WHATS_NEW_SEEN = "whats_new_seen"
     private const val D_STEPS_LAST = "steps_last"
     private const val D_HC_SYNCED = "hc_synced_at"
+    private const val D_BACKUP_PHOTOS = "backup_photos"
 
     /** Every phone-only key, as it was named in `meta` before 1.0.21. */
     internal val DEVICE_KEYS = listOf(
@@ -532,6 +536,7 @@ object Settings {
         autoBackupError = get(D_AUTO_ERROR),
         backupAfterChanges = bool(get(D_AFTER_CHANGES)),
         backupDirty = bool(get(D_DIRTY)),
+        backupPhotos = bool(get(D_BACKUP_PHOTOS)),
         lastImportName = get(D_IMPORT_NAME),
         lastImportAt = get(D_IMPORT_AT)?.toLongOrNull(),
         lastImportModified = get(D_IMPORT_MODIFIED)?.toLongOrNull(),
@@ -558,6 +563,7 @@ object Settings {
         D_AUTO_ERROR to autoBackupError,
         D_AFTER_CHANGES to if (backupAfterChanges) "1" else "0",
         D_DIRTY to if (backupDirty) "1" else null,
+        D_BACKUP_PHOTOS to if (backupPhotos) "1" else null,
         D_IMPORT_NAME to lastImportName,
         D_IMPORT_AT to lastImportAt?.toString(),
         D_IMPORT_MODIFIED to lastImportModified?.toString(),

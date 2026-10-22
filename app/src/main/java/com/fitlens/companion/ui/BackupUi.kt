@@ -212,6 +212,10 @@ fun BackupsPage(snap: Snapshot) {
             if (it) ensureNotifyPermission()
         }
         NotificationsOffNote(notify, afterChanges || autoDays > 0)
+        SettingsSwitchRow(
+            stringResource(R.string.backup_photos), device.backupPhotos,
+            summary = stringResource(R.string.backup_photos_summary)
+        ) { on -> Settings.updateDevice { it.copy(backupPhotos = on) } }
 
         // One status card (#41): each line with a tick, or a warning icon for a problem.
         SettingsGroup(stringResource(R.string.backup_group_status))

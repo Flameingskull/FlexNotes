@@ -8,6 +8,7 @@ import android.provider.DocumentsContract
 import android.text.format.Formatter
 import androidx.annotation.StringRes
 import com.fitlens.companion.R
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -558,9 +559,32 @@ object Backups {
         return backupToFolder(context)
     }
 
-    /** Writes a backup into the automatic-backup folder and keeps only the newest [autoKeep] files. */
+    /**
+     * Writes a backup into the automatic-backup folder and keeps only the newest [autoKeep] files. Then, when
+     * [DeviceSettings.backupPhotos] is on, copies new or changed photos as image files into its `Photos` folder (#195);
+     * that copy never fails the backup, and its counts are added to the result.
+     */
     suspend fun backupToFolder(context: Context): ImportSummary = withContext(Dispatchers.IO) {
         val tree = autoFolder() ?: return@withContext ImportSummary(context.getString(R.string.bk_choose_folder), false)
+        val saved = writeToFolder(context, tree)
+        if (!saved.ok || !Settings.current().backupPhotos) return@withContext saved
+        val photos = Store.snapshot.value?.photos ?: return@withContext saved
+        val res = context.resources
+        val copied = try {
+            PhotoExport.backupCopy(context, tree, photos)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            return@withContext ImportSummary(saved.message + " " + res.getString(R.string.bk_photos_copy_failed, why(e)), true)
+        }
+        val more = buildList {
+            if (copied.exported > 0) add(res.getQuantityString(R.plurals.bk_photos_copied, copied.exported, copied.exported))
+            if (copied.failed > 0) add(res.getQuantityString(R.plurals.bk_photos_not_copied, copied.failed, copied.failed))
+        }
+        if (more.isEmpty()) saved else ImportSummary((listOf(saved.message) + more).joinToString(" "), true)
+    }
+
+    private suspend fun writeToFolder(context: Context, tree: Uri): ImportSummary =
         lock.withLock {
             try {
                 val resolver = context.contentResolver
@@ -568,9 +592,9 @@ object Backups {
                 val name = fileName(AUTO_PREFIX)
                 // Written under a temporary name, then renamed, so an interrupted backup is never mistaken for a good one.
                 val doc = DocumentsContract.createDocument(resolver, parent, MIME, name + PART)
-                    ?: return@withContext failed(context.getString(R.string.bk_folder_missing), true)
+                    ?: return@withLock failed(context.getString(R.string.bk_folder_missing), true)
                 val photos = resolver.openOutputStream(doc, "wt")?.use { write(context, it) }
-                    ?: return@withContext failed(context.getString(R.string.bk_folder_write), true)
+                    ?: return@withLock failed(context.getString(R.string.bk_folder_write), true)
                 DocumentsContract.renameDocument(resolver, doc, name)
                 Settings.updateDeviceNow { it.copy(autoBackupLast = System.currentTimeMillis(), autoBackupError = null) }
                 AutoBackup.markBackedUp()
@@ -586,7 +610,6 @@ object Backups {
                 failed(context.getString(R.string.bk_auto_failed, why(e)), false)
             }
         }
-    }
 
     /** An exception's message for a result, or its type when it has none. */
     private fun why(e: Exception): String = e.message ?: e.javaClass.simpleName

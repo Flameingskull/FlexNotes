@@ -125,6 +125,7 @@ private val CATALOGUE = listOf(
         res.getQuantityString(R.plurals.backup_keep_count, device.autoBackupKeep, device.autoBackupKeep)
     },
     SettingEntry(R.string.search_backup_after, SettingsSection.Backups, R.string.search_backup_after_kw, R.string.backup_after) { onOff(device.backupAfterChanges) },
+    SettingEntry(R.string.backup_photos, SettingsSection.Backups, R.string.search_backup_photos_kw, R.string.backup_photos) { onOff(device.backupPhotos) },
     SettingEntry(R.string.search_safety_copy, SettingsSection.Backups, R.string.search_safety_copy_kw, R.string.backup_group_safety),
     SettingEntry(R.string.search_pdf_report, SettingsSection.Backups, R.string.search_pdf_report_kw, R.string.backup_group_pdf),
     SettingEntry(R.string.search_import_fitnotes, SettingsSection.Import, R.string.search_import_fitnotes_kw, R.string.import_file),

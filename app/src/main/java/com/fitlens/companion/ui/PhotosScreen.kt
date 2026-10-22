@@ -512,14 +512,7 @@ fun ReviewScreen(snap: Snapshot, nav: Nav) {
 /** Starts exporting [photos] into the folder [tree] (#195), each described by its pose, date and comment. */
 private fun startPhotoExport(ctx: android.content.Context, tree: android.net.Uri, photos: List<Photo>) {
     val res = ctx.resources
-    val started = PhotoExport.start(ctx, tree, photos, describe = { p ->
-        listOfNotNull(
-            res.getString(R.string.ph_export_description),
-            if (p.pose.isBlank()) null else poseText(res, p.pose),
-            p.date?.let { Dates.medium(it) },
-            p.note?.trim()?.takeIf { it.isNotEmpty() }
-        ).joinToString(" · ")
-    }) { r -> UiEvents.show(exportResultText(res, r)) }
+    val started = PhotoExport.start(ctx, tree, photos) { r -> UiEvents.show(exportResultText(res, r)) }
     if (!started) UiEvents.show(res.getString(R.string.ph_export_busy))
 }
 
