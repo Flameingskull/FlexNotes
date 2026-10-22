@@ -2644,6 +2644,7 @@
     <string name="search_hc_weight_kw">bodyweight weight scale smart scale weigh in health connect</string>
     <string name="search_hc_body_fat_kw">body fat percent scale health connect</string>
     <string name="search_hc_resting_hr_kw">resting heart rate pulse bpm watch health connect</string>
+    <string name="search_hc_history_kw">health connect history older past backfill all data</string>
     <string name="search_hc_sleep_kw">sleep hours night watch health connect</string>
     <string name="hc_group_body">Body values</string>
     <string name="hc_typed_desc">Only what you log in FlexNotes.</string>
@@ -2708,6 +2709,14 @@
     <string name="hc_sync_failed">Couldn\'t read Health Connect. Try again later.</string>
     <string name="hc_background_on">Syncs every hour, also while FlexNotes is closed, and whenever it opens.</string>
     <string name="hc_background_off">Syncs whenever FlexNotes opens. To sync while it\'s closed, allow background reading in Health Connect.</string>
+    <string name="hc_history">Older data</string>
+    <string name="hc_history_summary">Health Connect lets apps read the last %1$d days. Allow older data too, and FlexNotes reads everything Health Connect holds for the types you chose, once, then keeps it up to date.</string>
+    <string name="hc_history_on">Allowed</string>
+    <string name="hc_history_off">Last %1$d days</string>
+    <string name="hc_history_refused">Older data wasn\'t allowed, so only the last %1$d days are read. You can ask again here at any time.</string>
+    <string name="hc_history_ask_title">Read older data?</string>
+    <string name="hc_history_ask_text">Health Connect will ask whether FlexNotes may read data older than %1$d days. If you allow it, FlexNotes reads the whole history of each type you chose to take from Health Connect, once, in the background. It\'s kept on this phone, marked Health Connect, and what you typed yourself is never replaced. If you don\'t, nothing changes: the last %1$d days are still read.</string>
+    <string name="hc_history_ask_go">Continue</string>
     <string name="hc_privacy">FlexNotes only reads from Health Connect, and only the types you switch to it here: steps; the calories, protein, fat and carbs you ate; active calories burned; bodyweight and body fat; resting heart rate; and sleep. It reads them on this phone and keeps them in FlexNotes\'s own data and your backups. Nothing is sent anywhere: FlexNotes has no internet permission. Values already read stay if you switch a type back.</string>
     <string name="cal_card_from">From %1$s</string>
     <string name="cal_sheet_hc_note">Health Connect\'s totals count for this day (%1$s). What you type here is kept, but only counts on days without them. To count what you type, choose Typed in FlexNotes in Settings › Health Connect.</string>

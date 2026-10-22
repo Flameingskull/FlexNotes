@@ -20,6 +20,7 @@ import com.fitlens.companion.R
 import com.fitlens.companion.data.ActiveCalories
 import com.fitlens.companion.data.HealthConnect
 import com.fitlens.companion.data.Settings
+import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.SettingsActionRow
 import com.fitlens.companion.ui.design.SettingsChoiceRow
 import com.fitlens.companion.ui.design.SettingsGroup
@@ -39,8 +40,15 @@ internal class HealthConnectAccess(
     val status: HealthConnect.Status,
     val granted: Set<String>?,
     val refused: HealthConnect.Kind?,
-    val ask: (HealthConnect.Kind) -> Unit
+    val ask: (HealthConnect.Kind) -> Unit,
+    /** Older data than the last [HealthConnect.DAYS] days was asked for and refused (#192). */
+    val historyRefused: Boolean = false,
+    /** Asks for [HealthConnect.HISTORY] on its own (#192). */
+    val askHistory: () -> Unit = {}
 ) {
+    /** Older data may be read (#192). */
+    val history: Boolean get() = granted?.contains(HealthConnect.HISTORY) == true
+
     /** [kind] is known not to be allowed (null while the permissions are still being read). */
     fun notAllowed(kind: HealthConnect.Kind): Boolean = granted != null && kind.permission !in granted
 }
@@ -53,6 +61,8 @@ internal fun rememberHealthConnectAccess(onAllowed: (HealthConnect.Kind) -> Unit
     var granted by remember { mutableStateOf<Set<String>?>(null) }
     var pending by remember { mutableStateOf<HealthConnect.Kind?>(null) }
     var refused by remember { mutableStateOf<HealthConnect.Kind?>(null) }
+    var askingHistory by remember { mutableStateOf(false) }
+    var historyRefused by remember { mutableStateOf(false) }
     var resumes by remember { mutableIntStateOf(0) }
     val allowed by rememberUpdatedState(onAllowed)
     LifecycleResumeEffect(Unit) {
@@ -65,6 +75,12 @@ internal fun rememberHealthConnectAccess(onAllowed: (HealthConnect.Kind) -> Unit
     }
     val launcher = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { result ->
         granted = granted.orEmpty() + result
+        if (askingHistory) {
+            askingHistory = false
+            historyRefused = HealthConnect.HISTORY !in result
+            if (!historyRefused) HealthConnect.syncSoon(ctx)
+            return@rememberLauncherForActivityResult
+        }
         val kind = pending ?: return@rememberLauncherForActivityResult
         pending = null
         if (kind.permission in result) {
@@ -74,15 +90,24 @@ internal fun rememberHealthConnectAccess(onAllowed: (HealthConnect.Kind) -> Unit
             refused = kind
         }
     }
-    return HealthConnectAccess(status, granted, refused) { kind ->
-        if (granted?.contains(kind.permission) == true) {
-            refused = null
-            allowed(kind)
-        } else {
-            pending = kind
-            launcher.launch(HealthConnect.permissionsFor(kind))
+    return HealthConnectAccess(
+        status, granted, refused,
+        ask = { kind ->
+            if (granted?.contains(kind.permission) == true) {
+                refused = null
+                allowed(kind)
+            } else {
+                pending = kind
+                launcher.launch(HealthConnect.permissionsFor(kind))
+            }
+        },
+        historyRefused = historyRefused,
+        askHistory = {
+            pending = null
+            askingHistory = true
+            launcher.launch(setOf(HealthConnect.HISTORY))
         }
-    }
+    )
 }
 
 /**
@@ -160,6 +185,44 @@ private fun HealthConnectSourceRow(
         }
     }
     if (access.refused == kind || (chosen && access.notAllowed(kind))) HealthConnectNotAllowedRows(what)
+}
+
+/**
+ * Full history (#192): Health Connect lets FlexNotes read the last [HealthConnect.DAYS] days. This row explains what
+ * allowing older data does, in a sheet, before Health Connect's own dialog asks; refusing keeps the last
+ * [HealthConnect.DAYS] days. Once allowed, it opens Health Connect, where it can be taken back.
+ */
+@Composable
+private fun HistoryRow(access: HealthConnectAccess) {
+    val ctx = LocalContext.current
+    var explaining by remember { mutableStateOf(false) }
+    SettingsActionRow(
+        stringResource(R.string.hc_history),
+        stringResource(R.string.hc_history_summary, HealthConnect.DAYS),
+        value = if (access.history) stringResource(R.string.hc_history_on) else stringResource(R.string.hc_history_off, HealthConnect.DAYS)
+    ) {
+        if (access.history) {
+            if (!HealthConnect.openSettings(ctx)) openAppSettings(ctx)
+        } else {
+            explaining = true
+        }
+    }
+    if (access.historyRefused && !access.history) {
+        SettingsNote(stringResource(R.string.hc_history_refused, HealthConnect.DAYS), error = true)
+    }
+    if (explaining) {
+        ConfirmSheet(
+            title = stringResource(R.string.hc_history_ask_title),
+            message = stringResource(R.string.hc_history_ask_text, HealthConnect.DAYS),
+            confirmLabel = stringResource(R.string.hc_history_ask_go),
+            onDismiss = { explaining = false },
+            onConfirm = {
+                explaining = false
+                access.askHistory()
+            },
+            destructive = false
+        )
+    }
 }
 
 /**
@@ -241,6 +304,7 @@ internal fun HealthConnectPage() {
                     if (access.granted?.contains(HealthConnect.BACKGROUND) == true) R.string.hc_background_on else R.string.hc_background_off
                 )
             )
+            HistoryRow(access)
         }
         SettingsActionRow(stringResource(R.string.hc_open), stringResource(R.string.hc_open_summary)) {
             if (!HealthConnect.openSettings(ctx)) openAppSettings(ctx)

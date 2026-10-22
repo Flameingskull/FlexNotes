@@ -65,7 +65,10 @@ data class DeviceSettings(
      *  this phone, so it never travels in backups. */
     val stepsLast: String? = null,
     /** When Health Connect was last read on this phone (#184), epoch milliseconds, or null before the first sync. */
-    val hcSyncedAt: Long? = null
+    val hcSyncedAt: Long? = null,
+    /** The Health Connect types whose full history has been read on this phone (#192), as `Kind` names separated by
+     *  commas. Cleared when older data is no longer allowed, so allowing it again reads the history again. */
+    val hcHistoryKinds: String? = null
 )
 
 /**
@@ -452,6 +455,7 @@ object Settings {
     private const val D_STEPS_LAST = "steps_last"
     private const val D_HC_SYNCED = "hc_synced_at"
     private const val D_BACKUP_PHOTOS = "backup_photos"
+    private const val D_HC_HISTORY = "hc_history_kinds"
 
     /** Every phone-only key, as it was named in `meta` before 1.0.21. */
     internal val DEVICE_KEYS = listOf(
@@ -550,7 +554,8 @@ object Settings {
         setupDone = bool(get(D_SETUP_DONE)),
         whatsNewSeen = get(D_WHATS_NEW_SEEN)?.toLongOrNull() ?: 0,
         stepsLast = get(D_STEPS_LAST),
-        hcSyncedAt = get(D_HC_SYNCED)?.toLongOrNull()
+        hcSyncedAt = get(D_HC_SYNCED)?.toLongOrNull(),
+        hcHistoryKinds = get(D_HC_HISTORY)
     )
 
     private fun DeviceSettings.toMap(): Map<String, String?> = mapOf(
@@ -577,7 +582,8 @@ object Settings {
         D_SETUP_DONE to if (setupDone) "1" else null,
         D_WHATS_NEW_SEEN to whatsNewSeen.takeIf { it > 0 }?.toString(),
         D_STEPS_LAST to stepsLast,
-        D_HC_SYNCED to hcSyncedAt?.toString()
+        D_HC_SYNCED to hcSyncedAt?.toString(),
+        D_HC_HISTORY to hcHistoryKinds
     )
 
     private fun portableFrom(get: (String) -> String?) = PortableSettings(

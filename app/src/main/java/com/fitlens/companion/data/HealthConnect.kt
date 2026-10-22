@@ -73,6 +73,15 @@ object HealthConnect {
     /** Lets the hourly sync read while FlexNotes isn't on screen. Asked for with the types; optional. */
     const val BACKGROUND = "android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND"
 
+    /**
+     * Lets FlexNotes read data older than the [DAYS] Health Connect allows by default (#192). Asked for on its own, from
+     * Settings › Health Connect; without it only the last [DAYS] days are ever read.
+     */
+    const val HISTORY = "android.permission.health.READ_HEALTH_DATA_HISTORY"
+
+    /** The earliest day the full history is read from (#192). */
+    val HISTORY_FROM: LocalDate = LocalDate.of(2010, 1, 1)
+
     /** Days read at each sync, today included. */
     const val DAYS = 30
 
@@ -250,6 +259,7 @@ object HealthConnect {
                 HealthSessions.add(sessions(app, client, from, today, distance))
             }
             Settings.updateDeviceNow { it.copy(hcSyncedAt = System.currentTimeMillis()) }
+            readHistory(app, client, allowed, granted, from)
             Outcome.DONE
         } catch (e: CancellationException) {
             throw e
@@ -258,6 +268,44 @@ object HealthConnect {
         } finally {
             _syncing.value = false
         }
+    }
+
+    /**
+     * The full history (#192): once older data may be read ([HISTORY]), each allowed type not read back yet has
+     * everything from [HISTORY_FROM] to the day before [before] read, a year at a time, and is then remembered in
+     * [DeviceSettings.hcHistoryKinds]. Without the permission that record is cleared, so allowing it again reads the
+     * history again. A failure leaves the type to be tried at the next sync and never fails the regular one.
+     */
+    private suspend fun readHistory(context: Context, client: HealthConnectClient, allowed: List<Kind>, granted: Set<String>, before: LocalDate) {
+        val done = Settings.current().hcHistoryKinds?.split(',')?.filter { it.isNotBlank() }?.toSet().orEmpty()
+        if (HISTORY !in granted) {
+            if (done.isNotEmpty()) Settings.updateDeviceNow { it.copy(hcHistoryKinds = null) }
+            return
+        }
+        val due = allowed.filter { it.name !in done }
+        if (due.isEmpty()) return
+        val finished = mutableSetOf<String>()
+        for (kind in due) {
+            try {
+                var end = before.minusDays(1)
+                while (!end.isBefore(HISTORY_FROM)) {
+                    val start = maxOf(end.minusYears(1).plusDays(1), HISTORY_FROM)
+                    if (kind == Kind.EXERCISE) {
+                        val distance = HealthPermission.getReadPermission(DistanceRecord::class) in granted
+                        HealthSessions.add(sessions(context, client, start, end, distance))
+                    } else {
+                        Store.replaceHealthConnectDays(read(context, client, kind, start, end))
+                    }
+                    end = start.minusDays(1)
+                }
+                finished += kind.name
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                // Tried again at the next sync.
+            }
+        }
+        if (finished.isNotEmpty()) Settings.updateDeviceNow { it.copy(hcHistoryKinds = (done + finished).sorted().joinToString(",")) }
     }
 
     /** [kind]'s values from [from] to [to] (local days), as the series `Store` keeps; a day with none has none. */
