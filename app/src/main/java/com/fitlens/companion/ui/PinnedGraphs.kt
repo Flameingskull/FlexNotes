@@ -18,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -185,7 +186,8 @@ fun AnalysisOverviewTab(snap: Snapshot, onOpen: (PinnedGraph) -> Unit) {
                 onOpen = { onOpen(p) },
                 onUnpin = { updatePins { list -> list.filterNot { it.sameGraph(p) } } },
                 onMoveUp = if (i > 0) ({ move(p, -1) }) else null,
-                onMoveDown = if (i < pins.lastIndex) ({ move(p, 1) }) else null
+                onMoveDown = if (i < pins.lastIndex) ({ move(p, 1) }) else null,
+                colorSlot = i
             )
         }
     }
@@ -204,7 +206,9 @@ private fun PinnedGraphCard(
     onOpen: () -> Unit,
     onUnpin: () -> Unit,
     onMoveUp: (() -> Unit)?,
-    onMoveDown: (() -> Unit)?
+    onMoveDown: (() -> Unit)?,
+    /** Which palette colour this card's line takes (#198), so the cards read apart at a glance. */
+    colorSlot: Int = 0
 ) {
     // A Workouts pin (#51) or an exercise graph, with its comparison (#53).
     val totals = totalsOf(pin)
@@ -275,15 +279,19 @@ private fun PinnedGraphCard(
             if (onMoveUp != null || onMoveDown != null) DragHandle(title, CARD_HEIGHT + 64.dp, onMoveUp, onMoveDown)
         }
         if (series != null) {
-            FitChart(
-                series,
-                Modifier.padding(end = 12.dp),
-                kind = kind,
-                height = CARD_HEIGHT,
-                // Tapping the chart opens the graph too.
-                onSelect = { onOpen() },
-                unit = unit
-            )
+            CompositionLocalProvider(LocalChartColors provides LocalChartColors.current.rotated(colorSlot)) {
+                FitChart(
+                    series,
+                    Modifier.padding(end = 12.dp),
+                    kind = kind,
+                    height = CARD_HEIGHT,
+                    // Tapping the chart opens the graph too.
+                    onSelect = { onOpen() },
+                    unit = unit,
+                    better = if (totals == null && pin.graph == GRAPH_MAX_PACE) ::lowerIsBetter else ::higherIsBetter,
+                    showKey = false
+                )
+            }
         }
         GoldHairline(Modifier.padding(top = 8.dp, end = 12.dp))
     }

@@ -73,6 +73,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MRecord
+import com.fitlens.companion.data.MeasurementGoals
 import com.fitlens.companion.data.MeasurementDef
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.fmtNum
@@ -393,10 +394,15 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
             } ?: emptyList()
             val photoDays = remember(snap.photosKey) { snap.photosByDate.keys.map { Dates.epochDay(it) }.toSet() }
             val unit = def?.unit ?: shown.lastOrNull()?.unit ?: ""
+            // A measurement with a goal judges each move by it, as its changes do (changeColour, #198).
+            val better: (Double, Double) -> Boolean? = { from, to ->
+                def?.let { MeasurementGoals.isImprovement(it.goalType, it.goalValue, from, to) } ?: higherIsBetter(from, to)
+            }
             FitChart(
                 listOf(LineSeries(selectedName, points)),
                 Modifier.padding(horizontal = 8.dp),
                 kind = kind,
+                better = better,
                 photoDays = photoDays,
                 goal = if (def != null && def.goalType != 0 && def.goalValue > 0) def.goalValue else null,
                 selected = selectedPoint?.let { ChartSelection(0, it) },
@@ -433,6 +439,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                     FitChart(
                         listOf(LineSeries(selectedName, points)),
                         kind = kind,
+                        better = better,
                         height = h,
                         photoDays = photoDays,
                         goal = if (def != null && def.goalType != 0 && def.goalValue > 0) def.goalValue else null,

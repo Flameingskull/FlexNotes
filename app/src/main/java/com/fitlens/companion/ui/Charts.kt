@@ -246,6 +246,69 @@ internal fun DrawScope.marker(shape: Int, c: Offset, r: Float, color: Color, sty
     }
 }
 
+/** A triangle pointing up for a rise or down for a fall (#198). */
+internal fun DrawScope.arrowMarker(up: Boolean, c: Offset, r: Float, color: Color) {
+    val tip = if (up) -1.15f else 1.15f
+    val base = if (up) 0.85f else -0.85f
+    drawPath(Path().apply {
+        moveTo(c.x, c.y + r * tip); lineTo(c.x + r * 1.1f, c.y + r * base); lineTo(c.x - r * 1.1f, c.y + r * base); close()
+    }, color = color)
+}
+
+/** A five-pointed star centred on [c], [r] to its points: the best point (#198). */
+internal fun DrawScope.star(c: Offset, r: Float, color: Color) {
+    drawPath(Path().apply {
+        for (i in 0 until 10) {
+            val a = Math.toRadians(-90.0 + i * 36.0)
+            val rr = if (i % 2 == 0) r else r * 0.45f
+            val x = c.x + (kotlin.math.cos(a) * rr).toFloat()
+            val y = c.y + (kotlin.math.sin(a) * rr).toFloat()
+            if (i == 0) moveTo(x, y) else lineTo(x, y)
+        }
+        close()
+    }, color = color)
+}
+
+/** Whether a move [from] to [to] is better: higher is, by default; null for no change (#198). */
+fun higherIsBetter(from: Double, to: Double): Boolean? = when {
+    to > from -> true
+    to < from -> false
+    else -> null
+}
+
+/** For graphs where less is better, such as pace (#198). */
+fun lowerIsBetter(from: Double, to: Double): Boolean? = higherIsBetter(to, from)
+
+/** What a lone series' marks mean (#198): green better, red worse, the triangle's direction, the best star, the latest ring. */
+@Composable
+internal fun ChartKey(changes: Boolean, latest: Boolean) {
+    val colors = LocalChartColors.current
+    val style = MaterialTheme.typography.labelSmall
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    @Composable
+    fun Item(label: String, draw: DrawScope.() -> Unit) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Canvas(Modifier.size(12.dp), onDraw = draw)
+            Spacer(Modifier.width(4.dp))
+            Text(label, style = style, color = muted)
+        }
+    }
+    Row(
+        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (changes) {
+            Item(stringResource(R.string.ch_key_better)) { arrowMarker(true, center, size.minDimension / 2.4f, colors.better) }
+            Item(stringResource(R.string.ch_key_worse)) { arrowMarker(false, center, size.minDimension / 2.4f, colors.worse) }
+        }
+        Item(stringResource(R.string.ch_key_best)) { star(center, size.minDimension / 2f, colors.accent) }
+        if (latest) Item(stringResource(R.string.ch_key_latest)) {
+            drawCircle(colors.goal, radius = size.minDimension / 2.4f, center = center, style = Stroke(width = 1.5.dp.toPx()))
+        }
+    }
+}
+
 @Composable
 internal fun ChartEmpty(modifier: Modifier, height: Dp) {
     Box(modifier.fillMaxWidth().height(height), contentAlignment = Alignment.Center) {
@@ -302,7 +365,14 @@ fun FitChart(
     onExpand: (() -> Unit)? = null,
     gapDays: Set<Long> = emptySet(),
     overlay: LineSeries? = null,
-    overlayUnit: String = ""
+    overlayUnit: String = "",
+    /**
+     * Whether a move from one value to the next is better (true), worse (false) or neither (null) (#198): colours a
+     * single series' points and bar tops, and picks its best point. [lowerIsBetter] for pace; a goal for body values.
+     */
+    better: (Double, Double) -> Boolean? = ::higherIsBetter,
+    /** The small key under a single series that explains its marks. Off where the chart is only a preview (pinned cards). */
+    showKey: Boolean = true
 ) {
     var hidden by remember(series.size) { mutableStateOf(emptySet<Int>()) }
     // The overlay's legend entry follows the series, so its index is series.size.
@@ -328,7 +398,7 @@ fun FitChart(
         } else {
             LinePlot(
                 series, visible, kind, plotHeight, photoDays, goal, selected, onSelect, yFormat, unit, trends, yFromZero,
-                viewport, onExpand, gapDays, overlayShown, overlayUnit
+                viewport, onExpand, gapDays, overlayShown, overlayUnit, better
             )
         }
         if (series.size > 1 || showTrend || overlay != null) {
@@ -336,9 +406,12 @@ fun FitChart(
                 listOfNotNull(overlay?.let { o ->
                     stringResource(R.string.ch_right_axis, if (overlayUnit.isBlank()) o.label else stringResource(R.string.ch_with_unit, o.label, overlayUnit))
                 })
-            ChartLegend(labels, hidden, showTrend) { i ->
+            ChartLegend(labels, hidden, showTrend, single = visible.size <= 1) { i ->
                 hidden = if (i in hidden) hidden - i else hidden + i
             }
+        }
+        if (showKey && visible.size == 1 && all.isNotEmpty()) {
+            ChartKey(changes = kind != ChartKind.AREA, latest = kind != ChartKind.BAR)
         }
         if (showTrend && all.isNotEmpty()) TrendReadout(series, visible, trends, trendUnit, trendSkipLast)
     }
@@ -423,7 +496,8 @@ private fun LinePlot(
     onExpand: (() -> Unit)?,
     gapDays: Set<Long>,
     overlayIn: LineSeries?,
-    overlayUnit: String
+    overlayUnit: String,
+    better: (Double, Double) -> Boolean?
 ) {
     val colors = LocalChartColors.current
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -633,19 +707,26 @@ private fun LinePlot(
                 area.close()
                 drawPath(area, Brush.verticalGradient(listOf(colors.fill, colors.fill.copy(alpha = 0.08f)), startY = top, endY = bottom))
             }
+            val single = visible.size == 1
             visible.forEachIndexed { k, si ->
                 val pts = series[si].points
                 val color = colors.seriesColor(si)
                 if (kind == ChartKind.BAR) {
-                    // Gold columns with a red top (#137); several series stand side by side within each slot.
+                    // Gold columns with a red top (#137); several series stand side by side within each slot, each in its
+                    // own colour (#198). A lone series' tops are green or red by whether the bar beat the one before.
                     val sub = barW / visible.size
-                    val body = if (k == 0) colors.fill.copy(alpha = 0.6f) else color.copy(alpha = 0.35f)
-                    pts.forEach { p ->
-                        if (p.x < xMin || p.x > xMax) return@forEach
+                    val body = if (single) colors.fill.copy(alpha = 0.6f) else color.copy(alpha = 0.45f)
+                    pts.forEachIndexed { i, p ->
+                        if (p.x < xMin || p.x > xMax) return@forEachIndexed
                         val cx = px(p.x) + (k - (visible.size - 1) / 2f) * sub
                         val yTop = py(p.y).coerceIn(top, bottom)
+                        val topColor = if (!single || i == 0) color else when (better(pts[i - 1].y, p.y)) {
+                            true -> colors.better
+                            false -> colors.worse
+                            null -> color
+                        }
                         drawRect(body, topLeft = Offset(cx - sub / 2f, yTop), size = Size(sub * 0.92f, bottom - yTop))
-                        drawLine(color, Offset(cx - sub / 2f, yTop), Offset(cx - sub / 2f + sub * 0.92f, yTop), strokeWidth = 2.5.dp.toPx())
+                        drawLine(topColor, Offset(cx - sub / 2f, yTop), Offset(cx - sub / 2f + sub * 0.92f, yTop), strokeWidth = 3.dp.toPx())
                     }
                 } else {
                     val width = if (kind == ChartKind.AREA) 1.5.dp.toPx() else 2.5.dp.toPx()
@@ -657,8 +738,9 @@ private fun LinePlot(
                     tr.drawn().forEachIndexed { i, (x, y) ->
                         if (i == 0) path.moveTo(px(x), py(y)) else path.lineTo(px(x), py(y))
                     }
+                    // A lone series' trend has its own colour (#198), so it never hides in the line it follows.
                     drawPath(
-                        path, color.copy(alpha = 0.85f),
+                        path, if (single) colors.trend else color.copy(alpha = 0.85f),
                         style = Stroke(
                             width = 2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round,
                             pathEffect = PathEffect.dashPathEffect(floatArrayOf(14f, 10f))
@@ -668,15 +750,36 @@ private fun LinePlot(
                 val shownCount = pts.count { it.x >= xMin && it.x <= xMax }
                 // Markers belong to the line and step kinds; area and bar show only photo days (#137).
                 val showMarkers = (kind == ChartKind.LINE || kind == ChartKind.STEP) && (shownCount <= 60 || si > 0)
-                pts.forEach { p ->
-                    if (p.x < xMin || p.x > xMax) return@forEach
+                pts.forEachIndexed { i, p ->
+                    if (p.x < xMin || p.x > xMax) return@forEachIndexed
                     val c = Offset(px(p.x), py(p.y))
                     val hasPhoto = p.x in photoDays
                     if (showMarkers || hasPhoto) {
-                        marker(si, c, 5.dp.toPx(), surface)
-                        marker(si, c, 4.dp.toPx(), color)
+                        // A lone series shows each point's move (#198): a triangle up or down for the direction, green
+                        // or red for better or worse. The first point and an unchanged one keep the plain marker.
+                        val prev = if (single && i > 0) pts[i - 1].y else null
+                        val good = prev?.let { better(it, p.y) }
+                        if (prev != null && good != null && p.y != prev) {
+                            arrowMarker(p.y > prev, c, 5.5.dp.toPx(), surface)
+                            arrowMarker(p.y > prev, c, 4.5.dp.toPx(), if (good) colors.better else colors.worse)
+                        } else {
+                            marker(si, c, 5.dp.toPx(), surface)
+                            marker(si, c, 4.dp.toPx(), color)
+                        }
                     }
                     if (hasPhoto) drawCircle(colors.accent, radius = 6.dp.toPx(), center = c, style = Stroke(width = 2.dp.toPx()))
+                }
+                // The best point in view gets a gold star above it, and the latest an ivory ring (#198).
+                if (single) {
+                    val shown = pts.filter { it.x >= xMin && it.x <= xMax }
+                    shown.reduceOrNull { b, p -> if (better(b.y, p.y) == true) p else b }?.let { b ->
+                        val c = Offset(px(b.x), py(b.y).coerceIn(top, bottom) - 13.dp.toPx())
+                        star(c, 6.5.dp.toPx(), surface)
+                        star(c, 5.dp.toPx(), colors.accent)
+                    }
+                    if (kind != ChartKind.BAR) shown.lastOrNull()?.let { l ->
+                        drawCircle(colors.goal, radius = 8.dp.toPx(), center = Offset(px(l.x), py(l.y)), style = Stroke(width = 2.dp.toPx()))
+                    }
                 }
             }
             selectedPoint?.let { (s, p) ->
@@ -691,7 +794,7 @@ private fun LinePlot(
 
 /** The legend under a chart: each series with its colour and marker; tapping one hides or shows it. */
 @Composable
-internal fun ChartLegend(labels: List<String>, hidden: Set<Int>, showTrend: Boolean, onToggle: (Int) -> Unit) {
+internal fun ChartLegend(labels: List<String>, hidden: Set<Int>, showTrend: Boolean, single: Boolean, onToggle: (Int) -> Unit) {
     val colors = LocalChartColors.current
     Row(
         Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
@@ -716,7 +819,8 @@ internal fun ChartLegend(labels: List<String>, hidden: Set<Int>, showTrend: Bool
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Canvas(Modifier.size(width = 18.dp, height = 14.dp)) {
                     drawLine(
-                        colors.seriesColor(0), Offset(0f, center.y), Offset(size.width, center.y), strokeWidth = 1.5.dp.toPx(),
+                        if (single) colors.trend else colors.seriesColor(0), Offset(0f, center.y), Offset(size.width, center.y),
+                        strokeWidth = 1.5.dp.toPx(),
                         pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 4f))
                     )
                 }

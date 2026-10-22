@@ -32,7 +32,6 @@ object ShareImages {
     private val graphite get() = Brand.Graphite.toArgb()
     private val red get() = Brand.Fall.toArgb()
     private val gold get() = Brand.Gold.toArgb()
-    private val goldLight get() = Brand.GoldLight.toArgb()
     private val ivory get() = Brand.Ivory.toArgb()
     private val muted get() = Brand.Muted.toArgb()
     private val hairline get() = Brand.Hairline.toArgb()
@@ -148,7 +147,7 @@ object ShareImages {
             t.drawn().forEachIndexed { i, (x, v) -> if (i == 0) trendPath.moveTo(px(x), py(v)) else trendPath.lineTo(px(x), py(v)) }
             c.save()
             c.clipRect(r)
-            c.drawPath(trendPath, stroke(goldLight, 4f, dashed = true))
+            c.drawPath(trendPath, stroke(ChartHues.Sky.toArgb(), 4f, dashed = true))
             c.restore()
         }
         if (g.kind == ChartKind.BAR) {

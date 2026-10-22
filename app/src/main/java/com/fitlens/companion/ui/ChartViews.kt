@@ -171,7 +171,8 @@ fun DonutChart(
                             val topLeft = Offset(center.x - radius, center.y - radius) + shift
                             val arcSize = Size(radius * 2f, radius * 2f)
                             if (i == sel) {
-                                drawArc(Brand.Gold, start, sweep, useCenter = false, topLeft = topLeft, size = arcSize, style = Stroke(width = thick + 4.dp.toPx()))
+                                // Ivory, so the ring shows on a gold slice too (#198).
+                                drawArc(Brand.Ivory, start, sweep, useCenter = false, topLeft = topLeft, size = arcSize, style = Stroke(width = thick + 4.dp.toPx()))
                             }
                             drawArc(colors.seriesColor(i), start, sweep, useCenter = false, topLeft = topLeft, size = arcSize, style = Stroke(width = thick))
                         }

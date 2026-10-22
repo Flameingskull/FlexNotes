@@ -2312,6 +2312,10 @@
     <string name="ch_desc_selected">%1$s, %2$s: %3$s</string>
     <string name="ch_desc">Graph. %1$s%2$s</string>
     <string name="ch_trend_legend">Trend</string>
+    <string name="ch_key_better">Better</string>
+    <string name="ch_key_worse">Worse</string>
+    <string name="ch_key_best">Best</string>
+    <string name="ch_key_latest">Latest</string>
     <string name="tr_week">week</string>
     <string name="tr_month">month</string>
     <string name="tr_year">year</string>

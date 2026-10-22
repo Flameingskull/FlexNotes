@@ -26,7 +26,11 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
    in `.claude/agents/` (details below).
 4. **Brand look:** luxury black and vibrant gold (owner, 2026-10-02, 1.0.71: no purple). Red and green only for
    rises, falls and graph lines (a red line over a translucent gold fill). Use the `Brand` colours and the theme in
-   `ui/Theme.kt`. Don't hard-code other colours. **Type (owner, 2026-10-02, #135):** Manrope throughout, bundled in
+   `ui/Theme.kt`. Don't hard-code other colours. **Chart colours (owner, 2026-10-22, #198):** graphs and data visuals
+   start from the theme (a red line over gold fill) but are not bound by it: they use the wider, colour-blind-checked
+   `ChartHues` palette (red, gold, blue, mint, ivory, pink, green, sky) for series, slices, bars and pinned cards, and
+   green/red for a point that got better or worse, so data reads at a glance. Chart-only; the rest of the UI stays
+   black and gold. **Type (owner, 2026-10-02, #135):** Manrope throughout, bundled in
    `res/font/` (headings are no longer serif), from the `MaterialTheme.typography` roles only (no stray `.sp`);
    FitNotes-style uppercase section labels over a fine gold rule (`SectionLabel`); fine gold hairlines on glass.
    **Charts (owner, 2026-10-02, #137):** Line, Bar, Area and Step are all allowed, chosen per graph (bar charts are

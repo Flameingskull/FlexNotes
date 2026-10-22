@@ -592,6 +592,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                     series,
                     Modifier.padding(horizontal = 8.dp),
                     kind = kind,
+                    better = if (g.lowerIsBetter) ::lowerIsBetter else ::higherIsBetter,
                     photoDays = photoDays,
                     selected = sel,
                     onSelect = { pick ->
@@ -643,6 +644,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                     FitChart(
                         series,
                         kind = kind,
+                        better = if (g.lowerIsBetter) ::lowerIsBetter else ::higherIsBetter,
                         height = h,
                         photoDays = photoDays,
                         selected = sel,

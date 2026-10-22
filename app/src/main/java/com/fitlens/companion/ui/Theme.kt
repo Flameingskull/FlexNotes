@@ -71,18 +71,58 @@ fun deltaColour(delta: Double, plain: Color = Brand.Muted): Color = when {
 }
 
 /**
- * Chart colours (#50, 1.0.71): [series] is the line, red, over a translucent gold [fill]; [accent] marks photo days
- * and [goal] is the goal line. [palette] is the series order for charts with several lines: red first, then gold,
- * ivory and gold light. Charts with more series reuse it lighter (see `seriesColor` in Charts.kt) and tell series
- * apart by marker shape too.
+ * Chart-only hues (#198, owner 2026-10-22): graphs start from the brand's red and gold, then widen the palette so
+ * series, slices and cards read apart at a glance. Used only through [ChartColors], never for the rest of the UI.
+ * All sit at 5.7:1 or more on [Brand.Surface].
+ */
+object ChartHues {
+    val Blue = Color(0xFF3D8BFF)
+    val Mint = Color(0xFF5EDBC9)
+    val Pink = Color(0xFFE879B9)
+    val Green = Color(0xFF7CC242)
+    val Sky = Color(0xFFA3D8FF)
+
+    /**
+     * The categorical order. Every neighbouring pair (and last with first, for donuts) stays apart under
+     * deuteranopia, protanopia and tritanopia (OKLab ΔE ≥ 11) and in normal vision (ΔE ≥ 19); the first five, the
+     * most an exercise comparison shows (#53), are apart pair by pair too. Reorder only after checking again.
+     */
+    val Order = listOf(Brand.Fall, Brand.Gold, Blue, Mint, Brand.Ivory, Pink, Green, Sky)
+}
+
+/**
+ * Chart colours (#50, 1.0.71, #198): [series] is the line, red, over a translucent gold [fill]; [accent] marks photo
+ * days and the best point; [goal] is the goal line and marks the latest point; [trend] is a single series' trend.
+ * [palette] is the series order for charts with several lines, slices or cards ([ChartHues.Order]). Past it, colours
+ * repeat lighter (see `seriesColor` in Charts.kt) and series are told apart by marker shape too. [better] and [worse]
+ * colour a point by whether it improved on the one before.
  */
 data class ChartColors(
     val series: Color,
     val accent: Color,
     val goal: Color,
-    val palette: List<Color> = listOf(Brand.Fall, Brand.Gold, Brand.Ivory, Brand.GoldLight),
-    val fill: Color = Brand.Gold.copy(alpha = 0.32f)
-)
+    val palette: List<Color> = ChartHues.Order,
+    val fill: Color = Brand.Gold.copy(alpha = 0.32f),
+    val trend: Color = ChartHues.Sky,
+    val better: Color = Brand.Rise,
+    val worse: Color = Brand.Fall
+) {
+    /**
+     * These colours with the palette started at slot [n], so a set of single-line charts (pinned cards) each gets its
+     * own colour. Slot 0 keeps the brand's red over gold; others fill under the line in its own colour.
+     */
+    fun rotated(n: Int): ChartColors {
+        if (palette.isEmpty() || n % palette.size == 0) return this
+        val k = n % palette.size
+        val line = palette[k]
+        return copy(
+            series = line,
+            palette = palette.drop(k) + palette.take(k),
+            fill = line.copy(alpha = 0.28f),
+            trend = if (line == trend) Brand.Ivory else trend
+        )
+    }
+}
 
 val LocalChartColors = staticCompositionLocalOf { ChartColors(Brand.Fall, Brand.Gold, Brand.Ivory) }
 
