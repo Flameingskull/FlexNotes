@@ -19,12 +19,14 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.fitlens.companion.R
 import com.fitlens.companion.data.ActiveCalories
 import com.fitlens.companion.data.HealthConnect
+import com.fitlens.companion.data.HealthWrite
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.SettingsActionRow
 import com.fitlens.companion.ui.design.SettingsChoiceRow
 import com.fitlens.companion.ui.design.SettingsGroup
 import com.fitlens.companion.ui.design.SettingsNote
+import com.fitlens.companion.ui.design.SettingsSwitchRow
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
@@ -44,27 +46,43 @@ internal class HealthConnectAccess(
     /** Older data than the last [HealthConnect.DAYS] days was asked for and refused (#192). */
     val historyRefused: Boolean = false,
     /** Asks for [HealthConnect.HISTORY] on its own (#192). */
-    val askHistory: () -> Unit = {}
+    val askHistory: () -> Unit = {},
+    /** The type it last asked to write and was refused (#191). */
+    val writeRefused: HealthWrite.Out? = null,
+    /** Switches writing a type on, asking for its write permission first when needed (#191). */
+    val askWrite: (HealthWrite.Out) -> Unit = {}
 ) {
     /** Older data may be read (#192). */
     val history: Boolean get() = granted?.contains(HealthConnect.HISTORY) == true
 
     /** [kind] is known not to be allowed (null while the permissions are still being read). */
     fun notAllowed(kind: HealthConnect.Kind): Boolean = granted != null && kind.permission !in granted
+
+    /** Writing [out] is known not to be allowed (#191). */
+    fun notAllowed(out: HealthWrite.Out): Boolean = granted != null && out.permission !in granted
 }
 
-/** [onAllowed] runs once a type may be read: straight away when it already was, or after Health Connect's dialog. */
+/**
+ * [onAllowed] runs once a type may be read: straight away when it already was, or after Health Connect's dialog;
+ * [onWriteAllowed] the same once a type may be written (#191).
+ */
 @Composable
-internal fun rememberHealthConnectAccess(onAllowed: (HealthConnect.Kind) -> Unit): HealthConnectAccess {
+internal fun rememberHealthConnectAccess(
+    onWriteAllowed: (HealthWrite.Out) -> Unit = {},
+    onAllowed: (HealthConnect.Kind) -> Unit
+): HealthConnectAccess {
     val ctx = LocalContext.current
     var status by remember { mutableStateOf(HealthConnect.status(ctx)) }
     var granted by remember { mutableStateOf<Set<String>?>(null) }
     var pending by remember { mutableStateOf<HealthConnect.Kind?>(null) }
     var refused by remember { mutableStateOf<HealthConnect.Kind?>(null) }
+    var pendingWrite by remember { mutableStateOf<HealthWrite.Out?>(null) }
+    var writeRefused by remember { mutableStateOf<HealthWrite.Out?>(null) }
     var askingHistory by remember { mutableStateOf(false) }
     var historyRefused by remember { mutableStateOf(false) }
     var resumes by remember { mutableIntStateOf(0) }
     val allowed by rememberUpdatedState(onAllowed)
+    val writeAllowed by rememberUpdatedState(onWriteAllowed)
     LifecycleResumeEffect(Unit) {
         resumes++
         onPauseOrDispose { }
@@ -79,6 +97,16 @@ internal fun rememberHealthConnectAccess(onAllowed: (HealthConnect.Kind) -> Unit
             askingHistory = false
             historyRefused = HealthConnect.HISTORY !in result
             if (!historyRefused) HealthConnect.syncSoon(ctx)
+            return@rememberLauncherForActivityResult
+        }
+        pendingWrite?.let { out ->
+            pendingWrite = null
+            if (out.permission in result) {
+                writeRefused = null
+                writeAllowed(out)
+            } else {
+                writeRefused = out
+            }
             return@rememberLauncherForActivityResult
         }
         val kind = pending ?: return@rememberLauncherForActivityResult
@@ -98,14 +126,27 @@ internal fun rememberHealthConnectAccess(onAllowed: (HealthConnect.Kind) -> Unit
                 allowed(kind)
             } else {
                 pending = kind
+                pendingWrite = null
                 launcher.launch(HealthConnect.permissionsFor(kind))
             }
         },
         historyRefused = historyRefused,
         askHistory = {
             pending = null
+            pendingWrite = null
             askingHistory = true
             launcher.launch(setOf(HealthConnect.HISTORY))
+        },
+        writeRefused = writeRefused,
+        askWrite = { out ->
+            if (granted?.contains(out.permission) == true) {
+                writeRefused = null
+                writeAllowed(out)
+            } else {
+                pending = null
+                pendingWrite = out
+                launcher.launch(setOf(out.permission))
+            }
         }
     )
 }
@@ -188,6 +229,34 @@ private fun HealthConnectSourceRow(
 }
 
 /**
+ * Writing one type to Health Connect (#191): on asks for its write permission first; off stops writing it, and what
+ * was written stays. When it's refused, or no longer allowed, a note says so and opens Health Connect.
+ */
+@Composable
+private fun HealthWriteRow(out: HealthWrite.Out, access: HealthConnectAccess, on: Boolean, @StringRes title: Int, @StringRes summary: Int, @StringRes what: Int) {
+    val ctx = LocalContext.current
+    SettingsSwitchRow(
+        stringResource(title),
+        on,
+        summary = stringResource(summary),
+        enabled = access.status == HealthConnect.Status.AVAILABLE || on
+    ) { checked ->
+        if (!checked) {
+            Settings.updatePortable { out.switch(it, false) }
+            HealthConnect.syncSoon(ctx)
+        } else {
+            access.askWrite(out)
+        }
+    }
+    if (access.writeRefused == out || (on && access.notAllowed(out))) {
+        SettingsNote(stringResource(R.string.hcw_not_allowed, stringResource(what)), error = true)
+        SettingsActionRow(stringResource(R.string.hc_open)) {
+            if (!HealthConnect.openSettings(ctx)) openAppSettings(ctx)
+        }
+    }
+}
+
+/**
  * Full history (#192): Health Connect lets FlexNotes read the last [HealthConnect.DAYS] days. This row explains what
  * allowing older data does, in a sheet, before Health Connect's own dialog asks; refusing keeps the last
  * [HealthConnect.DAYS] days. Once allowed, it opens Health Connect, where it can be taken back.
@@ -228,7 +297,8 @@ private fun HistoryRow(access: HealthConnectAccess) {
 /**
  * Settings › Health Connect (#184): for each type, FlexNotes or Health Connect as the primary source (steps, #185,
  * with the phone's step counter as a third choice; what was eaten, #186; active calories, #188; bodyweight and body
- * fat, #187; resting heart rate and sleep, #189; exercise sessions as cardio sets, #190), the permission each needs, when it last synced, Sync now, Health
+ * fat, #187; resting heart rate and sleep, #189; exercise sessions as cardio sets, #190), what's written to it (#191:
+ * bodyweight, body fat and workouts, each switched on here), the permission each needs, when it last synced, Sync now, Health
  * Connect's own settings, and what's read and why (Health Connect's privacy link opens here).
  */
 @Composable
@@ -238,7 +308,12 @@ internal fun HealthConnectPage() {
     val prefs by Settings.portable.collectAsState()
     val device by Settings.device.collectAsState()
     val syncing by HealthConnect.syncing.collectAsState()
-    val access = rememberHealthConnectAccess { kind ->
+    val access = rememberHealthConnectAccess(
+        onWriteAllowed = { out ->
+            Settings.updatePortable { out.switch(it, true) }
+            HealthConnect.syncSoon(ctx)
+        }
+    ) { kind ->
         // Steps are switched on their own row, which also stops the phone's step counter.
         if (kind != HealthConnect.Kind.STEPS) {
             Settings.updatePortable { kind.choose(it, true) }
@@ -286,6 +361,12 @@ internal fun HealthConnectPage() {
         stringResource(R.string.hc_exercise_hc_desc, HealthConnect.DAYS), R.string.hc_what_exercise
     )
 
+    SettingsGroup(stringResource(R.string.hcw_group))
+    SettingsNote(stringResource(R.string.hcw_note))
+    HealthWriteRow(HealthWrite.Out.WEIGHT, access, prefs.hcWriteWeight, R.string.hcw_weight, R.string.hcw_weight_summary, R.string.hcw_what_weight)
+    HealthWriteRow(HealthWrite.Out.BODY_FAT, access, prefs.hcWriteBodyFat, R.string.hcw_body_fat, R.string.hcw_body_fat_summary, R.string.hcw_what_body_fat)
+    HealthWriteRow(HealthWrite.Out.WORKOUTS, access, prefs.hcWriteWorkouts, R.string.hcw_workouts, R.string.hcw_workouts_summary, R.string.hcw_what_workouts)
+
     if (access.status == HealthConnect.Status.AVAILABLE) {
         SettingsGroup(stringResource(R.string.hc_group_sync))
         val chosen = HealthConnect.anyChosen(prefs)
@@ -298,7 +379,7 @@ internal fun HealthConnectPage() {
         ) {
             AppScope.scope.launch { UiEvents.show(outcomeText(res, HealthConnect.sync(ctx, force = true))) }
         }
-        if (chosen) {
+        if (HealthConnect.Kind.entries.any { it.chosen(prefs) }) {
             SettingsNote(
                 stringResource(
                     if (access.granted?.contains(HealthConnect.BACKGROUND) == true) R.string.hc_background_on else R.string.hc_background_off

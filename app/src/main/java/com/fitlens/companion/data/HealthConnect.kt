@@ -52,7 +52,8 @@ import kotlin.reflect.KClass
  * Reading Google Health Connect (#184), so values other apps record on the phone (steps, #185; what was eaten, #186;
  * bodyweight and body fat, #187; active calories, #188; resting heart rate and sleep, #189) can be the primary source
  * for what FlexNotes records and calculates, and exercise sessions become cardio sets (#190, `HealthSessions`).
- * Health Connect runs on the phone, so this stays local: read only, no internet permission, accounts or cloud.
+ * Health Connect runs on the phone, so this stays local: no internet permission, accounts or cloud. Since #191 what
+ * FlexNotes logs can also be written to it (`HealthWrite`), each type only when the user switches it on.
  *
  * For each type switched to Health Connect in Settings ([Kind.chosen]), a sync reads the last [DAYS] days (the history
  * Health Connect allows by default). Totals are grouped by local day, so Health Connect applies the user's app
@@ -181,8 +182,8 @@ object HealthConnect {
     fun permissionsFor(vararg kinds: Kind): Set<String> =
         kinds.flatMap { k -> listOf(k.permission) + k.also.map { HealthPermission.getReadPermission(it) } }.toSet() + BACKGROUND
 
-    /** Some type is switched to Health Connect. */
-    fun anyChosen(p: PortableSettings): Boolean = Kind.entries.any { it.chosen(p) }
+    /** Some type is read from Health Connect or written to it (#191). */
+    fun anyChosen(p: PortableSettings): Boolean = Kind.entries.any { it.chosen(p) } || HealthWrite.anyOn(p)
 
     /** The Health Connect permissions FlexNotes has, or none when Health Connect can't be used. */
     suspend fun granted(context: Context): Set<String> {
@@ -224,7 +225,9 @@ object HealthConnect {
     suspend fun schedule(context: Context) {
         val app = context.applicationContext
         val wm = WorkManager.getInstance(app)
-        if (!anyChosen(Settings.currentPortable()) || BACKGROUND !in granted(app)) {
+        val p = Settings.currentPortable()
+        // Reading while FlexNotes is closed needs background reading; writing (#191) doesn't.
+        if (!(Kind.entries.any { it.chosen(p) } && BACKGROUND in granted(app)) && !HealthWrite.anyOn(p)) {
             wm.cancelUniqueWork(WORK)
             return
         }
@@ -233,14 +236,17 @@ object HealthConnect {
     }
 
     /**
-     * Reads the last [DAYS] days of every type switched to Health Connect and allowed, and keeps them. Unless
-     * [force]d, it does nothing within [MIN_GAP_MS] of the last sync. One sync at a time.
+     * Reads the last [DAYS] days of every type switched to Health Connect and allowed, and keeps them; then writes
+     * what's switched on to be written (#191, `HealthWrite`). Unless [force]d, it does nothing within [MIN_GAP_MS] of
+     * the last sync. One sync at a time.
      */
     suspend fun sync(context: Context, force: Boolean = false): Outcome = lock.withLock {
         Settings.awaitLoaded()
         val app = context.applicationContext
-        val kinds = Kind.entries.filter { it.chosen(Settings.currentPortable()) }
-        if (kinds.isEmpty()) return@withLock Outcome.NOTHING_CHOSEN
+        val p = Settings.currentPortable()
+        val kinds = Kind.entries.filter { it.chosen(p) }
+        val outs = HealthWrite.Out.entries.filter { it.on(p) }
+        if (kinds.isEmpty() && outs.isEmpty()) return@withLock Outcome.NOTHING_CHOSEN
         if (status(app) != Status.AVAILABLE) return@withLock Outcome.UNAVAILABLE
         val last = Settings.current().hcSyncedAt
         if (!force && last != null && System.currentTimeMillis() - last in 0 until MIN_GAP_MS) return@withLock Outcome.DONE
@@ -249,18 +255,26 @@ object HealthConnect {
             val client = HealthConnectClient.getOrCreate(app)
             val granted = client.permissionController.getGrantedPermissions()
             val allowed = kinds.filter { it.permission in granted }
-            if (allowed.isEmpty()) return@withLock Outcome.NOT_ALLOWED
-            val today = LocalDate.now()
-            val from = today.minusDays(DAYS - 1L)
-            val series = allowed.filter { it != Kind.EXERCISE }.flatMap { read(app, client, it, from, today) }
-            Store.replaceHealthConnectDays(series)
-            if (Kind.EXERCISE in allowed) {
-                val distance = HealthPermission.getReadPermission(DistanceRecord::class) in granted
-                HealthSessions.add(sessions(app, client, from, today, distance))
+            if (allowed.isEmpty() && outs.none { it.permission in granted }) return@withLock Outcome.NOT_ALLOWED
+            // Reading can fail while FlexNotes is closed without background reading; writing still goes ahead.
+            val reading = runCatching {
+                if (allowed.isNotEmpty()) {
+                    val today = LocalDate.now()
+                    val from = today.minusDays(DAYS - 1L)
+                    val series = allowed.filter { it != Kind.EXERCISE }.flatMap { read(app, client, it, from, today) }
+                    Store.replaceHealthConnectDays(series)
+                    if (Kind.EXERCISE in allowed) {
+                        val distance = HealthPermission.getReadPermission(DistanceRecord::class) in granted
+                        HealthSessions.add(sessions(app, client, from, today, distance))
+                    }
+                    readHistory(app, client, allowed, granted, from)
+                }
             }
-            Settings.updateDeviceNow { it.copy(hcSyncedAt = System.currentTimeMillis()) }
-            readHistory(app, client, allowed, granted, from)
-            Outcome.DONE
+            reading.exceptionOrNull()?.let { if (it is CancellationException) throw it }
+            HealthWrite.sync(app, client, granted)
+            // A failed read is tried again the next time FlexNotes opens.
+            if (reading.isSuccess) Settings.updateDeviceNow { it.copy(hcSyncedAt = System.currentTimeMillis()) }
+            if (reading.isFailure) Outcome.FAILED else Outcome.DONE
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -380,7 +394,8 @@ object HealthConnect {
                     pageToken = page
                 )
             )
-            response.records.forEach { r ->
+            // FlexNotes's own workouts (#191) are already in the day log.
+            response.records.filter { it.metadata.dataOrigin.packageName != context.packageName }.forEach { r ->
                 val metres = if (!distance) null else try {
                     client.aggregate(
                         AggregateRequest(
@@ -428,7 +443,8 @@ object HealthConnect {
                     pageToken = page
                 )
             )
-            response.records.forEach { r ->
+            // FlexNotes's own readings (#191) are already kept as the user's values.
+            response.records.filter { it.metadata.dataOrigin.packageName != context.packageName }.forEach { r ->
                 val (at, v) = value(r)
                 found += Reading(at, v, commentFor(listOfNotNull(appLabel(context, r.metadata.dataOrigin.packageName))))
             }

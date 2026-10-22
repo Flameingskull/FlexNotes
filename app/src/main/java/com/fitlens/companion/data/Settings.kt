@@ -170,6 +170,12 @@ data class PortableSettings(
     val hcSleep: Boolean = false,
     /** Exercise sessions from Health Connect become cardio sets (#190). */
     val hcExercise: Boolean = false,
+    /** Bodyweight logged in FlexNotes is written to Health Connect (#191). */
+    val hcWriteWeight: Boolean = false,
+    /** Body fat logged in FlexNotes is written to Health Connect (#191). */
+    val hcWriteBodyFat: Boolean = false,
+    /** Each logged workout with a start and end is written to Health Connect as an exercise session (#191). */
+    val hcWriteWorkouts: Boolean = false,
     /** The TDEE calculator's goal (#173), `Energy.Goal.encode`, or null for none chosen. */
     val calorieGoal: String? = null,
     /** The daily calorie target set from the calculator, or null. */
@@ -410,6 +416,9 @@ object Settings {
             P_HC_RESTING_HR to if (s.hcRestingHr) "1" else null,
             P_HC_SLEEP to if (s.hcSleep) "1" else null,
             P_HC_EXERCISE to if (s.hcExercise) "1" else null,
+            P_HCW_WEIGHT to if (s.hcWriteWeight) "1" else null,
+            P_HCW_BODY_FAT to if (s.hcWriteBodyFat) "1" else null,
+            P_HCW_WORKOUTS to if (s.hcWriteWorkouts) "1" else null,
             P_CALORIE_GOAL to s.calorieGoal?.takeIf { it.isNotBlank() },
             P_CALORIE_TARGET to s.calorieTargetKcal?.toString(),
             P_MACRO_PROTEIN to s.macroProteinG?.toString(),
@@ -509,6 +518,9 @@ object Settings {
     private const val P_HC_ACTIVE = "hc_active"
     private const val P_HC_RESTING_HR = "hc_resting_hr"
     private const val P_HC_EXERCISE = "hc_exercise"
+    private const val P_HCW_WEIGHT = "hc_write_weight"
+    private const val P_HCW_BODY_FAT = "hc_write_body_fat"
+    private const val P_HCW_WORKOUTS = "hc_write_workouts"
     private const val P_HC_SLEEP = "hc_sleep"
     private const val P_CALORIE_GOAL = "calorie_goal"
     private const val P_CALORIE_TARGET = "calorie_target_kcal"
@@ -637,6 +649,9 @@ object Settings {
         hcRestingHr = bool(get(P_HC_RESTING_HR)),
         hcSleep = bool(get(P_HC_SLEEP)),
         hcExercise = bool(get(P_HC_EXERCISE)),
+        hcWriteWeight = bool(get(P_HCW_WEIGHT)),
+        hcWriteBodyFat = bool(get(P_HCW_BODY_FAT)),
+        hcWriteWorkouts = bool(get(P_HCW_WORKOUTS)),
         calorieGoal = Energy.Goal.decode(get(P_CALORIE_GOAL))?.encode(),
         calorieTargetKcal = get(P_CALORIE_TARGET)?.toIntOrNull()?.takeIf { it in 500..10000 },
         macroProteinG = get(P_MACRO_PROTEIN)?.toIntOrNull()?.takeIf { it in 0..1000 },
@@ -698,6 +713,9 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     hcRestingHr = hcRestingHr,
     hcSleep = hcSleep,
     hcExercise = hcExercise,
+    hcWriteWeight = hcWriteWeight,
+    hcWriteBodyFat = hcWriteBodyFat,
+    hcWriteWorkouts = hcWriteWorkouts,
     calorieGoal = calorieGoal,
     calorieTargetKcal = calorieTargetKcal,
     macroProteinG = macroProteinG,

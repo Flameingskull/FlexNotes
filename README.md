@@ -66,8 +66,8 @@ custom metrics.
   Connect**, on the phone and read only: steps, food and macros from apps such as MacrosFirst, bodyweight, body fat,
   active calories, resting heart rate, sleep and other apps' workouts ([#184](https://github.com/Flameingskull/FlexNotes/issues/184) to [#190](https://github.com/Flameingskull/FlexNotes/issues/190)). 1.0.147 and
   1.0.148 export progress photos as image files, by hand or with each automatic backup ([#195](https://github.com/Flameingskull/FlexNotes/issues/195)), and 1.0.148
-  can read Health Connect's older data too ([#192](https://github.com/Flameingskull/FlexNotes/issues/192)). Next come writing to Health Connect
-  ([#191](https://github.com/Flameingskull/FlexNotes/issues/191)), the accessibility checks that need a real phone
+  can read Health Connect's older data too ([#192](https://github.com/Flameingskull/FlexNotes/issues/192)). 1.0.149 can write your bodyweight, body
+  fat and workouts to Health Connect ([#191](https://github.com/Flameingskull/FlexNotes/issues/191)). Next come the accessibility checks that need a real phone
   ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)) and the
   [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
@@ -257,7 +257,10 @@ custom metrics.
   runs, rides, swims and other sessions from your watch or fitness app become cardio sets in the day log, each added
   once and left as you edit it. FlexNotes syncs when it opens, from **Sync now**, and hourly in the background if
   you allow it. Health Connect lets apps read the last 30 days; **Older data** asks, with an explanation first, to
-  read everything before that once. Values you type are never replaced, and nothing is written to Health Connect.
+  read everything before that once. Values you type are never replaced. Under **Write to Health Connect** you can
+  switch on writing your bodyweight, body fat and workouts (each logged day with a start and end, as a strength
+  training session) so other apps see them: each is written once, kept up to date as you edit it, and deleted there
+  when you delete it in FlexNotes. Nothing read from Health Connect is written back.
 - **Data tools** (in Settings):
   - **CSV export:** workouts (with set and exercise comments) or body data for any date range, in kilograms or
     pounds, saved to a file or shared, for spreadsheets. The columns are listed on the page, with a custom metric's
@@ -400,8 +403,8 @@ FlexNotes only.
 
 **Permissions:** FlexNotes asks for notifications (Android 13+) only when you set up automatic backups or start a
 timer, physical activity only when you turn on step counting, the camera only when you open FlexNotes's camera, and
-Health Connect's read permissions only for the kinds of data you switch to it (older data and background reading
-are asked for separately). Switching on a setting that needs them gives a one-line reason first, and if notifications
+Health Connect's read permissions only for the kinds of data you switch to it, and its write permissions only for
+what you switch on to be written (older data and background reading are asked for separately). Switching on a setting that needs them gives a one-line reason first, and if notifications
 are off, the setting still works in the app and offers a way to turn them on. It also uses vibration and a foreground service for the timers, which Android grants
 without asking. Photos and folders are accessed through Android's file pickers, and only the ones you choose.
 

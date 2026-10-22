@@ -1,40 +1,39 @@
 ## Overview
 
-This update finishes the photo export: your automatic backups can now also keep your progress photos as ordinary
-image files. FlexNotes can also read your older Health Connect data, not only the last 30 days.
+FlexNotes can now write to Health Connect as well as read from it. Your bodyweight, body fat and workouts can be
+shared with other health and fitness apps on your phone. Each type is off until you switch it on.
 
 Install this update over the current app as usual. Everything you've logged is kept, and the database doesn't change.
 
 ## What's new
 
-- **Copy photos as image files with your backups.** In Settings › Backups, turn on **Copy photos as image files**.
-  Each automatic backup, and **Back up now**, then also saves your progress photos as ordinary image files in a
-  Photos folder inside your backup folder. They have the same names and photo details as Photos › Export as image
-  files: named by date and pose, such as 2026-10-16_front.jpg, with the FlexNotes date and time, pose and comment
-  in each file. The setting is off until you turn it on.
-- **Only new or changed photos are copied.** The first backup copies every photo. After that, each backup copies
-  only photos you've added, or whose date, pose or comment you've changed. A changed photo replaces its own earlier
-  copy when the file name still fits. If you move it to another date or pose, it gets a new file and the old one
-  stays. A long first copy that's interrupted carries on at the next backup.
-- **Older Health Connect data.** Health Connect lets apps read the last 30 days. In Settings › Health Connect,
-  under Sync, **Older data** explains what it does, then Health Connect asks whether FlexNotes may read further
-  back. If you allow it, FlexNotes reads the whole history of each kind of data you take from Health Connect once,
-  in the background, and then keeps it up to date. If you don't, nothing changes.
+- **Write to Health Connect.** Settings › Health Connect has a new section, **Write to Health Connect**, with three
+  switches: **Write bodyweight**, **Write body fat** and **Write workouts**. When you switch one on, Health Connect
+  asks whether FlexNotes may write that type. Nothing is written until you allow it.
+- **Bodyweight and body fat.** Every Bodyweight and Body fat value you've logged or imported is written at the
+  time it was logged. Bodyweight is converted to kilograms, as Health Connect stores it. A value without a time
+  counts at noon.
+- **Workouts.** Each day you've logged sets becomes a strength training session in Health Connect, called
+  FlexNotes workout. It runs from the workout timer's start to its end, and its notes list the day's exercises in
+  order. Health Connect needs a start and an end, so days without both are left out.
+- **Kept up to date, never doubled.** Each value is written once. If you edit it in FlexNotes, the copy in Health
+  Connect is replaced. If you delete it, it's deleted there too. This happens at the next sync: when FlexNotes opens,
+  from **Sync now**, and every hour.
 
 ## Improved
 
-- The backup message says how many photos were copied, and how many couldn't be. A photo that couldn't be copied is
-  tried again at the next backup, and a problem with the photos never stops the backup itself.
-- If you take back the older-data permission in Health Connect and allow it again later, FlexNotes reads the history
-  again.
+- **No loops.** Values and sessions FlexNotes read from Health Connect are never written back. When FlexNotes reads
+  bodyweight, body fat or exercise sessions, it skips the ones it wrote itself, so nothing appears twice in your
+  Body tracker or day log.
+- **Writing works in the background.** The hourly sync now also runs to keep what's written up to date, even if
+  you haven't allowed background reading.
+- **Clearer privacy note.** The privacy note in Settings › Health Connect now lists exercise sessions among the
+  types FlexNotes can read, and says what it writes. Everything stays on your phone: FlexNotes still has no internet
+  permission.
 
 ## Known limitations
 
-- Photos are copied only into the automatic backup folder. Files you delete there are copied again only if the photo
-  changes in FlexNotes, and nothing in that folder is ever deleted, even when you delete a photo in FlexNotes.
-- Some storage providers don't let apps set a file's modified date, so a copied file may show the time it was
-  copied. Its photo details always carry the date it was taken. Photos in formats whose details can't be written,
-  such as HEIC, are copied unchanged.
-- Older Health Connect data is read back to 2010. Not every phone's Health Connect offers older data. Where it
-  isn't offered, the last 30 days are still read.
-- FlexNotes reads Health Connect but doesn't write to it yet (#191).
+- Switching a type off stops writing it, but what was already written stays in Health Connect. You can delete it
+  in Health Connect's own settings.
+- Every workout is written as strength training, even a day of only cardio exercises.
+- Health Connect sessions show when the workout ran, not each set. Your sets, weights and reps stay in FlexNotes.

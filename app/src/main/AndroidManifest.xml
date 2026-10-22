@@ -22,7 +22,7 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
-    <!-- Health Connect (#184): read only, for the types the user switches to it in Settings, asked for there. The data
+    <!-- Health Connect (#184): reading the types the user switches to it in Settings, asked for there. The data
          is read on the phone and kept there: FlexNotes has no internet permission. Background reading lets the hourly
          sync run while FlexNotes is closed; it's optional. -->
     <uses-permission android:name="android.permission.health.READ_STEPS" />
@@ -34,6 +34,10 @@
     <uses-permission android:name="android.permission.health.READ_SLEEP" />
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_DISTANCE" />
+    <!-- Writing what's logged in FlexNotes, each type only when switched on in Settings (#191). -->
+    <uses-permission android:name="android.permission.health.WRITE_WEIGHT" />
+    <uses-permission android:name="android.permission.health.WRITE_BODY_FAT" />
+    <uses-permission android:name="android.permission.health.WRITE_EXERCISE" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
 
