@@ -283,6 +283,24 @@ class ExportedSchemaTest {
     }
 
     @Test
+    fun aV25DatabaseGainsSitesSupplyAndSymptomsAndKeepsEveryValue() {
+        // A database as 1.0.154 to 1.0.157 left it, made from the committed 25.json, upgraded to v26 (#207, #209, #210).
+        helper.createDatabase(Db.NAME, 25).use { db ->
+            db.row("measurement", "name" to "Semaglutide", "unit" to "mg", "sort_order" to 1, "custom" to 1, "medication" to 1)
+            db.row("mrecord", "id" to 1L, "name" to "Semaglutide", "unit" to "mg", "date" to "2026-10-01", "value" to 0.5, "source" to "manual", "dose_id" to 3L, "due" to "2026-10-01 08:00")
+            db.row("med_schedule", "id" to 1L, "name" to "Weekly")
+        }
+        val db = helper.runMigrationsAndValidate(Db.NAME, Db.VERSION, true, *migrations)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE id = 1 AND value = 0.5 AND dose_id = 3 AND site IS NULL"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM med_schedule WHERE name = 'Weekly'"))
+        db.row("med_info", "medication" to "Semaglutide", "supply" to 2.0, "injected" to 1)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM med_info WHERE warn_days = 7 AND injected = 1"))
+        db.row("symptom", "name" to "Nausea")
+        db.row("symptom_rating", "symptom_id" to 1L, "date" to "2026-10-02", "rating" to 3)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM symptom_rating WHERE rating = 3"))
+    }
+
+    @Test
     fun aDoseIsTakenOnceAndASkipReplacesItself() = Db(app).use { h ->
         runBlocking(Dispatchers.IO) {
             val m = h.medDao

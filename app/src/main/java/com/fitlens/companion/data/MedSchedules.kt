@@ -151,8 +151,16 @@ class MedPlan(
     val activations: List<MedActivation> = emptyList(),
     /** Skipped doses: their `doseId` to the due times skipped. */
     val skipped: Map<Long, Set<String>> = emptyMap(),
-    val changes: List<MedDoseChange> = emptyList()
+    val changes: List<MedDoseChange> = emptyList(),
+    /** Each medication's supply and injection details (#209, #210), by name; see [infoOf]. */
+    val info: Map<String, MedInfo> = emptyMap(),
+    /** The symptoms the user rates and their ratings (#207). */
+    val symptoms: List<Symptom> = emptyList(),
+    val ratings: List<SymptomRating> = emptyList()
 ) {
+    /** [medication]'s details, or empty ones when none were set. */
+    fun infoOf(medication: String): MedInfo = info[medication] ?: MedInfo.none(medication)
+
     val schedulesById: Map<Long, MedSchedule> = schedules.associateBy { it.id }
     val activationsBySchedule: Map<Long, List<MedActivation>> = activations.groupBy { it.scheduleId }
     /** Every dose with its schedule, by the dose's id. */
@@ -376,7 +384,10 @@ object MedSchedules {
         val skipped = HashMap<Long, MutableSet<String>>()
         r.statuses().filter { it.status == SKIPPED }.forEach { skipped.getOrPut(it.dose_id) { HashSet() }.add(it.due) }
         val changes = r.changes().map { MedDoseChange(it.id, it.activation_id, it.dose_id, it.from_date, it.to_date, it.amount) }
-        return MedPlan(schedules, activations, skipped, changes)
+        val info = r.infos().associate { it.medication to MedInfo(it.medication, it.supply, it.supply_from, it.warn_days, it.expires, it.injected != 0) }
+        val symptoms = r.symptoms().map { Symptom(it.id, it.name, it.sort_order) }
+        val ratings = r.ratings().map { SymptomRating(it.id, it.symptom_id, it.date, it.rating, it.comment) }
+        return MedPlan(schedules, activations, skipped, changes, info, symptoms, ratings)
     }
 
     // ---------- Writes ----------
@@ -485,13 +496,14 @@ object MedSchedules {
 
     /**
      * Marks [due] taken (#202): one medication value, tied to its dose and due time, at [time] (the due time when
-     * logged on another day). Taking it again does nothing; a skip is cleared. Returns the value's id.
+     * logged on another day), with the injection [site] when there is one (#210). Taking it again does nothing; a skip
+     * is cleared. Returns the value's id.
      */
-    suspend fun take(due: DueDose, time: String, comment: String? = null): Long = write { r ->
+    suspend fun take(due: DueDose, time: String, comment: String? = null, site: InjectionSite? = null): Long = write { r ->
         r.takenRecord(due.dose.id, due.due)?.let { return@write it }
         r.clearStatus(due.dose.id, due.due)
         r.ensureMedication(due.dose.medication, due.dose.unit)
-        r.addTaken(due.dose.medication, due.dose.unit, due.date, time, due.amount, comment, due.dose.id, due.due)
+        r.addTaken(due.dose.medication, due.dose.unit, due.date, time, due.amount, comment, due.dose.id, due.due, site?.key)
     }
 
     /** Un-ticks [due]: its value goes. */

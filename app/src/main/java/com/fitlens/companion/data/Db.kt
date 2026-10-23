@@ -25,7 +25,7 @@ class Db(context: Context) : Closeable {
     companion object {
         const val NAME = "fitlens.db"
         /** 21: Room takes over the file (#36). 22: an exercise's own activity for its calories (#174). */
-        const val VERSION = 25
+        const val VERSION = 26
 
         /** The most ids one query binds, inside the 999-variable limit of older phones' SQLite. */
         const val MAX_IDS = 500
@@ -306,6 +306,13 @@ class Db(context: Context) : Closeable {
                     addColumn(db, "mrecord", "dose_id", "INTEGER")
                     addColumn(db, "mrecord", "due", "TEXT")
                 }
+            }
+            if (oldVersion < 26) {
+                // ---- 1.0.158: supply, injection sites and symptoms (#207, #209, #210) ------------------------------------
+                // One nullable column, the site of an injected dose, so every value keeps its row and has none. The new
+                // `med_info`, `symptom` and `symptom_rating` tables are created by the rebuild that follows, exactly as
+                // Room makes them. Replays safely (#77).
+                if (hasTable(db, "mrecord")) addColumn(db, "mrecord", "site", "TEXT")
             }
         }
 

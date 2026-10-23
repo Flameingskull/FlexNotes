@@ -296,7 +296,9 @@ data class MRecord(
     /** The scheduled dose it was taken for (#202), or null. */
     val doseId: Long? = null,
     /** When that dose was due, `yyyy-MM-dd HH:mm` (#202). */
-    val due: String? = null
+    val due: String? = null,
+    /** Where an injected dose went (#210): an `InjectionSites` key, or null. */
+    val site: String? = null
 )
 
 object Poses {

@@ -28,7 +28,7 @@ import androidx.room.RoomDatabase
         RoutineRow::class, RoutineDayRow::class, WorkoutOriginRow::class, RoutineDayExerciseRow::class, RoutineDaySetRow::class,
         PhotoRow::class, MetaRow::class,
         MedScheduleRow::class, MedPhaseRow::class, MedDoseRow::class, MedActivationRow::class, MedDoseStatusRow::class,
-        MedDoseChangeRow::class
+        MedDoseChangeRow::class, MedInfoRow::class, SymptomRow::class, SymptomRatingRow::class
     ]
 )
 abstract class FlexNotesDatabase : RoomDatabase() {
@@ -288,7 +288,9 @@ data class MeasurementRecordRow(
     /** The scheduled dose this value was taken for (#202), or null for a value logged by hand. */
     val dose_id: Long? = null,
     /** When that dose was due, `yyyy-MM-dd HH:mm` (#202), so ticking it twice never logs it twice. */
-    val due: String? = null
+    val due: String? = null,
+    /** Where an injected dose went (#210): an `InjectionSites` key, or null. */
+    val site: String? = null
 )
 
 // ---- Medication schedules (#201, #202, #204) ----------------------------------------------------------------------
@@ -356,6 +358,39 @@ data class MedDoseChangeRow(
     val from_date: String,
     val to_date: String?,
     val amount: Double
+)
+
+/**
+ * A medication's own details (#209, #210), one row per medication name, made when one is first set: the [supply] on
+ * hand when counted at [supply_from] (`yyyy-MM-dd HH:mm:ss`; values taken after it count down), a warning [warn_days]
+ * before it runs out, an [expires] date, and whether doses are [injected] (each then records its site).
+ */
+@Entity(tableName = "med_info")
+data class MedInfoRow(
+    @PrimaryKey val medication: String,
+    val supply: Double?,
+    val supply_from: String?,
+    @ColumnInfo(defaultValue = "7") val warn_days: Int,
+    val expires: String?,
+    @ColumnInfo(defaultValue = "0") val injected: Int
+)
+
+/** A symptom the user rates (#207), in their own list's order. */
+@Entity(tableName = "symptom")
+data class SymptomRow(
+    @PrimaryKey(autoGenerate = true) val id: Long,
+    val name: String,
+    @ColumnInfo(defaultValue = "0") val sort_order: Int
+)
+
+/** A symptom's rating, 0–10, on a date (#207): one per symptom and day. */
+@Entity(tableName = "symptom_rating", indices = [Index(value = ["symptom_id", "date"], name = "idx_symptom_day", unique = true)])
+data class SymptomRatingRow(
+    @PrimaryKey(autoGenerate = true) val id: Long,
+    val symptom_id: Long,
+    val date: String,
+    val rating: Int,
+    val comment: String?
 )
 
 // ---- Photos and settings --------------------------------------------------------------------------------------------

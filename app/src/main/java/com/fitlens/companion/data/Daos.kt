@@ -1021,10 +1021,13 @@ interface MedDao {
     fun takenRecord(doseId: Long, due: String): Long?
 
     @Query(
-        "INSERT INTO mrecord(name, unit, date, time, value, comment, source, dose_id, due) " +
-            "VALUES(:name, :unit, :date, :time, :value, :comment, 'manual', :doseId, :due)"
+        "INSERT INTO mrecord(name, unit, date, time, value, comment, source, dose_id, due, site) " +
+            "VALUES(:name, :unit, :date, :time, :value, :comment, 'manual', :doseId, :due, :site)"
     )
-    fun addTaken(name: String, unit: String, date: String, time: String, value: Double, comment: String?, doseId: Long, due: String): Long
+    fun addTaken(
+        name: String, unit: String, date: String, time: String, value: Double, comment: String?, doseId: Long, due: String,
+        site: String? = null
+    ): Long
 
     @Query("INSERT OR IGNORE INTO measurement(name, unit, sort_order, medication) VALUES(:name, :unit, 999, 1)")
     fun ensureMedication(name: String, unit: String)
@@ -1037,11 +1040,52 @@ interface MedDao {
 
     @Query("DELETE FROM med_dose_change WHERE id = :id")
     fun deleteChange(id: Long)
+
+    // ---- Supply, sites and symptoms (#207, #209, #210) ----
+
+    @Query("SELECT * FROM med_info")
+    fun infos(): List<MedInfoRow>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    fun setInfo(row: MedInfoRow)
+
+    @Query("UPDATE mrecord SET site = :site WHERE id = :id")
+    fun setSite(id: Long, site: String?)
+
+    @Query("SELECT * FROM symptom ORDER BY sort_order, id")
+    fun symptoms(): List<SymptomRow>
+
+    @Query("SELECT * FROM symptom_rating ORDER BY date, id")
+    fun ratings(): List<SymptomRatingRow>
+
+    @Query("SELECT id FROM symptom WHERE name = :name COLLATE NOCASE LIMIT 1")
+    fun symptomId(name: String): Long?
+
+    @Query("SELECT IFNULL(MAX(sort_order), -1) + 1 FROM symptom")
+    fun nextSymptomOrder(): Int
+
+    @Insert
+    fun addSymptom(row: SymptomRow): Long
+
+    @Query("UPDATE symptom SET name = :name WHERE id = :id")
+    fun renameSymptom(id: Long, name: String)
+
+    @Query("DELETE FROM symptom WHERE id = :id")
+    fun deleteSymptom(id: Long)
+
+    @Query("DELETE FROM symptom_rating WHERE symptom_id = :symptomId")
+    fun deleteRatingsOf(symptomId: Long)
+
+    @Query("INSERT OR REPLACE INTO symptom_rating(symptom_id, date, rating, comment) VALUES(:symptomId, :date, :rating, :comment)")
+    fun rate(symptomId: Long, date: String, rating: Int, comment: String?)
+
+    @Query("DELETE FROM symptom_rating WHERE symptom_id = :symptomId AND date = :date")
+    fun clearRating(symptomId: Long, date: String)
 }
 
 internal fun MeasurementRow.toModel() =
     MeasurementDef(name, unit, sort_order, goal_type, goal_value, enabled != 0, custom != 0, link, display_unit, medication != 0)
 
-internal fun MeasurementRecordRow.toModel() = MRecord(id, name, unit, date, time, value, comment, source, dose_id, due)
+internal fun MeasurementRecordRow.toModel() = MRecord(id, name, unit, date, time, value, comment, source, dose_id, due, site)
 
 internal fun PhotoRow.toModel() = Photo(id, file, date, taken_at, date_source, pose, note, original_name)
