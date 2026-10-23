@@ -356,6 +356,13 @@ class MainActivity : ComponentActivity() {
             openBackups()
             return
         }
+        if (intent.getBooleanExtra(com.fitlens.companion.data.MedReminders.EXTRA_OPEN_MEDICATIONS, false)) {
+            // Opened from a medication reminder (#203): today's doses are at the top of Medications.
+            intent.removeExtra(com.fitlens.companion.data.MedReminders.EXTRA_OPEN_MEDICATIONS)
+            nav.home()
+            nav.push(Screen.Medications)
+            return
+        }
         if (intent.action == HC_RATIONALE || intent.action == Intent.ACTION_VIEW_PERMISSION_USAGE) {
             // Health Connect's link to why FlexNotes reads its data (#184).
             intent.action = null

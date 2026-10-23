@@ -13,6 +13,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.KeyboardType
+import com.fitlens.companion.data.MedDoseChange
+import com.fitlens.companion.data.Store
+import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.MenuAction
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -201,14 +218,19 @@ internal fun phaseLength(res: Resources, n: Int, unit: com.fitlens.companion.dat
 )
 
 /**
- * A dose due today, opened from its row (#202): Taken or Skip (or undo either), then the dose's details. Build C adds
- * changing the amount here.
+ * A dose due today, opened from its row (#202): Taken or Skip (or undo either), the dose's details, and Change amount
+ * (#204), which asks whether the change is for this day only or the rest of the schedule.
  */
 @Composable
 internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, extra: @Composable () -> Unit = {}) {
     val res = LocalContext.current.resources
     val taken = MedSchedules.takenRecord(snap.medicationView.records, due)
     val skipped = taken == null && snap.medPlan.isSkipped(due.dose.id, due.due)
+    var changing by remember { mutableStateOf(false) }
+    if (changing) {
+        DoseChangeSheet(snap, due, onDismiss)
+        return
+    }
     com.fitlens.companion.ui.design.FitSheet(
         title = doseLine(due),
         onDismiss = onDismiss,
@@ -240,7 +262,113 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
                 )
             }
             if (!due.dose.comment.isNullOrBlank()) Text("“${due.dose.comment}”", style = MaterialTheme.typography.bodySmall)
+            GlassOutlinedButton(onClick = { changing = true }, modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.touch)) {
+                Text(stringResource(R.string.md_change_amount))
+            }
             extra()
         }
     }
+}
+
+/**
+ * Changes a dose's amount (#204): **This day only**, or **This day and the rest of this schedule**. The second is a
+ * change from that date that the schedule's doses follow; the schedule itself stays as it is. A dose already taken
+ * that day takes the new amount too. Undo removes the change and puts the taken value back.
+ */
+@Composable
+internal fun DoseChangeSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit) {
+    val res = LocalContext.current.resources
+    var amount by remember { mutableStateOf(fmtNum(due.amount)) }
+    var dayOnly by remember { mutableStateOf(true) }
+    val taken = MedSchedules.takenRecord(snap.medicationView.records, due)
+    FitSheet(
+        title = stringResource(R.string.md_change_title, due.dose.medication),
+        onDismiss = onDismiss,
+        confirmLabel = stringResource(R.string.type_save),
+        confirmEnabled = amount.trim().replace(',', '.').toDoubleOrNull() != null,
+        onConfirm = {
+            val value = amount.trim().replace(',', '.').toDoubleOrNull()
+            if (value != null) {
+                val change = MedDoseChange(0L, due.activation.id, due.dose.id, due.date, if (dayOnly) due.date else null, value)
+                val only = dayOnly
+                AppScope.scope.launch {
+                    val id = MedSchedules.addChange(change)
+                    if (taken != null) Store.updateRecord(taken.id, taken.date, taken.time, value, taken.comment)
+                    UiEvents.show(
+                        res.getString(if (only) R.string.md_changed_day else R.string.md_changed_rest, due.dose.medication),
+                        res.getString(R.string.bm_undo)
+                    ) {
+                        AppScope.scope.launch {
+                            MedSchedules.deleteChange(id)
+                            if (taken != null) Store.updateRecord(taken.id, taken.date, taken.time, taken.value, taken.comment)
+                        }
+                    }
+                }
+            }
+            onDismiss()
+        }
+    ) {
+        OutlinedTextField(
+            value = amount, onValueChange = { amount = it },
+            label = { Text(stringResource(R.string.md_amount_in, due.dose.unit.ifBlank { "-" })) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            modifier = Modifier.fillMaxWidth()
+        )
+        Column(Modifier.selectableGroup()) {
+            listOf(true to R.string.md_change_day_only, false to R.string.md_change_rest).forEach { (only, label) ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = Spacing.touch)
+                        .selectable(selected = dayOnly == only, role = Role.RadioButton) { dayOnly = only },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(selected = dayOnly == only, onClick = null)
+                    Text(stringResource(label, Dates.medium(due.date)), Modifier.padding(start = Spacing.sm))
+                }
+            }
+        }
+        Text(
+            stringResource(R.string.md_change_note),
+            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+/**
+ * Dose changes as rows (#204), "From 12 Oct: Creatine 7.5 g" or "12 Oct only: Creatine 2 g", each removed from its
+ * menu with Undo. Shown in a medication's History and on its schedule's run.
+ */
+internal fun LazyListScope.doseChangeRows(snap: Snapshot, changes: List<MedDoseChange>) {
+    if (changes.isEmpty()) return
+    item(key = "changes-label") { SectionTitle(stringResource(R.string.md_changes)) }
+    items(changes.size, key = { "change-${changes[it].id}" }) { i -> DoseChangeRow(snap, changes[i]) }
+}
+
+/** One dose change, with what it replaced. */
+@Composable
+internal fun DoseChangeRow(snap: Snapshot, c: MedDoseChange) {
+    val res = LocalContext.current.resources
+    val found = snap.medPlan.dosesById[c.doseId] ?: return
+    val schedule = found.first
+    val dose = found.second
+    val amount = "${fmtNum(c.amount)} ${dose.unit}".trim()
+    val was = "${fmtNum(dose.amount)} ${dose.unit}".trim()
+    ListRowWithMenu(
+        title = if (c.toDate == c.fromDate) res.getString(R.string.md_change_row_day, Dates.medium(c.fromDate), dose.medication, amount)
+            else res.getString(R.string.md_change_row_rest, Dates.medium(c.fromDate), dose.medication, amount),
+        subtitle = res.getString(R.string.md_change_row_was, was, schedule.name, dose.time),
+        menu = listOf(
+            MenuAction(stringResource(R.string.md_change_remove)) {
+                AppScope.scope.launch {
+                    MedSchedules.deleteChange(c.id)
+                    UiEvents.show(res.getString(R.string.md_change_removed), res.getString(R.string.bm_undo)) {
+                        AppScope.scope.launch { MedSchedules.addChange(c) }
+                    }
+                }
+            }
+        ),
+        handle = false
+    )
 }

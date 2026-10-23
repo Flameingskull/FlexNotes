@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The status-bar glyph of a medication reminder (#203): a capsule. Android keeps only its outline, so it's one
+     solid shape; the notification's colour and picture come from the FlexNotes gold and the torso art. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4.22,19.78c-2.34,-2.34 -2.34,-6.14 0,-8.49l7.07,-7.07c2.34,-2.34 6.14,-2.34 8.49,0s2.34,6.14 0,8.49l-7.07,7.07C10.36,22.12 6.56,22.12 4.22,19.78zM12.71,5.64L9.17,9.17l5.66,5.66l3.54,-3.54c1.56,-1.56 1.56,-4.09 0,-5.66S14.27,4.08 12.71,5.64z" />
+</vector>

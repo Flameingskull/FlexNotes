@@ -560,6 +560,7 @@ object Store {
     suspend fun reload() = withContext(Dispatchers.IO) {
         Settings.reloadPortable()
         lock.withLock { _snapshot.value = build(null, Area.ALL) }
+        MedReminders.rearm()
     }
 
     /**
@@ -568,6 +569,8 @@ object Store {
      */
     suspend fun refresh(vararg areas: Area) = withContext(Dispatchers.IO) {
         lock.withLock { _snapshot.value = build(_snapshot.value, areas.toSet()) }
+        // Medications and their schedules live in the body area: the next reminder may have moved (#203).
+        if (Area.BODY in areas) MedReminders.rearm()
     }
 
     /**

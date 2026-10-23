@@ -9,8 +9,10 @@
 > Build B done in 1.0.154 (#201, #202: database v25, `MedSchedules.kt`, the schedule editor, runs with pauses, and
 > TODAY on the Track tab; v25 also holds `med_dose_change` for #204, so Build C needs no migration). README refreshed. Its first run, 1.0.153, failed CI: debug and release KSP raced on the new schema file.
 > Deviation: schedules are listed in a SCHEDULES section on the Track tab rather than a title switcher.
-> Left: Build C (#203, #204), Build D (#205); epic #206 closes with the last.
-> Next: `/safe-build 203 204` (tracker items for #203 and #204).
+> Build C done in 1.0.155 (#203, #204: `MedReminders.kt` alarm chain, notification with Taken / Snooze / Skip,
+> Settings › Medications, and dose changes for a day or the rest of a run; no database change).
+> Left: Build D (#205); epic #206 closes with it.
+> Next: `/safe-build 205` (tracker item for #205).
 >
 > Issue map: Epic #206 · M1 #199 · M2 #200 · M3 #201 · M4 #202 · M5 #203 · M6 #204 · M7 #205.
 

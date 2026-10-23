@@ -155,6 +155,13 @@ class MedPlan(
 ) {
     val schedulesById: Map<Long, MedSchedule> = schedules.associateBy { it.id }
     val activationsBySchedule: Map<Long, List<MedActivation>> = activations.groupBy { it.scheduleId }
+    /** Every dose with its schedule, by the dose's id. */
+    val dosesById: Map<Long, Pair<MedSchedule, MedDose>> =
+        schedules.flatMap { s -> s.phases.flatMap { p -> p.doses.map { it.id to (s to it) } } }.toMap()
+
+    /** The dose changes of [medication] (#204), newest first. */
+    fun changesOf(medication: String): List<MedDoseChange> =
+        changes.filter { dosesById[it.doseId]?.second?.medication == medication }.sortedWith(compareByDescending<MedDoseChange> { it.fromDate }.thenByDescending { it.id })
 
     /** The activation of [scheduleId] that is running on [date] (started, not ended), if any. */
     fun current(scheduleId: Long, date: String = Dates.today()): MedActivation? =

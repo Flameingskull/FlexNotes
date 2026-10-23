@@ -68,7 +68,15 @@ data class DeviceSettings(
     val hcSyncedAt: Long? = null,
     /** The Health Connect types whose full history has been read on this phone (#192), as `Kind` names separated by
      *  commas. Cleared when older data is no longer allowed, so allowing it again reads the history again. */
-    val hcHistoryKinds: String? = null
+    val hcHistoryKinds: String? = null,
+    /** Medication reminders (#203): a notification when a scheduled dose is due. On unless switched off. */
+    val medReminders: Boolean = true,
+    /** Medication names on the lock screen (#203). Off: the lock screen shows only "Medication reminder". */
+    val medNamesOnLockScreen: Boolean = false,
+    /** Minutes after a dose is due to remind again while it isn't taken or skipped (#203); 0 for no follow-up. */
+    val medNudgeMinutes: Int = 30,
+    /** Snoozed reminders (#203), `MedReminders.Snoozes.encode`: due time to when it rings again. Phone state. */
+    val medSnoozes: String? = null
 )
 
 /**
@@ -465,6 +473,10 @@ object Settings {
     private const val D_HC_SYNCED = "hc_synced_at"
     private const val D_BACKUP_PHOTOS = "backup_photos"
     private const val D_HC_HISTORY = "hc_history_kinds"
+    private const val D_MED_REMINDERS = "med_reminders"
+    private const val D_MED_NAMES = "med_names_lock_screen"
+    private const val D_MED_NUDGE = "med_nudge_minutes"
+    private const val D_MED_SNOOZES = "med_snoozes"
 
     /** Every phone-only key, as it was named in `meta` before 1.0.21. */
     internal val DEVICE_KEYS = listOf(
@@ -567,7 +579,11 @@ object Settings {
         whatsNewSeen = get(D_WHATS_NEW_SEEN)?.toLongOrNull() ?: 0,
         stepsLast = get(D_STEPS_LAST),
         hcSyncedAt = get(D_HC_SYNCED)?.toLongOrNull(),
-        hcHistoryKinds = get(D_HC_HISTORY)
+        hcHistoryKinds = get(D_HC_HISTORY),
+        medReminders = get(D_MED_REMINDERS) != "0",
+        medNamesOnLockScreen = bool(get(D_MED_NAMES)),
+        medNudgeMinutes = get(D_MED_NUDGE)?.toIntOrNull()?.coerceIn(0, 240) ?: 30,
+        medSnoozes = get(D_MED_SNOOZES)
     )
 
     private fun DeviceSettings.toMap(): Map<String, String?> = mapOf(
@@ -595,7 +611,11 @@ object Settings {
         D_WHATS_NEW_SEEN to whatsNewSeen.takeIf { it > 0 }?.toString(),
         D_STEPS_LAST to stepsLast,
         D_HC_SYNCED to hcSyncedAt?.toString(),
-        D_HC_HISTORY to hcHistoryKinds
+        D_HC_HISTORY to hcHistoryKinds,
+        D_MED_REMINDERS to if (medReminders) null else "0",
+        D_MED_NAMES to if (medNamesOnLockScreen) "1" else null,
+        D_MED_NUDGE to medNudgeMinutes.takeIf { it != 30 }?.toString(),
+        D_MED_SNOOZES to medSnoozes
     )
 
     private fun portableFrom(get: (String) -> String?) = PortableSettings(

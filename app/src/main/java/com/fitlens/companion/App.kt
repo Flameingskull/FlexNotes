@@ -3,6 +3,7 @@ package com.fitlens.companion
 import android.app.Application
 import com.fitlens.companion.data.AutoBackup
 import com.fitlens.companion.data.HealthConnect
+import com.fitlens.companion.data.MedReminders
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Steps
 import com.fitlens.companion.data.Store
@@ -24,5 +25,7 @@ class App : Application() {
         HealthConnect.start(this)
         // The timers' notification follows the workout timer wherever it is started or stopped (#12).
         TimerService.watch(this)
+        // Medication reminders (#203): the next one is set once the data has loaded, and after every change.
+        MedReminders.init(this)
     }
 }

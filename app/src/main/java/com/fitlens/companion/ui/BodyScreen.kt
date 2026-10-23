@@ -564,6 +564,8 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
     }
     val byDate = remember(records) { records.groupBy { it.date.take(10) }.toSortedMap() }
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+        // A medication's dose changes come first, each with its date (#204).
+        if (snap.showsMedications) doseChangeRows(snap, snap.medPlan.changesOf(name))
         byDate.entries.reversed().forEach { (d, l) ->
             item(key = d) {
                 Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {

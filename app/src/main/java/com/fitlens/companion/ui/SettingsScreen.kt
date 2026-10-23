@@ -86,6 +86,8 @@ enum class SettingsSection(@StringRes val title: Int, val group: PreferenceGroup
     Profile(R.string.settings_page_profile),
     // Health Connect as the source of steps and what was eaten (#184).
     HealthConnect(R.string.settings_page_hc),
+    // Medication reminders and their privacy (#203).
+    Medications(R.string.settings_page_meds),
     // In-app help and About (#33).
     Help(R.string.settings_page_help),
     About(R.string.settings_page_about)
@@ -179,6 +181,12 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.hc_body_fat, SettingsSection.HealthConnect, R.string.search_hc_body_fat_kw) { onOff(prefs.hcBodyFat) },
     SettingEntry(R.string.hc_resting_hr, SettingsSection.HealthConnect, R.string.search_hc_resting_hr_kw) { onOff(prefs.hcRestingHr) },
     SettingEntry(R.string.hc_history, SettingsSection.HealthConnect, R.string.search_hc_history_kw),
+    SettingEntry(R.string.mr_reminders, SettingsSection.Medications, R.string.search_mr_reminders_kw) { onOff(device.medReminders) },
+    SettingEntry(R.string.mr_exact, SettingsSection.Medications, R.string.search_mr_exact_kw),
+    SettingEntry(R.string.mr_nudge, SettingsSection.Medications, R.string.search_mr_nudge_kw) {
+        if (device.medNudgeMinutes == 0) res.getString(R.string.settings_value_off) else res.getString(R.string.mr_minutes, device.medNudgeMinutes)
+    },
+    SettingEntry(R.string.mr_names, SettingsSection.Medications, R.string.search_mr_names_kw) { onOff(device.medNamesOnLockScreen) },
     SettingEntry(R.string.hc_exercise, SettingsSection.HealthConnect, R.string.search_hc_exercise_kw) { onOff(prefs.hcExercise) },
     SettingEntry(R.string.hc_sleep, SettingsSection.HealthConnect, R.string.search_hc_sleep_kw) { onOff(prefs.hcSleep) },
     SettingEntry(R.string.hcw_weight, SettingsSection.HealthConnect, R.string.search_hcw_weight_kw) { onOff(prefs.hcWriteWeight) },
@@ -452,6 +460,14 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
         mainRow(s, R.string.settings_media, R.string.settings_media_kw) { title ->
             SettingsActionRow(title, stringResource(R.string.settings_media_summary)) { open(SettingsSection.Media) }
         },
+        // Medication reminders and their privacy (#203).
+        mainRow(s, R.string.settings_page_meds, R.string.settings_meds_kw) { title ->
+            SettingsActionRow(
+                title,
+                stringResource(R.string.settings_meds_summary),
+                value = stringResource(if (device.medReminders) R.string.settings_value_on else R.string.settings_value_off)
+            ) { open(SettingsSection.Medications) }
+        },
         mainRow(d, R.string.settings_backup, R.string.settings_backup_kw) { title ->
             SettingsActionRow(title, stringResource(R.string.settings_backup_summary)) { open(SettingsSection.Backups) }
         },
@@ -612,6 +628,7 @@ fun SettingsPageScreen(snap: Snapshot, nav: Nav, section: SettingsSection, targe
                     SettingsSection.Media -> MediaPage()
                     SettingsSection.Profile -> ProfilePage(nav)
                     SettingsSection.HealthConnect -> HealthConnectPage()
+                    SettingsSection.Medications -> MedicationsPage()
                     SettingsSection.Help -> HelpPage()
                     SettingsSection.About -> AboutPage()
                 }

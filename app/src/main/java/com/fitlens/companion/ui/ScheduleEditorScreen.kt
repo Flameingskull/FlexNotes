@@ -269,6 +269,8 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                     }
                 }
             }
+            // This run's dose changes (#204), each removable with Undo.
+            if (current != null) doseChangeRows(snap, snap.medPlan.changes.filter { it.activationId == current.id })
         }
         GoldHairline()
         GoldButton(

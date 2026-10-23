@@ -41,6 +41,12 @@
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_IN_BACKGROUND" />
     <uses-permission android:name="android.permission.health.READ_HEALTH_DATA_HISTORY" />
 
+    <!-- Medication reminders (#203): an alarm at the minute a dose is due, set on the phone (no internet). Exact alarms
+         are asked for in Settings › Medications; without them a reminder comes within ten minutes. The alarm is set
+         again after a reboot. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
     <!-- Lets the app see and launch FitNotes on Android 11+ -->
     <queries>
         <package android:name="com.github.jamesgay.fitnotes" />
@@ -118,6 +124,22 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Workout rest timer and workout stopwatch started by the user" />
         </service>
+
+        <!-- Medication reminders (#203): the alarm and the notification's Taken, Snooze and Skip, sent only by FlexNotes. -->
+        <receiver
+            android:name=".data.MedAlarmReceiver"
+            android:exported="false" />
+        <!-- Sets the next reminder again. Only the system can send these broadcasts. -->
+        <receiver
+            android:name=".data.MedBootReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"
