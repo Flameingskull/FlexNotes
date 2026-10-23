@@ -186,6 +186,12 @@ data class PortableSettings(
     val hcSleep: Boolean = false,
     /** Exercise sessions from Health Connect become cardio sets (#190). */
     val hcExercise: Boolean = false,
+    /** Vitals read from Health Connect (#212): blood pressure, blood glucose, blood oxygen, HRV and body temperature. */
+    val hcBloodPressure: Boolean = false,
+    val hcGlucose: Boolean = false,
+    val hcSpo2: Boolean = false,
+    val hcHrv: Boolean = false,
+    val hcTemperature: Boolean = false,
     /** Bodyweight logged in FlexNotes is written to Health Connect (#191). */
     val hcWriteWeight: Boolean = false,
     /** Body fat logged in FlexNotes is written to Health Connect (#191). */
@@ -436,6 +442,11 @@ object Settings {
             P_HC_RESTING_HR to if (s.hcRestingHr) "1" else null,
             P_HC_SLEEP to if (s.hcSleep) "1" else null,
             P_HC_EXERCISE to if (s.hcExercise) "1" else null,
+            P_HC_BLOOD_PRESSURE to if (s.hcBloodPressure) "1" else null,
+            P_HC_GLUCOSE to if (s.hcGlucose) "1" else null,
+            P_HC_SPO2 to if (s.hcSpo2) "1" else null,
+            P_HC_HRV to if (s.hcHrv) "1" else null,
+            P_HC_TEMPERATURE to if (s.hcTemperature) "1" else null,
             P_HCW_WEIGHT to if (s.hcWriteWeight) "1" else null,
             P_HCW_BODY_FAT to if (s.hcWriteBodyFat) "1" else null,
             P_HCW_WORKOUTS to if (s.hcWriteWorkouts) "1" else null,
@@ -547,6 +558,11 @@ object Settings {
     private const val P_HC_ACTIVE = "hc_active"
     private const val P_HC_RESTING_HR = "hc_resting_hr"
     private const val P_HC_EXERCISE = "hc_exercise"
+    private const val P_HC_BLOOD_PRESSURE = "hc_blood_pressure"
+    private const val P_HC_GLUCOSE = "hc_glucose"
+    private const val P_HC_SPO2 = "hc_spo2"
+    private const val P_HC_HRV = "hc_hrv"
+    private const val P_HC_TEMPERATURE = "hc_temperature"
     private const val P_HCW_WEIGHT = "hc_write_weight"
     private const val P_HCW_BODY_FAT = "hc_write_body_fat"
     private const val P_HCW_WORKOUTS = "hc_write_workouts"
@@ -692,6 +708,11 @@ object Settings {
         hcRestingHr = bool(get(P_HC_RESTING_HR)),
         hcSleep = bool(get(P_HC_SLEEP)),
         hcExercise = bool(get(P_HC_EXERCISE)),
+        hcBloodPressure = bool(get(P_HC_BLOOD_PRESSURE)),
+        hcGlucose = bool(get(P_HC_GLUCOSE)),
+        hcSpo2 = bool(get(P_HC_SPO2)),
+        hcHrv = bool(get(P_HC_HRV)),
+        hcTemperature = bool(get(P_HC_TEMPERATURE)),
         hcWriteWeight = bool(get(P_HCW_WEIGHT)),
         hcWriteBodyFat = bool(get(P_HCW_BODY_FAT)),
         hcWriteWorkouts = bool(get(P_HCW_WORKOUTS)),
@@ -761,6 +782,11 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     hcRestingHr = hcRestingHr,
     hcSleep = hcSleep,
     hcExercise = hcExercise,
+    hcBloodPressure = hcBloodPressure,
+    hcGlucose = hcGlucose,
+    hcSpo2 = hcSpo2,
+    hcHrv = hcHrv,
+    hcTemperature = hcTemperature,
     hcWriteWeight = hcWriteWeight,
     hcWriteBodyFat = hcWriteBodyFat,
     hcWriteWorkouts = hcWriteWorkouts,

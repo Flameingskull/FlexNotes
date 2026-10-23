@@ -115,8 +115,8 @@ fun BodyScreen(snap: Snapshot, nav: Nav, startEditing: Boolean = false) = BodyTr
 @Composable
 internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medications: Boolean) {
     val res = LocalContext.current.resources
-    // Every enabled measurement, logged or not, as FitNotes lists them.
-    val measurements = snap.allMeasurements.filter { it.enabled }
+    // Every enabled measurement, logged or not, as FitNotes lists them; lab markers after the rest (#211).
+    val measurements = snap.allMeasurements.filter { it.enabled }.sortedBy { it.lab }
     var reordering by rememberSaveable { mutableStateOf(false) }
     val names = measurements.map { it.name }
     val dragOrder = rememberInPlaceOrder(names)
@@ -197,8 +197,13 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                             val units = measurements.associate { it.name to it.unit }
                             AppScope.scope.launch { Store.reorderMeasurements(final, units) }
                         }
+                        val firstLab = order.firstOrNull { byName[it]?.lab == true }
                         itemsIndexed(order, key = { _, n -> n }) { i, n ->
                             val m = byName[n] ?: return@itemsIndexed
+                            // Lab markers under their own heading (#211).
+                            if (n == firstLab && !medications) {
+                                SectionLabel(stringResource(R.string.lab_section), Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.md))
+                            }
                             MeasurementListRow(
                                 snap, m,
                                 handle = reordering,
@@ -280,8 +285,9 @@ private fun MeasurementListRow(
     val prev = recs.getOrNull(recs.size - 2)
     val unit = m.unit.ifBlank { last?.unit.orEmpty() }
     val change = if (last != null && prev != null) changeText(res, prev, last) else null
+    val flag = last?.let { flagText(res, m, it.value) }
     val spoken = m.name + ", " + (last?.let { res.getString(R.string.body_value_on, "${fmtNum(it.value)} $unit".trim(), Dates.medium(it.date)) }
-        ?: res.getString(R.string.body_nothing_logged)) + (change?.let { ", $it" } ?: "")
+        ?: res.getString(R.string.body_nothing_logged)) + (flag?.let { ", $it" } ?: "") + (change?.let { ", $it" } ?: "")
     // TalkBack moves a measurement whether or not the handles show (#170); each move is saved at once.
     val moves = listOfNotNull(
         onMoveUp?.let { f -> CustomAccessibilityAction(res.getString(R.string.cmn_move_up)) { f(); onMoveEnd?.invoke(); true } },
@@ -316,6 +322,8 @@ private fun MeasurementListRow(
                 if (change != null && prev != null) {
                     Text(change, style = MaterialTheme.typography.bodySmall, color = changeColour(m, prev.value, last.value), maxLines = 1)
                 }
+                // Outside its reference range (#211).
+                RangeFlag(m, last.value)
             }
         }
         if (handle && (onMoveUp != null || onMoveDown != null)) DragHandle(m.name, 72.dp, onMoveUp, onMoveDown, onMoveEnd)
@@ -395,6 +403,7 @@ private fun BodyHistoryAll(
                         if (prev != null) {
                             Text(changeText(res, prev, r), style = MaterialTheme.typography.bodySmall, color = changeColour(def, prev.value, r.value), maxLines = 1)
                         }
+                        RangeFlag(def, r.value)
                     }
                 }
                 HorizontalDivider(color = Brand.Hairline)
@@ -484,6 +493,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                 better = better,
                 photoDays = photoDays,
                 goal = if (def != null && def.goalType != 0 && def.goalValue > 0) def.goalValue else null,
+                range = def?.takeIf { it.hasRange }?.let { it.refLow to it.refHigh },
                 selected = selectedPoint?.let { ChartSelection(0, it) },
                 onSelect = { selectedPoint = it.index; ChartHints.tapped() },
                 unit = unit,
@@ -524,6 +534,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                         height = h,
                         photoDays = photoDays,
                         goal = if (def != null && def.goalType != 0 && def.goalValue > 0) def.goalValue else null,
+                        range = def?.takeIf { it.hasRange }?.let { it.refLow to it.refHigh },
                         selected = selectedPoint?.let { ChartSelection(0, it) },
                         onSelect = { selectedPoint = it.index },
                         unit = unit,
@@ -639,7 +650,7 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
                         SetRowView(
                             index = i + 1,
                             summary = "${fmtNum(r.value)} ${r.unit}",
-                            cells = valueCells(res, r),
+                            cells = valueCells(res, r, def),
                             comment = r.comment,
                             framed = false,
                             showIndex = false,
@@ -665,11 +676,15 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
     }
 }
 
-/** A value and the time it was logged, in the set-row columns the exercise screen uses. */
-internal fun valueCells(res: Resources, r: MRecord): List<SetCell> {
+/**
+ * A value and the time it was logged, in the set-row columns the exercise screen uses, flagged High or Low when it's
+ * outside [def]'s reference range (#211).
+ */
+internal fun valueCells(res: Resources, r: MRecord, def: MeasurementDef? = null): List<SetCell> {
     val time = r.time.take(5)
     return listOfNotNull(
         SetCell(fmtNum(r.value), r.unit, "${fmtNum(r.value)} ${r.unit}"),
+        flagText(res, def, r.value)?.let { SetCell(it, spoken = it, unitSlot = false) },
         time.takeIf { it.isNotBlank() }?.let { SetCell(it, spoken = res.getString(R.string.body_at_time, it), unitSlot = false) },
         // An injected dose's site (#210).
         com.fitlens.companion.data.InjectionSite.of(r.site)?.let { siteName(res, it) }?.let { SetCell(it, spoken = it, unitSlot = false) }

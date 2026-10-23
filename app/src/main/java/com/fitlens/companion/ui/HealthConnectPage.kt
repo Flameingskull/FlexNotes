@@ -354,6 +354,29 @@ internal fun HealthConnectPage() {
         typed, typedDesc, stringResource(R.string.hc_sleep_hc_desc), R.string.hc_what_sleep
     )
 
+    // Vitals (#212): each a reading at its own time, also logged by hand in the Body tracker.
+    SettingsGroup(stringResource(R.string.hc_group_vitals))
+    HealthConnectSourceRow(
+        HealthConnect.Kind.BLOOD_PRESSURE, access, prefs.hcBloodPressure, R.string.hc_bp, R.string.hc_bp_summary,
+        typed, typedDesc, stringResource(R.string.hc_bp_hc_desc), R.string.hc_what_bp
+    )
+    HealthConnectSourceRow(
+        HealthConnect.Kind.GLUCOSE, access, prefs.hcGlucose, R.string.hc_glucose, R.string.hc_glucose_summary,
+        typed, typedDesc, stringResource(R.string.hc_glucose_hc_desc), R.string.hc_what_glucose
+    )
+    HealthConnectSourceRow(
+        HealthConnect.Kind.SPO2, access, prefs.hcSpo2, R.string.hc_spo2, R.string.hc_spo2_summary,
+        typed, typedDesc, stringResource(R.string.hc_spo2_hc_desc), R.string.hc_what_spo2
+    )
+    HealthConnectSourceRow(
+        HealthConnect.Kind.HRV, access, prefs.hcHrv, R.string.hc_hrv, R.string.hc_hrv_summary,
+        typed, typedDesc, stringResource(R.string.hc_hrv_hc_desc), R.string.hc_what_hrv
+    )
+    HealthConnectSourceRow(
+        HealthConnect.Kind.TEMPERATURE, access, prefs.hcTemperature, R.string.hc_temperature, R.string.hc_temperature_summary,
+        typed, typedDesc, stringResource(R.string.hc_temperature_hc_desc), R.string.hc_what_temperature
+    )
+
     SettingsGroup(stringResource(R.string.hc_group_workouts))
     HealthConnectSourceRow(
         HealthConnect.Kind.EXERCISE, access, prefs.hcExercise, R.string.hc_exercise, R.string.hc_exercise_summary,

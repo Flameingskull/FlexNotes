@@ -902,7 +902,13 @@ object Store {
     suspend fun saveCustomMetric(
         original: String?, name: String, unit: String, link: String?,
         /** Marks it as a medication (#199, #200), or keeps what it was when null. */
-        medication: Boolean? = null
+        medication: Boolean? = null,
+        /** Marks it as a lab marker (#211), or keeps what it was when null. */
+        lab: Boolean? = null,
+        /** Sets the reference range (#211) to [refLow] and [refHigh], typed in [unit]; otherwise it keeps the one it had. */
+        setRange: Boolean = false,
+        refLow: Double? = null,
+        refHigh: Double? = null
     ) = withContext(Dispatchers.IO) {
         val body = db.bodyDao
         db.transaction {
@@ -925,7 +931,11 @@ object Store {
                     enabled = 1, custom = 1, link = link?.takeIf { it.isNotBlank() }, edited = 0,
                     // Keeps the metric's own display unit (#7) while it's still the same kind of unit.
                     display_unit = (existing ?: old)?.displayUnit?.takeIf { MeasureUnits.sameKind(it, keptUnit) },
-                    medication = if (medication ?: (existing ?: old)?.medication == true) 1 else 0
+                    medication = if (medication ?: (existing ?: old)?.medication == true) 1 else 0,
+                    // The range is kept in the stored unit (#211), converted from the unit it was typed in.
+                    ref_low = if (setRange) refLow?.let { MeasureUnits.convert(it, unit, keptUnit) } else (existing ?: old)?.refLow,
+                    ref_high = if (setRange) refHigh?.let { MeasureUnits.convert(it, unit, keptUnit) } else (existing ?: old)?.refHigh,
+                    lab = if (lab ?: (existing ?: old)?.lab == true) 1 else 0
                 )
             )
             body.claimImportedRecords(name, (link?.takeIf { it.isNotBlank() } ?: name).trim().lowercase())
@@ -962,6 +972,20 @@ object Store {
     }
 
     /**
+     * Sets [name]'s reference range (#211), typed in [unit] (the unit it's shown in) and kept in the unit its values
+     * are stored in, so a range set in mg/dL or lbs still holds when the shown unit changes. Null clears that end.
+     */
+    suspend fun setReferenceRange(name: String, unit: String, low: Double?, high: Double?) = withContext(Dispatchers.IO) {
+        val body = db.bodyDao
+        db.transaction {
+            val stored = body.definition(name)?.unit ?: body.recordUnit(name)?.also { body.ensure(name, it, 999) } ?: unit.also { body.ensure(name, it, 999) }
+            fun kept(v: Double?) = v?.let { if (MeasureUnits.sameKind(unit, stored)) MeasureUnits.convert(it, unit, stored) else it }
+            body.setRange(name, kept(low), kept(high))
+        }
+        refresh(Area.BODY)
+    }
+
+    /**
      * Marks [name] as a medication or back as a body measurement (#199). Its values aren't copied or moved: the
      * whole history follows the flag to the Medications screen and back. Refused for the measurements other
      * features read by name ([Medications.canBeMedication]).
@@ -988,13 +1012,13 @@ object Store {
     }
 
     /**
-     * Adds the [StandardMeasurements] not already present (ignoring capitals) as FlexNotes's own measurements, after the
-     * existing ones. Existing measurements aren't touched. Returns how many were added.
+     * Adds the [StandardMeasurements] (or the vitals, #212: any [set]) not already present (ignoring capitals) as
+     * FlexNotes's own measurements, after the existing ones. Existing measurements aren't touched. Returns how many were added.
      */
-    suspend fun addStandardMeasurements(): Int = withContext(Dispatchers.IO) {
+    suspend fun addStandardMeasurements(set: List<Pair<String, String>> = StandardMeasurements.all): Int = withContext(Dispatchers.IO) {
         val body = db.bodyDao
         val added = db.transaction {
-            val missing = StandardMeasurements.missing(body.definitionNames() + body.recordNames())
+            val missing = StandardMeasurements.missing(body.definitionNames() + body.recordNames(), set)
             var order = body.lastOrder()
             missing.forEach { (name, unit) -> body.addOwn(name, unit, ++order) }
             missing.size

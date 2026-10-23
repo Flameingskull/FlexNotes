@@ -90,6 +90,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
     var comment by remember(name) { mutableStateOf("") }
     var editingGoal by remember { mutableStateOf(false) }
     var editingMetric by remember { mutableStateOf(false) }
+    var editingRange by remember { mutableStateOf(false) }
     // The History value open in its sheet (#169).
     var historyOpen by rememberSaveable(name) { mutableStateOf<Long?>(null) }
     // Body fat can be worked out from the tape measurements (#153).
@@ -165,6 +166,8 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
             // The measurement itself is set up where it's shown (#167): its goal, and for one of your own, its details.
             overflow = listOfNotNull(
                 MenuAction(stringResource(R.string.goal_generic), enabled = def != null) { editingGoal = true },
+                // A reference range (#211), for body values, vitals and lab markers.
+                if (!snap.showsMedications) MenuAction(stringResource(R.string.lab_range_menu), enabled = def != null) { editingRange = true } else null,
                 if (def?.custom == true) MenuAction(stringResource(R.string.bm_edit_metric)) { editingMetric = true } else null,
                 // Moved where it's shown (#199): the whole history goes with it, so this screen closes.
                 if (def != null && (snap.showsMedications || Medications.canBeMedication(name))) {
@@ -279,7 +282,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                             SetRowView(
                                 index = i + 1,
                                 summary = "${fmtNum(r.value)} ${r.unit}",
-                                cells = valueCells(res, r),
+                                cells = valueCells(res, r, def),
                                 comment = r.comment,
                                 selected = selected == r.id,
                                 noun = stringResource(R.string.body_value),
@@ -311,4 +314,5 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
     if (editingSupply) SupplySheet(snap, name, unit) { editingSupply = false }
     if (editingGoal && def != null) MeasurementGoalSheet(def) { editingGoal = false }
     if (editingMetric && def != null) CustomMetricEditor(snap, def) { editingMetric = false }
+    if (editingRange && def != null) ReferenceRangeSheet(def) { editingRange = false }
 }

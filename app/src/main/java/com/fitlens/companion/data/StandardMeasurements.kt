@@ -22,9 +22,15 @@ object StandardMeasurements {
         "Shoulders" to "cm"
     )
 
-    /** The standard measurements not yet among [existing] names (ignoring capitals and spaces). */
-    fun missing(existing: Collection<String>): List<Pair<String, String>> {
+    /**
+     * The vitals (#212): blood pressure, blood glucose, blood oxygen, HRV and body temperature, the names Health Connect
+     * fills, so values typed by hand and read from it share one measurement. Offered by "Add vitals".
+     */
+    val vitals: List<Pair<String, String>> get() = HealthConnect.Names.vitals
+
+    /** The measurements of [set] (the standard ones unless given) not yet among [existing] names (ignoring capitals). */
+    fun missing(existing: Collection<String>, set: List<Pair<String, String>> = all): List<Pair<String, String>> {
         val have = existing.map { it.trim().lowercase() }.toSet()
-        return all.filter { it.first.lowercase() !in have }
+        return set.filter { it.first.lowercase() !in have }
     }
 }

@@ -39,6 +39,7 @@ import androidx.compose.ui.semantics.stateDescription
 import com.fitlens.companion.data.MeasureUnits
 import com.fitlens.companion.data.MeasurementDef
 import com.fitlens.companion.data.Medications
+import com.fitlens.companion.data.VitalUnits
 import com.fitlens.companion.data.WeightUnits
 import com.fitlens.companion.ui.design.DropdownPill
 import com.fitlens.companion.data.Snapshot
@@ -61,6 +62,8 @@ import kotlinx.coroutines.launch
 internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
     val res = LocalContext.current.resources
     var creating by remember { mutableStateOf(false) }
+    var creatingLab by remember { mutableStateOf(false) }
+    var rangeFor by remember { mutableStateOf<MeasurementDef?>(null) }
     var editing by remember { mutableStateOf<MeasurementDef?>(null) }
     var deleting by remember { mutableStateOf<MeasurementDef?>(null) }
     var goalFor by remember { mutableStateOf<MeasurementDef?>(null) }
@@ -68,6 +71,11 @@ internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
     val missing = remember(snap.bodyKey) {
         if (medications) emptyList()
         else StandardMeasurements.missing(snap.measurementDefs.map { it.name }).filterNot { snap.inOtherHalf(it.first) }
+    }
+    // The vitals (#212), for logging by hand or before Health Connect fills them.
+    val missingVitals = remember(snap.bodyKey) {
+        if (medications) emptyList()
+        else StandardMeasurements.missing(snap.measurementDefs.map { it.name }, StandardMeasurements.vitals).filterNot { snap.inOtherHalf(it.first) }
     }
 
     Column(Modifier.fillMaxSize()) {
@@ -91,6 +99,21 @@ internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
                             onClick = { AppScope.scope.launch { Store.addStandardMeasurements() } },
                             modifier = Modifier.padding(top = Spacing.sm).heightIn(min = Spacing.touch)
                         ) { Text(stringResource(R.string.ms_add_standard, missing.size)) }
+                    }
+                    if (!medications) {
+                        GlassOutlinedButton(
+                            onClick = { creatingLab = true },
+                            modifier = Modifier.padding(top = Spacing.sm).heightIn(min = Spacing.touch)
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null, tint = Brand.Gold)
+                            Text(stringResource(R.string.lab_new))
+                        }
+                    }
+                    if (missingVitals.isNotEmpty()) {
+                        GlassOutlinedButton(
+                            onClick = { AppScope.scope.launch { Store.addStandardMeasurements(StandardMeasurements.vitals) } },
+                            modifier = Modifier.padding(top = Spacing.sm).heightIn(min = Spacing.touch)
+                        ) { Text(stringResource(R.string.vit_add, missingVitals.size)) }
                     }
                 }
                 HorizontalDivider(color = Brand.Hairline)
@@ -118,10 +141,25 @@ internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
                             Text(unitLongName(res, m.unit), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Text(goalText(res, m), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // Its reference range (#211), when one is set.
+                        rangeText(res, m)?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         // Its own unit (#7): a weight in kg or lbs, a length in cm or in, whatever Settings says for the
                         // rest. Values are stored as logged and converted for display.
                         val choices = MeasureUnits.choices(m.unit)
-                        if (choices.isNotEmpty()) {
+                        // A glucose or temperature unit (#212) has no Settings unit: it's shown in one of its own.
+                        val vital = VitalUnits.of(m.unit) != null
+                        if (choices.isNotEmpty() && vital) {
+                            DropdownPill(
+                                stringResource(R.string.ms_unit_for, m.name),
+                                choices.map { stringResource(R.string.ms_always_in, it) },
+                                choices.indexOf(VitalUnits.of(m.unit)).coerceAtLeast(0)
+                            ) { i ->
+                                // Values stay stored as logged; the chosen unit only changes how they're shown.
+                                AppScope.scope.launch { Store.setMeasurementDisplayUnit(m.name, choices[i]) }
+                            }
+                        } else if (choices.isNotEmpty()) {
                             val global = if (WeightUnits.of(m.unit) != null) snap.weightUnit else snap.lengthUnit
                             DropdownPill(
                                 stringResource(R.string.ms_unit_for, m.name),
@@ -142,20 +180,19 @@ internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
                         }
                     )
                     val canMove = medications || Medications.canBeMedication(m.name)
-                    if (m.custom || canMove) {
-                        OverflowMenu(
-                            listOfNotNull(
-                                if (m.custom) MenuAction(stringResource(R.string.lib_edit)) { editing = m } else null,
-                                if (canMove) {
-                                    MenuAction(stringResource(if (medications) R.string.md_move_to_body else R.string.md_move_to_meds)) {
-                                        moveMeasurement(res, m, toMedications = !medications)
-                                    }
-                                } else null,
-                                if (m.custom) MenuAction(stringResource(R.string.lib_delete)) { deleting = m } else null
-                            ),
-                            description = stringResource(R.string.ms_options_for, m.name)
-                        )
-                    }
+                    OverflowMenu(
+                        listOfNotNull(
+                            if (m.custom) MenuAction(stringResource(R.string.lib_edit)) { editing = m } else null,
+                            if (!medications) MenuAction(stringResource(R.string.lab_range_menu)) { rangeFor = m } else null,
+                            if (canMove) {
+                                MenuAction(stringResource(if (medications) R.string.md_move_to_body else R.string.md_move_to_meds)) {
+                                    moveMeasurement(res, m, toMedications = !medications)
+                                }
+                            } else null,
+                            if (m.custom) MenuAction(stringResource(R.string.lib_delete)) { deleting = m } else null
+                        ),
+                        description = stringResource(R.string.ms_options_for, m.name)
+                    )
                 }
                 GoldHairline()
             }
@@ -164,6 +201,8 @@ internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
 
     goalFor?.let { m -> MeasurementGoalSheet(m) { goalFor = null } }
     if (creating) CustomMetricEditor(snap, null, medication = medications) { creating = false }
+    if (creatingLab) CustomMetricEditor(snap, null, lab = true) { creatingLab = false }
+    rangeFor?.let { m -> ReferenceRangeSheet(m) { rangeFor = null } }
     editing?.let { m -> CustomMetricEditor(snap, m) { editing = null } }
     deleting?.let { m ->
         val manual = Store.manualCount(snap, m.name)

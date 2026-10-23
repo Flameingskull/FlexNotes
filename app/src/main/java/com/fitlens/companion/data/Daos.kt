@@ -151,6 +151,10 @@ interface BodyDao {
     @Query("UPDATE measurement SET display_unit = :unit WHERE name = :name")
     fun setDisplayUnit(name: String, unit: String?)
 
+    /** Sets a measurement's reference range (#211), in its stored unit; null clears that end. */
+    @Query("UPDATE measurement SET ref_low = :low, ref_high = :high WHERE name = :name")
+    fun setRange(name: String, low: Double?, high: Double?)
+
     @Query("SELECT name FROM measurement")
     fun definitionNames(): List<String>
 
@@ -1090,7 +1094,7 @@ interface MedDao {
 }
 
 internal fun MeasurementRow.toModel() =
-    MeasurementDef(name, unit, sort_order, goal_type, goal_value, enabled != 0, custom != 0, link, display_unit, medication != 0)
+    MeasurementDef(name, unit, sort_order, goal_type, goal_value, enabled != 0, custom != 0, link, display_unit, medication != 0, ref_low, ref_high, lab != 0)
 
 internal fun MeasurementRecordRow.toModel() = MRecord(id, name, unit, date, time, value, comment, source, dose_id, due, site)
 

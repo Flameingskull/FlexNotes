@@ -279,6 +279,16 @@ object MedicationReport {
                     v(pts.minOf { it.value }), v(pts.maxOf { it.value })
                 )
             para(w, summary, 9f, muted = true)
+            // Its reference range and the readings outside it (#211).
+            val def = snap.allMeasurements.firstOrNull { it.name == n }
+            com.fitlens.companion.ui.rangeText(res, def)?.let { range ->
+                val out = pts.count { def?.rangeFlag(it.value) != 0 }
+                val latest = com.fitlens.companion.ui.flagText(res, def, last.value)
+                val line = if (out == 0) res.getString(R.string.mdr_range_in, range)
+                    else res.getString(R.string.mdr_range_out, range, res.getQuantityString(R.plurals.mdr_range_out_count, out, out, pts.size)) +
+                        (latest?.let { " · " + res.getString(R.string.mdr_range_latest, it) } ?: "")
+                para(w, line, 9f, muted = out == 0)
+            }
             if (h > 0f) {
                 val r = RectF(M + 28f, w.y + 4f, M + CW, w.y + 4f + h)
                 PdfReport.lineChart(w, pts.map { Dates.epochDay(it.date) to it.value }, emptyList(), r)

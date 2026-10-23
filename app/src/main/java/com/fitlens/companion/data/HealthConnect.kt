@@ -11,10 +11,15 @@ import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.BloodGlucoseRecord
+import androidx.health.connect.client.records.BloodPressureRecord
 import androidx.health.connect.client.records.BodyFatRecord
+import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
+import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.NutritionRecord
+import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -50,15 +55,15 @@ import kotlin.reflect.KClass
 
 /**
  * Reading Google Health Connect (#184), so values other apps record on the phone (steps, #185; what was eaten, #186;
- * bodyweight and body fat, #187; active calories, #188; resting heart rate and sleep, #189) can be the primary source
+ * bodyweight and body fat, #187; active calories, #188; resting heart rate and sleep, #189; vitals, #212) can be the primary source
  * for what FlexNotes records and calculates, and exercise sessions become cardio sets (#190, `HealthSessions`).
  * Health Connect runs on the phone, so this stays local: no internet permission, accounts or cloud. Since #191 what
  * FlexNotes logs can also be written to it (`HealthWrite`), each type only when the user switches it on.
  *
  * For each type switched to Health Connect in Settings ([Kind.chosen]), a sync reads the last [DAYS] days (the history
  * Health Connect allows by default). Totals are grouped by local day, so Health Connect applies the user's app
- * priority and a watch and a phone aren't counted twice; sleep is grouped by the day it ends. Bodyweight and body fat
- * are readings, each kept at its own time. Everything is kept as body values from [SOURCE]
+ * priority and a watch and a phone aren't counted twice; sleep is grouped by the day it ends. Bodyweight, body fat and
+ * the vitals (blood pressure, glucose, blood oxygen, HRV and temperature, #212) are readings, each kept at its own time. Everything is kept as body values from [SOURCE]
  * (`Store.replaceHealthConnectDays`), replaced at each sync; typed values are never touched, and which one counts
  * follows `Sources.dayValues`.
  *
@@ -125,7 +130,13 @@ object HealthConnect {
         ACTIVE(ActiveCaloriesBurnedRecord::class, setOf(ActiveCaloriesBurnedRecord.ACTIVE_CALORIES_TOTAL)),
         RESTING_HR(RestingHeartRateRecord::class, setOf(RestingHeartRateRecord.BPM_AVG)),
         SLEEP(SleepSessionRecord::class, setOf(SleepSessionRecord.SLEEP_DURATION_TOTAL)),
-        EXERCISE(ExerciseSessionRecord::class, also = setOf(DistanceRecord::class));
+        EXERCISE(ExerciseSessionRecord::class, also = setOf(DistanceRecord::class)),
+        // Vitals (#212): readings, each kept at its own time.
+        BLOOD_PRESSURE(BloodPressureRecord::class),
+        GLUCOSE(BloodGlucoseRecord::class),
+        SPO2(OxygenSaturationRecord::class),
+        HRV(HeartRateVariabilityRmssdRecord::class),
+        TEMPERATURE(BodyTemperatureRecord::class);
 
         /** The read permission Health Connect asks the user for. */
         val permission: String get() = HealthPermission.getReadPermission(record)
@@ -140,6 +151,11 @@ object HealthConnect {
             RESTING_HR -> p.hcRestingHr
             SLEEP -> p.hcSleep
             EXERCISE -> p.hcExercise
+            BLOOD_PRESSURE -> p.hcBloodPressure
+            GLUCOSE -> p.hcGlucose
+            SPO2 -> p.hcSpo2
+            HRV -> p.hcHrv
+            TEMPERATURE -> p.hcTemperature
         }
 
         /**
@@ -155,6 +171,11 @@ object HealthConnect {
             RESTING_HR -> p.copy(hcRestingHr = on)
             SLEEP -> p.copy(hcSleep = on)
             EXERCISE -> p.copy(hcExercise = on)
+            BLOOD_PRESSURE -> p.copy(hcBloodPressure = on)
+            GLUCOSE -> p.copy(hcGlucose = on)
+            SPO2 -> p.copy(hcSpo2 = on)
+            HRV -> p.copy(hcHrv = on)
+            TEMPERATURE -> p.copy(hcTemperature = on)
         }
     }
 
@@ -167,6 +188,25 @@ object HealthConnect {
         const val RESTING_HR_UNIT = "bpm"
         const val SLEEP = "Sleep"
         const val SLEEP_UNIT = "h"
+
+        // Vitals (#212): read from Health Connect or logged by hand, made as FlexNotes's own measurements.
+        const val BP_SYSTOLIC = "Blood pressure (systolic)"
+        const val BP_DIASTOLIC = "Blood pressure (diastolic)"
+        const val BP_UNIT = "mmHg"
+        const val GLUCOSE = "Blood glucose"
+        const val GLUCOSE_UNIT = VitalUnits.MMOL
+        const val SPO2 = "Blood oxygen"
+        const val SPO2_UNIT = "%"
+        const val HRV = "Heart rate variability"
+        const val HRV_UNIT = "ms"
+        const val TEMPERATURE = "Body temperature"
+        const val TEMPERATURE_UNIT = VitalUnits.CELSIUS
+
+        /** Every vital, name and unit, in the order "Add vitals" lists them. */
+        val vitals: List<Pair<String, String>> = listOf(
+            BP_SYSTOLIC to BP_UNIT, BP_DIASTOLIC to BP_UNIT, GLUCOSE to GLUCOSE_UNIT, SPO2 to SPO2_UNIT,
+            HRV to HRV_UNIT, TEMPERATURE to TEMPERATURE_UNIT
+        )
     }
 
     /** What a sync did. */
@@ -332,6 +372,35 @@ object HealthConnect {
             Kind.BODY_FAT -> return listOf(
                 readings(context, client, BodyFatRecord::class, from, to, BodyFat.NAME, "%", dates) { it.time to it.percentage.value }
             )
+            // Each blood pressure reading is two values, kept at the same time (#212).
+            Kind.BLOOD_PRESSURE -> return listOf(
+                readings(context, client, BloodPressureRecord::class, from, to, Names.BP_SYSTOLIC, Names.BP_UNIT, dates, own = true) {
+                    it.time to it.systolic.inMillimetersOfMercury
+                },
+                readings(context, client, BloodPressureRecord::class, from, to, Names.BP_DIASTOLIC, Names.BP_UNIT, dates, own = true) {
+                    it.time to it.diastolic.inMillimetersOfMercury
+                }
+            )
+            Kind.GLUCOSE -> return listOf(
+                readings(context, client, BloodGlucoseRecord::class, from, to, Names.GLUCOSE, Names.GLUCOSE_UNIT, dates, own = true) {
+                    it.time to it.level.inMillimolesPerLiter
+                }
+            )
+            Kind.SPO2 -> return listOf(
+                readings(context, client, OxygenSaturationRecord::class, from, to, Names.SPO2, Names.SPO2_UNIT, dates, own = true) {
+                    it.time to it.percentage.value
+                }
+            )
+            Kind.HRV -> return listOf(
+                readings(context, client, HeartRateVariabilityRmssdRecord::class, from, to, Names.HRV, Names.HRV_UNIT, dates, own = true) {
+                    it.time to it.heartRateVariabilityMillis
+                }
+            )
+            Kind.TEMPERATURE -> return listOf(
+                readings(context, client, BodyTemperatureRecord::class, from, to, Names.TEMPERATURE, Names.TEMPERATURE_UNIT, dates, own = true) {
+                    it.time to it.temperature.inCelsius
+                }
+            )
             else -> {}
         }
         // Sleep is grouped from the evening before, so each night counts on the day it ends (#189).
@@ -375,7 +444,7 @@ object HealthConnect {
             Kind.SLEEP -> listOf(
                 series(Names.SLEEP, Names.SLEEP_UNIT, true) { r -> r[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.let { it.seconds / 3600.0 } }
             )
-            Kind.WEIGHT, Kind.BODY_FAT, Kind.EXERCISE -> emptyList()
+            Kind.WEIGHT, Kind.BODY_FAT, Kind.EXERCISE, Kind.BLOOD_PRESSURE, Kind.GLUCOSE, Kind.SPO2, Kind.HRV, Kind.TEMPERATURE -> emptyList()
         }
     }
 
@@ -427,11 +496,11 @@ object HealthConnect {
 
     /**
      * Every [type] reading from [from] to [to] (#187), each kept on its own local date and time, in [unit]. [value]
-     * gives a reading's time and value.
+     * gives a reading's time and value. [own] makes the measurement as FlexNotes's own the first time (the vitals, #212).
      */
     private suspend fun <T : Record> readings(
         context: Context, client: HealthConnectClient, type: KClass<T>, from: LocalDate, to: LocalDate,
-        name: String, unit: String, dates: List<String>, value: (T) -> Pair<Instant, Double>
+        name: String, unit: String, dates: List<String>, own: Boolean = false, value: (T) -> Pair<Instant, Double>
     ): Store.HealthSeries {
         val found = mutableListOf<Reading>()
         var page: String? = null
@@ -450,7 +519,7 @@ object HealthConnect {
             }
             page = response.pageToken
         } while (!page.isNullOrEmpty())
-        return Store.HealthSeries(name, unit, readingsByDate(found, dates, ZoneId.systemDefault()))
+        return Store.HealthSeries(name, unit, readingsByDate(found, dates, ZoneId.systemDefault()), own)
     }
 
     /** A reading from Health Connect: when, its value, and the comment it's kept with. */

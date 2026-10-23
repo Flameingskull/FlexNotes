@@ -372,7 +372,9 @@ fun FitChart(
      */
     better: (Double, Double) -> Boolean? = ::higherIsBetter,
     /** The small key under a single series that explains its marks. Off where the chart is only a preview (pinned cards). */
-    showKey: Boolean = true
+    showKey: Boolean = true,
+    /** A reference range (#211), low and high (either may be null), shaded behind the series. */
+    range: Pair<Double?, Double?>? = null
 ) {
     var hidden by remember(series.size) { mutableStateOf(emptySet<Int>()) }
     // The overlay's legend entry follows the series, so its index is series.size.
@@ -398,7 +400,7 @@ fun FitChart(
         } else {
             LinePlot(
                 series, visible, kind, plotHeight, photoDays, goal, selected, onSelect, yFormat, unit, trends, yFromZero,
-                viewport, onExpand, gapDays, overlayShown, overlayUnit, better
+                viewport, onExpand, gapDays, overlayShown, overlayUnit, better, range
             )
         }
         if (series.size > 1 || showTrend || overlay != null) {
@@ -497,7 +499,8 @@ private fun LinePlot(
     gapDays: Set<Long>,
     overlayIn: LineSeries?,
     overlayUnit: String,
-    better: (Double, Double) -> Boolean?
+    better: (Double, Double) -> Boolean?,
+    range: Pair<Double?, Double?>?
 ) {
     val colors = LocalChartColors.current
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -514,6 +517,9 @@ private fun LinePlot(
     var yMin = inView.minOf { it.y }
     var yMax = inView.maxOf { it.y }
     if (goal != null && goal > 0) { yMin = minOf(yMin, goal); yMax = maxOf(yMax, goal) }
+    // The range's ends stay in view, so a value's place against it can be read (#211).
+    range?.first?.let { yMin = minOf(yMin, it); yMax = maxOf(yMax, it) }
+    range?.second?.let { yMin = minOf(yMin, it); yMax = maxOf(yMax, it) }
     // Bars always stand on zero, so their heights compare truly (#137).
     if (yFromZero || kind == ChartKind.BAR) yMin = minOf(yMin, 0.0)
     if (yMax - yMin < 1e-9) { yMin -= 1; yMax += 1 }
@@ -663,6 +669,19 @@ private fun LinePlot(
         }
 
         clipRect(left - 8.dp.toPx(), top - 8.dp.toPx(), right + 8.dp.toPx(), bottom + 1f) {
+            // The reference range (#211): a faint mint band with fine dashed edges, open-ended where an end is missing.
+            if (range != null && (range.first != null || range.second != null)) {
+                val bandTop = range.second?.let { py(it) } ?: top
+                val bandBottom = range.first?.let { py(it) } ?: bottom
+                drawRect(ChartHues.Mint.copy(alpha = 0.12f), Offset(left, bandTop), Size(right - left, (bandBottom - bandTop).coerceAtLeast(0f)))
+                listOfNotNull(range.first, range.second).forEach { v ->
+                    val ry = py(v)
+                    drawLine(
+                        ChartHues.Mint.copy(alpha = 0.6f), Offset(left, ry), Offset(right, ry), strokeWidth = 1.dp.toPx(),
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f))
+                    )
+                }
+            }
             if (goal != null && goal > 0) {
                 val gy = py(goal)
                 drawLine(

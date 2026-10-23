@@ -254,8 +254,26 @@ data class MeasurementDef(
      * A medication (#199): shown only on the Medications screen, never in a body view, graph, estimate, export or
      * Health Connect write. Its values stay in the same table, so switching moves the whole history without a copy.
      */
-    val medication: Boolean = false
+    val medication: Boolean = false,
+    /**
+     * The reference range (#211): values below [refLow] or above [refHigh] are flagged Low or High. Either may be
+     * missing (an upper limit only, say); stored in [unit] and converted with it when shown.
+     */
+    val refLow: Double? = null,
+    val refHigh: Double? = null,
+    /** A lab marker (#211): listed under LAB RESULTS on the Body tracker's Track tab. */
+    val lab: Boolean = false
 ) {
+    /** The range is set. */
+    val hasRange: Boolean get() = refLow != null || refHigh != null
+
+    /** Whether [value] is below the range (-1), above it (1) or in it or with no range (0). */
+    fun rangeFlag(value: Double): Int = when {
+        refLow != null && value < refLow - 1e-9 -> -1
+        refHigh != null && value > refHigh + 1e-9 -> 1
+        else -> 0
+    }
+
     /** Lower-case FitNotes name this custom metric takes its values from. */
     val matchKey: String get() = (link?.takeIf { it.isNotBlank() } ?: name).trim().lowercase()
 }
@@ -496,38 +514,99 @@ object MeasureUnits {
      * it's the same kind (#7).
      */
     fun display(unit: String?, weightUnit: String, lengthUnit: String, override: String? = null): String? = when {
-        override != null && sameKind(unit, override) -> WeightUnits.of(override) ?: LengthUnits.of(override)
+        override != null && sameKind(unit, override) -> WeightUnits.of(override) ?: LengthUnits.of(override) ?: VitalUnits.of(override)
         WeightUnits.of(unit) != null -> weightUnit
         LengthUnits.of(unit) != null -> lengthUnit
         else -> unit
     }
 
-    /** The units a measurement stored in [unit] can be shown in: kg and lbs, cm and in, or none for other units. */
+    /**
+     * The units a measurement stored in [unit] can be shown in: kg and lbs, cm and in, mmol/L and mg/dL, °C and °F
+     * (#212), or none for other units.
+     */
     fun choices(unit: String?): List<String> = when {
         WeightUnits.of(unit) != null -> listOf("kg", "lbs")
         LengthUnits.of(unit) != null -> listOf(LengthUnits.CM, LengthUnits.IN)
-        else -> emptyList()
+        else -> VitalUnits.choices(unit)
     }
 
-    /** A weight or a length: a unit FlexNotes converts between kg and lbs, or cm and in. */
-    fun convertible(unit: String?): Boolean = WeightUnits.of(unit) != null || LengthUnits.of(unit) != null
+    /** A weight, a length, a blood glucose or a temperature: a unit FlexNotes converts to another of its kind. */
+    fun convertible(unit: String?): Boolean = WeightUnits.of(unit) != null || LengthUnits.of(unit) != null || VitalUnits.of(unit) != null
 
-    /** Both are weights, or both are lengths, so one converts to the other. */
+    /** Both are weights, both lengths, or both the same kind of vital unit (#212), so one converts to the other. */
     fun sameKind(a: String?, b: String?): Boolean =
-        (WeightUnits.of(a) != null && WeightUnits.of(b) != null) || (LengthUnits.of(a) != null && LengthUnits.of(b) != null)
+        (WeightUnits.of(a) != null && WeightUnits.of(b) != null) || (LengthUnits.of(a) != null && LengthUnits.of(b) != null) ||
+            VitalUnits.sameKind(a, b)
 
     /** [value] in [from] expressed in [to]; unchanged unless they're the same kind and differ. */
-    fun convert(value: Double, from: String?, to: String?): Double =
-        if (WeightUnits.of(from) != null) WeightUnits.convert(value, from, to) else LengthUnits.convert(value, from, to)
+    fun convert(value: Double, from: String?, to: String?): Double = when {
+        WeightUnits.of(from) != null -> WeightUnits.convert(value, from, to)
+        VitalUnits.of(from) != null -> VitalUnits.convert(value, from, to)
+        else -> LengthUnits.convert(value, from, to)
+    }
 
     fun shown(d: MeasurementDef, weightUnit: String, lengthUnit: String): MeasurementDef {
         val to = display(d.unit, weightUnit, lengthUnit, d.displayUnit) ?: return d
-        return if (to == d.unit) d else d.copy(unit = to, goalValue = convert(d.goalValue, d.unit, to))
+        return if (to == d.unit) d else d.copy(
+            unit = to, goalValue = convert(d.goalValue, d.unit, to),
+            refLow = d.refLow?.let { convert(it, d.unit, to) }, refHigh = d.refHigh?.let { convert(it, d.unit, to) }
+        )
     }
 
     fun shown(r: MRecord, weightUnit: String, lengthUnit: String, override: String? = null): MRecord {
         val to = display(r.unit, weightUnit, lengthUnit, override) ?: return r
         return if (to == r.unit) r else r.copy(unit = to, value = convert(r.value, r.unit, to))
+    }
+}
+
+/**
+ * Blood glucose and body temperature units (#212), converted like weights and lengths but never by a global unit:
+ * only a measurement's own display unit ([MeasurementDef.displayUnit]) shows them in the other one. Plain Kotlin,
+ * tested in `VitalUnitsTest`.
+ */
+object VitalUnits {
+    const val MMOL = "mmol/L"
+    const val MGDL = "mg/dL"
+    const val CELSIUS = "°C"
+    const val FAHRENHEIT = "°F"
+
+    /** mg/dL in one mmol/L of glucose (its molar mass, 180.16 g/mol, over 10). */
+    const val MGDL_PER_MMOL = 18.016
+
+    fun glucose(unit: String?): String? = when (unit?.trim()?.lowercase()) {
+        "mmol/l", "mmol" -> MMOL
+        "mg/dl" -> MGDL
+        else -> null
+    }
+
+    fun temperature(unit: String?): String? = when (unit?.trim()?.lowercase()?.removePrefix("°")?.trim()) {
+        "c", "celsius" -> CELSIUS
+        "f", "fahrenheit" -> FAHRENHEIT
+        else -> null
+    }
+
+    /** The canonical name of a glucose or temperature unit, or null for any other. */
+    fun of(unit: String?): String? = glucose(unit) ?: temperature(unit)
+
+    fun sameKind(a: String?, b: String?): Boolean =
+        (glucose(a) != null && glucose(b) != null) || (temperature(a) != null && temperature(b) != null)
+
+    fun choices(unit: String?): List<String> = when {
+        glucose(unit) != null -> listOf(MMOL, MGDL)
+        temperature(unit) != null -> listOf(CELSIUS, FAHRENHEIT)
+        else -> emptyList()
+    }
+
+    /** [value] in [from] expressed in [to]; unchanged unless both are glucose or both temperature units and differ. */
+    fun convert(value: Double, from: String?, to: String?): Double {
+        if (!sameKind(from, to)) return value
+        return when (of(from) to of(to)) {
+            MMOL to MGDL -> value * MGDL_PER_MMOL
+            MGDL to MMOL -> value / MGDL_PER_MMOL
+            CELSIUS to FAHRENHEIT -> value * 9.0 / 5.0 + 32.0
+            FAHRENHEIT to CELSIUS -> (value - 32.0) * 5.0 / 9.0
+            else -> value
+        }
     }
 }
 

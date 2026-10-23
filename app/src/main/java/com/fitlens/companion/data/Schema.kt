@@ -272,7 +272,12 @@ data class MeasurementRow(
     @ColumnInfo(defaultValue = "0") val edited: Int,
     val display_unit: String?,
     /** A medication (#199), shown only on the Medications screen. */
-    @ColumnInfo(defaultValue = "0") val medication: Int = 0
+    @ColumnInfo(defaultValue = "0") val medication: Int = 0,
+    /** The reference range (#211), in [unit]: either end may be missing. */
+    val ref_low: Double? = null,
+    val ref_high: Double? = null,
+    /** A lab marker (#211), listed under LAB RESULTS. */
+    @ColumnInfo(defaultValue = "0") val lab: Int = 0
 )
 
 @Entity(tableName = "mrecord", indices = [Index(value = ["date"], name = "idx_mr_date")])
