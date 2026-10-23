@@ -513,11 +513,13 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                 "relativeGaps", snap.trainingKey, snap.bodyKey, exId, formula, Records.maxRepsFor(formula)
             ) { relativeStrength(snap, exId).missing.map { Dates.epochDay(it) }.toSet() } ?: emptySet()
             val yFormat: (Double) -> String = if (isBodyRatio && !isRelative) { v -> fmtNum(v, 2) } else { v -> fmtNum(v, 1) }
-            // The body overlay (#56): the chosen measurement's daily values, in the unit it's shown in.
-            val overlayDef = overlayName?.let { n -> snap.allMeasurements.firstOrNull { it.name == n } }
+            // The body overlay (#56): the chosen measurement's daily values, in the unit it's shown in, or a
+            // medication's daily doses (#208) while Medications aren't locked.
+            val hideMeds = medicationsHidden()
+            val overlayDef = remember(snap.bodyKey, overlayName, hideMeds) { overlayName?.let { overlaySource(snap, it, hideMeds) } }
             val overlay = overlayDef?.let { d ->
-                remember(snap.bodyKey, d.name) {
-                    LineSeries(d.name, snap.dailySeries(d.name).map { ChartPoint(Dates.epochDay(it.date), it.value, it.date) })
+                remember(d) {
+                    LineSeries(d.name, d.daily.map { ChartPoint(Dates.epochDay(it.date), it.value, it.date) })
                 }
             }
             val overlayUnit = overlayDef?.unit.orEmpty()
@@ -770,6 +772,9 @@ private fun comparePhotosOn(res: Resources, snap: Snapshot, nav: Nav, a: String,
 @Composable
 internal fun BodyOverlaySheet(snap: Snapshot, current: String?, onPick: (String?) -> Unit, onDismiss: () -> Unit) {
     val names = snap.usedMeasurements.map { it.name }.filter { snap.recordsByName[it].orEmpty().isNotEmpty() }
+    // Medications (#208) follow under their own label, unless they're locked (#214).
+    val hideMeds = medicationsHidden()
+    val meds = remember(snap.bodyKey, hideMeds) { if (hideMeds) emptyList() else overlayMedications(snap) }
     FitSheet(
         title = stringResource(R.string.ex_overlay_title),
         onDismiss = onDismiss,
@@ -783,7 +788,8 @@ internal fun BodyOverlaySheet(snap: Snapshot, current: String?, onPick: (String?
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        names.forEach { n ->
+        @Composable
+        fun choice(n: String) {
             Row(
                 Modifier.fillMaxWidth().clickable { onPick(n) }.padding(vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
@@ -796,6 +802,11 @@ internal fun BodyOverlaySheet(snap: Snapshot, current: String?, onPick: (String?
                 if (n == current) Text(stringResource(R.string.ex_overlay_shown), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        }
+        names.forEach { choice(it) }
+        if (meds.isNotEmpty()) {
+            SectionLabel(stringResource(R.string.md_title))
+            meds.forEach { choice(it) }
         }
         Text(
             stringResource(R.string.ex_overlay_note),
@@ -1103,4 +1114,26 @@ private fun RecordRow(label: String, value: String, unit: String, date: String, 
             Text(date, style = MaterialTheme.typography.bodyMedium, color = tint)
         }
     }
+}
+
+/** An overlay's daily values (#56): a body measurement's, or a medication's doses (#208), in the unit each is shown in. */
+internal data class OverlaySource(val name: String, val unit: String, val daily: List<com.fitlens.companion.data.MRecord>)
+
+/**
+ * The overlay called [name]: a body measurement first, else a medication (#208) unless [medsHidden] (#214), so a
+ * medication picked before the lock went on simply stops showing. Null when it no longer exists.
+ */
+internal fun overlaySource(snap: Snapshot, name: String, medsHidden: Boolean): OverlaySource? {
+    snap.allMeasurements.firstOrNull { it.name == name }?.let { d -> return OverlaySource(d.name, d.unit, snap.dailySeries(d.name)) }
+    if (medsHidden || snap.showsMedications) return null
+    val meds = snap.medicationView
+    val d = meds.allMeasurements.firstOrNull { it.name == name } ?: return null
+    return OverlaySource(d.name, d.unit, meds.dailySeries(d.name))
+}
+
+/** The medications with logged doses (#208), offered as overlays on body and training graphs. */
+internal fun overlayMedications(snap: Snapshot): List<String> {
+    if (snap.showsMedications) return emptyList()
+    val meds = snap.medicationView
+    return meds.usedMeasurements.map { it.name }.filter { meds.recordsByName[it].orEmpty().isNotEmpty() }
 }

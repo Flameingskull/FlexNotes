@@ -327,10 +327,12 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, onFil
         totals.orEmpty().map { ChartPoint(it.start.toEpochDay(), shown(valueOf(it)), it.start.format(Dates.ISO)) }
     }
     val series = remember(points, metric) { listOf(LineSeries(metric.text(res), points)) }
-    val overlayDef = overlayName?.let { n -> snap.allMeasurements.firstOrNull { it.name == n } }
+    // A body measurement's or, unless Medications are locked, a medication's (#208, #214) period average.
+    val hideMeds = medicationsHidden()
+    val overlayDef = remember(snap.bodyKey, overlayName, hideMeds) { overlayName?.let { overlaySource(snap, it, hideMeds) } }
     val overlay = overlayDef?.let { d ->
-        remember(snap.bodyKey, d.name, period, from) {
-            val avgs = Analysis.periodAverages(snap.dailySeries(d.name), period, from)
+        remember(d, period, from) {
+            val avgs = Analysis.periodAverages(d.daily, period, from)
             LineSeries(
                 res.getString(R.string.an_overlay_average, d.name, period.word(res)),
                 avgs.map { (start, v) -> ChartPoint(start.toEpochDay(), v, start.format(Dates.ISO)) }

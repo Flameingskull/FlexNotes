@@ -416,18 +416,32 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
     val shown = remember(all, rangeIdx) { inRange(all, RANGES[rangeIdx].second) { it.date } }
     // A medication's graph can overlay one symptom's ratings on a 0–10 axis at the right (#207); 0 is none.
     val symptoms = if (snap.showsMedications) snap.medPlan.symptoms else emptyList()
+    // A body graph can overlay a medication's daily doses instead (#208), while Medications aren't locked (#214).
+    val hideMeds = medicationsHidden()
+    val medNames = remember(snap.bodyKey, hideMeds) { if (hideMeds) emptyList() else overlayMedications(snap) }
+    val choices = symptoms.map { it.name } + medNames
     var symptomIdx by rememberSaveable(selectedName) { mutableIntStateOf(0) }
     val overlaid = symptoms.getOrNull(symptomIdx - 1)
-    val symptomOverlay = remember(snap.bodyKey, overlaid, shown) {
-        val from = shown.firstOrNull()?.date
-        val to = shown.lastOrNull()?.date
-        if (overlaid == null || from == null || to == null) null
-        else LineSeries(
-            overlaid.name,
-            Symptoms.series(snap.medPlan, overlaid.id).filter { it.date in from..to }
-                .map { ChartPoint(Dates.epochDay(it.date), it.rating.toDouble(), it.date) }
-        )
+    val medName = medNames.getOrNull(symptomIdx - 1 - symptoms.size)
+    val overlaidMed = remember(snap.bodyKey, medName, hideMeds) { medName?.let { overlaySource(snap, it, hideMeds) } }
+    val symptomOverlay = remember(snap.bodyKey, overlaid, overlaidMed, shown) {
+        val from = shown.firstOrNull()?.date?.take(10)
+        val to = shown.lastOrNull()?.date?.take(10)
+        when {
+            from == null || to == null -> null
+            overlaid != null -> LineSeries(
+                overlaid.name,
+                Symptoms.series(snap.medPlan, overlaid.id).filter { it.date in from..to }
+                    .map { ChartPoint(Dates.epochDay(it.date), it.rating.toDouble(), it.date) }
+            )
+            overlaidMed != null -> LineSeries(
+                overlaidMed.name,
+                overlaidMed.daily.filter { it.date.take(10) in from..to }.map { ChartPoint(Dates.epochDay(it.date), it.value, it.date) }
+            )
+            else -> null
+        }
     }
+    val overlayUnit = overlaidMed?.unit ?: "/10"
     // Line, bar, area or step, remembered for each measurement (#137).
     val (kind, setKind) = rememberChartKind("body:$selectedName")
     if (all.isEmpty()) {
@@ -445,10 +459,10 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                 trailing = { ExpandGraphButton { fullScreen = true } }
             )
         }
-        if (symptoms.isNotEmpty()) {
+        if (choices.isNotEmpty()) {
             item {
-                val options = listOf(stringResource(R.string.sym_overlay_none)) + symptoms.map { it.name }
-                DropdownPill(stringResource(R.string.sym_overlay), options, symptomIdx.coerceIn(0, options.lastIndex), Modifier.padding(horizontal = 4.dp)) {
+                val options = listOf(stringResource(R.string.sym_overlay_none)) + choices
+                DropdownPill(stringResource(if (symptoms.isEmpty()) R.string.ex_overlay_title else R.string.sym_overlay), options, symptomIdx.coerceIn(0, options.lastIndex), Modifier.padding(horizontal = 4.dp)) {
                     symptomIdx = it
                 }
             }
@@ -477,7 +491,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                 yFromZero = fromZero,
                 onExpand = { ChartHints.expanded(); fullScreen = true },
                 overlay = symptomOverlay,
-                overlayUnit = "/10"
+                overlayUnit = overlayUnit
             )
             ChartHint()
             if (fullScreen) {
@@ -518,7 +532,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                         viewport = vp,
                         onExpand = resetZoom,
                         overlay = symptomOverlay,
-                        overlayUnit = "/10"
+                        overlayUnit = overlayUnit
                     )
                 }
             }
