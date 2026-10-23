@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Settings
@@ -149,6 +150,7 @@ internal fun medicationsHidden(): Boolean {
  * Wraps each Medications screen (#214): its [content] while unlocked or with the lock off, else a locked page that
  * asks for the phone's prompt straight away, with Unlock to ask again and Back to leave.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun MedLockGate(nav: Nav, content: @Composable () -> Unit) {
     val ctx = LocalContext.current
