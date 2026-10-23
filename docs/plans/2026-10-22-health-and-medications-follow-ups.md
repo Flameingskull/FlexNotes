@@ -1,6 +1,6 @@
 # Health and medications follow-ups: plan across builds (2026-10-22)
 
-> **Status (2026-10-23, 1.0.161): In progress.** All 16 suggestions from the Medications plan
+> **Status (2026-10-23, 1.0.162): In progress.** All 16 suggestions from the Medications plan
 > (`docs/plans/2026-10-22-medications.md`) were picked by the owner and filed as #207–#222, each imported into the
 > tracker; tracker plan item "Health and medications follow-ups: plan across builds (2026-10-22)".
 > Build 1 done in 1.0.158 (the medication extras #207, #209, #210: database v26 with `med_info`, `mrecord.site` and the
@@ -12,9 +12,13 @@
 > Build 3 done in 1.0.161 (`/safe-build`; its first run, 1.0.160, failed CI for a missing Material 3 opt-in and published nothing: #213, the appointment summary: body values and quick ranges in the doctor's
 > report; #214, Lock Medications: `ui/MedLock.kt`, `DeviceSettings.medLock`, private reminders; #208, medication
 > overlays on exercise, Analysis and body graphs). No database change.
-> Left: #211, #212, #216–#222. #211, #212, #216, #217, #221 and #222 can start any time; the rest depend on
-> shipped work. Next: `/new-build` to triage these (all still `needs-triage`), then #211 (lab results, a database
-> change) with #212 (vitals), which also feed the appointment summary.
+> Build 4 done in 1.0.162 (`/safe-build`: #212, vitals from Health Connect and by hand, `VitalUnits` for mmol/L ↔ mg/dL
+> and °C ↔ °F; #211, lab markers and reference ranges for any measurement: database v27 with `measurement.ref_low`,
+> `ref_high` and `lab`, `LabMarkers.kt`, `ui/LabResults.kt`, High / Low flags, the graph's range band and ranges in the
+> doctor's report). Filed under rule 5 as #211's deferred part: #225 (lab results from Health Connect medical records).
+> Left: #216–#222 and #225. #216, #217, #221, #222 and #225 can start any time; the rest depend on shipped work.
+> Next: `/new-build` to triage these (all still `needs-triage`), then #216 (readiness check-in) with #217 (training
+> load), which share the Analysis area.
 
 ## Context
 

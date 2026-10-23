@@ -1,40 +1,33 @@
 ## Overview
 
-This update makes Medications more private and more useful at the doctor's. You can lock Medications behind your
-fingerprint, face or phone PIN. The report for a doctor can become an appointment summary with your body values. And
-any medication can be drawn over your bodyweight, strength, heart rate or sleep graphs, so you can see how a dose
-lines up with the results.
+This update brings your health checks into FlexNotes. Blood pressure, blood glucose, blood oxygen, heart rate
+variability and body temperature can come from Health Connect or be logged by hand. Lab results from blood tests can
+be recorded with the reference range printed on your report. Any value outside its range is marked High or Low, the
+graph shows the range, and the report for a doctor lists it.
 
 ## What's new
 
-- **Lock Medications.** In **Settings › Medications**, turn on **Lock Medications**. The Medications screens then open
-  only after your phone's own fingerprint, face or PIN check. Turning the lock on or off asks for the same check. Once
-  unlocked, Medications stay open while you use FlexNotes and lock again about two minutes after you leave the app.
-  While the lock is on, unlocked Medications screens are hidden from the recent-apps preview and can't be captured in
-  screenshots.
-- **Private reminders.** While Medications is locked, dose reminders don't name any medication or injection site,
-  even when you pull down the notification shade. **Taken**, **Snooze** and **Skip** still work from the reminder.
-- **Appointment summary.** On the Medications screen, open the ⋮ menu and choose **Report for a doctor**. A new
-  **Body values** section lets you add measurements to the PDF. Bodyweight, resting heart rate, sleep and body fat are
-  picked by default when you have them. For each one, the report shows how many readings there are, the latest value
-  and how much it changed from the first in the period, the lowest and highest, and a graph. With any body value
-  picked, the report is titled **Appointment summary**.
-- **Dose vs outcome graphs.** Medications with logged doses now appear in the overlay list on exercise graphs (such as
-  estimated 1RM) and on **Analysis › Workouts**. Body graphs (bodyweight, resting heart rate, sleep and the rest) have
-  a new **Body overlay** menu. Each dose is drawn on its own scale at the right and lined up with the graph by date.
-
-## Improved
-
-- **Quick date ranges.** The report sheet has **30 days**, **90 days**, **6 months** and **1 year** buttons under
-  the dates.
-- **Medication names on the lock screen.** This setting is switched off and greyed out while Lock Medications is
-  on.
+- **Vitals from Health Connect.** **Settings › Health Connect** has a new **Vitals** section: **Blood pressure**,
+  **Blood glucose**, **Blood oxygen**, **Heart rate variability** and **Body temperature**. Switch any of them to
+  Health Connect and each reading from your monitor, watch, ring or meter arrives at its own time in the Body tracker.
+  Blood pressure is kept as two values, systolic and diastolic. What you type yourself is always kept.
+- **Log vitals by hand.** In the Body tracker, tap the pencil and choose **Add vitals** to add all five, ready to log
+  without Health Connect.
+- **Glucose and temperature units.** Blood glucose can be shown in mmol/L or mg/dL, and body temperature in °C or °F.
+  Choose the unit in the Body tracker's Measurements list. Readings convert both ways, and nothing stored changes.
+- **Lab results.** In the Body tracker's Measurements list, tap **New lab marker**. Pick a common marker (cholesterol,
+  HbA1c, testosterone, thyroid, liver, kidney, vitamin D, ferritin and more) or type your own, then enter the reference
+  range from your lab report. Lab markers are listed under **Lab results** on the Track tab and are logged, edited and
+  graphed like any other value.
+- **Reference ranges for any value.** Any body measurement can have a reference range: choose **Reference range**
+  from its ⋮ menu. Leave one end blank for an upper or lower limit only.
+- **High and Low flags.** A value outside its range is marked **▲ High** or **▼ Low** on the Track tab, in History
+  and in the measurement's own list. The graph shades the range, so you can see at a glance where each reading falls.
+- **Ranges in the report for a doctor.** In the Medications report's **Body values**, a value with a range now shows
+  that range, how many readings fell outside it, and whether the latest one is High or Low.
 
 ## Known limitations
 
-- Lock Medications needs a screen lock on your phone. Without one, the setting can't be turned on.
-- If you leave FlexNotes for more than two minutes while saving or sharing a report, Medications locks again and the
-  file isn't saved. Unlock and try again.
-- Medication overlays are hidden from graphs while Medications is locked.
-- The appointment summary doesn't include lab results or vitals such as blood pressure yet. They'll be added when
-  those features arrive.
+- Lab results are typed in by hand. Reading them from Health Connect's medical records is planned separately.
+- No reference ranges are filled in for you, because they differ between labs. Copy yours from your report.
+- Vitals read from Health Connect cover the last 30 days, or the full history if you allowed older data.
