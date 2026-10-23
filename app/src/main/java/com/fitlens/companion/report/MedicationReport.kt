@@ -29,14 +29,21 @@ data class MedicationReportOptions(
     val comments: Boolean = true,
     val graphs: Boolean = true,
     /** The symptom ratings in the range, each with its graph (#223). */
-    val symptoms: Boolean = true
-)
+    val symptoms: Boolean = true,
+    /** Body measurements to summarise and graph over the range (#213), read from the body area; empty leaves them out
+     *  and keeps the report to medications only. Any one makes it an appointment summary. */
+    val body: List<String> = emptyList()
+) {
+    val summary: Boolean get() = body.isNotEmpty()
+}
 
 /**
  * A Medications-only PDF to share with a doctor (#205), drawn with the progress report's pages ([PageWriter], light
  * for printing by default): a heading with the patient line and range, current medications and their schedules,
  * adherence per medication, a dose log (due, taken, amount, status, dose changes), comments and a graph per
- * medication, and the symptoms rated over the range (#223). It holds no workout, body or photo data.
+ * medication, and the symptoms rated over the range (#223). With body values chosen (#213) it becomes an appointment
+ * summary: each chosen measurement's readings over the range, summarised and graphed. It never holds workouts or photos,
+ * and body values only when they're chosen.
  */
 object MedicationReport {
 
@@ -54,6 +61,7 @@ object MedicationReport {
                 if (o.adherence) adherence(w, MedSchedules.adherence(log))
                 if (o.graphs) graphs(w, snap, o, names)
                 if (o.symptoms) symptoms(w, snap, o)
+                if (o.summary) bodyValues(w, snap, o)
                 if (o.doseLog) doseLog(w, log)
                 if (o.comments) comments(w, log)
                 w.finish()
@@ -86,7 +94,7 @@ object MedicationReport {
         w.newPage()
         w.c.drawText("FLEXNOTES", M, w.y + 12f, paint(w.p.gold, 10f, bold = true, tracking = 0.4f))
         w.y += 22f
-        w.c.drawText(res.getString(R.string.mdr_title), M, w.y + 24f, paint(w.p.text, 24f, bold = true))
+        w.c.drawText(res.getString(if (o.summary) R.string.mdr_title_summary else R.string.mdr_title), M, w.y + 24f, paint(w.p.text, 24f, bold = true))
         w.y += 38f
         if (o.patient.isNotBlank()) para(w, res.getString(R.string.mdr_patient, o.patient.trim()), 11f)
         para(w, res.getString(R.string.mdr_range, Dates.medium(o.from), Dates.medium(o.to)), 10f, muted = true)
@@ -235,6 +243,49 @@ object MedicationReport {
             }
             pts.filter { !it.comment.isNullOrBlank() }.forEach { rt ->
                 para(w, "${Dates.medium(rt.date)} · ${rt.rating}/${Symptoms.MAX} · “${rt.comment!!.trim()}”", 8.5f, indent = 8f)
+            }
+            w.y += 6f
+        }
+    }
+
+    /**
+     * The chosen body measurements over the range (#213): how many readings, the first and the latest with the change
+     * between them in the measurement's unit, the lowest and highest, then a graph when there are two or more. A
+     * measurement with no reading in the range says so. [snap] must be the body area: the medication view holds none.
+     */
+    private fun bodyValues(w: PageWriter, snap: Snapshot, o: MedicationReportOptions) {
+        val res = w.res
+        label(w, res.getString(R.string.mdr_body))
+        o.body.forEach { n ->
+            val pts = if (snap.showsMedications) emptyList() else snap.dailySeries(n).filter { it.date.take(10) in o.from..o.to }
+            val unit = pts.lastOrNull()?.unit ?: snap.allMeasurements.firstOrNull { it.name == n }?.unit.orEmpty()
+            fun v(x: Double) = "${fmtNum(x, 1)} $unit".trim()
+            val h = if (pts.size >= 2) 90f else 0f
+            w.ensure(h + 44f)
+            w.c.drawText(if (unit.isBlank()) n else "$n ($unit)", M, w.y + 10f, paint(w.p.text, 10f, bold = true))
+            w.y += 16f
+            if (pts.isEmpty()) {
+                para(w, res.getString(R.string.mdr_body_none), 9f, muted = true)
+                w.y += 6f
+                return@forEach
+            }
+            val first = pts.first()
+            val last = pts.last()
+            val count = res.getQuantityString(R.plurals.mdr_body_count, pts.size, pts.size)
+            val summary = if (pts.size == 1) res.getString(R.string.mdr_body_one, count, v(last.value), Dates.medium(last.date))
+                else res.getString(
+                    R.string.mdr_body_summary, count, v(last.value), Dates.medium(last.date),
+                    "${com.fitlens.companion.data.fmtSigned(last.value - first.value, 1)} $unit".trim(), v(first.value), Dates.medium(first.date),
+                    v(pts.minOf { it.value }), v(pts.maxOf { it.value })
+                )
+            para(w, summary, 9f, muted = true)
+            if (h > 0f) {
+                val r = RectF(M + 28f, w.y + 4f, M + CW, w.y + 4f + h)
+                PdfReport.lineChart(w, pts.map { Dates.epochDay(it.date) to it.value }, emptyList(), r)
+                val dp = paint(w.p.muted, 7f)
+                w.c.drawText(Dates.short(first.date), r.left, r.bottom + 12f, dp)
+                w.rightText(Dates.short(last.date), dp, r.right, r.bottom + 12f)
+                w.y = r.bottom + 20f
             }
             w.y += 6f
         }

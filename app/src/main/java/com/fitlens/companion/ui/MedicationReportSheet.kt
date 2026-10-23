@@ -39,8 +39,10 @@ import java.io.File
 
 /**
  * The Medications report for a doctor (#205), from the Medications screen's ⋮: the date range (the last 90 days by
- * default), which medications, an optional patient name, what to include, and light or dark pages. Save or share the
- * PDF (with the symptoms rated, #223), or the same dose log as CSV. Only medication data goes in: no workouts, body values or photos.
+ * default, or a quick 30 days to 1 year), which medications, an optional patient name, what to include, and light or
+ * dark pages. Save or share the PDF (with the symptoms rated, #223), or the same dose log as CSV. Body values picked
+ * under BODY VALUES (#213; bodyweight, resting heart rate, sleep and body fat by default) make it an appointment
+ * summary; workouts and photos never go in.
  */
 @Composable
 internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
@@ -58,12 +60,18 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
     var graphs by rememberSaveable { mutableStateOf(true) }
     var symptoms by rememberSaveable { mutableStateOf(true) }
     var dark by rememberSaveable { mutableStateOf(false) }
+    // Body values (#213) come from the body area, which the Medications screens' view doesn't hold.
+    val bodySnap = remember(snap.bodyKey) { (Store.snapshot.value ?: snap).takeIf { !it.showsMedications } }
+    val bodyNames = remember(bodySnap) {
+        bodySnap?.usedMeasurements.orEmpty().map { it.name }.filter { bodySnap?.recordsByName?.get(it).orEmpty().isNotEmpty() }
+    }
+    var body by remember(bodyNames) { mutableStateOf(bodyNames.filter { it in SUMMARY_DEFAULTS }.toSet()) }
     var picking by remember { mutableStateOf<Int?>(null) }
 
     fun options() = MedicationReportOptions(
         from = minOf(from, to), to = maxOf(from, to), names = chosen, dark = dark, patient = patient,
         schedules = schedules, adherence = adherence, doseLog = doseLog, comments = comments, graphs = graphs,
-        symptoms = symptoms
+        symptoms = symptoms, body = bodyNames.filter { it in body }
     )
     fun name(ext: String) = "FlexNotes_Medications_${options().from}_to_${options().to}.$ext"
     suspend fun csv(): String = withContext(Dispatchers.Default) {
@@ -119,7 +127,7 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
     }
 
     FitSheet(
-        title = stringResource(R.string.mdr_sheet_title),
+        title = stringResource(if (body.isNotEmpty()) R.string.mdr_title_summary else R.string.mdr_sheet_title),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.mdr_save_pdf),
         confirmEnabled = chosen.isNotEmpty(),
@@ -135,6 +143,13 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
             }
             GlassOutlinedButton(onClick = { picking = 1 }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {
                 Text(stringResource(R.string.mdr_to, Dates.medium(to)))
+            }
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            val today = Dates.today()
+            RANGE_PRESETS.forEach { (days, label) ->
+                val start = Dates.parse(today)!!.minusDays(days - 1L).format(Dates.ISO)
+                FilterChip(selected = from == start && to == today, onClick = { from = start; to = today }, label = { Text(stringResource(label)) })
             }
         }
         SectionLabel(stringResource(R.string.md_title))
@@ -153,6 +168,16 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
         ToggleRow(stringResource(R.string.mdr_graphs), graphs, inset = Spacing.xxs) { graphs = it }
         if (snap.medPlan.symptoms.isNotEmpty()) {
             ToggleRow(stringResource(R.string.mdr_symptoms), symptoms, inset = Spacing.xxs) { symptoms = it }
+        }
+        if (bodyNames.isNotEmpty()) {
+            SectionLabel(stringResource(R.string.mdr_body))
+            Text(stringResource(R.string.mdr_body_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                bodyNames.forEach { n ->
+                    FilterChip(selected = n in body, onClick = { body = if (n in body) body - n else body + n }, label = { Text(n) })
+                }
+            }
+            SectionLabel(stringResource(R.string.mdr_include))
         }
         ToggleRow(stringResource(R.string.mdr_dose_log), doseLog, inset = Spacing.xxs) { doseLog = it }
         ToggleRow(stringResource(R.string.mdr_comments), comments, inset = Spacing.xxs) { comments = it }
@@ -173,3 +198,19 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
         PickDateDialog(if (which == 0) from else to, onDismiss = { picking = null }) { d -> if (which == 0) from = d else to = d }
     }
 }
+
+/** The body values an appointment summary starts with (#213), when the user has them. */
+private val SUMMARY_DEFAULTS = setOf(
+    com.fitlens.companion.data.HealthConnect.Names.BODYWEIGHT,
+    com.fitlens.companion.data.HealthConnect.Names.RESTING_HR,
+    com.fitlens.companion.data.HealthConnect.Names.SLEEP,
+    "Body fat"
+)
+
+/** The quick ranges (#213): days back from today, today included. */
+private val RANGE_PRESETS = listOf(
+    30 to R.string.mdr_range_30,
+    90 to R.string.mdr_range_90,
+    182 to R.string.mdr_range_6m,
+    365 to R.string.mdr_range_1y
+)
