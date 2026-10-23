@@ -1830,6 +1830,8 @@
     <string name="mr_title_again">Still due: medication at %1$s</string>
     <string name="mr_public_title">Medication reminder</string>
     <string name="mr_public_text">Unlock to see which dose is due.</string>
+    <string name="mr_taken_site">Taken · %1$s</string>
+    <string name="mr_taken_sites">Taken · next sites</string>
     <string name="mr_snooze">Snooze %1$d min</string>
     <string name="mr_notify_why">Reminders come as notifications when a scheduled dose is due, with Taken, Snooze and Skip buttons.</string>
     <string name="mr_group_reminders">Reminders</string>

@@ -71,4 +71,24 @@ class MedRemindersTest {
         assertTrue(back.pruned(at("2026-10-22T22:00")).until.isEmpty())
         assertTrue(MedReminders.Snoozes.decode("rubbish;=").until.isEmpty())
     }
+
+    @Test
+    fun anInjectedDoseTakenFromTheReminderGoesToTheNextSite() {
+        val injected = MedPlan(
+            listOf(schedule), listOf(MedActivation(1, 1, "2026-10-01")),
+            info = mapOf("Creatine" to MedInfo("Creatine", injected = true))
+        )
+        val open = MedReminders.openAt(injected, emptyList(), "2026-10-22 08:00")
+        val sites = MedReminders.sitesFor(injected, emptyList(), open)
+        // Creatine is injected and goes to the first site; Vitamin D isn't, so it gets none.
+        assertEquals(open.map { if (it.dose.medication == "Creatine") InjectionSite.ABDOMEN_UPPER_LEFT else null }, sites)
+        val used = listOf(taken(morning, "2026-10-21 08:00").copy(site = InjectionSite.ABDOMEN_UPPER_LEFT.key))
+        assertEquals(InjectionSite.ABDOMEN_UPPER_RIGHT, MedReminders.sitesFor(injected, used, open).filterNotNull().single())
+        // Two doses of it at once rotate rather than share a site.
+        val creatine = open.first { it.dose.medication == "Creatine" }
+        assertEquals(
+            listOf(InjectionSite.ABDOMEN_UPPER_LEFT, InjectionSite.ABDOMEN_UPPER_RIGHT),
+            MedReminders.sitesFor(injected, emptyList(), listOf(creatine, creatine))
+        )
+    }
 }

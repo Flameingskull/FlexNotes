@@ -18,6 +18,7 @@ import androidx.core.content.ContextCompat
 import com.fitlens.companion.R
 import com.fitlens.companion.ui.Brand
 import com.fitlens.companion.ui.MainActivity
+import com.fitlens.companion.ui.siteName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -240,6 +241,10 @@ object MedReminders {
         val time = key.drop(11)
         val title = context.getString(if (nudge) R.string.mr_title_again else R.string.mr_title, time)
         val text = open.joinToString(", ") { "${it.dose.medication} ${fmtNum(it.amount)} ${it.dose.unit}".trim() }
+        // An injected dose taken from here goes to the suggested next site (#224), named on the button when there's one.
+        val sites = sitesFor(snap.medPlan, snap.medicationView.records, open).filterNotNull()
+        val takeLabel = sites.singleOrNull()?.let { context.getString(R.string.mr_taken_site, siteName(context.resources, it)) }
+            ?: context.getString(if (sites.isEmpty()) R.string.md_take else R.string.mr_taken_sites)
         val tap = PendingIntent.getActivity(
             context, notificationId(key),
             Intent(context, MainActivity::class.java).apply {
@@ -275,7 +280,7 @@ object MedReminders {
             .setContentIntent(tap)
             .setAutoCancel(true)
             .addExtras(android.os.Bundle().apply { putString(EXTRA_AT, key) })
-            .addAction(0, context.getString(R.string.md_take), action(ACTION_TAKEN, 1))
+            .addAction(0, takeLabel, action(ACTION_TAKEN, 1))
             .addAction(0, context.getString(R.string.mr_snooze, SNOOZE_MINUTES), action(ACTION_SNOOZE, 2))
             .addAction(0, context.getString(R.string.md_skip), action(ACTION_SKIP, 3))
             .build()
@@ -283,6 +288,22 @@ object MedReminders {
             nm.notify(notificationId(key), n)
         } catch (e: SecurityException) {
             // Notifications were switched off meanwhile; the doses still show on Medications.
+        }
+    }
+
+    /**
+     * The site each of [open] goes to when taken from the notification (#224), index for index: null for a medication
+     * that isn't injected, else the suggested next site, so two doses of one medication at once get different sites.
+     * The user can change a site afterwards from the medication's History.
+     */
+    fun sitesFor(plan: MedPlan, records: List<MRecord>, open: List<DueDose>): List<InjectionSite?> {
+        val used = records.toMutableList()
+        return open.map { d ->
+            if (!plan.infoOf(d.dose.medication).injected) return@map null
+            val site = InjectionSites.suggest(used, d.dose.medication)
+            // Counted as used just now, after every real value, so the next dose of it moves on.
+            used += MRecord(0L, d.dose.medication, d.dose.unit, "9999-12-31", "23:59:59", 0.0, null, "", site = site.key)
+            site
         }
     }
 
@@ -295,7 +316,8 @@ object MedReminders {
             ACTION_TAKEN -> {
                 val today = Dates.today()
                 val now = LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))
-                open.forEach { d -> MedSchedules.take(d, if (d.date == today) now else d.time + ":00") }
+                val sites = sitesFor(snap.medPlan, snap.medicationView.records, open)
+                open.forEachIndexed { i, d -> MedSchedules.take(d, if (d.date == today) now else d.time + ":00", site = sites[i]) }
             }
             ACTION_SKIP -> open.forEach { MedSchedules.skip(it) }
             ACTION_SNOOZE -> {
