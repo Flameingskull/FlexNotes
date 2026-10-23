@@ -1,6 +1,6 @@
 # Health and medications follow-ups: plan across builds (2026-10-22)
 
-> **Status (2026-10-23, 1.0.159): In progress.** All 16 suggestions from the Medications plan
+> **Status (2026-10-23, 1.0.160): In progress.** All 16 suggestions from the Medications plan
 > (`docs/plans/2026-10-22-medications.md`) were picked by the owner and filed as #207–#222, each imported into the
 > tracker; tracker plan item "Health and medications follow-ups: plan across builds (2026-10-22)".
 > Build 1 done in 1.0.158 (the medication extras #207, #209, #210: database v26 with `med_info`, `mrecord.site` and the
@@ -9,9 +9,12 @@
 > Build 2 done in 1.0.159 (#215, the emergency card: `EmergencyCard.kt`, `report/EmergencyCardPdf.kt`,
 > `ui/EmergencyCardSheet.kt`, details in `PortableSettings`, no database change), with #223 (symptoms and sites in the
 > doctor's report and CSV) and #224 (the reminder's Taken records the next site) from outside the plan.
-> Left: #208, #211–#214, #216–#222. #211, #212, #216, #217, #221 and #222 can start any time; the rest depend on
-> shipped work. Next: `/new-build` to triage these (all still `needs-triage`), then the next group (#214 or #213,
-> or Health data).
+> Build 3 done in 1.0.160 (`/safe-build`: #213, the appointment summary: body values and quick ranges in the doctor's
+> report; #214, Lock Medications: `ui/MedLock.kt`, `DeviceSettings.medLock`, private reminders; #208, medication
+> overlays on exercise, Analysis and body graphs). No database change.
+> Left: #211, #212, #216–#222. #211, #212, #216, #217, #221 and #222 can start any time; the rest depend on
+> shipped work. Next: `/new-build` to triage these (all still `needs-triage`), then #211 (lab results, a database
+> change) with #212 (vitals), which also feed the appointment summary.
 
 ## Context
 
