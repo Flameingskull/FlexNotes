@@ -618,6 +618,8 @@ internal fun valueCells(res: Resources, r: MRecord): List<SetCell> {
     val time = r.time.take(5)
     return listOfNotNull(
         SetCell(fmtNum(r.value), r.unit, "${fmtNum(r.value)} ${r.unit}"),
-        time.takeIf { it.isNotBlank() }?.let { SetCell(it, spoken = res.getString(R.string.body_at_time, it), unitSlot = false) }
+        time.takeIf { it.isNotBlank() }?.let { SetCell(it, spoken = res.getString(R.string.body_at_time, it), unitSlot = false) },
+        // An injected dose's site (#210).
+        com.fitlens.companion.data.InjectionSite.of(r.site)?.let { siteName(res, it) }?.let { SetCell(it, spoken = it, unitSlot = false) }
     )
 }

@@ -186,6 +186,12 @@ interface BodyDao {
     )
     fun addManualRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?)
 
+    @Query(
+        "INSERT INTO mrecord(name, unit, date, time, value, comment, source, site) " +
+            "VALUES(:name, :unit, :date, :time, :value, :comment, 'manual', :site)"
+    )
+    fun addSitedRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?, site: String)
+
     @Query("SELECT * FROM mrecord WHERE id = :id")
     fun record(id: Long): MeasurementRecordRow?
 
@@ -1026,7 +1032,7 @@ interface MedDao {
     )
     fun addTaken(
         name: String, unit: String, date: String, time: String, value: Double, comment: String?, doseId: Long, due: String,
-        site: String? = null
+        site: String?
     ): Long
 
     @Query("INSERT OR IGNORE INTO measurement(name, unit, sort_order, medication) VALUES(:name, :unit, 999, 1)")

@@ -28,6 +28,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
+import com.fitlens.companion.data.InjectionSite
+import com.fitlens.companion.data.InjectionSites
+import com.fitlens.companion.data.MedExtras
 import com.fitlens.companion.data.BodyFat
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MRecord
@@ -52,7 +55,7 @@ fun deleteBodyValue(res: Resources, r: MRecord) {
     AppScope.scope.launch {
         Store.deleteRecord(r.id)
         UiEvents.show(res.getString(R.string.bm_deleted), res.getString(R.string.bm_undo)) {
-            AppScope.scope.launch { Store.addManualRecord(r.name, r.unit, r.date, r.time, r.value, r.comment) }
+            AppScope.scope.launch { Store.addManualRecord(r.name, r.unit, r.date, r.time, r.value, r.comment, r.site) }
         }
     }
 }
@@ -83,6 +86,10 @@ fun MeasurementEntrySheet(
     }
     var pickDate by remember { mutableStateOf(false) }
     var calculating by remember { mutableStateOf(false) }
+    // An injected medication's site (#210): the value's own, or the suggested next one for a new value.
+    var site by remember(existing?.id) { mutableStateOf(InjectionSite.of(existing?.site)) }
+    val injected = snap.isInjected(name.trim())
+    val suggestedSite = remember(snap.bodyKey, name) { InjectionSites.suggest(snap.records, name.trim()) }
     val unit = existing?.unit ?: snap.measurementDefs.firstOrNull { it.name == name }?.unit
         ?: snap.recordsByName[name]?.lastOrNull()?.unit ?: ""
     // A new Body fat value starts from the figure the latest measurements on or before its date give (#194). Seeded
@@ -129,10 +136,19 @@ fun MeasurementEntrySheet(
         val time = runCatching { LocalTime.parse(timeText.trim()) }.getOrNull()?.format(HHMMSS) ?: LocalTime.now().format(HHMMSS)
         val c = comment.trim().ifBlank { null }
         val d = theDate
+        // A new injected value without a tapped site takes the suggested one; an edited one keeps its own.
+        val chosenSite = when {
+            !injected -> null
+            existing == null -> site ?: suggestedSite
+            else -> site
+        }
         AppScope.scope.launch {
             if (newMedication) Store.setMedication(n, unit, true)
-            if (existing == null) Store.addManualRecord(n, unit, d, time, v, c)
-            else Store.updateRecord(existing.id, d, time, v, c)
+            if (existing == null) Store.addManualRecord(n, unit, d, time, v, c, chosenSite?.key)
+            else {
+                Store.updateRecord(existing.id, d, time, v, c)
+                if (injected && chosenSite?.key != existing.site) MedExtras.setSite(existing.id, chosenSite)
+            }
         }
         onDismiss()
     }
@@ -186,6 +202,7 @@ fun MeasurementEntrySheet(
             value = comment, onValueChange = { comment = it },
             label = { Text(stringResource(R.string.mse_comment_optional)) }, modifier = Modifier.fillMaxWidth()
         )
+        if (injected) SitePicker(snap, name.trim(), if (existing == null) site ?: suggestedSite else site) { site = it }
     }
     if (calculating) {
         BodyFatCalculatorSheet(snap, theDate, onDismiss = { calculating = false }) { p, c ->

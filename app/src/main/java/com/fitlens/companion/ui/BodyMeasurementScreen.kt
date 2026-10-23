@@ -39,6 +39,9 @@ import com.fitlens.companion.data.BodyFat
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MRecord
+import com.fitlens.companion.data.InjectionSite
+import com.fitlens.companion.data.InjectionSites
+import com.fitlens.companion.data.MedExtras
 import com.fitlens.companion.data.Medications
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Store
@@ -92,6 +95,11 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
     // Body fat can be worked out from the tape measurements (#153).
     val isBodyFat = BodyFat.isBodyFat(name)
     var calculating by remember { mutableStateOf(false) }
+    // A medication's supply sheet (#209), and the site of a new injected dose (#210): null means the suggested one.
+    var editingSupply by remember { mutableStateOf(false) }
+    val injected = snap.isInjected(name)
+    val suggestedSite = remember(snap.bodyKey, name) { InjectionSites.suggest(records, name) }
+    var site by remember(name) { mutableStateOf<InjectionSite?>(null) }
 
     val dayValues = remember(records, date) { records.filter { it.date.take(10) == date } }
     val chosen = selected?.let { id -> records.firstOrNull { it.id == id } }
@@ -112,6 +120,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
             value = (if (chosen == null) prefill?.first else null)?.let { fmtNum(it, 1) } ?: source?.value?.let { fmtNum(it) } ?: ""
             timeText = chosen?.time?.take(5)?.takeIf { it.isNotBlank() } ?: LocalTime.now().format(HHMM)
             comment = if (chosen != null) chosen.comment.orEmpty() else prefill?.second.orEmpty()
+            site = null
         }
     }
 
@@ -126,9 +135,10 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
         val c = comment.trim().ifBlank { null }
         val d = date
         val editing = chosen
+        val siteKey = if (injected) (site ?: suggestedSite).key else null
         AppScope.scope.launch {
             if (editing == null) {
-                Store.addManualRecord(name, unit, d, time, v, c)
+                Store.addManualRecord(name, unit, d, time, v, c, siteKey)
             } else {
                 Store.updateRecord(editing.id, d, time, v, c)
                 UiEvents.show(res.getString(R.string.bm_updated))
@@ -161,6 +171,12 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                     MenuAction(stringResource(if (snap.showsMedications) R.string.md_move_to_body else R.string.md_move_to_meds)) {
                         moveMeasurement(res, def, toMedications = !snap.showsMedications)
                         nav.pop()
+                    }
+                } else null,
+                // Injected medications record each dose's site (#210).
+                if (def != null && snap.showsMedications) {
+                    MenuAction(stringResource(if (injected) R.string.inj_menu_off else R.string.inj_menu_on)) {
+                        setInjected(res, snap, name, !injected)
                     }
                 } else null
             )
@@ -195,6 +211,17 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                                     value = fmtNum(max(0.0, now + dir * VALUE_STEP), 2)
                                 }
                             )
+                            if (injected) {
+                                // A new value takes the chosen site; a selected one moves to a tapped site at once.
+                                val editingValue = chosen
+                                SitePicker(
+                                    snap, name,
+                                    if (editingValue != null) InjectionSite.of(editingValue.site) else site ?: suggestedSite
+                                ) { picked ->
+                                    if (editingValue == null) site = picked
+                                    if (editingValue != null) AppScope.scope.launch { MedExtras.setSite(editingValue.id, picked) }
+                                }
+                            }
                             if (isBodyFat && chosen == null) {
                                 BodyFatPrefillNote(estimate, date)
                                 GlassOutlinedButton(onClick = { calculating = true }, modifier = Modifier.fillMaxWidth().height(48.dp)) {
@@ -262,6 +289,10 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                             )
                         }
                     }
+                    // A medication's supply and injection sites (#209, #210).
+                    if (snap.showsMedications) {
+                        medicationExtras(snap, name, unit, onSupply = { editingSupply = true }) { r -> historyOpen = r.id }
+                    }
                 }
             }
         }
@@ -277,6 +308,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
             UiEvents.show(res.getString(R.string.bm_calculated))
         }
     }
+    if (editingSupply) SupplySheet(snap, name, unit) { editingSupply = false }
     if (editingGoal && def != null) MeasurementGoalSheet(def) { editingGoal = false }
     if (editingMetric && def != null) CustomMetricEditor(snap, def) { editingMetric = false }
 }

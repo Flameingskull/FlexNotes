@@ -27,6 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import com.fitlens.companion.data.MedDoseChange
+import com.fitlens.companion.data.InjectionSite
+import com.fitlens.companion.data.InjectionSites
+import com.fitlens.companion.data.MedExtras
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.MenuAction
@@ -91,6 +94,8 @@ internal fun LazyListScope.medicationTrackHeader(snap: Snapshot, nav: Nav, onDos
             DueDoseRow(snap, due[i], i + 1, onOpen = { onDose(due[i]) })
         }
     }
+    // Medications running low, run out or expiring (#209).
+    supplyAlertRows(snap, nav)
     item(key = "schedules") {
         SectionTitle(stringResource(R.string.md_schedules))
     }
@@ -135,7 +140,10 @@ private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> U
         comment = due.dose.comment,
         done = taken != null,
         onDoneChange = { on ->
-            if (on) {
+            if (on && snap.isInjected(due.dose.medication)) {
+                // An injected dose needs its site (#210): the sheet asks, with the next site chosen.
+                onOpen()
+            } else if (on) {
                 Haptics.confirm(view)
                 takeDose(res, due)
             } else {
@@ -152,11 +160,11 @@ private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> U
     )
 }
 
-/** Takes [due] now (or at its due time on another day), with Undo. */
-internal fun takeDose(res: Resources, due: DueDose) {
+/** Takes [due] now (or at its due time on another day), at [site] for an injected dose (#210), with Undo. */
+internal fun takeDose(res: Resources, due: DueDose, site: InjectionSite? = null) {
     val time = if (due.date == Dates.today()) LocalTime.now().format(HHMMSS) else due.time + ":00"
     AppScope.scope.launch {
-        MedSchedules.take(due, time)
+        MedSchedules.take(due, time, site = site)
         UiEvents.show(res.getString(R.string.md_taken_named, due.dose.medication), res.getString(R.string.bm_undo)) {
             AppScope.scope.launch { MedSchedules.untake(due) }
         }
@@ -227,6 +235,12 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
     val taken = MedSchedules.takenRecord(snap.medicationView.records, due)
     val skipped = taken == null && snap.medPlan.isSkipped(due.dose.id, due.due)
     var changing by remember { mutableStateOf(false) }
+    // An injected dose's site (#210): the next one to begin with, or where a taken dose went.
+    val injected = snap.isInjected(due.dose.medication)
+    val suggested = remember(snap.bodyKey, due.dose.medication) {
+        InjectionSites.suggest(snap.medicationView.records, due.dose.medication)
+    }
+    var site by remember(taken?.id) { mutableStateOf(if (taken != null) InjectionSite.of(taken.site) else suggested) }
     if (changing) {
         DoseChangeSheet(snap, due, onDismiss)
         return
@@ -237,7 +251,7 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
         dismissLabel = stringResource(R.string.cancel),
         confirmLabel = stringResource(if (taken != null) R.string.md_untake else R.string.md_take),
         onConfirm = {
-            if (taken != null) AppScope.scope.launch { MedSchedules.untake(due) } else takeDose(res, due)
+            if (taken != null) AppScope.scope.launch { MedSchedules.untake(due) } else takeDose(res, due, if (injected) site else null)
             onDismiss()
         },
         secondaryLabel = stringResource(if (skipped) R.string.md_unskip else R.string.md_skip),
@@ -264,6 +278,13 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
             if (!due.dose.comment.isNullOrBlank()) Text("“${due.dose.comment}”", style = MaterialTheme.typography.bodySmall)
             GlassOutlinedButton(onClick = { changing = true }, modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.touch)) {
                 Text(stringResource(R.string.md_change_amount))
+            }
+            if (injected) {
+                // Before taking it, the site to record; once taken, a tap moves it there at once.
+                SitePicker(snap, due.dose.medication, site) { picked ->
+                    site = picked
+                    if (taken != null) AppScope.scope.launch { MedExtras.setSite(taken.id, picked) }
+                }
             }
             extra()
         }

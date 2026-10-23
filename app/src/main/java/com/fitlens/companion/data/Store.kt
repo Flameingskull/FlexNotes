@@ -830,14 +830,19 @@ object Store {
         return changed
     }
 
-    suspend fun addManualRecord(name: String, unit: String, date: String, time: String, value: Double, comment: String?) =
+    suspend fun addManualRecord(
+        name: String, unit: String, date: String, time: String, value: Double, comment: String?, site: String? = null
+    ) =
         withContext(Dispatchers.IO) {
             val body = db.bodyDao
             // A value typed in the display unit is stored in the unit the measurement already uses (#117).
             val stored = body.definition(name)?.unit?.takeIf { MeasureUnits.sameKind(it, unit) } ?: unit
             db.transaction {
                 body.ensure(name, stored, 999)
-                body.addManualRecord(name, stored, date, time, MeasureUnits.convert(value, unit, stored), comment)
+                val v = MeasureUnits.convert(value, unit, stored)
+                // An injected medication's value keeps its site (#210).
+                if (site != null) body.addSitedRecord(name, stored, date, time, v, comment, site)
+                else body.addManualRecord(name, stored, date, time, v, comment)
             }
             refresh(Area.BODY)
         }

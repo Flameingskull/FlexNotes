@@ -48,7 +48,9 @@ data class SupplyState(
     val low: Boolean,
     val expired: Boolean,
     /** True when it expires within the warning days. */
-    val expiresSoon: Boolean
+    val expiresSoon: Boolean,
+    /** True when a running schedule takes it within the horizon (else [runsOut] comes from the recent average). */
+    val scheduled: Boolean = false
 ) {
     val needsAttention: Boolean get() = low || expired || expiresSoon
 }
@@ -119,7 +121,8 @@ object Supply {
             runsOut = runsOut,
             low = runsOut != null && runsOut <= warnBy,
             expired = expires != null && expires < today,
-            expiresSoon = expires != null && expires >= today && expires <= warnBy
+            expiresSoon = expires != null && expires >= today && expires <= warnBy,
+            scheduled = scheduled
         )
     }
 }

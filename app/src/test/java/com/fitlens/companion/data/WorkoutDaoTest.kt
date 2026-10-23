@@ -311,7 +311,7 @@ class ExportedSchemaTest {
             m.ensureMedication("Creatine", "mg")
             assertEquals(1, h.snapshotDao.measurements().count { it.name == "Creatine" && it.medication == 1 && it.unit == "g" })
             assertNull(m.takenRecord(dose, "2026-10-22 08:00"))
-            val taken = m.addTaken("Creatine", "g", "2026-10-22", "08:05:00", 5.0, null, dose, "2026-10-22 08:00")
+            val taken = m.addTaken("Creatine", "g", "2026-10-22", "08:05:00", 5.0, null, dose, "2026-10-22 08:00", null)
             assertEquals(taken, m.takenRecord(dose, "2026-10-22 08:00"))
             m.setStatus(dose, "2026-10-23 08:00", MedSchedules.SKIPPED)
             m.setStatus(dose, "2026-10-23 08:00", MedSchedules.SKIPPED)
