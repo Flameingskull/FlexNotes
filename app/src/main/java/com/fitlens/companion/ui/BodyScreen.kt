@@ -128,6 +128,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     // The doctor's report sheet (#205), and the symptom ratings sheet (#207).
     var reporting by rememberSaveable { mutableStateOf(false) }
     var ratingSymptoms by rememberSaveable { mutableStateOf(false) }
+    var emergencyCard by rememberSaveable { mutableStateOf(false) }
     val pager = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
 
@@ -154,6 +155,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                 editing -> emptyList()
                 medications -> listOf(
                     MenuAction(stringResource(R.string.mdr_menu), enabled = measurements.isNotEmpty()) { reporting = true },
+                    MenuAction(stringResource(R.string.ec_title)) { emergencyCard = true },
                     MenuAction(stringResource(R.string.settings_page_meds)) { nav.push(Screen.SettingsPage(SettingsSection.Medications)) }
                 )
                 else -> listOf(MenuAction(stringResource(R.string.tdee_title)) { nav.push(Screen.Tdee) })
@@ -226,6 +228,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     androidx.activity.compose.BackHandler(enabled = editing) { editing = false }
     if (adding) MeasurementEntrySheet(snap, Dates.today()) { adding = false }
     if (reporting) MedicationReportSheet(snap, onDismiss = { reporting = false })
+    if (emergencyCard) EmergencyCardSheet(snap, onDismiss = { emergencyCard = false })
     if (ratingSymptoms) SymptomSheet(snap, Dates.today()) { ratingSymptoms = false }
     openDose?.let { key ->
         com.fitlens.companion.data.MedSchedules.dueOn(snap.medPlan, Dates.today()).firstOrNull { "${it.dose.id}|${it.due}" == key }

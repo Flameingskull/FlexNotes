@@ -1817,9 +1817,34 @@
     <!-- Symptoms and sites in the report (#223) -->
     <string name="mdr_col_site">Site</string>
     <string name="mdr_symptoms">Symptoms</string>
-    <string name="mdr_symptoms_note">Each symptom's ratings in this period, from 0 (none) to %1$d (worst).</string>
+    <string name="mdr_symptoms_note">Each symptom\'s ratings in this period, from 0 (none) to %1$d (worst).</string>
     <string name="mdr_symptom_one">1 rating: %1$d on %2$s</string>
     <string name="mdr_symptom_summary">%1$d ratings · average %2$s · lowest %3$d · highest %4$d · latest %5$d on %6$s</string>
+    <!-- Emergency card (#215) -->
+    <string name="ec_title">Emergency card</string>
+    <string name="ec_sheet_note">A card for anyone helping in an emergency: current medications from your schedules and recent doses, with the details below. It\'s made on the phone and only leaves it when you save or share it.</string>
+    <string name="ec_current">Current medications</string>
+    <string name="ec_no_medications">No current medications.</string>
+    <string name="ec_as_needed">As needed · last %1$s on %2$s</string>
+    <string name="ec_details">On the card</string>
+    <string name="ec_name_label">Name on the card</string>
+    <string name="ec_allergies">Allergies</string>
+    <string name="ec_allergies_hint">For example: penicillin (rash), peanuts</string>
+    <string name="ec_conditions">Conditions</string>
+    <string name="ec_conditions_hint">For example: type 1 diabetes, asthma</string>
+    <string name="ec_contact">Emergency contact</string>
+    <string name="ec_contact_hint">Name, relationship and phone number</string>
+    <string name="ec_none_recorded">None recorded</string>
+    <string name="ec_footer">Made with FlexNotes on %1$s from what was entered on the phone. Check with the person or their doctor before relying on it.</string>
+    <string name="ec_dark">Dark card</string>
+    <string name="ec_image">Image</string>
+    <string name="ec_save_pdf">Save PDF</string>
+    <string name="ec_share_pdf">Share PDF</string>
+    <string name="ec_save_image">Save image</string>
+    <string name="ec_share_image">Share image</string>
+    <string name="ec_busy">Making the emergency card…</string>
+    <string name="ec_saved">Emergency card saved</string>
+    <string name="ec_failed">Couldn\'t make the emergency card</string>
     <!-- Medication reminders (#203) -->
     <string name="settings_page_meds">Medications</string>
     <string name="settings_meds_kw">medications medicine pills tablets doses reminders alarm notification lock screen privacy supplements</string>

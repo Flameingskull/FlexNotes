@@ -153,6 +153,11 @@ data class PortableSettings(
     val profileSex: String? = null,
     /** The profile (#172): date of birth (ISO), so age is worked out for each date, or null. */
     val profileBirthDate: String? = null,
+    /** The emergency card (#215): the name printed on it, allergies, conditions and an emergency contact, as typed. */
+    val emergencyName: String? = null,
+    val emergencyAllergies: String? = null,
+    val emergencyConditions: String? = null,
+    val emergencyContact: String? = null,
     /** Height in cm, the profile's own value (not the Height measurement), or null. */
     val profileHeightCm: Double? = null,
     /** Daily activity outside training, `Energy.Lifestyle.key`, or null. */
@@ -413,6 +418,10 @@ object Settings {
             P_GRAPH_COMPARE to s.graphCompare?.takeIf { it.isNotBlank() },
             P_PROFILE_SEX to s.profileSex?.takeIf { it.isNotBlank() },
             P_PROFILE_BIRTH to s.profileBirthDate?.takeIf { it.isNotBlank() },
+            P_EMERGENCY_NAME to s.emergencyName?.takeIf { it.isNotBlank() },
+            P_EMERGENCY_ALLERGIES to s.emergencyAllergies?.takeIf { it.isNotBlank() },
+            P_EMERGENCY_CONDITIONS to s.emergencyConditions?.takeIf { it.isNotBlank() },
+            P_EMERGENCY_CONTACT to s.emergencyContact?.takeIf { it.isNotBlank() },
             P_PROFILE_HEIGHT to s.profileHeightCm?.toString(),
             P_PROFILE_LIFESTYLE to s.profileLifestyle?.takeIf { it.isNotBlank() },
             P_ACTIVITY_STEPS to if (s.activityFromSteps) "1" else null,
@@ -520,6 +529,10 @@ object Settings {
     private const val P_PROFILE_SEX = "profile_sex"
     // The profile and the TDEE calculator (#172, #173).
     private const val P_PROFILE_BIRTH = "profile_birth_date"
+    private const val P_EMERGENCY_NAME = "emergency_name"
+    private const val P_EMERGENCY_ALLERGIES = "emergency_allergies"
+    private const val P_EMERGENCY_CONDITIONS = "emergency_conditions"
+    private const val P_EMERGENCY_CONTACT = "emergency_contact"
     private const val P_PROFILE_HEIGHT = "profile_height_cm"
     private const val P_PROFILE_LIFESTYLE = "profile_lifestyle"
     private const val P_ACTIVITY_STEPS = "activity_from_steps"
@@ -658,6 +671,10 @@ object Settings {
         profileSex = get(P_PROFILE_SEX)?.takeIf { it.isNotBlank() },
         // Each profile value is checked as it's read, so a bad or newer backup can't break the formulas (#172).
         profileBirthDate = get(P_PROFILE_BIRTH)?.takeIf { Dates.parse(it) != null },
+        emergencyName = get(P_EMERGENCY_NAME)?.takeIf { it.isNotBlank() },
+        emergencyAllergies = get(P_EMERGENCY_ALLERGIES)?.takeIf { it.isNotBlank() },
+        emergencyConditions = get(P_EMERGENCY_CONDITIONS)?.takeIf { it.isNotBlank() },
+        emergencyContact = get(P_EMERGENCY_CONTACT)?.takeIf { it.isNotBlank() },
         profileHeightCm = get(P_PROFILE_HEIGHT)?.toDoubleOrNull()?.takeIf { it in 50.0..260.0 },
         profileLifestyle = Energy.Lifestyle.of(get(P_PROFILE_LIFESTYLE))?.key,
         activityFromSteps = bool(get(P_ACTIVITY_STEPS)),
@@ -714,7 +731,8 @@ private object MetaToDeviceMigration : DataMigration<Preferences> {
 
 /**
  * The user's preferences at their defaults (#41). What they made rather than set stays: pinned graphs and their
- * comparisons, the routine last open, the profile (#172) and the calorie target set from it (#173).
+ * comparisons, the routine last open, the profile (#172), the calorie target set from it (#173) and the emergency
+ * card's details (#215).
  */
 internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSettings(
     pinnedGraphs = pinnedGraphs,
@@ -722,6 +740,10 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     lastRoutineId = lastRoutineId,
     profileSex = profileSex,
     profileBirthDate = profileBirthDate,
+    emergencyName = emergencyName,
+    emergencyAllergies = emergencyAllergies,
+    emergencyConditions = emergencyConditions,
+    emergencyContact = emergencyContact,
     profileHeightCm = profileHeightCm,
     profileLifestyle = profileLifestyle,
     activityFromSteps = activityFromSteps,
