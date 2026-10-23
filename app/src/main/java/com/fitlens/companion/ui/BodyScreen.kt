@@ -5,6 +5,7 @@ import com.fitlens.companion.ui.design.MenuAction
 import com.fitlens.companion.ui.design.TopBarAction
 import com.fitlens.companion.ui.design.FitTabRow
 import com.fitlens.companion.ui.design.FitTopBar
+import com.fitlens.companion.data.Symptoms
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.ui.design.rememberInPlaceOrder
 import com.fitlens.companion.ui.design.ReorderToggle
@@ -124,8 +125,9 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     var open by rememberSaveable { mutableStateOf<Long?>(null) }
     // The dose due today whose sheet is open (#202), by dose id and due time.
     var openDose by rememberSaveable { mutableStateOf<String?>(null) }
-    // The doctor's report sheet (#205).
+    // The doctor's report sheet (#205), and the symptom ratings sheet (#207).
     var reporting by rememberSaveable { mutableStateOf(false) }
+    var ratingSymptoms by rememberSaveable { mutableStateOf(false) }
     val pager = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
 
@@ -186,7 +188,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                 when (page) {
                     0 -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
                         // Medications: today's doses and the schedules come first (#201, #202).
-                        if (medications) medicationTrackHeader(snap, nav) { d -> openDose = "${d.dose.id}|${d.due}" }
+                        if (medications) medicationTrackHeader(snap, nav, onSymptoms = { ratingSymptoms = true }) { d -> openDose = "${d.dose.id}|${d.due}" }
                         val order = dragOrder.of(names)
                         val byName = measurements.associateBy { it.name }
                         fun save() = dragOrder.end(names) { final ->
@@ -224,6 +226,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     androidx.activity.compose.BackHandler(enabled = editing) { editing = false }
     if (adding) MeasurementEntrySheet(snap, Dates.today()) { adding = false }
     if (reporting) MedicationReportSheet(snap, onDismiss = { reporting = false })
+    if (ratingSymptoms) SymptomSheet(snap, Dates.today()) { ratingSymptoms = false }
     openDose?.let { key ->
         com.fitlens.companion.data.MedSchedules.dueOn(snap.medPlan, Dates.today()).firstOrNull { "${it.dose.id}|${it.due}" == key }
     }?.let { d -> DueDoseSheet(snap, d, onDismiss = { openDose = null }) }
@@ -408,6 +411,20 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
     var fullScreen by rememberSaveable { mutableStateOf(false) }
     val all = remember(snap.bodyKey, selectedName) { snap.dailySeries(selectedName) }
     val shown = remember(all, rangeIdx) { inRange(all, RANGES[rangeIdx].second) { it.date } }
+    // A medication's graph can overlay one symptom's ratings on a 0–10 axis at the right (#207); 0 is none.
+    val symptoms = if (snap.showsMedications) snap.medPlan.symptoms else emptyList()
+    var symptomIdx by rememberSaveable(selectedName) { mutableIntStateOf(0) }
+    val overlaid = symptoms.getOrNull(symptomIdx - 1)
+    val symptomOverlay = remember(snap.bodyKey, overlaid, shown) {
+        val from = shown.firstOrNull()?.date
+        val to = shown.lastOrNull()?.date
+        if (overlaid == null || from == null || to == null) null
+        else LineSeries(
+            overlaid.name,
+            Symptoms.series(snap.medPlan, overlaid.id).filter { it.date in from..to }
+                .map { ChartPoint(Dates.epochDay(it.date), it.rating.toDouble(), it.date) }
+        )
+    }
     // Line, bar, area or step, remembered for each measurement (#137).
     val (kind, setKind) = rememberChartKind("body:$selectedName")
     if (all.isEmpty()) {
@@ -424,6 +441,14 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                 kind = kind, onKind = setKind,
                 trailing = { ExpandGraphButton { fullScreen = true } }
             )
+        }
+        if (symptoms.isNotEmpty()) {
+            item {
+                val options = listOf(stringResource(R.string.sym_overlay_none)) + symptoms.map { it.name }
+                DropdownPill(stringResource(R.string.sym_overlay), options, symptomIdx.coerceIn(0, options.lastIndex), Modifier.padding(horizontal = 4.dp)) {
+                    symptomIdx = it
+                }
+            }
         }
         item {
             val points = rememberChartData(shown) {
@@ -447,7 +472,9 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                 unit = unit,
                 showTrend = showTrend,
                 yFromZero = fromZero,
-                onExpand = { ChartHints.expanded(); fullScreen = true }
+                onExpand = { ChartHints.expanded(); fullScreen = true },
+                overlay = symptomOverlay,
+                overlayUnit = "/10"
             )
             ChartHint()
             if (fullScreen) {
@@ -486,7 +513,9 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                         showTrend = showTrend,
                         yFromZero = fromZero,
                         viewport = vp,
-                        onExpand = resetZoom
+                        onExpand = resetZoom,
+                        overlay = symptomOverlay,
+                        overlayUnit = "/10"
                     )
                 }
             }
@@ -581,6 +610,12 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         SectionLabel(historyDay(d), Modifier.weight(1f))
                         if (snap.photosByDate.containsKey(d)) Dot(LocalChartColors.current.accent)
+                    }
+                    // A medication's day shows that day's symptom ratings beside its doses (#207).
+                    if (snap.showsMedications) {
+                        symptomLine(res, snap, d)?.let {
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
                     l.forEachIndexed { i, r ->
                         val prev = records.getOrNull(records.indexOf(r) - 1)

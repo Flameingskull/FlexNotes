@@ -6,6 +6,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -16,8 +18,14 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -48,11 +56,15 @@ import com.fitlens.companion.data.MedInfo
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Supply
 import com.fitlens.companion.data.SupplyState
+import com.fitlens.companion.data.Symptoms
 import com.fitlens.companion.data.fmtNum
+import com.fitlens.companion.ui.design.DayNavigator
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.SectionLabel
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.ListRowWithMenu
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 import kotlin.math.abs
 
 /**
@@ -418,5 +430,154 @@ internal fun setInjected(res: Resources, snap: Snapshot, medication: String, on:
         UiEvents.show(res.getString(if (on) R.string.inj_on else R.string.inj_off, medication), res.getString(R.string.bm_undo)) {
             AppScope.scope.launch { MedExtras.setInfo(old) }
         }
+    }
+}
+
+// ---------- Symptoms (#207) ----------
+
+/** Symptoms the sheet offers to add with one tap while they aren't on the list. */
+private val SUGGESTED_SYMPTOMS = listOf(
+    R.string.sym_nausea, R.string.sym_headache, R.string.sym_fatigue, R.string.sym_appetite, R.string.sym_site_reaction,
+    R.string.sym_mood, R.string.sym_sleep
+)
+
+/** "Nausea 3/10 · Headache 1/10", the ratings of [date], or null when nothing was rated. */
+internal fun symptomLine(res: Resources, snap: Snapshot, date: String): String? =
+    Symptoms.ratingsOn(snap.medPlan, date)
+        .takeIf { it.isNotEmpty() }
+        ?.joinToString(" · ") { (s, r) -> res.getString(R.string.sym_rating, s.name, r.rating) }
+
+/** The Medications Track tab's SYMPTOMS row (#207): today's ratings, opening the sheet to rate any day. */
+internal fun LazyListScope.symptomRows(snap: Snapshot, onRate: () -> Unit) {
+    item(key = "symptoms-label") { SectionTitle(stringResource(R.string.sym_title)) }
+    item(key = "symptoms") {
+        val res = LocalContext.current.resources
+        val empty = snap.medPlan.symptoms.isEmpty()
+        ListRowWithMenu(
+            title = if (empty) res.getString(R.string.sym_start)
+                else symptomLine(res, snap, Dates.today()) ?: res.getString(R.string.sym_none_today),
+            subtitle = res.getString(if (empty) R.string.sym_start_body else R.string.sym_rate_hint),
+            onClick = onRate,
+            handle = false
+        )
+    }
+}
+
+/**
+ * Rates symptoms 0–10 on any day (#207): the day's navigator, then each symptom with its 0–10 choice (tap the chosen
+ * number again to clear it), saved at once. The list is the user's own: add a name (or a suggested one), and rename
+ * or delete one from its menu, with Undo.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> Unit) {
+    val res = LocalContext.current.resources
+    val plan = snap.medPlan
+    var date by remember { mutableStateOf(initialDate) }
+    var newName by remember { mutableStateOf("") }
+    var renaming by remember { mutableStateOf<Long?>(null) }
+    var renameText by remember { mutableStateOf("") }
+    fun shift(days: Long) {
+        date = (Dates.parse(date) ?: LocalDate.now()).plusDays(days).format(Dates.ISO)
+    }
+    fun add(name: String) {
+        val clean = name.trim()
+        if (clean.isEmpty()) return
+        AppScope.scope.launch { MedExtras.addSymptom(clean) }
+        newName = ""
+    }
+    FitSheet(title = stringResource(R.string.sym_sheet_title), onDismiss = onDismiss, dismissLabel = stringResource(R.string.sym_done)) {
+        DayNavigator(
+            date = date,
+            onPrevious = { shift(-1) },
+            onNext = { shift(1) },
+            onPickDate = { date = it },
+            onToday = { date = Dates.today() }
+        )
+        if (plan.symptoms.isEmpty()) {
+            Text(stringResource(R.string.sym_empty), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        plan.symptoms.forEach { s ->
+            val rating = plan.ratings.firstOrNull { it.symptomId == s.id && it.date == date }
+            var menu by remember(s.id) { mutableStateOf(false) }
+            Column(Modifier.fillMaxWidth().padding(vertical = Spacing.xs)) {
+                if (renaming == s.id) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedTextField(
+                            value = renameText, onValueChange = { renameText = it },
+                            label = { Text(stringResource(R.string.sym_name)) }, singleLine = true, modifier = Modifier.weight(1f)
+                        )
+                        TextButton(onClick = {
+                            val text = renameText
+                            AppScope.scope.launch { MedExtras.renameSymptom(s.id, text) }
+                            renaming = null
+                        }) { Text(stringResource(R.string.type_save)) }
+                    }
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(s.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Text(
+                            rating?.let { res.getString(R.string.sym_of_ten, it.rating) } ?: res.getString(R.string.sym_not_rated),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (rating != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Box {
+                            IconButton(onClick = { menu = true }) {
+                                Icon(Icons.Filled.MoreVert, contentDescription = res.getString(R.string.sym_menu, s.name))
+                            }
+                            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                                DropdownMenuItem(text = { Text(stringResource(R.string.sym_rename)) }, onClick = {
+                                    menu = false
+                                    renameText = s.name
+                                    renaming = s.id
+                                })
+                                DropdownMenuItem(text = { Text(stringResource(R.string.sym_delete)) }, onClick = {
+                                    menu = false
+                                    val kept = plan.ratings.filter { it.symptomId == s.id }
+                                    AppScope.scope.launch {
+                                        MedExtras.deleteSymptom(s.id)
+                                        UiEvents.show(res.getString(R.string.sym_deleted, s.name), res.getString(R.string.bm_undo)) {
+                                            AppScope.scope.launch { MedExtras.restoreSymptom(s, kept) }
+                                        }
+                                    }
+                                })
+                            }
+                        }
+                    }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.selectableGroup()) {
+                    (0..Symptoms.MAX).forEach { n ->
+                        val chosen = rating?.rating == n
+                        FilterChip(
+                            selected = chosen,
+                            onClick = {
+                                val d = date
+                                AppScope.scope.launch {
+                                    if (chosen) MedExtras.clearRating(s.id, d) else MedExtras.rate(s.id, d, n, rating?.comment)
+                                }
+                            },
+                            label = { Text("$n") },
+                            modifier = Modifier.semantics { contentDescription = res.getString(R.string.sym_rate_spoken, s.name, n) }
+                        )
+                    }
+                }
+            }
+        }
+        SectionLabel(stringResource(R.string.sym_add_title))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = newName, onValueChange = { newName = it },
+                label = { Text(stringResource(R.string.sym_name)) }, singleLine = true, modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = { add(newName) }, enabled = newName.isNotBlank()) { Text(stringResource(R.string.sym_add)) }
+        }
+        val have = plan.symptoms.map { it.name.lowercase() }.toSet()
+        val offered = SUGGESTED_SYMPTOMS.map { res.getString(it) }.filter { it.lowercase() !in have }
+        if (offered.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                offered.forEach { n -> AssistChip(onClick = { add(n) }, label = { Text("+ $n") }) }
+            }
+        }
+        Text(stringResource(R.string.sym_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }

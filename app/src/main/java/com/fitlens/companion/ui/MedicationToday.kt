@@ -61,9 +61,10 @@ private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 /**
  * The top of the Medications Track tab (#202): **TODAY**, every dose due today across the running schedules with a
  * done box like a set's (#19), each schedule's phase ("On · day 12 of 56", "Off · on again 3 Dec"), missed doses
- * flagged; then **SCHEDULES** (#201), each with its state, and + New schedule. [onDose] opens a dose's sheet.
+ * flagged; supply warnings (#209) and SYMPTOMS (#207, [onSymptoms] opens the rating sheet); then **SCHEDULES** (#201),
+ * each with its state, and + New schedule. [onDose] opens a dose's sheet.
  */
-internal fun LazyListScope.medicationTrackHeader(snap: Snapshot, nav: Nav, onDose: (DueDose) -> Unit) {
+internal fun LazyListScope.medicationTrackHeader(snap: Snapshot, nav: Nav, onSymptoms: () -> Unit, onDose: (DueDose) -> Unit) {
     val plan = snap.medPlan
     val today = Dates.today()
     val due = MedSchedules.dueOn(plan, today)
@@ -94,8 +95,9 @@ internal fun LazyListScope.medicationTrackHeader(snap: Snapshot, nav: Nav, onDos
             DueDoseRow(snap, due[i], i + 1, onOpen = { onDose(due[i]) })
         }
     }
-    // Medications running low, run out or expiring (#209).
+    // Medications running low, run out or expiring (#209), then today's symptom ratings (#207).
     supplyAlertRows(snap, nav)
+    symptomRows(snap, onSymptoms)
     item(key = "schedules") {
         SectionTitle(stringResource(R.string.md_schedules))
     }

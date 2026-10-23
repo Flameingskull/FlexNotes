@@ -3178,4 +3178,34 @@
     <string name="inj_on">%1$s doses now record their injection site</string>
     <string name="inj_off">%1$s doses no longer record a site</string>
     <string name="inj_taken_at">Taken at %1$s</string>
+    <!-- Symptoms (#207) -->
+    <string name="sym_title">Symptoms</string>
+    <string name="sym_sheet_title">Rate symptoms</string>
+    <string name="sym_start">Rate symptoms</string>
+    <string name="sym_start_body">Side effects and how you feel, 0 to 10, beside your doses</string>
+    <string name="sym_none_today">Nothing rated today</string>
+    <string name="sym_rate_hint">Tap to rate today or any other day</string>
+    <string name="sym_rating">%1$s %2$d/10</string>
+    <string name="sym_of_ten">%1$d/10</string>
+    <string name="sym_not_rated">Not rated</string>
+    <string name="sym_rate_spoken">Rate %1$s %2$d out of 10</string>
+    <string name="sym_menu">%1$s options</string>
+    <string name="sym_rename">Rename</string>
+    <string name="sym_delete">Delete symptom</string>
+    <string name="sym_deleted">%1$s and its ratings deleted</string>
+    <string name="sym_done">Done</string>
+    <string name="sym_empty">Add the symptoms you want to follow, then rate each one from 0 (none) to 10 (worst).</string>
+    <string name="sym_add_title">Add a symptom</string>
+    <string name="sym_name">Symptom</string>
+    <string name="sym_add">Add</string>
+    <string name="sym_note">Ratings save as you tap. Tap the chosen number again to clear it. Each medication shows them in its History and can overlay one on its graph.</string>
+    <string name="sym_nausea">Nausea</string>
+    <string name="sym_headache">Headache</string>
+    <string name="sym_fatigue">Fatigue</string>
+    <string name="sym_appetite">Appetite</string>
+    <string name="sym_site_reaction">Injection site reaction</string>
+    <string name="sym_mood">Low mood</string>
+    <string name="sym_sleep">Poor sleep</string>
+    <string name="sym_overlay">Symptom</string>
+    <string name="sym_overlay_none">None</string>
 </resources>
