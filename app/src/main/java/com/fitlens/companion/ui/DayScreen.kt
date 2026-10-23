@@ -81,6 +81,7 @@ import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.ExerciseTypes
 import com.fitlens.companion.data.Intake
+import com.fitlens.companion.data.Readiness
 import com.fitlens.companion.data.MRecord
 import com.fitlens.companion.data.Photo
 import com.fitlens.companion.data.Settings
@@ -137,6 +138,7 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
     var reordering by state.saved("reordering", false)
     // The day's calories breakdown (#174).
     var caloriesSheet by state.saved("caloriesSheet", false)
+    var readinessSheet by state.saved("readinessSheet", false)
     var editComment by state.saved("editComment", false)
     var copyPrevious by state.saved("copyPrevious", false)
     var copyToDay by state.saved("copyToDay", false)
@@ -256,6 +258,8 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                     onEditTime = { editTime = true },
                     showCalories = prefs.homeShowCalories,
                     onCalories = { caloriesSheet = true },
+                    showReadiness = prefs.homeShowReadiness,
+                    onReadiness = { readinessSheet = true },
                     reordering = reordering && shown == date
                 )
             }
@@ -270,6 +274,7 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
     }
     if (editComment) WorkoutCommentSheet(snap, date) { editComment = false }
     if (caloriesSheet) CaloriesSheet(snap, nav, date) { caloriesSheet = false }
+    if (readinessSheet) ReadinessSheet(snap, date) { readinessSheet = false }
     if (copyChooser) {
         CopyWorkoutSheet(hasSets = sets.isNotEmpty(), hasWorkout = hasWorkout, onDismiss = { copyChooser = false }) { choice ->
             copyChooser = false
@@ -310,13 +315,16 @@ private fun DayContent(
     onEditTime: () -> Unit,
     showCalories: Boolean,
     onCalories: () -> Unit,
+    showReadiness: Boolean,
+    onReadiness: () -> Unit,
     reordering: Boolean
 ) {
     val res = LocalContext.current.resources
     val photos = snap.photosByDate[date] ?: emptyList()
     val dayRecords = snap.recordsByDate[date] ?: emptyList()
     // What was eaten is shown and edited in the calories card (#176), unless that card is hidden.
-    val records = if (showCalories) dayRecords.filterNot { Intake.isIntake(it.name) } else dayRecords
+    // So is the readiness check-in, in the readiness card (#216).
+    val records = dayRecords.filterNot { (showCalories && Intake.isIntake(it.name)) || (showReadiness && Readiness.isCheckIn(it.name)) }
     val sets = snap.setsByDate[date] ?: emptyList()
     val comments = snap.workoutComments[date].orEmpty()
     // Exercises in the order they were first logged that day.
@@ -347,6 +355,12 @@ private fun DayContent(
         if (showCalories) {
             item(key = "calories") {
                 CaloriesCard(snap, date, onOpen = onCalories)
+            }
+        }
+        // The day's readiness (#216), after the calories; Home Screen Settings can hide it.
+        if (showReadiness) {
+            item(key = "readiness") {
+                ReadinessCard(snap, date, onOpen = onReadiness)
             }
         }
         // The day's progress photos (a FlexNotes extra).

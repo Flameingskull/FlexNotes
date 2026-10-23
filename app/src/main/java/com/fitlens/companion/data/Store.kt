@@ -869,6 +869,28 @@ object Store {
             refresh(Area.BODY)
         }
 
+    /**
+     * Replaces [date]'s readiness check-in (#216) in one transaction, as [setIntake] does: the day's check-in values
+     * ([replace], their ids) go, and each rating in [values] is logged as one value.
+     */
+    suspend fun setCheckIn(date: String, time: String, replace: List<Long>, values: Map<Readiness.Item, Double>) =
+        withContext(Dispatchers.IO) {
+            val body = db.bodyDao
+            db.transaction {
+                replace.forEach { id ->
+                    body.record(id)?.let { skipImported(db, it) }
+                    body.deleteRecord(id)
+                }
+                values.filterValues { it >= Readiness.MIN }.forEach { (item, v) ->
+                    // Made as FlexNotes's own measurement the first time, after the others.
+                    val name = body.definitionNames().firstOrNull { item.matches(it) }
+                        ?: item.label.also { body.addOwn(it, Readiness.UNIT, body.lastOrder() + 1) }
+                    body.addManualRecord(name, Readiness.UNIT, date, time, v, null)
+                }
+            }
+            refresh(Area.BODY)
+        }
+
     /** Sets a measurement's goal (#27), and marks it so a FitNotes import keeps the user's choice. */
     suspend fun setMeasurementGoal(name: String, unit: String, type: Int, value: Double) = withContext(Dispatchers.IO) {
         val body = db.bodyDao

@@ -141,6 +141,7 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.reset_row, SettingsSection.DataTools, R.string.search_reset_kw),
     SettingEntry(R.string.home_show_categories, SettingsSection.Home, R.string.search_home_categories_kw) { onOff(prefs.homeShowCategories) },
     SettingEntry(R.string.home_show_calories, SettingsSection.Home, R.string.search_home_calories_kw) { onOff(prefs.homeShowCalories) },
+    SettingEntry(R.string.home_show_readiness, SettingsSection.Home, R.string.search_home_readiness_kw) { onOff(prefs.homeShowReadiness) },
     SettingEntry(R.string.home_sets_shown, SettingsSection.Home, R.string.search_home_sets_kw) {
         if (prefs.homeSetsShown == 0) res.getString(R.string.home_sets_all) else "${prefs.homeSetsShown}"
     },
@@ -693,6 +694,10 @@ private fun HomePage() {
         stringResource(R.string.home_show_calories), prefs.homeShowCalories,
         summary = stringResource(R.string.home_show_calories_summary)
     ) { on -> Settings.updatePortable { it.copy(homeShowCalories = on) } }
+    SettingsSwitchRow(
+        stringResource(R.string.home_show_readiness), prefs.homeShowReadiness,
+        summary = stringResource(R.string.home_show_readiness_summary)
+    ) { on -> Settings.updatePortable { it.copy(homeShowReadiness = on) } }
     SettingsNote(stringResource(R.string.settings_travel_note))
 }
 

@@ -89,6 +89,7 @@ private const val TAB_BREAKDOWN = 2
 private const val TAB_EXERCISES = 3
 private const val TAB_GOALS = 4
 private const val TAB_RECORDS = 5
+private const val TAB_READINESS = 6
 
 /**
  * The Analysis hub (#90, the #58 hub), with FitNotes's tabs: Workouts (#51), Breakdown (#52), Exercises (#22's graphs
@@ -103,13 +104,16 @@ fun AnalysisHub(snap: Snapshot, nav: Nav, tab: Int, onTab: (Int) -> Unit, adding
             titles = listOf(
                 stringResource(R.string.an_tab_overview), stringResource(R.string.an_tab_workouts),
                 stringResource(R.string.an_tab_breakdown), stringResource(R.string.an_tab_exercises),
-                stringResource(R.string.ex_tab_goals), stringResource(R.string.ex_tab_records)
+                stringResource(R.string.ex_tab_goals), stringResource(R.string.ex_tab_records),
+                stringResource(R.string.an_tab_readiness)
             ),
             selected = tab,
             onSelect = onTab
         )
         when (tab) {
             TAB_RECORDS -> RecordsBoard(snap, nav)
+            // Readiness and training load (#216, #217), after FitNotes's tabs.
+            TAB_READINESS -> ReadinessTab(snap)
             TAB_GOALS -> AnalysisGoalsTab(snap, nav, addingGoal, onAddingGoalDone)
             TAB_EXERCISES -> AnalysisExercisesTab(snap, nav)
             // A pinned card opens its graph, with its settings, in Exercises.
