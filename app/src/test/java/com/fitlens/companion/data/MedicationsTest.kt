@@ -112,6 +112,40 @@ class MedicationsTest {
     }
 
     @Test
+    fun theDoseLogAndAdherenceCountOnlyScheduledDoses() {
+        val dose = MedDose(7, "Metformin", 500.0, "mg", "08:00")
+        val plan = MedPlan(
+            listOf(MedSchedule(1, "Daily", phases = listOf(MedPhase(1, true, 1, PhaseUnit.YEARS, listOf(dose))))),
+            listOf(MedActivation(1, 1, "2026-10-20")),
+            skipped = mapOf(7L to setOf("2026-10-21 08:00"))
+        )
+        val taken = rec(9, "Metformin", "mg", 500.0, "2026-10-20").copy(doseId = 7, due = "2026-10-20 08:00", comment = "With food")
+        val byHand = rec(10, "Creatine", "g", 5.0, "2026-10-21")
+        val log = MedSchedules.doseLog(plan, listOf(taken, byHand), "2026-10-20", "2026-10-30", today = "2026-10-23")
+        // The 20th taken, the 21st skipped, the 22nd missed, the 23rd still due; the 24th on hasn't come yet.
+        assertEquals(
+            listOf(MedSchedules.Outcome.TAKEN, null, MedSchedules.Outcome.SKIPPED, MedSchedules.Outcome.MISSED, MedSchedules.Outcome.DUE),
+            log.map { it.outcome }
+        )
+        val a = MedSchedules.adherence(log).single()
+        assertEquals(MedSchedules.Adherence("Metformin", 4, 1, 1, 1), a)
+        assertEquals(33, a.percent)
+        assertEquals(listOf("Creatine"), MedSchedules.doseLog(plan, listOf(taken, byHand), "2026-10-20", "2026-10-30", "2026-10-23", setOf("Creatine")).map { it.medication })
+    }
+
+    @Test
+    fun theMedicationsCsvHoldsOnlyMedications() {
+        val snap = snapshot(BodyPart(defs, records, "kg"))
+        val csv = CsvExport.medications(snap, "2026-10-01", "2026-10-31", today = "2026-10-31")
+        val lines = csv.trim().lines()
+        assertEquals(CsvExport.MEDICATION_COLUMNS.joinToString(","), lines.first())
+        assertEquals(4, lines.size)
+        assertFalse(csv.contains("Bodyweight"))
+        assertFalse(csv.contains("Waist"))
+        assertTrue(lines.drop(1).all { it.contains(",Logged,") })
+    }
+
+    @Test
     fun theMeasurementsOtherFeaturesReadCantBeMedications() {
         listOf(
             "Bodyweight", "Body Weight", "body fat", "Body Fat %", "Height", "Steps", "Active calories",

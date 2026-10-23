@@ -292,6 +292,68 @@ object MedSchedules {
     fun takenRecord(records: List<MRecord>, due: DueDose): MRecord? =
         records.firstOrNull { it.doseId == due.dose.id && it.due == due.due }
 
+    // ---------- The dose log and adherence (#205) ----------
+
+    /** What became of a scheduled dose: taken, skipped, missed (its day is over), or still due today. */
+    enum class Outcome { TAKEN, SKIPPED, MISSED, DUE }
+
+    /** One line of the dose log: a scheduled dose and what became of it, or a value logged by hand ([due] null). */
+    data class LogEntry(
+        val date: String,
+        val medication: String,
+        val due: DueDose?,
+        val record: MRecord?,
+        val outcome: Outcome?
+    )
+
+    /**
+     * Every scheduled dose from [from] to [to] (inclusive, not after [today]) with its outcome, plus every value of
+     * [names] logged by hand, oldest first. [names] empty means every medication.
+     */
+    fun doseLog(plan: MedPlan, records: List<MRecord>, from: String, to: String, today: String, names: Set<String> = emptySet()): List<LogEntry> {
+        fun wanted(n: String) = names.isEmpty() || n in names
+        val out = ArrayList<LogEntry>()
+        val linked = HashSet<Long>()
+        val last = minOf(to, today)
+        var day = Dates.parse(from) ?: return emptyList()
+        val end = Dates.parse(last) ?: return emptyList()
+        while (!day.isAfter(end)) {
+            val date = day.format(Dates.ISO)
+            dueOn(plan, date).filter { wanted(it.dose.medication) }.forEach { d ->
+                val r = takenRecord(records, d)
+                if (r != null) linked += r.id
+                val outcome = when {
+                    r != null -> Outcome.TAKEN
+                    plan.isSkipped(d.dose.id, d.due) -> Outcome.SKIPPED
+                    date < today -> Outcome.MISSED
+                    else -> Outcome.DUE
+                }
+                out += LogEntry(date, d.dose.medication, d, r, outcome)
+            }
+            day = day.plusDays(1)
+        }
+        records.filter { it.id !in linked && wanted(it.name) && it.date.take(10) in from..to }
+            .forEach { out += LogEntry(it.date.take(10), it.name, null, it, null) }
+        return out.sortedWith(compareBy({ it.date }, { it.due?.time ?: it.record?.time?.take(5).orEmpty() }, { it.medication.lowercase() }))
+    }
+
+    /** A medication's adherence over a range: doses scheduled, taken, skipped and missed, and the share taken. */
+    data class Adherence(val medication: String, val scheduled: Int, val taken: Int, val skipped: Int, val missed: Int) {
+        /** Taken out of the doses whose time has come (today's still due aren't counted), 0–100, or null with none. */
+        val percent: Int? get() = (taken + skipped + missed).takeIf { it > 0 }?.let { Math.round(taken * 100.0 / it).toInt() }
+    }
+
+    /** Adherence per medication from a [doseLog], in name order. Values logged by hand don't count. */
+    fun adherence(log: List<LogEntry>): List<Adherence> =
+        log.filter { it.due != null }.groupBy { it.medication }.map { (name, entries) ->
+            Adherence(
+                name, entries.size,
+                entries.count { it.outcome == Outcome.TAKEN },
+                entries.count { it.outcome == Outcome.SKIPPED },
+                entries.count { it.outcome == Outcome.MISSED }
+            )
+        }.sortedBy { it.medication.lowercase() }
+
     // ---------- Loading ----------
 
     fun load(r: MedDao): MedPlan {

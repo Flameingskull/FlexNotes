@@ -124,6 +124,8 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     var open by rememberSaveable { mutableStateOf<Long?>(null) }
     // The dose due today whose sheet is open (#202), by dose id and due time.
     var openDose by rememberSaveable { mutableStateOf<String?>(null) }
+    // The doctor's report sheet (#205).
+    var reporting by rememberSaveable { mutableStateOf(false) }
     val pager = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
 
@@ -146,9 +148,14 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                     TopBarAction(Icons.Filled.Edit, stringResource(if (medications) R.string.md_edit else R.string.body_edit_measurements)) { editing = true }
                 )
             },
-            overflow = if (editing || medications) emptyList() else listOf(
-                MenuAction(stringResource(R.string.tdee_title)) { nav.push(Screen.Tdee) }
-            ),
+            overflow = when {
+                editing -> emptyList()
+                medications -> listOf(
+                    MenuAction(stringResource(R.string.mdr_menu), enabled = measurements.isNotEmpty()) { reporting = true },
+                    MenuAction(stringResource(R.string.settings_page_meds)) { nav.push(Screen.SettingsPage(SettingsSection.Medications)) }
+                )
+                else -> listOf(MenuAction(stringResource(R.string.tdee_title)) { nav.push(Screen.Tdee) })
+            },
             trailing = {
                 if (!editing && measurements.size > 1 && pager.currentPage == 0) ReorderToggle(reordering) { reordering = it }
             }
@@ -216,6 +223,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     // Back leaves edit mode first.
     androidx.activity.compose.BackHandler(enabled = editing) { editing = false }
     if (adding) MeasurementEntrySheet(snap, Dates.today()) { adding = false }
+    if (reporting) MedicationReportSheet(snap, onDismiss = { reporting = false })
     openDose?.let { key ->
         com.fitlens.companion.data.MedSchedules.dueOn(snap.medPlan, Dates.today()).firstOrNull { "${it.dose.id}|${it.due}" == key }
     }?.let { d -> DueDoseSheet(snap, d, onDismiss = { openDose = null }) }

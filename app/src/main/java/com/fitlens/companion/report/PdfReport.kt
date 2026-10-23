@@ -42,31 +42,31 @@ data class ReportOptions(
     val highQuality: Boolean = false
 )
 
-private class Palette(
+internal class Palette(
     val bg: Int, val card: Int, val text: Int, val muted: Int,
     val gold: Int, val accent: Int, val line: Int, val fill: Int, val hairline: Int, val grid: Int
 )
 
-private val DARK = Palette(
+internal val DARK = Palette(
     bg = 0xFF050505.toInt(), card = 0xFF141414.toInt(), text = 0xFFF7F3EA.toInt(), muted = 0xFFBDB6A8.toInt(),
     gold = 0xFFF2BE22.toInt(), accent = 0xFFFFDB6E.toInt(), line = 0xFFF05E62.toInt(), fill = 0x33F2BE22,
     hairline = 0xFF38342B.toInt(), grid = 0x33FFFFFF
 )
 
 // Deeper gold and red on white keep text readable when printed.
-private val LIGHT = Palette(
+internal val LIGHT = Palette(
     bg = 0xFFFFFFFF.toInt(), card = 0xFFF8F6F0.toInt(), text = 0xFF1A1A1A.toInt(), muted = 0xFF5E5A52.toInt(),
     gold = 0xFF8A6A00.toInt(), accent = 0xFF3A3A3A.toInt(), line = 0xFFC62828.toInt(), fill = 0x2EC9A227,
     hairline = 0xFFDDD8CC.toInt(), grid = 0x22000000
 )
 
-private const val PW = 595 // A4 in points
-private const val PH = 842
-private const val M = 40f
-private const val CW = PW - 2 * M
-private const val BOTTOM = PH - 56f
+internal const val PW = 595 // A4 in points
+internal const val PH = 842
+internal const val M = 40f
+internal const val CW = PW - 2 * M
+internal const val BOTTOM = PH - 56f
 
-private fun paint(color: Int, size: Float, bold: Boolean = false, serif: Boolean = false, tracking: Float = 0f, italic: Boolean = false) =
+internal fun paint(color: Int, size: Float, bold: Boolean = false, serif: Boolean = false, tracking: Float = 0f, italic: Boolean = false) =
     Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = color
         textSize = size
@@ -75,9 +75,9 @@ private fun paint(color: Int, size: Float, bold: Boolean = false, serif: Boolean
         letterSpacing = tracking
     }
 
-private fun fill(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+internal fun fill(color: Int) = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
 
-private fun wrap(text: String, p: Paint, width: Float): List<String> {
+internal fun wrap(text: String, p: Paint, width: Float): List<String> {
     val out = ArrayList<String>()
     for (para in text.split('\n')) {
         var line = ""
@@ -90,8 +90,8 @@ private fun wrap(text: String, p: Paint, width: Float): List<String> {
     return out
 }
 
-/** Starts pages as needed and draws the footer on each one. */
-private class PageWriter(val res: Resources, val doc: PdfDocument, val p: Palette, val footer: String) {
+/** Starts pages as needed and draws the footer on each one. Shared with the Medications report (#205). */
+internal class PageWriter(val res: Resources, val doc: PdfDocument, val p: Palette, val footer: String) {
     var pages = 0
         private set
     private var page: PdfDocument.Page? = null
@@ -307,7 +307,7 @@ object PdfReport {
         }
     }
 
-    private fun lineChart(w: PageWriter, pts: List<Pair<Long, Double>>, photoDays: List<Long>, r: RectF) {
+    internal fun lineChart(w: PageWriter, pts: List<Pair<Long, Double>>, photoDays: List<Long>, r: RectF) {
         val c = w.c
         val p = w.p
         val x0 = pts.first().first

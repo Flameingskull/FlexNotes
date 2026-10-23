@@ -1,6 +1,6 @@
 # Medications: plan across builds (2026-10-22)
 
-> **Status (2026-10-22): In progress.** Step 0 done: issues #199–#206 filed (label `area: medications`) and imported;
+> **Status (2026-10-23): Done.** Step 0 done: issues #199–#206 filed (label `area: medications`) and imported;
 > tracker plan item "Medications: plan across builds (2026-10-22)". Parity fix done (duplicate #157 item archived);
 > parity rule added to CLAUDE.md and the build skills. All 16 suggestions picked: #207–#222, in the follow-up plan
 > `docs/plans/2026-10-22-health-and-medications-follow-ups.md`.
@@ -9,10 +9,11 @@
 > Build B done in 1.0.154 (#201, #202: database v25, `MedSchedules.kt`, the schedule editor, runs with pauses, and
 > TODAY on the Track tab; v25 also holds `med_dose_change` for #204, so Build C needs no migration). README refreshed. Its first run, 1.0.153, failed CI: debug and release KSP raced on the new schema file.
 > Deviation: schedules are listed in a SCHEDULES section on the Track tab rather than a title switcher.
-> Build C done in 1.0.155 (#203, #204: `MedReminders.kt` alarm chain, notification with Taken / Snooze / Skip,
+> Build C done in 1.0.156 (#203, #204: `MedReminders.kt` alarm chain, notification with Taken / Snooze / Skip,
 > Settings › Medications, and dose changes for a day or the rest of a run; no database change).
-> Left: Build D (#205); epic #206 closes with it.
-> Next: `/safe-build 205` (tracker item for #205).
+> Build D done in 1.0.157 (#205: `report/MedicationReport.kt`, `CsvExport.medications`, the dose log and adherence in
+> `MedSchedules`, and the Report for a doctor sheet), closing epic #206. Nothing remains; follow-ups are in
+> `docs/plans/2026-10-22-health-and-medications-follow-ups.md`.
 >
 > Issue map: Epic #206 · M1 #199 · M2 #200 · M3 #201 · M4 #202 · M5 #203 · M6 #204 · M7 #205.
 

@@ -75,6 +75,45 @@ object CsvExport {
         return sb.toString()
     }
 
+    val MEDICATION_COLUMNS = listOf("Date", "Due", "Taken at", "Medication", "Amount", "Unit", "Status", "Schedule", "Dose change", "Comment")
+
+    /**
+     * The Medications dose log (#205) for a doctor: every scheduled dose from [from] to [to] with what became of it
+     * (Taken, Skipped, Missed, Due), and every dose logged by hand ("Logged"), for [names] or every medication. Only
+     * medication data: no workouts, body values or photos.
+     */
+    fun medications(snap: Snapshot, from: String, to: String, names: Set<String> = emptySet(), today: String = Dates.today()): String {
+        val sb = StringBuilder()
+        row(sb, MEDICATION_COLUMNS)
+        val meds = snap.medicationView
+        MedSchedules.doseLog(snap.medPlan, meds.records, from, to, today, names).forEach { e ->
+            val d = e.due
+            val r = e.record
+            val amount = r?.value ?: d?.amount
+            row(
+                sb, listOf(
+                    e.date,
+                    d?.time.orEmpty(),
+                    r?.time?.take(5).orEmpty(),
+                    e.medication,
+                    amount?.let { fmtNum(it, 3) }.orEmpty(),
+                    r?.unit ?: d?.dose?.unit.orEmpty(),
+                    when (e.outcome) {
+                        MedSchedules.Outcome.TAKEN -> "Taken"
+                        MedSchedules.Outcome.SKIPPED -> "Skipped"
+                        MedSchedules.Outcome.MISSED -> "Missed"
+                        MedSchedules.Outcome.DUE -> "Due"
+                        null -> "Logged"
+                    },
+                    d?.schedule?.name.orEmpty(),
+                    if (d?.change != null) "Changed from ${fmtNum(d.dose.amount, 3)}" else "",
+                    r?.comment ?: d?.dose?.comment.orEmpty()
+                )
+            )
+        }
+        return sb.toString()
+    }
+
     /** How many sets and workout days, or body values, an export would hold. For the page's preview line. */
     fun countWorkouts(snap: Snapshot, from: String?, to: String?): Pair<Int, Int> {
         val sets = snap.sets.filter { inRange(it.date, from, to) }
