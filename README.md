@@ -71,9 +71,12 @@ custom metrics.
   each build, and 1.0.151 gave graphs a wider, colour-blind-checked palette ([#198](https://github.com/Flameingskull/FlexNotes/issues/198)). From 1.0.152 FlexNotes
   has **Medications**: any measurement can be marked as a medication and moves to its own screen with its whole
   history ([#199](https://github.com/Flameingskull/FlexNotes/issues/199), [#200](https://github.com/Flameingskull/FlexNotes/issues/200)), and 1.0.154 adds dose schedules made of on and off cycles,
-  started from any date, with today's doses ticked off as they're taken ([#201](https://github.com/Flameingskull/FlexNotes/issues/201), [#202](https://github.com/Flameingskull/FlexNotes/issues/202)). Next
-  come dose reminders through notifications, dose changes and a Medications PDF for a doctor
-  ([epic #206](https://github.com/Flameingskull/FlexNotes/issues/206)), then the health follow-ups (#207 to #222), the accessibility
+  started from any date, with today's doses ticked off as they're taken ([#201](https://github.com/Flameingskull/FlexNotes/issues/201), [#202](https://github.com/Flameingskull/FlexNotes/issues/202)).
+  1.0.156 to 1.0.158 added dose reminders, dose changes, a Medications report for a doctor, supply and refill
+  warnings, injection sites and symptom ratings ([epic #206](https://github.com/Flameingskull/FlexNotes/issues/206), [#207](https://github.com/Flameingskull/FlexNotes/issues/207), [#209](https://github.com/Flameingskull/FlexNotes/issues/209),
+  [#210](https://github.com/Flameingskull/FlexNotes/issues/210)), and 1.0.159 puts symptoms and sites in the doctor's report, records a site from the reminder and
+  adds an emergency card ([#215](https://github.com/Flameingskull/FlexNotes/issues/215), [#223](https://github.com/Flameingskull/FlexNotes/issues/223), [#224](https://github.com/Flameingskull/FlexNotes/issues/224)). Next come the rest of the health
+  follow-ups (#208, #211 to #222), the accessibility
   checks that need a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)) and the
   [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
@@ -214,7 +217,18 @@ custom metrics.
   chosen weekdays or every few days. The cycle can repeat. Start a schedule from any date, then pause, resume or end
   it; several can run at once. The Medications screen's **TODAY** lists the doses due, each with a done box like a
   set's, where each schedule is in its cycle ("On · day 12 of 56", "Off · on again 3 Dec"), and missed or skipped
-  doses. Ticking a dose logs it as an ordinary medication value, once, with Undo; tapping it offers Taken or Skip.
+  doses. Ticking a dose logs it as an ordinary medication value, once, with Undo; tapping it offers Taken or Skip,
+  or a change of amount for that day or the rest of the run.
+- **Dose reminders:** a notification when a scheduled dose is due, with **Taken**, **Snooze** and **Skip**, and an
+  optional second reminder (Settings › Medications). The lock screen hides medication names unless you choose to
+  show them. For an injected medication, **Taken** names the site it records, the one used longest ago.
+- **Supply, sites and symptoms:** a medication can track its supply, counted down by every dose, with warnings
+  before it runs out or expires. An injected one gets a body map that suggests the next site and keeps every dose's
+  site. **Symptoms** are rated 0 to 10 on any day, shown in each medication's History and overlaid on its Graph.
+- **Report for a doctor and emergency card:** the Medications ⋮ menu makes a PDF with only medication data
+  (schedules, adherence, graphs, symptoms, the dose log with injection sites, comments), or the same dose log as
+  CSV. **Emergency card** makes a one-page PDF or image with current medications, allergies, conditions and an
+  emergency contact, to save or share.
 - **Measurements:** the Body tracker's pencil switches it to editing measurements: an on/off switch for each, its
   unit and goal, the standard set (bodyweight and eight tape measurements), and your own, such as sleep, with their
   own unit. **Body fat** and **Height** are there for everyone. You can link one to a FitNotes measurement so imports
@@ -501,9 +515,9 @@ The first time FlexNotes opens, a short guided setup walks through the steps bel
   database or barcode scanning). Steps come from the phone's own step counter or from Health Connect.
 - FlexNotes writes only bodyweight, body fat and workouts to Health Connect, each switched on separately. Without the
   **Older data** permission, only the last 30 days are read.
-- Medication reminders through notifications, dose changes and the doctor's PDF are still to come
-  ([epic #206](https://github.com/Flameingskull/FlexNotes/issues/206)). FlexNotes never gives drug interaction or dosing advice: that would need an
-  online, licensed database.
+- FlexNotes never gives drug interaction or dosing advice: that would need an online, licensed database. The
+  emergency card shows only what you entered and logged; it isn't a medical record. Medications have no app lock
+  yet ([#214](https://github.com/Flameingskull/FlexNotes/issues/214)).
 - Some storage providers don't let apps set a file's modified date, so exported photo files can show the export time
   there; their photo details always carry the date taken. Formats whose details can't be written, such as HEIC, are
   exported unchanged.
