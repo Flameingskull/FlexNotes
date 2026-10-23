@@ -42,6 +42,8 @@ object MedLock {
     private val _unlocked = MutableStateFlow(false)
     val unlocked: StateFlow<Boolean> = _unlocked
     private var stoppedAt: Long? = null
+    /** A prompt is on screen: two Medications screens composed during a transition ask only once. */
+    private var prompting = false
 
     /** Whether the phone has a screen lock: without one there is nothing to ask for, so the lock can't be used. */
     fun available(context: Context): Boolean =
@@ -75,10 +77,11 @@ object MedLock {
             onResult(true)
             return
         }
-        if (activity == null) {
+        if (activity == null || prompting) {
             onResult(false)
             return
         }
+        prompting = true
         val builder = BiometricPrompt.Builder(activity)
             .setTitle(activity.getString(R.string.ml_prompt_title))
             .setSubtitle(subtitle)
@@ -88,15 +91,25 @@ object MedLock {
             @Suppress("DEPRECATION")
             builder.setDeviceCredentialAllowed(true)
         }
-        builder.build().authenticate(
+        // A phone whose prompt can't be built (no usable authenticator) answers false rather than crashing.
+        val prompt = try {
+            builder.build()
+        } catch (e: IllegalArgumentException) {
+            prompting = false
+            onResult(false)
+            return
+        }
+        prompt.authenticate(
             CancellationSignal(), activity.mainExecutor,
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult?) {
+                    prompting = false
                     _unlocked.value = true
                     onResult(true)
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) {
+                    prompting = false
                     onResult(false)
                 }
             }

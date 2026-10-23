@@ -169,6 +169,9 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
         if (snap.medPlan.symptoms.isNotEmpty()) {
             ToggleRow(stringResource(R.string.mdr_symptoms), symptoms, inset = Spacing.xxs) { symptoms = it }
         }
+        ToggleRow(stringResource(R.string.mdr_dose_log), doseLog, inset = Spacing.xxs) { doseLog = it }
+        ToggleRow(stringResource(R.string.mdr_comments), comments, inset = Spacing.xxs) { comments = it }
+        ToggleRow(stringResource(R.string.mdr_dark), dark, inset = Spacing.xxs) { dark = it }
         if (bodyNames.isNotEmpty()) {
             SectionLabel(stringResource(R.string.mdr_body))
             Text(stringResource(R.string.mdr_body_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -177,11 +180,7 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
                     FilterChip(selected = n in body, onClick = { body = if (n in body) body - n else body + n }, label = { Text(n) })
                 }
             }
-            SectionLabel(stringResource(R.string.mdr_include))
         }
-        ToggleRow(stringResource(R.string.mdr_dose_log), doseLog, inset = Spacing.xxs) { doseLog = it }
-        ToggleRow(stringResource(R.string.mdr_comments), comments, inset = Spacing.xxs) { comments = it }
-        ToggleRow(stringResource(R.string.mdr_dark), dark, inset = Spacing.xxs) { dark = it }
         SectionLabel(stringResource(R.string.mdr_csv))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             GlassOutlinedButton(
