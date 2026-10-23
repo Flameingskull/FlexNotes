@@ -40,7 +40,7 @@ import java.io.File
 /**
  * The Medications report for a doctor (#205), from the Medications screen's ⋮: the date range (the last 90 days by
  * default), which medications, an optional patient name, what to include, and light or dark pages. Save or share the
- * PDF, or the same dose log as CSV. Only medication data goes in: no workouts, body values or photos.
+ * PDF (with the symptoms rated, #223), or the same dose log as CSV. Only medication data goes in: no workouts, body values or photos.
  */
 @Composable
 internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
@@ -56,12 +56,14 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
     var doseLog by rememberSaveable { mutableStateOf(true) }
     var comments by rememberSaveable { mutableStateOf(true) }
     var graphs by rememberSaveable { mutableStateOf(true) }
+    var symptoms by rememberSaveable { mutableStateOf(true) }
     var dark by rememberSaveable { mutableStateOf(false) }
     var picking by remember { mutableStateOf<Int?>(null) }
 
     fun options() = MedicationReportOptions(
         from = minOf(from, to), to = maxOf(from, to), names = chosen, dark = dark, patient = patient,
-        schedules = schedules, adherence = adherence, doseLog = doseLog, comments = comments, graphs = graphs
+        schedules = schedules, adherence = adherence, doseLog = doseLog, comments = comments, graphs = graphs,
+        symptoms = symptoms
     )
     fun name(ext: String) = "FlexNotes_Medications_${options().from}_to_${options().to}.$ext"
     suspend fun csv(): String = withContext(Dispatchers.Default) {
@@ -149,6 +151,9 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
         ToggleRow(stringResource(R.string.mdr_current), schedules, inset = Spacing.xxs) { schedules = it }
         ToggleRow(stringResource(R.string.mdr_adherence), adherence, inset = Spacing.xxs) { adherence = it }
         ToggleRow(stringResource(R.string.mdr_graphs), graphs, inset = Spacing.xxs) { graphs = it }
+        if (snap.medPlan.symptoms.isNotEmpty()) {
+            ToggleRow(stringResource(R.string.mdr_symptoms), symptoms, inset = Spacing.xxs) { symptoms = it }
+        }
         ToggleRow(stringResource(R.string.mdr_dose_log), doseLog, inset = Spacing.xxs) { doseLog = it }
         ToggleRow(stringResource(R.string.mdr_comments), comments, inset = Spacing.xxs) { comments = it }
         ToggleRow(stringResource(R.string.mdr_dark), dark, inset = Spacing.xxs) { dark = it }

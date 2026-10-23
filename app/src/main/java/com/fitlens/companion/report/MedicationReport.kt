@@ -5,9 +5,12 @@ import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
+import com.fitlens.companion.data.InjectionSite
 import com.fitlens.companion.data.MedSchedules
 import com.fitlens.companion.data.Snapshot
+import com.fitlens.companion.data.Symptoms
 import com.fitlens.companion.data.fmtNum
+import com.fitlens.companion.ui.siteName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.OutputStream
@@ -24,14 +27,16 @@ data class MedicationReportOptions(
     val adherence: Boolean = true,
     val doseLog: Boolean = true,
     val comments: Boolean = true,
-    val graphs: Boolean = true
+    val graphs: Boolean = true,
+    /** The symptom ratings in the range, each with its graph (#223). */
+    val symptoms: Boolean = true
 )
 
 /**
  * A Medications-only PDF to share with a doctor (#205), drawn with the progress report's pages ([PageWriter], light
  * for printing by default): a heading with the patient line and range, current medications and their schedules,
  * adherence per medication, a dose log (due, taken, amount, status, dose changes), comments and a graph per
- * medication. It holds no workout, body or photo data.
+ * medication, and the symptoms rated over the range (#223). It holds no workout, body or photo data.
  */
 object MedicationReport {
 
@@ -48,6 +53,7 @@ object MedicationReport {
                 if (o.schedules) schedules(w, snap, names, today)
                 if (o.adherence) adherence(w, MedSchedules.adherence(log))
                 if (o.graphs) graphs(w, snap, o, names)
+                if (o.symptoms) symptoms(w, snap, o)
                 if (o.doseLog) doseLog(w, log)
                 if (o.comments) comments(w, log)
                 w.finish()
@@ -191,6 +197,49 @@ object MedicationReport {
         }
     }
 
+    /**
+     * Each symptom rated in the range (#223): how often, the average, lowest and highest rating and the latest, then
+     * a small graph of the ratings when there are two or more. Nothing is drawn when no symptom was rated.
+     */
+    private fun symptoms(w: PageWriter, snap: Snapshot, o: MedicationReportOptions) {
+        val res = w.res
+        val plan = snap.medPlan
+        val rated = plan.symptoms.mapNotNull { s ->
+            val pts = Symptoms.series(plan, s.id).filter { it.date.take(10) in o.from..o.to }
+            if (pts.isEmpty()) null else s to pts
+        }
+        if (rated.isEmpty()) return
+        label(w, res.getString(R.string.mdr_symptoms))
+        para(w, res.getString(R.string.mdr_symptoms_note, Symptoms.MAX), 8f, muted = true)
+        w.y += 4f
+        rated.forEach { (s, pts) ->
+            val avg = pts.sumOf { it.rating }.toDouble() / pts.size
+            val latest = pts.last()
+            val h = if (pts.size >= 2) 70f else 0f
+            w.ensure(h + 44f)
+            w.c.drawText(s.name, M, w.y + 10f, paint(w.p.text, 10f, bold = true))
+            w.y += 16f
+            val summary = if (pts.size == 1) res.getString(R.string.mdr_symptom_one, latest.rating, Dates.medium(latest.date))
+                else res.getString(
+                    R.string.mdr_symptom_summary, pts.size, fmtNum(avg, 1),
+                    pts.minOf { it.rating }, pts.maxOf { it.rating }, latest.rating, Dates.medium(latest.date)
+                )
+            para(w, summary, 9f, muted = true)
+            if (h > 0f) {
+                val r = RectF(M + 28f, w.y + 4f, M + CW, w.y + 4f + h)
+                PdfReport.lineChart(w, pts.map { Dates.epochDay(it.date) to it.rating.toDouble() }, emptyList(), r)
+                val dp = paint(w.p.muted, 7f)
+                w.c.drawText(Dates.short(pts.first().date), r.left, r.bottom + 12f, dp)
+                w.rightText(Dates.short(pts.last().date), dp, r.right, r.bottom + 12f)
+                w.y = r.bottom + 20f
+            }
+            pts.filter { !it.comment.isNullOrBlank() }.forEach { rt ->
+                para(w, "${Dates.medium(rt.date)} · ${rt.rating}/${Symptoms.MAX} · “${rt.comment!!.trim()}”", 8.5f, indent = 8f)
+            }
+            w.y += 6f
+        }
+    }
+
     private fun doseLog(w: PageWriter, log: List<MedSchedules.LogEntry>) {
         val res = w.res
         label(w, res.getString(R.string.mdr_dose_log))
@@ -198,10 +247,11 @@ object MedicationReport {
             para(w, res.getString(R.string.mdr_nothing), 9.5f, muted = true)
             return
         }
-        val cols = floatArrayOf(M, M + 80f, M + 125f, M + 170f, M + 330f, M + 410f)
+        // The Site column (#223) holds where an injected dose went; it stays empty for any other value.
+        val cols = floatArrayOf(M, M + 68f, M + 108f, M + 150f, M + 278f, M + 368f, M + 435f)
         val hp = paint(w.p.muted, 7.5f, bold = true, tracking = 0.15f)
         fun header() {
-            listOf(R.string.mdr_col_date, R.string.mdr_col_due, R.string.mdr_col_taken_at, R.string.mdr_col_medication, R.string.mdr_col_amount, R.string.mdr_col_status)
+            listOf(R.string.mdr_col_date, R.string.mdr_col_due, R.string.mdr_col_taken_at, R.string.mdr_col_medication, R.string.mdr_col_site, R.string.mdr_col_amount, R.string.mdr_col_status)
                 .forEachIndexed { i, id -> w.c.drawText(res.getString(id).uppercase(), cols[i], w.y + 8f, hp) }
             w.y += 16f
         }
@@ -224,12 +274,21 @@ object MedicationReport {
             w.c.drawText(Dates.short(e.date), cols[0], w.y + 9f, tp)
             w.c.drawText(d?.time.orEmpty(), cols[1], w.y + 9f, tp)
             w.c.drawText(r?.time?.take(5).orEmpty(), cols[2], w.y + 9f, tp)
-            w.c.drawText(e.medication, cols[3], w.y + 9f, tp)
-            w.c.drawText(amount, cols[4], w.y + 9f, tp)
-            w.c.drawText(status, cols[5], w.y + 9f, if (e.outcome == MedSchedules.Outcome.TAKEN || e.outcome == null) tp else mp)
+            w.c.drawText(clip(e.medication, tp, cols[4] - cols[3] - 6f), cols[3], w.y + 9f, tp)
+            InjectionSite.of(r?.site)?.let { w.c.drawText(clip(siteName(res, it), tp, cols[5] - cols[4] - 6f), cols[4], w.y + 9f, tp) }
+            w.c.drawText(amount, cols[5], w.y + 9f, tp)
+            w.c.drawText(status, cols[6], w.y + 9f, if (e.outcome == MedSchedules.Outcome.TAKEN || e.outcome == null) tp else mp)
             w.y += 14f
         }
         w.y += 8f
+    }
+
+    /** [text] cut with an ellipsis to fit [width], so a long name can't run into the next column. */
+    private fun clip(text: String, p: android.graphics.Paint, width: Float): String {
+        if (p.measureText(text) <= width) return text
+        var end = text.length
+        while (end > 1 && p.measureText(text, 0, end) + p.measureText("…") > width) end--
+        return text.take(end).trimEnd() + "…"
     }
 
     private fun comments(w: PageWriter, log: List<MedSchedules.LogEntry>) {

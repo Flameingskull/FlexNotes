@@ -1814,6 +1814,12 @@
     <string name="mdr_logged">Logged</string>
     <string name="mdr_changed">changed</string>
     <string name="mdr_comments">Comments</string>
+    <!-- Symptoms and sites in the report (#223) -->
+    <string name="mdr_col_site">Site</string>
+    <string name="mdr_symptoms">Symptoms</string>
+    <string name="mdr_symptoms_note">Each symptom's ratings in this period, from 0 (none) to %1$d (worst).</string>
+    <string name="mdr_symptom_one">1 rating: %1$d on %2$s</string>
+    <string name="mdr_symptom_summary">%1$d ratings · average %2$s · lowest %3$d · highest %4$d · latest %5$d on %6$s</string>
     <!-- Medication reminders (#203) -->
     <string name="settings_page_meds">Medications</string>
     <string name="settings_meds_kw">medications medicine pills tablets doses reminders alarm notification lock screen privacy supplements</string>

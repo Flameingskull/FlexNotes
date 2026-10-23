@@ -75,11 +75,12 @@ object CsvExport {
         return sb.toString()
     }
 
-    val MEDICATION_COLUMNS = listOf("Date", "Due", "Taken at", "Medication", "Amount", "Unit", "Status", "Schedule", "Dose change", "Comment")
+    val MEDICATION_COLUMNS = listOf("Date", "Due", "Taken at", "Medication", "Amount", "Unit", "Status", "Schedule", "Dose change", "Comment", "Site")
 
     /**
      * The Medications dose log (#205) for a doctor: every scheduled dose from [from] to [to] with what became of it
-     * (Taken, Skipped, Missed, Due), and every dose logged by hand ("Logged"), for [names] or every medication. Only
+     * (Taken, Skipped, Missed, Due), and every dose logged by hand ("Logged"), for [names] or every medication, with the
+     * injection site of a sited dose (#223). Only
      * medication data: no workouts, body values or photos.
      */
     fun medications(snap: Snapshot, from: String, to: String, names: Set<String> = emptySet(), today: String = Dates.today()): String {
@@ -107,7 +108,9 @@ object CsvExport {
                     },
                     d?.schedule?.name.orEmpty(),
                     if (d?.change != null) "Changed from ${fmtNum(d.dose.amount, 3)}" else "",
-                    r?.comment ?: d?.dose?.comment.orEmpty()
+                    r?.comment ?: d?.dose?.comment.orEmpty(),
+                    // Where an injected dose went (#223), added last so older spreadsheets keep their columns.
+                    InjectionSite.of(r?.site)?.label.orEmpty()
                 )
             )
         }

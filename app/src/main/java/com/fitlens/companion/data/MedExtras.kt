@@ -131,17 +131,17 @@ object Supply {
  * Injection sites (#210): ten areas over the abdomen, thighs, upper arms and buttocks, each stored by its [key]. The
  * next site suggested is the one used longest ago, never-used ones first, in [entries] order.
  */
-enum class InjectionSite(val key: String) {
-    ABDOMEN_UPPER_LEFT("abd-ul"),
-    ABDOMEN_UPPER_RIGHT("abd-ur"),
-    ABDOMEN_LOWER_RIGHT("abd-lr"),
-    ABDOMEN_LOWER_LEFT("abd-ll"),
-    THIGH_LEFT("thigh-l"),
-    THIGH_RIGHT("thigh-r"),
-    ARM_LEFT("arm-l"),
-    ARM_RIGHT("arm-r"),
-    GLUTE_LEFT("glute-l"),
-    GLUTE_RIGHT("glute-r");
+enum class InjectionSite(val key: String, /** The English name in CSV files (#223), which aren't translated. */ val label: String) {
+    ABDOMEN_UPPER_LEFT("abd-ul", "Abdomen, upper left"),
+    ABDOMEN_UPPER_RIGHT("abd-ur", "Abdomen, upper right"),
+    ABDOMEN_LOWER_RIGHT("abd-lr", "Abdomen, lower right"),
+    ABDOMEN_LOWER_LEFT("abd-ll", "Abdomen, lower left"),
+    THIGH_LEFT("thigh-l", "Left thigh"),
+    THIGH_RIGHT("thigh-r", "Right thigh"),
+    ARM_LEFT("arm-l", "Left upper arm"),
+    ARM_RIGHT("arm-r", "Right upper arm"),
+    GLUTE_LEFT("glute-l", "Left buttock"),
+    GLUTE_RIGHT("glute-r", "Right buttock");
 
     companion object {
         fun of(key: String?): InjectionSite? = entries.firstOrNull { it.key == key }

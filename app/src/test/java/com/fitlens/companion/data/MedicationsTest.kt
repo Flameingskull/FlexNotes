@@ -146,6 +146,14 @@ class MedicationsTest {
     }
 
     @Test
+    fun theMedicationsCsvGivesAnInjectedDosesSite() {
+        val sited = records + rec(99, "Metformin", "mg", 500.0, "2026-10-12").copy(site = InjectionSite.THIGH_LEFT.key)
+        val csv = CsvExport.medications(snapshot(BodyPart(defs, sited, "kg")), "2026-10-01", "2026-10-31", today = "2026-10-31")
+        assertEquals("Site", CsvExport.MEDICATION_COLUMNS.last())
+        assertTrue(csv.lines().any { it.contains("Metformin") && it.endsWith(",Left thigh") })
+    }
+
+    @Test
     fun theMeasurementsOtherFeaturesReadCantBeMedications() {
         listOf(
             "Bodyweight", "Body Weight", "body fat", "Body Fat %", "Height", "Steps", "Active calories",
