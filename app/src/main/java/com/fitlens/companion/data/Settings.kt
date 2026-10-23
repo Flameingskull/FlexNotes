@@ -73,6 +73,9 @@ data class DeviceSettings(
     val medReminders: Boolean = true,
     /** Medication names on the lock screen (#203). Off: the lock screen shows only "Medication reminder". */
     val medNamesOnLockScreen: Boolean = false,
+    /** Lock Medications (#214): the Medications screens need the phone's fingerprint, face or PIN prompt, and
+     *  reminders name no medication. Off unless switched on; belongs to this phone, like its screen lock. */
+    val medLock: Boolean = false,
     /** Minutes after a dose is due to remind again while it isn't taken or skipped (#203); 0 for no follow-up. */
     val medNudgeMinutes: Int = 30,
     /** Snoozed reminders (#203), `MedReminders.Snoozes.encode`: due time to when it rings again. Phone state. */
@@ -484,6 +487,7 @@ object Settings {
     private const val D_HC_HISTORY = "hc_history_kinds"
     private const val D_MED_REMINDERS = "med_reminders"
     private const val D_MED_NAMES = "med_names_lock_screen"
+    private const val D_MED_LOCK = "med_lock"
     private const val D_MED_NUDGE = "med_nudge_minutes"
     private const val D_MED_SNOOZES = "med_snoozes"
 
@@ -595,6 +599,7 @@ object Settings {
         hcHistoryKinds = get(D_HC_HISTORY),
         medReminders = get(D_MED_REMINDERS) != "0",
         medNamesOnLockScreen = bool(get(D_MED_NAMES)),
+        medLock = bool(get(D_MED_LOCK)),
         medNudgeMinutes = get(D_MED_NUDGE)?.toIntOrNull()?.coerceIn(0, 240) ?: 30,
         medSnoozes = get(D_MED_SNOOZES)
     )
@@ -627,6 +632,7 @@ object Settings {
         D_HC_HISTORY to hcHistoryKinds,
         D_MED_REMINDERS to if (medReminders) null else "0",
         D_MED_NAMES to if (medNamesOnLockScreen) "1" else null,
+        D_MED_LOCK to if (medLock) "1" else null,
         D_MED_NUDGE to medNudgeMinutes.takeIf { it != 30 }?.toString(),
         D_MED_SNOOZES to medSnoozes
     )

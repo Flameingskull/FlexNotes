@@ -45,6 +45,8 @@
          are asked for in Settings › Medications; without them a reminder comes within ten minutes. The alarm is set
          again after a reboot. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Lock Medications (#214): the phone's own fingerprint, face or PIN prompt. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Lets the app see and launch FitNotes on Android 11+ -->

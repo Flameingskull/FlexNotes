@@ -333,8 +333,15 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Medications lock again after a while away (#214).
+        MedLock.onAppStarted()
+    }
+
     override fun onStop() {
         super.onStop()
+        MedLock.onAppStopped()
         // "Back up after changes" (#34): queue a background backup when FlexNotes leaves the screen.
         AutoBackup.onAppBackground(applicationContext)
     }
@@ -589,9 +596,10 @@ private fun ScreenContent(s: Snapshot, nav: Nav, screen: Screen) {
         Screen.Body -> BodyScreen(s, nav)
         is Screen.BodyMeasurement -> BodyMeasurementScreen(s, nav, screen.name, screen.page)
         Screen.Measurements -> BodyScreen(s, nav, startEditing = true)
-        Screen.Medications -> MedicationsScreen(s, nav)
-        is Screen.Medication -> MedicationScreen(s, nav, screen.name, screen.page)
-        is Screen.MedSchedule -> ScheduleEditorScreen(s, nav, screen.id)
+        // Behind the phone's prompt while Lock Medications is on (#214).
+        Screen.Medications -> MedLockGate(nav) { MedicationsScreen(s, nav) }
+        is Screen.Medication -> MedLockGate(nav) { MedicationScreen(s, nav, screen.name, screen.page) }
+        is Screen.MedSchedule -> MedLockGate(nav) { ScheduleEditorScreen(s, nav, screen.id) }
         Screen.Analysis -> AnalysisScreen(s, nav)
         is Screen.WorkoutEditor -> WorkoutEditorScreen(s, nav, screen.id)
         Screen.Photos -> PhotosScreen(s, nav)

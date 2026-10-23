@@ -1893,6 +1893,18 @@
     <string name="search_mr_exact_kw">exact alarm on time minute late reminder</string>
     <string name="search_mr_nudge_kw">remind again follow up nudge missed dose</string>
     <string name="search_mr_names_kw">lock screen private hide medication names privacy</string>
+    <string name="ml_lock">Lock Medications</string>
+    <string name="ml_lock_summary">Open Medications with your fingerprint, face or phone PIN, and keep reminders from naming any medication</string>
+    <string name="ml_no_screen_lock">Set a screen lock on your phone first</string>
+    <string name="ml_names_off">Hidden while Lock Medications is on</string>
+    <string name="ml_prompt_title">Unlock Medications</string>
+    <string name="ml_prompt_open">Confirm it\'s you to see your medications</string>
+    <string name="ml_prompt_setting">Confirm it\'s you to change the Medications lock</string>
+    <string name="ml_locked_title">Medications are locked</string>
+    <string name="ml_locked_body">Use your fingerprint, face or phone PIN to open them. They lock again a couple of minutes after you leave FlexNotes.</string>
+    <string name="ml_unlock">Unlock</string>
+    <string name="ml_notification_text">A dose is due. Open FlexNotes to see it.</string>
+    <string name="search_ml_lock_kw">lock pin fingerprint face biometric private privacy hide secure medications</string>
     <!-- Body fat calculator (#94) -->
     <string name="bf_comment">Calculated (US Navy formula, %1$s) from %2$s</string>
     <string name="bf_title">Calculate body fat</string>

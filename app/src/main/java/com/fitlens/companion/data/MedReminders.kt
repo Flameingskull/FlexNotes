@@ -239,11 +239,15 @@ object MedReminders {
             }
         )
         val time = key.drop(11)
+        val device = Settings.current()
+        // Lock Medications (#214): the notification itself names nothing, not only its lock-screen version.
+        val locked = device.medLock
         val title = context.getString(if (nudge) R.string.mr_title_again else R.string.mr_title, time)
-        val text = open.joinToString(", ") { "${it.dose.medication} ${fmtNum(it.amount)} ${it.dose.unit}".trim() }
+        val text = if (locked) context.getString(R.string.ml_notification_text)
+            else open.joinToString(", ") { "${it.dose.medication} ${fmtNum(it.amount)} ${it.dose.unit}".trim() }
         // An injected dose taken from here goes to the suggested next site (#224), named on the button when there's one.
         val sites = sitesFor(snap.medPlan, snap.medicationView.records, open).filterNotNull()
-        val takeLabel = sites.singleOrNull()?.let { context.getString(R.string.mr_taken_site, siteName(context.resources, it)) }
+        val takeLabel = sites.singleOrNull()?.takeIf { !locked }?.let { context.getString(R.string.mr_taken_site, siteName(context.resources, it)) }
             ?: context.getString(if (sites.isEmpty()) R.string.md_take else R.string.mr_taken_sites)
         val tap = PendingIntent.getActivity(
             context, notificationId(key),
@@ -258,7 +262,6 @@ object MedReminders {
             Intent(context, MedAlarmReceiver::class.java).setAction(action).putExtra(EXTRA_AT, key),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val device = Settings.current()
         // What the lock screen shows when names are kept private: no medication, no amount.
         val public = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_medication)
@@ -275,7 +278,7 @@ object MedReminders {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setVisibility(if (device.medNamesOnLockScreen) NotificationCompat.VISIBILITY_PUBLIC else NotificationCompat.VISIBILITY_PRIVATE)
+            .setVisibility(if (device.medNamesOnLockScreen && !locked) NotificationCompat.VISIBILITY_PUBLIC else NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(public)
             .setContentIntent(tap)
             .setAutoCancel(true)

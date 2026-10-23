@@ -187,6 +187,7 @@ private val CATALOGUE = listOf(
         if (device.medNudgeMinutes == 0) res.getString(R.string.settings_value_off) else res.getString(R.string.mr_minutes, device.medNudgeMinutes)
     },
     SettingEntry(R.string.mr_names, SettingsSection.Medications, R.string.search_mr_names_kw) { onOff(device.medNamesOnLockScreen) },
+    SettingEntry(R.string.ml_lock, SettingsSection.Medications, R.string.search_ml_lock_kw) { onOff(device.medLock) },
     SettingEntry(R.string.hc_exercise, SettingsSection.HealthConnect, R.string.search_hc_exercise_kw) { onOff(prefs.hcExercise) },
     SettingEntry(R.string.hc_sleep, SettingsSection.HealthConnect, R.string.search_hc_sleep_kw) { onOff(prefs.hcSleep) },
     SettingEntry(R.string.hcw_weight, SettingsSection.HealthConnect, R.string.search_hcw_weight_kw) { onOff(prefs.hcWriteWeight) },
