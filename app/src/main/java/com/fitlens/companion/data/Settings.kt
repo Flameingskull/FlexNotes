@@ -79,7 +79,11 @@ data class DeviceSettings(
     /** Minutes after a dose is due to remind again while it isn't taken or skipped (#203); 0 for no follow-up. */
     val medNudgeMinutes: Int = 30,
     /** Snoozed reminders (#203), `MedReminders.Snoozes.encode`: due time to when it rings again. Phone state. */
-    val medSnoozes: String? = null
+    val medSnoozes: String? = null,
+    /** The camera's last photo behind the body outline (#230): its opacity in percent, 0 to 60. */
+    val cameraPhotoOpacity: Int = 30,
+    /** The camera's body outline (#230): `BodyOutline.THIN`, `MEDIUM` or `BOLD`. */
+    val cameraOutlineLine: Int = BodyOutline.BOLD
 )
 
 /**
@@ -510,6 +514,8 @@ object Settings {
     private const val D_MED_LOCK = "med_lock"
     private const val D_MED_NUDGE = "med_nudge_minutes"
     private const val D_MED_SNOOZES = "med_snoozes"
+    private const val D_CAM_OPACITY = "camera_photo_opacity"
+    private const val D_CAM_LINE = "camera_outline_line"
 
     /** Every phone-only key, as it was named in `meta` before 1.0.21. */
     internal val DEVICE_KEYS = listOf(
@@ -629,7 +635,9 @@ object Settings {
         medNamesOnLockScreen = bool(get(D_MED_NAMES)),
         medLock = bool(get(D_MED_LOCK)),
         medNudgeMinutes = get(D_MED_NUDGE)?.toIntOrNull()?.coerceIn(0, 240) ?: 30,
-        medSnoozes = get(D_MED_SNOOZES)
+        medSnoozes = get(D_MED_SNOOZES),
+        cameraPhotoOpacity = get(D_CAM_OPACITY)?.toIntOrNull()?.coerceIn(0, 60) ?: 30,
+        cameraOutlineLine = get(D_CAM_LINE)?.toIntOrNull()?.takeIf { it in BodyOutline.THIN..BodyOutline.BOLD } ?: BodyOutline.BOLD
     )
 
     private fun DeviceSettings.toMap(): Map<String, String?> = mapOf(
@@ -662,7 +670,9 @@ object Settings {
         D_MED_NAMES to if (medNamesOnLockScreen) "1" else null,
         D_MED_LOCK to if (medLock) "1" else null,
         D_MED_NUDGE to medNudgeMinutes.takeIf { it != 30 }?.toString(),
-        D_MED_SNOOZES to medSnoozes
+        D_MED_SNOOZES to medSnoozes,
+        D_CAM_OPACITY to cameraPhotoOpacity.takeIf { it != 30 }?.toString(),
+        D_CAM_LINE to cameraOutlineLine.takeIf { it != BodyOutline.BOLD }?.toString()
     )
 
     private fun portableFrom(get: (String) -> String?) = PortableSettings(

@@ -2210,6 +2210,13 @@
     <string name="cam_unavailable">The camera couldn\'t be opened. Close other apps using it and try again.</string>
     <string name="cam_failed">The photo couldn\'t be taken. Try again.</string>
     <string name="cam_outline">Outline of the last %1$s photo</string>
+    <string name="cam_photo_opacity">Last photo opacity</string>
+    <string name="cam_photo_opacity_value">Photo %1$d%%</string>
+    <string name="cam_line">Line</string>
+    <string name="cam_line_thin">Thin</string>
+    <string name="cam_line_medium">Medium</string>
+    <string name="cam_line_bold">Bold</string>
+    <string name="cam_no_body">No body found in the last photo, so only the photo shows.</string>
     <string name="cam_timer">Self-timer</string>
     <string name="cam_timer_off">Off</string>
     <string name="cam_timer_seconds">%1$d s</string>

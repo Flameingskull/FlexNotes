@@ -30,7 +30,8 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
    start from the theme (a red line over gold fill) but are not bound by it: they use the wider, colour-blind-checked
    `ChartHues` palette (red, gold, blue, mint, ivory, pink, green, sky) for series, slices, bars and pinned cards, and
    green/red for a point that got better or worse, so data reads at a glance. Chart-only; the rest of the UI stays
-   black and gold. **Type (owner, 2026-10-02, #135):** Manrope throughout, bundled in
+   black and gold. **Camera outline (owner, 2026-10-24, #230):** the camera's body outline is white over a soft dark
+   stroke (`Brand.AlignWhite`, `Brand.AlignShadow`), the one sanctioned non-brand colour, for lining up shots only. **Type (owner, 2026-10-02, #135):** Manrope throughout, bundled in
    `res/font/` (headings are no longer serif), from the `MaterialTheme.typography` roles only (no stray `.sp`);
    FitNotes-style uppercase section labels over a fine gold rule (`SectionLabel`); fine gold hairlines on glass.
    **Charts (owner, 2026-10-02, #137):** Line, Bar, Area and Step are all allowed, chosen per graph (bar charts are

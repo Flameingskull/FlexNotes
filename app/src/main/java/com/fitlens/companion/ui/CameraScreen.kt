@@ -13,6 +13,7 @@ import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -36,12 +37,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,6 +56,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -67,8 +76,10 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil.compose.AsyncImage
 import com.fitlens.companion.R
+import com.fitlens.companion.data.BodyOutline
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Photo
+import com.fitlens.companion.data.PoseOutlines
 import com.fitlens.companion.data.Poses
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
@@ -90,9 +101,9 @@ private val TIMERS = listOf(0, 3, 10)
 /**
  * FlexNotes's own camera for progress photos (#183), opened from Take photo (#182). It asks for the camera permission
  * when it opens; refused, it says why and offers the phone's settings, and comes back to the viewfinder once allowed.
- * Before a shot the pose is chosen, and a faint outline of the last photo in that pose can be shown so the shots line
- * up. A shot is reviewed (Retake or Use photo) and then goes through the same import as Choose from phone, on [date]
- * (null: today) with its pose. Nothing is written to the phone's gallery.
+ * Before a shot the pose is chosen, and the last photo in that pose can be shown, translucent and with a bold white
+ * outline of the body traced on the phone (#230), so the shots line up. A shot is reviewed (Retake or Use photo) and
+ * then goes through the same import as Choose from phone, on [date] (null: today) with its pose. Nothing is written to the phone's gallery.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -298,16 +309,28 @@ private fun Viewfinder(snap: Snapshot, pose: String, onPose: (String) -> Unit, o
     val last: Photo? = remember(snap.photosKey, pose) {
         snap.photos.filter { it.pose == pose && it.date != null }.maxByOrNull { (it.date ?: "") + (it.takenAt ?: "") }
     }
+    val device by Settings.device.collectAsState()
+    // The body in the last photo, worked out once per photo off the main thread and cached (#230).
+    var body by remember(last) { mutableStateOf<BodyOutline?>(null) }
+    var tracing by remember(last) { mutableStateOf(last != null) }
+    LaunchedEffect(last) {
+        body = last?.let { PoseOutlines.of(ctx, snap.photoFile(it)) }
+        tracing = false
+    }
+    var opacity by remember(device.cameraPhotoOpacity) { mutableFloatStateOf(device.cameraPhotoOpacity.toFloat()) }
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).fillMaxWidth()) {
             AndroidView({ previewView }, Modifier.fillMaxSize())
             if (outline && last != null) {
-                AsyncImage(
-                    model = snap.photoFile(last),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().alpha(0.3f)
-                )
+                if (opacity > 0f) {
+                    AsyncImage(
+                        model = snap.photoFile(last),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().alpha(opacity / 100f)
+                    )
+                }
+                body?.takeIf { it.found }?.let { OutlineLines(it, device.cameraOutlineLine, Modifier.fillMaxSize()) }
             }
             if (countdown > 0) {
                 Text(
@@ -342,6 +365,16 @@ private fun Viewfinder(snap: Snapshot, pose: String, onPose: (String) -> Unit, o
                         modifier = Modifier.weight(1f)
                     )
                     Switch(checked = outline, onCheckedChange = { outline = it })
+                }
+                if (outline) {
+                    OutlineControls(
+                        opacity = opacity,
+                        onOpacity = { opacity = it },
+                        onOpacityDone = { val v = opacity.toInt(); Settings.updateDevice { it.copy(cameraPhotoOpacity = v) } },
+                        line = device.cameraOutlineLine,
+                        onLine = { v -> Settings.updateDevice { it.copy(cameraOutlineLine = v) } },
+                        noBody = !tracing && body?.found != true
+                    )
                 }
             }
             Row(
@@ -385,22 +418,110 @@ private fun Viewfinder(snap: Snapshot, pose: String, onPose: (String) -> Unit, o
 @Composable
 private fun PoseChoice(pose: String, onPose: (String) -> Unit) {
     val res = LocalContext.current.resources
+    ChoiceRow(Poses.all.map { it to poseText(res, it) }, pose, onPose, Modifier.padding(horizontal = Spacing.lg))
+}
+
+/** A row of single choices, as gold-outlined chips; it scrolls sideways when they don't fit. */
+@Composable
+private fun <T> ChoiceRow(options: List<Pair<T, String>>, chosen: T, onChoose: (T) -> Unit, modifier: Modifier = Modifier) {
     Row(
-        Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = Spacing.lg).selectableGroup(),
+        modifier.horizontalScroll(rememberScrollState()).selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
-        Poses.all.forEach { p ->
-            val chosen = p == pose
+        options.forEach { (value, label) ->
+            val on = value == chosen
             Text(
-                poseText(res, p).uppercase(),
+                label.uppercase(),
                 style = MaterialTheme.typography.labelLarge,
-                color = if (chosen) Brand.Gold else Brand.Muted,
+                color = if (on) Brand.Gold else Brand.Muted,
                 modifier = Modifier
                     .clip(FitShapes.row)
-                    .border(1.dp, if (chosen) Brand.Gold else Brand.Hairline, FitShapes.row)
-                    .background(if (chosen) Brand.GoldDusk else Brand.Black)
-                    .selectable(selected = chosen, role = Role.RadioButton) { onPose(p) }
+                    .border(1.dp, if (on) Brand.Gold else Brand.Hairline, FitShapes.row)
+                    .background(if (on) Brand.GoldDusk else Brand.Black)
+                    .selectable(selected = on, role = Role.RadioButton) { onChoose(value) }
                     .padding(horizontal = Spacing.lg, vertical = Spacing.md)
+            )
+        }
+    }
+}
+
+/**
+ * The body outline over the preview (#230): white, the one colour outside the brand, used only to line shots up, over
+ * a soft dark stroke so it shows on light backgrounds too. Mapped with the same centre crop as the photo under it.
+ */
+@Composable
+private fun OutlineLines(outline: BodyOutline, line: Int, modifier: Modifier) {
+    Canvas(modifier.clipToBounds()) {
+        val scale = maxOf(size.width / outline.width, size.height / outline.height)
+        val w = outline.width * scale
+        val h = outline.height * scale
+        val left = (size.width - w) / 2f
+        val top = (size.height - h) / 2f
+        val path = Path()
+        outline.loops.forEach { loop ->
+            path.moveTo(left + loop[0] * w, top + loop[1] * h)
+            var i = 2
+            while (i + 1 < loop.size) {
+                path.lineTo(left + loop[i] * w, top + loop[i + 1] * h)
+                i += 2
+            }
+            path.close()
+        }
+        val stroke = when (line) {
+            BodyOutline.THIN -> 1.5.dp
+            BodyOutline.MEDIUM -> 2.5.dp
+            else -> 4.dp
+        }.toPx()
+        drawPath(path, Brand.AlignShadow, style = Stroke(stroke + 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round))
+        drawPath(path, Brand.AlignWhite, style = Stroke(stroke, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    }
+}
+
+/** The outline's settings, both remembered on this phone: how much of the last photo shows, and the line's weight. */
+@Composable
+private fun OutlineControls(
+    opacity: Float,
+    onOpacity: (Float) -> Unit,
+    onOpacityDone: () -> Unit,
+    line: Int,
+    onLine: (Int) -> Unit,
+    noBody: Boolean
+) {
+    val opacityLabel = stringResource(R.string.cam_photo_opacity)
+    val opacityValue = stringResource(R.string.cam_photo_opacity_value, opacity.toInt())
+    Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg)) {
+        if (noBody) {
+            Text(
+                stringResource(R.string.cam_no_body),
+                style = MaterialTheme.typography.bodySmall,
+                color = Brand.Muted,
+                modifier = Modifier.padding(bottom = Spacing.xs)
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(opacityValue, style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(96.dp))
+            Slider(
+                value = opacity,
+                onValueChange = onOpacity,
+                valueRange = 0f..60f,
+                steps = 11,
+                onValueChangeFinished = onOpacityDone,
+                modifier = Modifier.weight(1f).semantics {
+                    contentDescription = opacityLabel
+                    stateDescription = opacityValue
+                }
+            )
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.cam_line), style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(96.dp))
+            ChoiceRow(
+                listOf(
+                    BodyOutline.THIN to stringResource(R.string.cam_line_thin),
+                    BodyOutline.MEDIUM to stringResource(R.string.cam_line_medium),
+                    BodyOutline.BOLD to stringResource(R.string.cam_line_bold)
+                ),
+                line,
+                onLine
             )
         }
     }

@@ -116,6 +116,9 @@ dependencies {
     implementation("androidx.camera:camera-camera2:1.4.2")
     implementation("androidx.camera:camera-lifecycle:1.4.2")
     implementation("androidx.camera:camera-view:1.4.2")
+    // The camera's body outline (#230): ML Kit selfie segmentation with its model bundled in the APK, so it works
+    // offline. The manifest removes the internet permission its logging asks for.
+    implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta6")
     // Reading Health Connect on the phone (#184): steps, food and other apps' data. Read only, no internet.
     implementation("androidx.health.connect:connect-client:1.1.0")
     // connect-client brings Guava at runtime only, which swaps CameraX's ListenableFuture for Guava's empty stand-in

@@ -61,6 +61,10 @@ object Brand {
     val Rise = Color(0xFF4CC38A)
     /** A value that went down, progress away from a goal, and the line of every graph. 4.6:1 on [SurfaceHighest] (#157). */
     val Fall = Color(0xFFF05E62)
+    /** The camera's body outline only (#230): white, the one sanctioned colour outside the brand, for lining up. */
+    val AlignWhite = Color(0xFFFFFFFF)
+    /** The soft dark stroke under [AlignWhite], so the outline shows on light backgrounds. */
+    val AlignShadow = Color(0x99000000)
 }
 
 /** The colour of a change: green for a rise, red for a fall, plain for no change. */
