@@ -641,6 +641,26 @@ object MedSchedules {
 
     suspend fun deleteChange(id: Long): Unit = write { r -> r.deleteChange(id) }
 
+    // ---------- Simple setup (#232) ----------
+
+    /** What a new schedule starts with from the simple setup: its phases, whether it repeats, and its first dose's days. */
+    data class Starter(val phases: List<MedPhase>, val repeats: Boolean, val days: MedDays)
+
+    /** Every day, set weekdays or every N days ([days]), with no end: one ongoing on phase. */
+    fun ongoingStarter(days: MedDays): Starter = Starter(listOf(MedPhase(0L, true, 1, PhaseUnit.ONGOING)), false, days)
+
+    /** [onLength] [onUnit]s of doses every day, then [offLength] [offUnit]s off, repeating. Lengths are kept to 1–999. */
+    fun cycleStarter(onLength: Int, onUnit: PhaseUnit, offLength: Int, offUnit: PhaseUnit): Starter {
+        fun fixed(u: PhaseUnit) = if (u == PhaseUnit.ONGOING) PhaseUnit.WEEKS else u
+        return Starter(
+            listOf(
+                MedPhase(0L, true, onLength.coerceIn(1, 999), fixed(onUnit)),
+                MedPhase(0L, false, offLength.coerceIn(1, 999), fixed(offUnit))
+            ),
+            true, MedDays()
+        )
+    }
+
     /** The weekday numbers in the user's week order, starting on [weekStart] (1 = Monday). */
     fun weekOrder(weekStart: Int): List<Int> = (0 until 7).map { ((weekStart - 1 + it) % 7) + 1 }
 

@@ -1782,6 +1782,20 @@
     <string name="md_run_changed">Run dates changed</string>
     <string name="md_run_dates_invalid">A run has to start before it ends.</string>
     <string name="md_run_overlaps">That would overlap another run of this schedule.</string>
+    <!-- Simple setup of a new schedule (#232). -->
+    <string name="md_setup_question">How do you take it?</string>
+    <string name="md_setup_note">Pick the closest. Next you add the dose, and you can change anything later.</string>
+    <string name="md_setup_daily">Every day</string>
+    <string name="md_setup_daily_note">The same dose every day, with no end date</string>
+    <string name="md_setup_weekdays">On set days of the week</string>
+    <string name="md_setup_weekdays_note">For example Monday, Wednesday and Friday, with no end date</string>
+    <string name="md_setup_every">Every few days</string>
+    <string name="md_setup_every_note">Every 2, 3 or more days, with no end date</string>
+    <string name="md_setup_cycles">In cycles (on and off)</string>
+    <string name="md_setup_cycles_note">A stretch of doses, then a break, repeating</string>
+    <string name="md_setup_on_for">On for</string>
+    <string name="md_setup_off_for">Then off for</string>
+    <string name="md_setup_next">Next: add the dose</string>
     <!-- Dose changes (#204) -->
     <string name="md_change_amount">Change amount</string>
     <string name="md_change_title">Change %1$s</string>

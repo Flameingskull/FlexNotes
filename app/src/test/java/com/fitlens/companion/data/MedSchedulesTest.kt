@@ -288,4 +288,24 @@ class MedSchedulesTest {
         assertEquals(4L, summary.days)
         assertEquals(75, summary.adherence)
     }
+
+    @Test
+    fun theSimpleSetupBuildsOngoingAndCycleSchedules() {
+        // Every Monday, Wednesday and Friday with no end (#232): one ongoing phase, never repeating.
+        val weekly = MedSchedules.ongoingStarter(MedDays(weekdays = setOf(1, 3, 5)))
+        assertEquals(1, weekly.phases.size)
+        assertEquals(PhaseUnit.ONGOING, weekly.phases.single().unit)
+        assertFalse(weekly.repeats)
+        val s = schedule(weekly.phases.single().copy(doses = listOf(dose(1, days = weekly.days))))
+        val a = run("2026-10-05")
+        assertEquals(1, MedSchedules.dosesOn(s, a, "2027-10-04").size) // a Monday, a year on
+        assertTrue(MedSchedules.dosesOn(s, a, "2027-10-05").isEmpty()) // a Tuesday
+        // Eight weeks on, four off, repeating; an ongoing unit can't sneak into a cycle.
+        val cycle = MedSchedules.cycleStarter(8, PhaseUnit.WEEKS, 4, PhaseUnit.ONGOING)
+        assertTrue(cycle.repeats)
+        assertEquals(listOf(true, false), cycle.phases.map { it.on })
+        assertEquals(listOf(PhaseUnit.WEEKS, PhaseUnit.WEEKS), cycle.phases.map { it.unit })
+        assertTrue(cycle.days.everyDay)
+        assertEquals(1, MedSchedules.cycleStarter(0, PhaseUnit.DAYS, 1, PhaseUnit.DAYS).phases.first().length)
+    }
 }

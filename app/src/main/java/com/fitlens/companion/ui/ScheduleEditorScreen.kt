@@ -24,6 +24,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -136,6 +137,9 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     // An earlier run being changed (#231): its id, and whether its first day (else its last) is picked; one to delete.
     var runEdit by remember { mutableStateOf<Pair<Long, Boolean>?>(null) }
     var runDelete by remember { mutableStateOf<Long?>(null) }
+    // A new schedule first asks how it's taken (#232); new doses then start on the days chosen there.
+    var setup by remember(id) { mutableStateOf(id == 0L) }
+    var newDoseDays by remember(id) { mutableStateOf(MedDays()) }
 
     val draft = MedSchedule(original.id, name, notes.ifBlank { null }, repeats, original.sortOrder, phases.map { it.phase })
     val dirty = draft.name != original.name || draft.notes.orEmpty() != original.notes.orEmpty() ||
@@ -176,6 +180,19 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     val endedRun = lastRun?.takeIf { current == null && it.endedOn != null }
     // An ongoing last phase (#228) stays last.
     val endsOngoing = phases.lastOrNull()?.phase?.unit == PhaseUnit.ONGOING
+
+    if (setup) {
+        ScheduleSetup(snap.weekStart, onBack = { nav.pop() }) { start ->
+            phases.clear()
+            start.phases.forEach { p -> phases.add(PhaseDraft(key(), p, emptyList())) }
+            repeats = start.repeats
+            newDoseDays = start.days
+            setup = false
+            // Straight on to the first dose, the one thing the setup can't guess.
+            phases.firstOrNull { it.phase.on }?.let { editingDose = it.key to null }
+        }
+        return
+    }
 
     Column(Modifier.fillMaxSize()) {
         FitTopBar(
@@ -335,7 +352,7 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     editingDose?.let { (phaseKey, doseKey) ->
         val d = phases.firstOrNull { it.key == phaseKey } ?: return@let
         val at = doseKey?.let { d.doseKeys.indexOf(it) } ?: -1
-        DoseSheet(snap, d.phase.doses.getOrNull(at), onDismiss = { editingDose = null }) { dose ->
+        DoseSheet(snap, d.phase.doses.getOrNull(at), newDoseDays, onDismiss = { editingDose = null }) { dose ->
             updatePhase(phaseKey) {
                 if (at >= 0) it.copy(phase = it.phase.copy(doses = it.phase.doses.toMutableList().also { l -> l[at] = dose }))
                 else it.copy(phase = it.phase.copy(doses = it.phase.doses + dose), doseKeys = it.doseKeys + key())
@@ -466,6 +483,118 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                 }
             }
         )
+    }
+}
+
+/**
+ * The simple setup of a new schedule (#232): "How do you take it?" with Every day, On set days of the week, Every few
+ * days (each ongoing, #228) or In cycles (on and off, repeating). [onDone] gets the phases it builds; the editor then
+ * opens with them, so anything can still be changed there.
+ */
+@Composable
+private fun ScheduleSetup(weekStart: Int, onBack: () -> Unit, onDone: (MedSchedules.Starter) -> Unit) {
+    val res = LocalContext.current.resources
+    var choice by rememberSaveable { mutableStateOf(0) }
+    var weekdays by rememberSaveable { mutableStateOf(listOf(1, 3, 5)) }
+    var every by rememberSaveable { mutableStateOf("2") }
+    var onLength by rememberSaveable { mutableStateOf("8") }
+    var onUnit by rememberSaveable { mutableStateOf(PhaseUnit.WEEKS) }
+    var offLength by rememberSaveable { mutableStateOf("4") }
+    var offUnit by rememberSaveable { mutableStateOf(PhaseUnit.WEEKS) }
+    val options = listOf(
+        R.string.md_setup_daily to R.string.md_setup_daily_note,
+        R.string.md_setup_weekdays to R.string.md_setup_weekdays_note,
+        R.string.md_setup_every to R.string.md_setup_every_note,
+        R.string.md_setup_cycles to R.string.md_setup_cycles_note
+    )
+    val ready = when (choice) {
+        1 -> weekdays.isNotEmpty()
+        2 -> (every.toIntOrNull() ?: 0) >= 2
+        3 -> (onLength.toIntOrNull() ?: 0) > 0 && (offLength.toIntOrNull() ?: 0) > 0
+        else -> true
+    }
+
+    @Composable
+    fun lengthPicker(label: String, value: String, onValue: (String) -> Unit, unit: PhaseUnit, onUnitChange: (PhaseUnit) -> Unit) {
+        StepperField(
+            label = label,
+            value = value,
+            onValue = { onValue(it.filter { c -> c.isDigit() }.take(3)) },
+            onStep = { dir -> onValue(max(1, (value.toIntOrNull() ?: 1) + dir).toString()) },
+            keyboard = KeyboardType.Number
+        )
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+            PhaseUnit.entries.filter { it != PhaseUnit.ONGOING }.forEach { u ->
+                FilterChip(
+                    selected = unit == u, onClick = { onUnitChange(u) },
+                    label = { Text(phaseLength(res, value.toIntOrNull() ?: 1, u).substringAfter(' ')) }
+                )
+            }
+        }
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        FitTopBar(title = stringResource(R.string.md_schedule_new), onBack = onBack)
+        Column(
+            Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+            verticalArrangement = Arrangement.spacedBy(Spacing.sm)
+        ) {
+            Text(stringResource(R.string.md_setup_question), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.md_setup_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Column(Modifier.selectableGroup()) {
+                options.forEachIndexed { i, (title, note) ->
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = Spacing.row)
+                            .selectable(selected = choice == i, role = Role.RadioButton) { choice = i }
+                            .padding(vertical = Spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(selected = choice == i, onClick = null)
+                        Column(Modifier.padding(start = Spacing.sm)) {
+                            Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
+                            Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+            when (choice) {
+                1 -> Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
+                    MedSchedules.weekOrder(weekStart).forEach { d ->
+                        FilterChip(
+                            selected = d in weekdays,
+                            onClick = { weekdays = if (d in weekdays) weekdays - d else weekdays + d },
+                            label = { Text(MedSchedules.weekdayShort(d)) }
+                        )
+                    }
+                }
+                2 -> StepperField(
+                    label = stringResource(R.string.md_every_how_many),
+                    value = every,
+                    onValue = { every = it.filter { c -> c.isDigit() }.take(3) },
+                    onStep = { dir -> every = max(2, (every.toIntOrNull() ?: 2) + dir).toString() },
+                    keyboard = KeyboardType.Number
+                )
+                3 -> {
+                    lengthPicker(stringResource(R.string.md_setup_on_for), onLength, { onLength = it }, onUnit) { onUnit = it }
+                    lengthPicker(stringResource(R.string.md_setup_off_for), offLength, { offLength = it }, offUnit) { offUnit = it }
+                }
+            }
+        }
+        GoldHairline()
+        GoldButton(
+            onClick = {
+                onDone(
+                    when (choice) {
+                        1 -> MedSchedules.ongoingStarter(MedDays(weekdays = weekdays.toSet()))
+                        2 -> MedSchedules.ongoingStarter(MedDays(every = (every.toIntOrNull() ?: 2).coerceIn(2, 365)))
+                        3 -> MedSchedules.cycleStarter(onLength.toIntOrNull() ?: 1, onUnit, offLength.toIntOrNull() ?: 1, offUnit)
+                        else -> MedSchedules.ongoingStarter(MedDays())
+                    }
+                )
+            },
+            enabled = ready,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md).heightIn(min = Spacing.row)
+        ) { Text(stringResource(R.string.md_setup_next)) }
     }
 }
 
@@ -663,9 +792,12 @@ private fun PhaseSheet(existing: MedPhase?, canBeOngoing: Boolean, onDismiss: ()
     }
 }
 
-/** A dose's sheet: medication, amount, unit, time, which days, and a comment. [existing] null adds one. */
+/**
+ * A dose's sheet: medication, amount, unit, time, which days, and a comment. [existing] null adds one, on
+ * [defaultDays] (the simple setup's choice, #232).
+ */
 @Composable
-private fun DoseSheet(snap: Snapshot, existing: MedDose?, onDismiss: () -> Unit, onSave: (MedDose) -> Unit) {
+private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, onDismiss: () -> Unit, onSave: (MedDose) -> Unit) {
     val res = LocalContext.current.resources
     val names = remember(snap.bodyKey) { snap.medications.map { it.name } }
     var medication by remember { mutableStateOf(existing?.medication ?: names.firstOrNull().orEmpty()) }
@@ -674,9 +806,10 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, onDismiss: () -> Unit,
     var unit by remember { mutableStateOf(existing?.unit ?: unitOf(medication)) }
     var time by remember { mutableStateOf(existing?.time ?: "08:00") }
     // 0 every day, 1 chosen weekdays, 2 every N days.
-    var mode by remember { mutableStateOf(existing?.days?.let { if (it.weekdays.isNotEmpty()) 1 else if (it.every > 1) 2 else 0 } ?: 0) }
-    var weekdays by remember { mutableStateOf(existing?.days?.weekdays ?: setOf(1, 2, 3, 4, 5, 6, 7)) }
-    var every by remember { mutableStateOf((existing?.days?.every?.takeIf { it > 1 } ?: 2).toString()) }
+    val startDays = existing?.days ?: defaultDays
+    var mode by remember { mutableStateOf(if (startDays.weekdays.isNotEmpty()) 1 else if (startDays.every > 1) 2 else 0) }
+    var weekdays by remember { mutableStateOf(startDays.weekdays.ifEmpty { setOf(1, 2, 3, 4, 5, 6, 7) }) }
+    var every by remember { mutableStateOf((startDays.every.takeIf { it > 1 } ?: 2).toString()) }
     var comment by remember { mutableStateOf(existing?.comment.orEmpty()) }
 
     fun save() {
