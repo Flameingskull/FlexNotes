@@ -1,36 +1,39 @@
 ## Overview
 
-This update makes Medications fit more kinds of treatment. A new schedule now starts with one simple question,
-"How do you take it?", instead of phases and cycles. Doses can taper down or step up over time on their own. Medicines
-you take only when needed, such as pain relief or an inhaler, now have their own place on Today with a one-tap
-**Take** button.
+This update brings two things you asked for. **Training blocks** let you plan a workout over the weeks, for example
+three weeks of building and then a lighter deload week, and the day log now shows which block you're in. The
+camera's alignment guide is also much easier to see: the last photo of the pose now has a **bold white body outline**
+over it, so you can line up each new progress photo with the last one.
 
 ## What's new
 
-- **Simple schedule setup.** **New schedule** first asks how you take it: **Every day**, **On set days of the week**,
-  **Every few days** (each with no end date) or **In cycles** (a stretch on, then a break, repeating). FlexNotes
-  builds the schedule and opens the dose straight away, already set to those days. Everything can still be changed
-  in the schedule editor afterwards.
-- **Tapering and step-up doses.** In a dose's sheet, **Change over time** can be **Taper down** or **Step up**: by
-  how much, every how many days, and the lowest (or highest) it goes. A preview shows the amounts, for example
-  "20 → 15 → 10 mg". Today, reminders, the supply forecast, the emergency card, CSV files and the report for a doctor
-  all use the right amount for each day. A pause holds the taper back, and a dose change on Today still overrides it.
-- **As-needed medications.** From a medication's ⋮ menu, **Taken as needed…** marks it as taken only when needed,
-  with an optional most a day. Today lists these under **As needed**, with the time since your last dose, how many
-  you've had today and a **Take** button that logs your usual amount at once, with Undo. Once today's most is reached,
-  FlexNotes asks before logging another.
-- **As needed in the doctor's report.** The Medications report gives as-needed medications their own section: how
-  many times each was taken, on how many days, the total and the most in one day. They aren't counted in adherence.
+- **Training blocks.** In a workout's editor, the new **Training blocks** section plans the workout in blocks from a
+  start date you choose. **Add training blocks** starts you off with three weeks of **Build** and a one-week
+  **Deload**, and everything can be changed: rename a block, set its length in weeks or days, mark it as a deload,
+  add, duplicate or delete blocks, and drag them into a new order with **Reorder**. The last block can be
+  **Ongoing**, with no end. Switch on **Start again after the last block** to repeat the plan round after round.
+- **Your block on the day log.** When a workout's blocks are running, the day log opens with a card showing the
+  workout, the block and how far in you are (for example "Build · week 2 of 3"), and what comes next and from when.
+  In a deload block the card has a gold border and a reminder to go lighter. Past days show the block they fell in.
+  Tap the card to change the blocks.
+- **Body outline on the camera.** When you take a progress photo in a pose you've photographed before, FlexNotes
+  finds the body in the last photo and draws a bold white outline of it over the viewfinder, together with the
+  translucent photo. The outline has a soft dark edge, so it stays visible against light walls too.
+- **Outline controls.** Under the outline switch, **Photo** sets how much of the last photo shows (from 0 to 60%,
+  30% to start) and **Line** sets the outline's weight (**Thin**, **Medium** or **Bold**). FlexNotes remembers both.
 
 ## Improved
 
-- The Medications screen opens on **Today** when you have an as-needed medication, as well as when a dose is due.
-- A tapering dose's row in the schedule editor and its sheet on Today say how it changes, for example "Down 5 mg
-  every 7 days, to 10 mg".
+- The body is found on your phone, with a model built into FlexNotes. Nothing is uploaded, it works in airplane mode,
+  and FlexNotes still has no internet permission. Each photo is worked out once, so the outline shows straight away
+  the next time you open the camera.
+- Every release is now checked automatically to make sure it never gains the internet permission.
 
 ## Known limitations
 
-- A taper counts from the start of its phase and starts again in each phase of a repeating cycle.
-- **Take** repeats the amount of your last logged dose. To log a different amount, or the very first dose, use the
-  medication's own page.
-- As-needed medications don't have reminders.
+- If no body can be found in the last photo (for example a close-up), only the translucent photo is shown, with a
+  short note.
+- Training blocks don't change your sets or weights by themselves yet: a deload block is a reminder, and the lighter
+  sets are still yours to choose.
+- This update upgrades the database to a new version. Your workouts, routines and all other data are kept as they
+  are.
