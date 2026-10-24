@@ -1,33 +1,40 @@
 ## Overview
 
-This update brings your health checks into FlexNotes. Blood pressure, blood glucose, blood oxygen, heart rate
-variability and body temperature can come from Health Connect or be logged by hand. Lab results from blood tests can
-be recorded with the reference range printed on your report. Any value outside its range is marked High or Low, the
-graph shows the range, and the report for a doctor lists it.
+This update helps you judge how hard to train each day. A quick daily check-in and your heart data make a readiness
+score. Training load shows when your week is a sharp jump on what you're used to. A new water and caffeine log
+estimates how much caffeine is still active when you go to bed, and sets it against the sleep that followed.
 
 ## What's new
 
-- **Vitals from Health Connect.** **Settings › Health Connect** has a new **Vitals** section: **Blood pressure**,
-  **Blood glucose**, **Blood oxygen**, **Heart rate variability** and **Body temperature**. Switch any of them to
-  Health Connect and each reading from your monitor, watch, ring or meter arrives at its own time in the Body tracker.
-  Blood pressure is kept as two values, systolic and diastolic. What you type yourself is always kept.
-- **Log vitals by hand.** In the Body tracker, tap the pencil and choose **Add vitals** to add all five, ready to log
-  without Health Connect.
-- **Glucose and temperature units.** Blood glucose can be shown in mmol/L or mg/dL, and body temperature in °C or °F.
-  Choose the unit in the Body tracker's Measurements list. Readings convert both ways, and nothing stored changes.
-- **Lab results.** In the Body tracker's Measurements list, tap **New lab marker**. Pick a common marker (cholesterol,
-  HbA1c, testosterone, thyroid, liver, kidney, vitamin D, ferritin and more) or type your own, then enter the reference
-  range from your lab report. Lab markers are listed under **Lab results** on the Track tab and are logged, edited and
-  graphed like any other value.
-- **Reference ranges for any value.** Any body measurement can have a reference range: choose **Reference range**
-  from its ⋮ menu. Leave one end blank for an upper or lower limit only.
-- **High and Low flags.** A value outside its range is marked **▲ High** or **▼ Low** on the Track tab, in History
-  and in the measurement's own list. The graph shades the range, so you can see at a glance where each reading falls.
-- **Ranges in the report for a doctor.** In the Medications report's **Body values**, a value with a range now shows
-  that range, how many readings fell outside it, and whether the latest one is High or Low.
+- **Daily check-in.** The day log has a new **Readiness** card. Tap it to rate **sleep quality**, **soreness**,
+  **mood**, **stress** and **energy** from 1 to 5. Leave out any you'd rather not rate. Save it, change it later, or
+  clear the day, all with Undo, on any date.
+- **Readiness score.** Each day gets a score from 0 to 100, with a word to go with it: **Ready**, **Steady** or
+  **Take it easy**. Half the score comes from your check-in. The rest comes from heart rate variability and resting
+  heart rate, each against your own usual over the last four weeks, and from the hours you slept. The check-in shows
+  how each part counted, and the card shows how the day compares with your last 7 days.
+- **Analysis › Readiness.** A new tab in Analysis graphs your readiness over time and has a **Check in** button for
+  today.
+- **Training load.** The same tab shows your acute load (the last 7 days) and your chronic load (the last 28 days),
+  measured as volume lifted or as the number of sets. It also graphs the **acute:chronic ratio** over time.
+- **Load spike warning.** When this week reaches more than **1.5×** your usual load, a level linked to a higher injury
+  risk, Analysis warns you and the day's readiness card says so. A ratio under 0.8 is flagged as load dropping off.
+- **Monotony and strain.** Monotony shows how alike your training days are, graphed with a line at 2.0, along with
+  the week's strain. High monotony is flagged, since mixing hard and easy days lowers the strain.
+- **Water and caffeine.** A new card on the day log shows the day's water and caffeine. Log a drink at any time with
+  one tap: water from 250 to 750 ml, or an espresso, coffee, tea, energy drink or cola. You can also type any amount.
+  Each drink is listed with its time. Tap one to edit it, or delete it with Undo.
+- **Caffeine at bedtime.** Set your usual bedtime, and FlexNotes estimates how much caffeine is still active then.
+  Each recent night lists that figure next to the hours you slept, from Health Connect or typed in.
+- **Home screen choices.** **Settings › Home Screen Settings** can hide the Readiness card or the Water and caffeine card.
 
 ## Known limitations
 
-- Lab results are typed in by hand. Reading them from Health Connect's medical records is planned separately.
-- No reference ranges are filled in for you, because they differ between labs. Copy yours from your report.
-- Vitals read from Health Connect cover the last 30 days, or the full history if you allowed older data.
+- The readiness score and the caffeine estimate are guides, not medical measures. Caffeine is assumed to halve every
+  5 hours, and that varies from person to person.
+- Heart rate variability and resting heart rate count toward the score only once at least 5 earlier days of them are
+  logged in the last four weeks.
+- The acute:chronic ratio starts once training has been logged for 28 days. Training load counts lifting volume or
+  sets only, so cardio counts toward load by set count alone.
+- Check-in ratings, water and caffeine are kept as body values, so they also appear in the Body tracker, where they
+  can be graphed.

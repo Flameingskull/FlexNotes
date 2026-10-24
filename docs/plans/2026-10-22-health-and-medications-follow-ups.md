@@ -1,6 +1,6 @@
 # Health and medications follow-ups: plan across builds (2026-10-22)
 
-> **Status (2026-10-23, 1.0.162): In progress.** All 16 suggestions from the Medications plan
+> **Status (2026-10-24, 1.0.163): In progress.** All 16 suggestions from the Medications plan
 > (`docs/plans/2026-10-22-medications.md`) were picked by the owner and filed as #207–#222, each imported into the
 > tracker; tracker plan item "Health and medications follow-ups: plan across builds (2026-10-22)".
 > Build 1 done in 1.0.158 (the medication extras #207, #209, #210: database v26 with `med_info`, `mrecord.site` and the
@@ -16,9 +16,12 @@
 > and °C ↔ °F; #211, lab markers and reference ranges for any measurement: database v27 with `measurement.ref_low`,
 > `ref_high` and `lab`, `LabMarkers.kt`, `ui/LabResults.kt`, High / Low flags, the graph's range band and ranges in the
 > doctor's report). Filed under rule 5 as #211's deferred part: #225 (lab results from Health Connect medical records).
-> Left: #216–#222 and #225. #216, #217, #221, #222 and #225 can start any time; the rest depend on shipped work.
-> Next: `/new-build` to triage these (all still `needs-triage`), then #216 (readiness check-in) with #217 (training
-> load), which share the Analysis area.
+> Build 5 done in 1.0.163 (`/safe-build`: #216, the readiness check-in and score, `Readiness.kt`,
+> `ui/ReadinessViews.kt`, the day log's Readiness card; #217, training load, `TrainingLoad.kt`, both in the new
+> Analysis › Readiness tab, `ui/ReadinessTab.kt`; #221, water and caffeine with caffeine at bedtime against sleep,
+> `Drinks.kt`, `ui/DrinksViews.kt`). No database change: check-ins and drinks are body values, like intake.
+> Left: #218, #219, #220, #222 and #225. #222 and #225 can start any time; the rest depend on shipped work.
+> Next: `/new-build` to triage these (all still `needs-triage`).
 
 ## Context
 
