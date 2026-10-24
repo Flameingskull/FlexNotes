@@ -7,6 +7,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.health.connect.client.HealthConnectClient
+import androidx.health.connect.client.HealthConnectFeatures
+import androidx.health.connect.client.feature.ExperimentalPersonalHealthRecordApi
 import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.permission.HealthPermission
@@ -19,6 +21,7 @@ import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
 import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.MedicalResource
 import androidx.health.connect.client.records.MenstruationFlowRecord
 import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.NutritionRecord
@@ -30,6 +33,9 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
+import androidx.health.connect.client.request.ReadMedicalResourcesInitialRequest
+import androidx.health.connect.client.request.ReadMedicalResourcesPageRequest
+import androidx.health.connect.client.request.ReadMedicalResourcesRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.work.CoroutineWorker
@@ -87,6 +93,12 @@ object HealthConnect {
      * Settings › Health Connect; without it only the last [DAYS] days are ever read.
      */
     const val HISTORY = "android.permission.health.READ_HEALTH_DATA_HISTORY"
+
+    /** Lab results from medical records (#225), asked for on its own from Settings › Health Connect where the phone offers them. */
+    const val LABS = "android.permission.health.READ_MEDICAL_DATA_LABORATORY_RESULTS"
+
+    /** The comment a lab result from Health Connect is kept with (#225). */
+    const val LAB_COMMENT = "Health Connect · lab result"
 
     /** The earliest day the full history is read from (#192). */
     val HISTORY_FROM: LocalDate = LocalDate.of(2010, 1, 1)
@@ -236,8 +248,23 @@ object HealthConnect {
     fun permissionsFor(vararg kinds: Kind): Set<String> =
         kinds.flatMap { k -> listOf(k.permission) + k.also.map { HealthPermission.getReadPermission(it) } }.toSet() + BACKGROUND
 
-    /** Some type is read from Health Connect or written to it (#191). */
-    fun anyChosen(p: PortableSettings): Boolean = Kind.entries.any { it.chosen(p) } || HealthWrite.anyOn(p)
+    /** Some type is read from Health Connect or written to it (#191), lab results included (#225). */
+    fun anyChosen(p: PortableSettings): Boolean = Kind.entries.any { it.chosen(p) } || p.hcLabs || HealthWrite.anyOn(p)
+
+    /**
+     * Health Connect on this phone offers medical records (#225): Android 16 and later with a Health Connect that has
+     * them. False when Health Connect can't be used, or the check itself fails.
+     */
+    @OptIn(ExperimentalPersonalHealthRecordApi::class)
+    fun labsAvailable(context: Context): Boolean {
+        if (status(context) != Status.AVAILABLE) return false
+        return try {
+            HealthConnectClient.getOrCreate(context.applicationContext).features
+                .getFeatureStatus(HealthConnectFeatures.FEATURE_PERSONAL_HEALTH_RECORD) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+        } catch (e: Exception) {
+            false
+        }
+    }
 
     /** The Health Connect permissions FlexNotes has, or none when Health Connect can't be used. */
     suspend fun granted(context: Context): Set<String> {
@@ -281,7 +308,7 @@ object HealthConnect {
         val wm = WorkManager.getInstance(app)
         val p = Settings.currentPortable()
         // Reading while FlexNotes is closed needs background reading; writing (#191) doesn't.
-        if (!(Kind.entries.any { it.chosen(p) } && BACKGROUND in granted(app)) && !HealthWrite.anyOn(p)) {
+        if (!((Kind.entries.any { it.chosen(p) } || p.hcLabs) && BACKGROUND in granted(app)) && !HealthWrite.anyOn(p)) {
             wm.cancelUniqueWork(WORK)
             return
         }
@@ -300,7 +327,7 @@ object HealthConnect {
         val p = Settings.currentPortable()
         val kinds = Kind.entries.filter { it.chosen(p) }
         val outs = HealthWrite.Out.entries.filter { it.on(p) }
-        if (kinds.isEmpty() && outs.isEmpty()) return@withLock Outcome.NOTHING_CHOSEN
+        if (kinds.isEmpty() && outs.isEmpty() && !p.hcLabs) return@withLock Outcome.NOTHING_CHOSEN
         if (status(app) != Status.AVAILABLE) return@withLock Outcome.UNAVAILABLE
         val last = Settings.current().hcSyncedAt
         if (!force && last != null && System.currentTimeMillis() - last in 0 until MIN_GAP_MS) return@withLock Outcome.DONE
@@ -309,7 +336,8 @@ object HealthConnect {
             val client = HealthConnectClient.getOrCreate(app)
             val granted = client.permissionController.getGrantedPermissions()
             val allowed = kinds.filter { it.permission in granted }
-            if (allowed.isEmpty() && outs.none { it.permission in granted }) return@withLock Outcome.NOT_ALLOWED
+            val labs = p.hcLabs && LABS in granted
+            if (allowed.isEmpty() && !labs && outs.none { it.permission in granted }) return@withLock Outcome.NOT_ALLOWED
             // Reading can fail while FlexNotes is closed without background reading; writing still goes ahead.
             val reading = runCatching {
                 if (allowed.isNotEmpty()) {
@@ -322,6 +350,16 @@ object HealthConnect {
                         HealthSessions.add(sessions(app, client, from, today, distance))
                     }
                     readHistory(app, client, allowed, granted, from)
+                }
+                // Lab results never fail the regular read: they're tried again at the next sync.
+                if (labs && labsAvailable(app)) {
+                    try {
+                        readLabs(client)
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        // Left for the next sync.
+                    }
                 }
             }
             reading.exceptionOrNull()?.let { if (it is CancellationException) throw it }
@@ -374,6 +412,30 @@ object HealthConnect {
             }
         }
         if (finished.isNotEmpty()) Settings.updateDeviceNow { it.copy(hcHistoryKinds = (done + finished).sorted().joinToString(",")) }
+    }
+
+    /**
+     * Every laboratory result in Health Connect's medical records (#225), however old: the ones not added before (by
+     * their key, kept on this phone in [DeviceSettings.hcLabIds]) are added through `Store.addLabResults`. So a re-sync
+     * never duplicates a result, and one the user edited or deleted stays as they left it.
+     */
+    @OptIn(ExperimentalPersonalHealthRecordApi::class)
+    private suspend fun readLabs(client: HealthConnectClient) {
+        val seen = LabResults.seen(Settings.current().hcLabIds)
+        val found = mutableListOf<LabResults.Result>()
+        var request: ReadMedicalResourcesRequest = ReadMedicalResourcesInitialRequest(MedicalResource.MEDICAL_RESOURCE_TYPE_LABORATORY_RESULTS, emptySet())
+        var guard = 0
+        while (guard++ < 100) {
+            val response = client.readMedicalResources(request)
+            response.medicalResources.forEach { m ->
+                LabResults.parse(m.fhirResource.data, m.dataSourceId)?.takeIf { it.key !in seen }?.let { found += it }
+            }
+            val next = response.nextPageToken
+            if (next.isNullOrEmpty()) break
+            request = ReadMedicalResourcesPageRequest(next)
+        }
+        val added = Store.addLabResults(found)
+        if (added.isNotEmpty()) Settings.updateDeviceNow { it.copy(hcLabIds = LabResults.store(seen, added)) }
     }
 
     /** [kind]'s values from [from] to [to] (local days), as the series `Store` keeps; a day with none has none. */

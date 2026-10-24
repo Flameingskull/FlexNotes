@@ -69,6 +69,9 @@ data class DeviceSettings(
     /** The Health Connect types whose full history has been read on this phone (#192), as `Kind` names separated by
      *  commas. Cleared when older data is no longer allowed, so allowing it again reads the history again. */
     val hcHistoryKinds: String? = null,
+    /** The lab results from Health Connect already added on this phone (#225), one key a line (`LabResults.seen`), so
+     *  a result is added once and stays as the user left it after an edit or a delete. */
+    val hcLabIds: String? = null,
     /** Medication reminders (#203): a notification when a scheduled dose is due. On unless switched off. */
     val medReminders: Boolean = true,
     /** Medication names on the lock screen (#203). Off: the lock screen shows only "Medication reminder". */
@@ -203,6 +206,8 @@ data class PortableSettings(
     val hcCycle: Boolean = false,
     /** The cycle's phases are left off body and exercise graphs (#222); shown by default when there are Period values. */
     val cycleBandsOff: Boolean = false,
+    /** Lab results read from Health Connect's medical records (#225), where the phone offers them. */
+    val hcLabs: Boolean = false,
     /** Bodyweight logged in FlexNotes is written to Health Connect (#191). */
     val hcWriteWeight: Boolean = false,
     /** Body fat logged in FlexNotes is written to Health Connect (#191). */
@@ -468,6 +473,7 @@ object Settings {
             P_HC_CAFFEINE to if (s.hcCaffeine) "1" else null,
             P_HC_CYCLE to if (s.hcCycle) "1" else null,
             P_CYCLE_BANDS_OFF to if (s.cycleBandsOff) "1" else null,
+            P_HC_LABS to if (s.hcLabs) "1" else null,
             P_HCW_WEIGHT to if (s.hcWriteWeight) "1" else null,
             P_HCW_BODY_FAT to if (s.hcWriteBodyFat) "1" else null,
             P_HCW_WORKOUTS to if (s.hcWriteWorkouts) "1" else null,
@@ -520,6 +526,7 @@ object Settings {
     private const val D_HC_SYNCED = "hc_synced_at"
     private const val D_BACKUP_PHOTOS = "backup_photos"
     private const val D_HC_HISTORY = "hc_history_kinds"
+    private const val D_HC_LAB_IDS = "hc_lab_ids"
     private const val D_MED_REMINDERS = "med_reminders"
     private const val D_MED_NAMES = "med_names_lock_screen"
     private const val D_MED_LOCK = "med_lock"
@@ -593,6 +600,7 @@ object Settings {
     private const val P_HC_CAFFEINE = "hc_caffeine"
     private const val P_HC_CYCLE = "hc_cycle"
     private const val P_CYCLE_BANDS_OFF = "cycle_bands_off"
+    private const val P_HC_LABS = "hc_labs"
     private const val P_HCW_WEIGHT = "hc_write_weight"
     private const val P_HCW_BODY_FAT = "hc_write_body_fat"
     private const val P_HCW_WORKOUTS = "hc_write_workouts"
@@ -646,6 +654,7 @@ object Settings {
         stepsLast = get(D_STEPS_LAST),
         hcSyncedAt = get(D_HC_SYNCED)?.toLongOrNull(),
         hcHistoryKinds = get(D_HC_HISTORY),
+        hcLabIds = get(D_HC_LAB_IDS),
         medReminders = get(D_MED_REMINDERS) != "0",
         medNamesOnLockScreen = bool(get(D_MED_NAMES)),
         medLock = bool(get(D_MED_LOCK)),
@@ -681,6 +690,7 @@ object Settings {
         D_STEPS_LAST to stepsLast,
         D_HC_SYNCED to hcSyncedAt?.toString(),
         D_HC_HISTORY to hcHistoryKinds,
+        D_HC_LAB_IDS to hcLabIds,
         D_MED_REMINDERS to if (medReminders) null else "0",
         D_MED_NAMES to if (medNamesOnLockScreen) "1" else null,
         D_MED_LOCK to if (medLock) "1" else null,
@@ -754,6 +764,7 @@ object Settings {
         hcCaffeine = bool(get(P_HC_CAFFEINE)),
         hcCycle = bool(get(P_HC_CYCLE)),
         cycleBandsOff = bool(get(P_CYCLE_BANDS_OFF)),
+        hcLabs = bool(get(P_HC_LABS)),
         hcWriteWeight = bool(get(P_HCW_WEIGHT)),
         hcWriteBodyFat = bool(get(P_HCW_BODY_FAT)),
         hcWriteWorkouts = bool(get(P_HCW_WORKOUTS)),
@@ -834,6 +845,7 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     hcWater = hcWater,
     hcCaffeine = hcCaffeine,
     hcCycle = hcCycle,
+    hcLabs = hcLabs,
     hcWriteWeight = hcWriteWeight,
     hcWriteBodyFat = hcWriteBodyFat,
     hcWriteWorkouts = hcWriteWorkouts,

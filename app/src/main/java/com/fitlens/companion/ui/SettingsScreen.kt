@@ -200,6 +200,7 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.hc_water, SettingsSection.HealthConnect, R.string.search_hc_water_kw) { onOff(prefs.hcWater) },
     SettingEntry(R.string.hc_caffeine, SettingsSection.HealthConnect, R.string.search_hc_caffeine_kw) { onOff(prefs.hcCaffeine) },
     SettingEntry(R.string.hc_cycle, SettingsSection.HealthConnect, R.string.search_hc_cycle_kw) { onOff(prefs.hcCycle) },
+    SettingEntry(R.string.hc_labs, SettingsSection.HealthConnect, R.string.search_hc_labs_kw) { onOff(prefs.hcLabs) },
     SettingEntry(R.string.hc_cycle_bands, SettingsSection.HealthConnect, R.string.search_hc_cycle_bands_kw) { onOff(!prefs.cycleBandsOff) },
     SettingEntry(R.string.hcw_weight, SettingsSection.HealthConnect, R.string.search_hcw_weight_kw) { onOff(prefs.hcWriteWeight) },
     SettingEntry(R.string.hcw_body_fat, SettingsSection.HealthConnect, R.string.search_hcw_body_fat_kw) { onOff(prefs.hcWriteBodyFat) },

@@ -3123,7 +3123,7 @@
     <string name="hc_history_ask_title">Read older data?</string>
     <string name="hc_history_ask_text">Health Connect will ask whether FlexNotes may read data older than %1$d days. If you allow it, FlexNotes reads the whole history of each type you chose to take from Health Connect, once, in the background. It\'s kept on this phone, marked Health Connect, and what you typed yourself is never replaced. If you don\'t, nothing changes: the last %1$d days are still read.</string>
     <string name="hc_history_ask_go">Continue</string>
-    <string name="hc_privacy">FlexNotes reads from Health Connect only the types you switch to it here: steps; the calories, protein, fat and carbs you ate; active calories burned; bodyweight and body fat; resting heart rate; sleep; exercise sessions; the vitals: blood pressure, blood glucose, blood oxygen, heart rate variability and body temperature; water and caffeine; and your menstrual cycle. It reads them on this phone and keeps them in FlexNotes\'s own data and your backups. It writes to Health Connect only what you switch on under Write to Health Connect: your bodyweight, body fat and workouts. Nothing is sent anywhere: FlexNotes has no internet permission. Values already read stay if you switch a type back, and values already written stay in Health Connect, where you can delete them.</string>
+    <string name="hc_privacy">FlexNotes reads from Health Connect only the types you switch to it here: steps; the calories, protein, fat and carbs you ate; active calories burned; bodyweight and body fat; resting heart rate; sleep; exercise sessions; the vitals: blood pressure, blood glucose, blood oxygen, heart rate variability and body temperature; water and caffeine; your menstrual cycle; and lab results from your medical records. It reads them on this phone and keeps them in FlexNotes\'s own data and your backups. It writes to Health Connect only what you switch on under Write to Health Connect: your bodyweight, body fat and workouts. Nothing is sent anywhere: FlexNotes has no internet permission. Values already read stay if you switch a type back, and values already written stay in Health Connect, where you can delete them.</string>
     <!-- Vitals (#212) -->
     <string name="hc_group_vitals">Vitals</string>
     <string name="hc_bp">Blood pressure</string>
@@ -3177,6 +3177,12 @@
     <string name="cy_follicular">Follicular</string>
     <string name="cy_ovulation">Ovulation (estimated)</string>
     <string name="cy_luteal">Luteal</string>
+    <!-- Lab results from Health Connect medical records (#225) -->
+    <string name="hc_labs">Lab results</string>
+    <string name="hc_labs_summary">Each laboratory result in your medical records, filed under its lab marker with its reference range. Results you edit or delete stay as you left them.</string>
+    <string name="hc_labs_unavailable">This phone\'s Health Connect doesn\'t have medical records (they need Android 16 or later).</string>
+    <string name="hc_what_labs">lab results</string>
+    <string name="search_hc_labs_kw">lab results blood test medical records fhir markers health connect</string>
     <string name="vit_add">Add vitals (%1$d)</string>
     <!-- Lab results and reference ranges (#211) -->
     <string name="lab_new">New lab marker</string>

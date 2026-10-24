@@ -790,6 +790,47 @@ object Store {
         changed
     }
 
+    /**
+     * Adds lab results read from Health Connect's medical records (#225), each as a value of its lab marker at its own
+     * date and time, from [Sources.HEALTH_CONNECT]. A marker is found by name whatever its capitals and spaces, or made
+     * as a lab marker in the result's unit with its reference range; an existing marker without a range takes the
+     * record's. A result in a unit that can't be converted to its marker's (or named like a medication) gets its own
+     * marker, "Name (unit)". One already there at the same time and value isn't added again (after a restore).
+     * Returns the keys of the results now recorded, added or already there, so they're never added twice.
+     */
+    suspend fun addLabResults(results: List<LabResults.Result>): List<String> = withContext(Dispatchers.IO) {
+        if (results.isEmpty()) return@withContext emptyList()
+        val done = mutableListOf<String>()
+        db.transaction {
+            val body = db.bodyDao
+            val records = db.importDao
+            results.forEach { r ->
+                var name = body.definitionNames().firstOrNull { looseName(it) == looseName(r.name) } ?: r.name
+                var def = body.definition(name)
+                if (def != null && (def.medication != 0 || (def.unit.isNotBlank() && r.unit.isNotBlank() && !MeasureUnits.sameKind(def.unit, r.unit)))) {
+                    name = if (r.unit.isBlank()) "${r.name} (lab)" else "${r.name} (${r.unit})"
+                    def = body.definition(name)
+                }
+                val stored = def?.unit?.takeIf { it.isNotBlank() } ?: r.unit
+                fun toStored(v: Double?) = v?.let { if (r.unit.isBlank()) it else MeasureUnits.convert(it, r.unit, stored) }
+                if (def == null) {
+                    body.addOwn(name, stored, body.lastOrder() + 1)
+                    body.definition(name)?.let { row -> body.replaceDefinition(row.copy(lab = 1, ref_low = toStored(r.refLow), ref_high = toStored(r.refHigh))) }
+                } else if (def.ref_low == null && def.ref_high == null && (r.refLow != null || r.refHigh != null)) {
+                    body.setRange(name, toStored(r.refLow), toStored(r.refHigh))
+                }
+                val value = toStored(r.value) ?: r.value
+                val there = records.recordsFrom(name, Sources.HEALTH_CONNECT, listOf(r.date))
+                    .any { it.time == r.time && abs(it.value - value) < 1e-6 }
+                if (!there) records.addRecord(name, stored, r.date, r.time, value, HealthConnect.LAB_COMMENT, Sources.HEALTH_CONNECT)
+                done += r.key
+            }
+        }
+        // A background sync may run before the app has loaded its data.
+        if (_snapshot.value != null) refresh(Area.BODY)
+        done
+    }
+
     /** A measurement's name compared loosely, so "Body Weight" is "Bodyweight" and "Body fat" is "Bodyfat". */
     private fun looseName(name: String): String = name.filterNot { it.isWhitespace() }.lowercase()
 
