@@ -1,39 +1,41 @@
 ## Overview
 
-This update brings two things you asked for. **Training blocks** let you plan a workout over the weeks, for example
-three weeks of building and then a lighter deload week, and the day log now shows which block you're in. The
-camera's alignment guide is also much easier to see: the last photo of the pose now has a **bold white body outline**
-over it, so you can line up each new progress photo with the last one.
+This update brings more of your health data in from **Health Connect**, the health hub on your phone. Water and
+caffeine logged in other apps now count toward your day, your **menstrual cycle** can be shaded on your body and
+exercise graphs, and on phones that support it, **lab results** from your medical records are filed under your lab
+markers. As always, everything is read on your phone, and FlexNotes still has no internet permission.
 
 ## What's new
 
-- **Training blocks.** In a workout's editor, the new **Training blocks** section plans the workout in blocks from a
-  start date you choose. **Add training blocks** starts you off with three weeks of **Build** and a one-week
-  **Deload**, and everything can be changed: rename a block, set its length in weeks or days, mark it as a deload,
-  add, duplicate or delete blocks, and drag them into a new order with **Reorder**. The last block can be
-  **Ongoing**, with no end. Switch on **Start again after the last block** to repeat the plan round after round.
-- **Your block on the day log.** When a workout's blocks are running, the day log opens with a card showing the
-  workout, the block and how far in you are (for example "Build · week 2 of 3"), and what comes next and from when.
-  In a deload block the card has a gold border and a reminder to go lighter. Past days show the block they fell in.
-  Tap the card to change the blocks.
-- **Body outline on the camera.** When you take a progress photo in a pose you've photographed before, FlexNotes
-  finds the body in the last photo and draws a bold white outline of it over the viewfinder, together with the
-  translucent photo. The outline has a soft dark edge, so it stays visible against light walls too.
-- **Outline controls.** Under the outline switch, **Photo** sets how much of the last photo shows (from 0 to 60%,
-  30% to start) and **Line** sets the outline's weight (**Thin**, **Medium** or **Bold**). FlexNotes remembers both.
+- **Water and caffeine from Health Connect.** In Settings › Health Connect, **Water** and **Caffeine** can each be
+  switched to read from Health Connect. Each drink keeps the time it was logged, so drinks from a water or food app
+  add up on the day log, and **caffeine at bedtime** uses them too.
+- **Your menstrual cycle on graphs.** Switch **Menstrual cycle** to Health Connect and FlexNotes reads your period
+  days and flow from your cycle-tracking app. Body and exercise graphs then shade each phase behind your values:
+  **Period**, **Follicular**, **Ovulation (estimated)** and **Luteal**, with a small key under the graph. You can
+  also log period days yourself as a **Period** value in the Body tracker (1 light, 2 medium, 3 heavy), and the
+  phases work the same way.
+- **Cycle phases on graphs** is a setting of its own, so you can keep the cycle data and hide the shading at any time.
+- **Lab results from medical records.** On phones whose Health Connect has medical records (Android 16 and later),
+  the new **Lab results** switch reads each laboratory result with a number and a date. Each one goes under the lab
+  marker of the same name, at its own date, and a new marker is made the first time with the unit and reference range
+  from the record.
 
 ## Improved
 
-- The body is found on your phone, with a model built into FlexNotes. Nothing is uploaded, it works in airplane mode,
-  and FlexNotes still has no internet permission. Each photo is worked out once, so the outline shows straight away
-  the next time you open the camera.
-- Every release is now checked automatically to make sure it never gains the internet permission.
+- When a day has drinks both typed in FlexNotes and read from Health Connect, the one source you chose is counted,
+  and the water and caffeine sheet marks each drink from Health Connect and any drink that isn't counted that day.
+  Typed drinks are never changed or removed.
+- Lab results are added only once. A result you edit or delete stays as you left it, even when Health Connect is read
+  again.
+- The Health Connect privacy note now lists every type FlexNotes can read.
 
 ## Known limitations
 
-- If no body can be found in the last photo (for example a close-up), only the translucent photo is shown, with a
-  short note.
-- Training blocks don't change your sets or weights by themselves yet: a deload block is a reminder, and the lighter
-  sets are still yours to choose.
-- This update upgrades the database to a new version. Your workouts, routines and all other data are kept as they
-  are.
+- Ovulation and the phases after it are estimated from your cycle length (ovulation about 14 days before your next
+  period), so treat the shading as a guide, not a prediction. A cycle shorter than 21 or longer than 45 days, usually
+  because a period wasn't logged, shows only its period.
+- Lab results need medical records in Health Connect, which most phones don't have yet. Where they're missing, the
+  switch says so and can't be turned on. Results written as text, such as "negative", aren't added.
+- Health Connect normally shares the last 30 days. To read older drinks and cycles, allow **Older data** in Settings ›
+  Health Connect.
