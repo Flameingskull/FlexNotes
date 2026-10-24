@@ -129,7 +129,13 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     var reporting by rememberSaveable { mutableStateOf(false) }
     var ratingSymptoms by rememberSaveable { mutableStateOf(false) }
     var emergencyCard by rememberSaveable { mutableStateOf(false) }
-    val pager = rememberPagerState(pageCount = { 3 })
+    // Medications has five tabs (#227): Today, Schedules, Medications, History, Graph. It opens on Today when a dose is
+    // due today (so a reminder's tap lands there), otherwise on the medication list.
+    val listPage = if (medications) MED_LIST_PAGE else 0
+    val pager = rememberPagerState(
+        initialPage = if (medications && com.fitlens.companion.data.MedSchedules.dueOn(snap.medPlan, Dates.today()).isEmpty()) MED_LIST_PAGE else 0,
+        pageCount = { if (medications) 5 else 3 }
+    )
     val scope = rememberCoroutineScope()
 
     Column(Modifier.fillMaxSize()) {
@@ -161,7 +167,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                 else -> listOf(MenuAction(stringResource(R.string.tdee_title)) { nav.push(Screen.Tdee) })
             },
             trailing = {
-                if (!editing && measurements.size > 1 && pager.currentPage == 0) ReorderToggle(reordering) { reordering = it }
+                if (!editing && measurements.size > 1 && pager.currentPage == listPage) ReorderToggle(reordering) { reordering = it }
             }
         )
         if (editing) {
@@ -182,15 +188,25 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
             }
         } else {
             FitTabRow(
-                titles = bodyTabs(),
+                titles = if (medications) medicationTabs() else bodyTabs(),
                 selected = pager.currentPage,
                 onSelect = { i -> scope.launch { pager.animateScrollToPage(i) } }
             )
-            HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
-                when (page) {
-                    0 -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
-                        // Medications: today's doses and the schedules come first (#201, #202).
-                        if (medications) medicationTrackHeader(snap, nav, onSymptoms = { ratingSymptoms = true }) { d -> openDose = "${d.dose.id}|${d.due}" }
+            HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { pageIndex ->
+                // The Body tracker's Track / History / Graph are Medications' pages 2–4.
+                val page = if (medications) pageIndex - MED_LIST_PAGE else pageIndex
+                when {
+                    pageIndex == 0 && medications -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+                        medicationTodayTab(
+                            snap, nav,
+                            onSchedules = { scope.launch { pager.animateScrollToPage(1) } },
+                            onSymptoms = { ratingSymptoms = true }
+                        ) { d -> openDose = "${d.dose.id}|${d.due}" }
+                    }
+                    pageIndex == 1 && medications -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+                        medicationSchedulesTab(snap, nav)
+                    }
+                    page == 0 -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
                         val order = dragOrder.of(names)
                         val byName = measurements.associateBy { it.name }
                         fun save() = dragOrder.end(names) { final ->
@@ -214,7 +230,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                             HorizontalDivider(color = Brand.Hairline)
                         }
                     }
-                    1 -> BodyHistoryAll(snap, measurements, onDelete = { deleteBodyValue(res, it) }) { r -> open = r.id }
+                    page == 1 -> BodyHistoryAll(snap, measurements, onDelete = { deleteBodyValue(res, it) }) { r -> open = r.id }
                     else -> {
                         var graphOf by rememberSaveable { mutableStateOf(measurements.first().name) }
                         val names = measurements.map { it.name }
@@ -242,6 +258,16 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
         MeasurementEntrySheet(snap, r.date, existing = r) { open = null }
     }
 }
+
+/** Medications' list tab (#227): after Today and Schedules, before History and Graph. */
+private const val MED_LIST_PAGE = 2
+
+/** Medications' five tabs (#227): Today, Schedules, Medications, History, Graph. */
+@Composable
+private fun medicationTabs(): List<String> = listOf(
+    stringResource(R.string.md_today), stringResource(R.string.md_schedules), stringResource(R.string.md_title),
+    stringResource(R.string.body_tab_history), stringResource(R.string.ex_graph)
+)
 
 /** The Track, History and Graph tabs, as the body tracker and each measurement name them. */
 @Composable

@@ -21,15 +21,20 @@ import java.time.temporal.ChronoUnit
  * that month's last day when it has no such date. Writes refresh the body area, which holds the medications.
  */
 
-/** How long a phase lasts. Stored as its [code]. */
+/**
+ * How long a phase lasts. Stored as its [code]. [ONGOING] (#228) has no end: only the last phase of a schedule can be
+ * ongoing, and once a run reaches it the schedule never finishes or repeats (its stored length is ignored).
+ */
 enum class PhaseUnit(val code: String) {
-    DAYS("d"), WEEKS("w"), MONTHS("m"), YEARS("y");
+    DAYS("d"), WEEKS("w"), MONTHS("m"), YEARS("y"), ONGOING("o");
 
+    /** [n] units after [date]; an ongoing phase never ends, so [LocalDate.MAX] (never stepped past). */
     fun add(date: LocalDate, n: Long): LocalDate = when (this) {
         DAYS -> date.plusDays(n)
         WEEKS -> date.plusWeeks(n)
         MONTHS -> date.plusMonths(n)
         YEARS -> date.plusYears(n)
+        ONGOING -> LocalDate.MAX
     }
 
     companion object {
@@ -100,7 +105,10 @@ data class MedSchedule(
     val repeats: Boolean = false,
     val sortOrder: Int = 0,
     val phases: List<MedPhase> = emptyList()
-)
+) {
+    /** Whether the last phase is ongoing (#228): the schedule then never ends, and "repeat" has no meaning. */
+    val ongoing: Boolean get() = phases.lastOrNull()?.unit == PhaseUnit.ONGOING
+}
 
 /** A pause from [from] until [to] (the day doses resume, exclusive), or still paused when [to] is null. */
 data class MedPause(val from: String, val to: String?)
@@ -200,14 +208,17 @@ data class DueDose(
     val due: String get() = "$date $time"
 }
 
-/** Where an activation is on a date: its phase, the day within it (1-based) and how long it lasts. */
+/**
+ * Where an activation is on a date: its phase, the day within it (1-based) and how long it lasts. An ongoing phase
+ * (#228) has no length or last day: [days] and [lastDay] are null.
+ */
 data class PhaseState(
     val index: Int,
     val phase: MedPhase,
     val day: Long,
-    val days: Long,
+    val days: Long?,
     /** The phase's last day, counting no further pauses. */
-    val lastDay: String,
+    val lastDay: String?,
     /** Which time round the cycle (1 for the first) when it repeats. */
     val cycle: Int
 )
@@ -235,7 +246,8 @@ object MedSchedules {
 
     /**
      * The phase [a] is in on [date], or null when the schedule hasn't started, has ended, is paused that day, or has
-     * run its course without repeating. Pauses push the cycle back by their length.
+     * run its course without repeating. Pauses push the cycle back by their length. An ongoing phase (#228) holds the
+     * run for good once it's reached.
      */
     fun phaseOn(schedule: MedSchedule, a: MedActivation, date: String): PhaseState? {
         val day = Dates.parse(date) ?: return null
@@ -250,6 +262,10 @@ object MedSchedules {
         // Every phase lasts at least a day, so this ends; the cap only guards against absurd dates.
         while (cycle <= 100_000) {
             for ((i, p) in phases.withIndex()) {
+                if (p.unit == PhaseUnit.ONGOING) {
+                    val inPhase = ChronoUnit.DAYS.between(phaseStart, reached)
+                    return PhaseState(schedule.phases.indexOf(p).takeIf { it >= 0 } ?: i, p, inPhase + 1, null, null, cycle)
+                }
                 val end = p.unit.add(phaseStart, p.length.toLong())
                 if (reached < end) {
                     val inPhase = ChronoUnit.DAYS.between(phaseStart, reached)
@@ -407,7 +423,8 @@ object MedSchedules {
     suspend fun save(schedule: MedSchedule): Long = write { r ->
         val name = schedule.name.trim().replace(Regex("\\s+"), " ").ifEmpty { "Schedule" }
         val notes = schedule.notes?.trim()?.ifBlank { null }
-        val repeats = if (schedule.repeats) 1 else 0
+        // An ongoing schedule never reaches the end of its cycle, so it can't repeat (#228).
+        val repeats = if (schedule.repeats && !schedule.ongoing) 1 else 0
         val id = if (schedule.id == 0L) {
             r.addSchedule(MedScheduleRow(0L, name, notes, repeats, r.nextScheduleOrder()))
         } else {
@@ -483,7 +500,58 @@ object MedSchedules {
         r.updateActivation(a.id, a.start, MedActivation.encodePauses(pauses), firstDayWithout)
     }
 
-    /** Puts [a] back as it was, for Undo after a pause, resume or end. */
+    /**
+     * [a] counted from [start] instead (#229), or null when that's not allowed: on or after the day the run ended.
+     * Pauses that ended by the new start go; one that spans it now begins on it. Doses already taken stay as values
+     * (those that no longer fall on a dose day show as logged by hand); dose changes stay as they are.
+     */
+    fun withStart(a: MedActivation, start: String): MedActivation? {
+        if (Dates.parse(start) == null || (a.endedOn != null && start >= a.endedOn)) return null
+        val pauses = a.pauses
+            .filter { it.to == null || it.to > start }
+            .map { if (it.from < start) MedPause(start, it.to) else it }
+        return a.copy(start = start, pauses = pauses)
+    }
+
+    /**
+     * Starting [a]'s schedule again from day 1 on [date] (#229): the old run, ended the day before [date] so its history
+     * and adherence stay, and the new run from [date] (id 0, not saved). On or before [a]'s own start there's nothing
+     * to keep, so it's [a] moved to [date] with no pauses, and no new run.
+     */
+    fun restarted(a: MedActivation, date: String): Pair<MedActivation, MedActivation?> {
+        if (date <= a.start) return a.copy(start = date, pauses = emptyList(), endedOn = null) to null
+        val end = minOf(date, a.endedOn ?: date)
+        val pauses = a.pauses.map { if (it.to == null) MedPause(it.from, maxOf(end, it.from)) else it }.filter { it.from < end }
+        return a.copy(pauses = pauses, endedOn = end) to MedActivation(0L, a.scheduleId, date)
+    }
+
+    /** Moves [a]'s start to [start] (#229, see [withStart]). False when that's not allowed. Undo is [restore]. */
+    suspend fun setStart(a: MedActivation, start: String): Boolean {
+        val moved = withStart(a, start) ?: return false
+        restore(moved)
+        return true
+    }
+
+    /**
+     * Starts [a]'s schedule again from day 1 on [date] (#229, see [restarted]), in one transaction. Returns the new
+     * run's id, or [a]'s own when it was moved instead. Undo: [undoRestart].
+     */
+    suspend fun restart(a: MedActivation, date: String): Long = write { r ->
+        val (old, new) = restarted(a, date)
+        r.updateActivation(old.id, old.start, MedActivation.encodePauses(old.pauses), old.endedOn)
+        if (new == null) old.id else r.addActivation(MedActivationRow(0L, new.scheduleId, new.start, "", null))
+    }
+
+    /** Undoes [restart]: removes the new run [newId] (unless it was [before] itself) and puts [before] back. */
+    suspend fun undoRestart(before: MedActivation, newId: Long): Unit = write { r ->
+        if (newId != before.id) {
+            r.deleteChangesOfActivation(newId)
+            r.deleteActivation(newId)
+        }
+        r.updateActivation(before.id, before.start, MedActivation.encodePauses(before.pauses), before.endedOn)
+    }
+
+    /** Puts [a] back as it was, for Undo after a pause, resume, end or a changed start. */
     suspend fun restore(a: MedActivation): Unit = write { r ->
         r.updateActivation(a.id, a.start, MedActivation.encodePauses(a.pauses), a.endedOn)
     }

@@ -1745,6 +1745,31 @@
     <string name="md_end_title">End %1$s?</string>
     <string name="md_end_body">Today\'s doses stay. No doses are due from tomorrow. The schedule itself is kept, so you can start it again.</string>
     <string name="md_ended_named">%1$s ended</string>
+    <!-- Medications in tabs (#227), ongoing phases (#228), fixing a running schedule (#229). -->
+    <string name="md_today_no_schedules">No schedules yet. Make one to see each day\'s doses here, with a box to tick when you take them.</string>
+    <string name="md_today_not_running">No schedule is running today. Start one from Schedules, or log a dose with +.</string>
+    <string name="md_go_schedules">Go to Schedules</string>
+    <string name="md_schedules_none">No schedules yet. A schedule says what to take, how much and when.</string>
+    <string name="md_phase_on_ongoing">On · day %1$d · ongoing</string>
+    <string name="md_phase_off_ongoing">Off · day %1$d</string>
+    <string name="md_summary_on_ongoing">Ongoing</string>
+    <string name="md_summary_off_ongoing">Off for good</string>
+    <string name="md_ongoing">ongoing</string>
+    <string name="md_ongoing_choice">Ongoing (no end)</string>
+    <string name="md_ongoing_note">An ongoing phase has no end: its doses carry on until you end the schedule. It has to be the last phase, so the cycle doesn\'t repeat.</string>
+    <string name="md_run_again_note">This schedule\'s last day was %1$s. Start it again from day 1 on any date. Earlier runs and their doses stay in your history.</string>
+    <string name="md_start_again">Start again</string>
+    <string name="md_change_start">Change start date</string>
+    <string name="md_restart">Start again from day 1</string>
+    <string name="md_start_after_end">The start has to be before the day the schedule ended.</string>
+    <string name="md_change_start_title">Start on %1$s instead?</string>
+    <string name="md_change_start_body">The phases are counted from %2$s instead of %1$s, so each day\'s doses move with them. Doses you\'ve already ticked stay in your history; any that no longer fall on a dose day show as logged by hand. Pauses before the new start are removed.</string>
+    <string name="md_change_start_confirm">Change start</string>
+    <string name="md_start_changed">%1$s now starts %2$s</string>
+    <string name="md_restart_title">Start %1$s again?</string>
+    <string name="md_restart_body">The schedule starts again from day 1 on %1$s. The current run ends the day before, so its doses and adherence stay in your history.</string>
+    <string name="md_restart_confirm">Start again</string>
+    <string name="md_restarted">%1$s starts again %2$s</string>
     <!-- Dose changes (#204) -->
     <string name="md_change_amount">Change amount</string>
     <string name="md_change_title">Change %1$s</string>
@@ -1789,7 +1814,6 @@
     <string name="mdr_last_dose">%1$s · last dose %2$s on %3$s</string>
     <string name="mdr_paused">Paused</string>
     <string name="mdr_off_day">Off · day %1$d of %2$d</string>
-    <string name="mdr_repeating">", repeating"</string>
     <string name="mdr_change_day">Changed for %1$s only: %2$s</string>
     <string name="mdr_change_rest">Changed from %1$s: %2$s</string>
     <string name="mdr_adherence">Adherence</string>

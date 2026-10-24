@@ -44,6 +44,7 @@ import com.fitlens.companion.data.MedActivation
 import com.fitlens.companion.data.MedPlan
 import com.fitlens.companion.data.MedSchedule
 import com.fitlens.companion.data.MedSchedules
+import com.fitlens.companion.data.PhaseUnit
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.GlassOutlinedButton
@@ -59,47 +60,71 @@ import java.time.format.DateTimeFormatter
 private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 /**
- * The top of the Medications Track tab (#202): **TODAY**, every dose due today across the running schedules with a
- * done box like a set's (#19), each schedule's phase ("On · day 12 of 56", "Off · on again 3 Dec"), missed doses
- * flagged; supply warnings (#209) and SYMPTOMS (#207, [onSymptoms] opens the rating sheet); then **SCHEDULES** (#201),
- * each with its state, and + New schedule. [onDose] opens a dose's sheet.
+ * The Medications **Today** tab (#227, from #202): every dose due today across the running schedules with a done box
+ * like a set's (#19), each schedule's phase ("On · day 12 of 56", "Off · on again 3 Dec"), missed doses flagged;
+ * supply warnings (#209) and SYMPTOMS (#207, [onSymptoms] opens the rating sheet). With nothing running it says so and
+ * [onSchedules] opens the Schedules tab. [onDose] opens a dose's sheet.
  */
-internal fun LazyListScope.medicationTrackHeader(snap: Snapshot, nav: Nav, onSymptoms: () -> Unit, onDose: (DueDose) -> Unit) {
+internal fun LazyListScope.medicationTodayTab(snap: Snapshot, nav: Nav, onSchedules: () -> Unit, onSymptoms: () -> Unit, onDose: (DueDose) -> Unit) {
     val plan = snap.medPlan
     val today = Dates.today()
     val due = MedSchedules.dueOn(plan, today)
     val running = plan.activations.filter { a -> plan.schedulesById.containsKey(a.scheduleId) && a.start <= today && a.runsOn(today) }
-    if (running.isNotEmpty()) {
-        item(key = "today-label") { SectionTitle(stringResource(R.string.md_today)) }
-        items(running.size, key = { "phase-${running[it].id}" }) { i ->
-            val a = running[i]
-            val s = plan.schedulesById.getValue(a.scheduleId)
-            val res = LocalContext.current.resources
+    item(key = "today-label") { SectionTitle(stringResource(R.string.md_today)) }
+    if (running.isEmpty()) {
+        item(key = "today-idle") {
+            Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
+                Text(
+                    stringResource(if (plan.schedules.isEmpty()) R.string.md_today_no_schedules else R.string.md_today_not_running),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                GlassOutlinedButton(onClick = onSchedules, modifier = Modifier.heightIn(min = Spacing.touch)) {
+                    Text(stringResource(R.string.md_go_schedules))
+                }
+            }
+        }
+    }
+    items(running.size, key = { "phase-${running[it].id}" }) { i ->
+        val a = running[i]
+        val s = plan.schedulesById.getValue(a.scheduleId)
+        val res = LocalContext.current.resources
+        Text(
+            "${s.name} · ${phaseText(res, s, a, today)}",
+            Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    if (running.isNotEmpty() && due.isEmpty()) {
+        item(key = "today-none") {
             Text(
-                "${s.name} · ${phaseText(res, s, a, today)}",
-                Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
-                style = MaterialTheme.typography.bodyMedium,
+                stringResource(R.string.md_today_none),
+                Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        if (due.isEmpty()) {
-            item(key = "today-none") {
-                Text(
-                    stringResource(R.string.md_today_none),
-                    Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-        items(due.size, key = { "due-${due[it].dose.id}-${due[it].due}" }) { i ->
-            DueDoseRow(snap, due[i], i + 1, onOpen = { onDose(due[i]) })
-        }
+    }
+    items(due.size, key = { "due-${due[it].dose.id}-${due[it].due}" }) { i ->
+        DueDoseRow(snap, due[i], i + 1, onOpen = { onDose(due[i]) })
     }
     // Medications running low, run out or expiring (#209), then today's symptom ratings (#207).
     supplyAlertRows(snap, nav)
     symptomRows(snap, onSymptoms)
-    item(key = "schedules") {
-        SectionTitle(stringResource(R.string.md_schedules))
+}
+
+/** The Medications **Schedules** tab (#227, from #201): each schedule with its state, and + New schedule. */
+internal fun LazyListScope.medicationSchedulesTab(snap: Snapshot, nav: Nav) {
+    val plan = snap.medPlan
+    val today = Dates.today()
+    item(key = "schedules") { SectionTitle(stringResource(R.string.md_schedules)) }
+    if (plan.schedules.isEmpty()) {
+        item(key = "schedules-none") {
+            Text(
+                stringResource(R.string.md_schedules_none),
+                Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
     items(plan.schedules.size, key = { "schedule-${plan.schedules[it].id}" }) { i ->
         val s = plan.schedules[i]
@@ -120,7 +145,6 @@ internal fun LazyListScope.medicationTrackHeader(snap: Snapshot, nav: Nav, onSym
             Text(stringResource(R.string.md_new_schedule))
         }
     }
-    item(key = "meds-label") { SectionTitle(stringResource(R.string.md_title)) }
 }
 
 /** One dose due today, as a set row: time, medication and amount, a done box, and Missed or Skipped beside it. */
@@ -195,8 +219,15 @@ internal fun phaseText(res: Resources, s: MedSchedule, a: MedActivation, date: S
         !a.runsOn(date) -> res.getString(R.string.md_ended)
         else -> {
             val st = MedSchedules.phaseOn(s, a, date) ?: return res.getString(R.string.md_finished)
-            if (st.phase.on) res.getString(R.string.md_phase_on, st.day, st.days)
-            else res.getString(R.string.md_phase_off, Dates.medium(Dates.parse(st.lastDay)!!.plusDays(1).format(Dates.ISO)))
+            val days = st.days
+            val last = st.lastDay?.let { Dates.parse(it) }
+            when {
+                // An ongoing phase (#228) has no end to count towards.
+                days == null || last == null ->
+                    res.getString(if (st.phase.on) R.string.md_phase_on_ongoing else R.string.md_phase_off_ongoing, st.day)
+                st.phase.on -> res.getString(R.string.md_phase_on, st.day, days)
+                else -> res.getString(R.string.md_phase_off, Dates.medium(last.plusDays(1).format(Dates.ISO)))
+            }
         }
     }
 }
@@ -207,25 +238,24 @@ internal fun scheduleState(res: Resources, plan: MedPlan, s: MedSchedule, date: 
     return phaseText(res, s, a, date)
 }
 
-/** "2 weeks on · 1 week off, repeating". */
+/** "2 weeks on · 1 week off, repeating", or "2 weeks on · then on, ongoing" (#228). */
 internal fun scheduleSummary(res: Resources, s: MedSchedule): String {
     if (s.phases.isEmpty()) return res.getString(R.string.md_no_phases)
     val parts = s.phases.joinToString(" · ") { p ->
-        res.getString(if (p.on) R.string.md_summary_on else R.string.md_summary_off, phaseLength(res, p.length, p.unit))
+        if (p.unit == PhaseUnit.ONGOING) res.getString(if (p.on) R.string.md_summary_on_ongoing else R.string.md_summary_off_ongoing)
+        else res.getString(if (p.on) R.string.md_summary_on else R.string.md_summary_off, phaseLength(res, p.length, p.unit))
     }
-    return if (s.repeats) res.getString(R.string.md_summary_repeating, parts) else parts
+    return if (s.repeats && !s.ongoing) res.getString(R.string.md_summary_repeating, parts) else parts
 }
 
-/** "8 weeks", "1 month". */
-internal fun phaseLength(res: Resources, n: Int, unit: com.fitlens.companion.data.PhaseUnit): String = res.getQuantityString(
-    when (unit) {
-        com.fitlens.companion.data.PhaseUnit.DAYS -> R.plurals.md_days
-        com.fitlens.companion.data.PhaseUnit.WEEKS -> R.plurals.md_weeks
-        com.fitlens.companion.data.PhaseUnit.MONTHS -> R.plurals.md_months
-        com.fitlens.companion.data.PhaseUnit.YEARS -> R.plurals.md_years
-    },
-    n, n
-)
+/** "8 weeks", "1 month", or "ongoing" (#228). */
+internal fun phaseLength(res: Resources, n: Int, unit: PhaseUnit): String = when (unit) {
+    PhaseUnit.DAYS -> res.getQuantityString(R.plurals.md_days, n, n)
+    PhaseUnit.WEEKS -> res.getQuantityString(R.plurals.md_weeks, n, n)
+    PhaseUnit.MONTHS -> res.getQuantityString(R.plurals.md_months, n, n)
+    PhaseUnit.YEARS -> res.getQuantityString(R.plurals.md_years, n, n)
+    PhaseUnit.ONGOING -> res.getString(R.string.md_ongoing)
+}
 
 /**
  * A dose due today, opened from its row (#202): Taken or Skip (or undo either), the dose's details, and Change amount

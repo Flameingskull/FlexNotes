@@ -152,4 +152,103 @@ class MedSchedulesTest {
         assertEquals(listOf(7, 1, 2, 3, 4, 5, 6), MedSchedules.weekOrder(7))
         assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), MedSchedules.weekOrder(1))
     }
+
+    // ---------- Ongoing phases (#228) ----------
+
+    @Test
+    fun anOngoingPhaseNeverEnds() {
+        val s = schedule(on(1, PhaseUnit.ONGOING, dose(1)))
+        assertTrue(s.ongoing)
+        val a = run("2026-01-01")
+        assertNull(MedSchedules.phaseOn(s, a, "2025-12-31"))
+        val st = MedSchedules.phaseOn(s, a, "2026-01-11")!!
+        assertEquals(11L, st.day)
+        assertNull(st.days)
+        assertNull(st.lastDay)
+        // Years later it still doses every day.
+        assertEquals(1, MedSchedules.dosesOn(s, a, "2031-06-01").size)
+        assertEquals(1, MedSchedules.phaseOn(s, a, "2031-06-01")!!.cycle)
+    }
+
+    @Test
+    fun cyclesThenOngoingNeverRepeat() {
+        // Even with repeat switched on, reaching the ongoing phase holds the run there for good.
+        val s = schedule(on(2, PhaseUnit.WEEKS, dose(1)), off(1, PhaseUnit.WEEKS), on(1, PhaseUnit.ONGOING, dose(2, "20:00")), repeats = true)
+        val a = run("2026-10-01")
+        assertFalse(MedSchedules.phaseOn(s, a, "2026-10-15")!!.phase.on)
+        assertTrue(MedSchedules.dosesOn(s, a, "2026-10-18").isEmpty())
+        val first = MedSchedules.phaseOn(s, a, "2026-10-22")!!
+        assertEquals(2, first.index)
+        assertEquals(1L, first.day)
+        val later = MedSchedules.phaseOn(s, a, "2027-10-22")!!
+        assertEquals(2, later.index)
+        assertEquals(1, later.cycle)
+        assertEquals(listOf(2L), MedSchedules.dosesOn(s, a, "2027-10-22").map { it.dose.id })
+    }
+
+    @Test
+    fun aPauseInsideAnOngoingPhaseHoldsItsDayCount() {
+        val s = schedule(on(1, PhaseUnit.ONGOING, dose(1, days = MedDays(every = 2))))
+        val a = run("2026-10-01", MedPause("2026-10-03", "2026-10-06"))
+        assertTrue(MedSchedules.dosesOn(s, a, "2026-10-02").isEmpty())
+        assertTrue(MedSchedules.dosesOn(s, a, "2026-10-04").isEmpty())
+        // Three paused days: the 6th is the phase's third day, a dose day.
+        assertEquals(3L, MedSchedules.phaseOn(s, a, "2026-10-06")!!.day)
+        assertEquals(1, MedSchedules.dosesOn(s, a, "2026-10-06").size)
+    }
+
+    @Test
+    fun onlyAnOngoingLastPhaseMakesTheScheduleOngoing() {
+        assertFalse(schedule(on(1, PhaseUnit.ONGOING, dose(1)), off(1, PhaseUnit.WEEKS)).ongoing)
+        assertFalse(schedule().ongoing)
+        assertEquals(PhaseUnit.ONGOING, PhaseUnit.of("o"))
+        assertEquals(PhaseUnit.WEEKS, PhaseUnit.of("?"))
+    }
+
+    // ---------- Fixing a running schedule (#229) ----------
+
+    @Test
+    fun aNewStartDropsEarlierPausesAndTrimsOneThatSpansIt() {
+        val a = run("2026-10-01", MedPause("2026-10-03", "2026-10-05"), MedPause("2026-10-10", "2026-10-12"), MedPause("2026-10-20", null))
+        val moved = MedSchedules.withStart(a, "2026-10-11")!!
+        assertEquals("2026-10-11", moved.start)
+        assertEquals(listOf(MedPause("2026-10-11", "2026-10-12"), MedPause("2026-10-20", null)), moved.pauses)
+        // Moving it earlier keeps every pause.
+        assertEquals(a.pauses, MedSchedules.withStart(a, "2026-09-01")!!.pauses)
+        // An ended run can't start on or after the day it ended.
+        val ended = run("2026-10-01", ended = "2026-10-15")
+        assertNull(MedSchedules.withStart(ended, "2026-10-15"))
+        assertEquals("2026-10-14", MedSchedules.withStart(ended, "2026-10-14")!!.start)
+        assertNull(MedSchedules.withStart(a, "not a date"))
+    }
+
+    @Test
+    fun aDoseTakenBeforeTheNewStartStaysAsALoggedValue() {
+        val s = schedule(on(1, PhaseUnit.YEARS, dose(1, days = MedDays(every = 2))))
+        val taken = MRecord(5, "Creatine", "g", "2026-10-01", "08:05:00", 5.0, null, Sources.FLEXNOTES, doseId = 1, due = "2026-10-01 08:00")
+        val moved = MedSchedules.withStart(run("2026-10-01"), "2026-10-02")!!
+        val log = MedSchedules.doseLog(MedPlan(listOf(s), listOf(moved)), listOf(taken), "2026-10-01", "2026-10-02", "2026-10-03")
+        assertEquals(2, log.size)
+        assertEquals(MedSchedules.Outcome.MISSED, log.single { it.due != null }.outcome)
+        assertEquals(5L, log.single { it.due == null }.record?.id)
+    }
+
+    @Test
+    fun restartingEndsTheOldRunTheDayBeforeAndStartsFromDayOne() {
+        val a = run("2026-10-01", MedPause("2026-10-05", null))
+        val (old, new) = MedSchedules.restarted(a, "2026-10-20")
+        assertEquals("2026-10-20", old.endedOn)
+        assertEquals(listOf(MedPause("2026-10-05", "2026-10-20")), old.pauses)
+        assertEquals("2026-10-20", new!!.start)
+        assertEquals(a.scheduleId, new.scheduleId)
+        val s = schedule(on(10, PhaseUnit.DAYS, dose(1)), off(5, PhaseUnit.DAYS))
+        val plan = MedPlan(listOf(s), listOf(old, new.copy(id = 2)))
+        assertEquals(2L, plan.current(1, "2026-10-20")!!.id)
+        assertEquals(1L, MedSchedules.phaseOn(s, plan.current(1, "2026-10-20")!!, "2026-10-20")!!.day)
+        // On or before its own start there's nothing to keep: the same run, moved, with no pauses.
+        val (same, none) = MedSchedules.restarted(a, "2026-09-25")
+        assertNull(none)
+        assertEquals("2026-09-25", same.start)
+        assertTrue(same.pauses.isEmpty())
+    }
 }

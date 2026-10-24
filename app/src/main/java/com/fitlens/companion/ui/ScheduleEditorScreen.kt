@@ -89,7 +89,9 @@ import kotlin.math.max
  * then its phases as cards (ON · 8 weeks / OFF · 4 weeks). An on phase has + Add dose and its doses as rows; each
  * phase and dose opens its sheet. The Reorder toggle moves phases and doses (#170); ⋮ has Duplicate and Delete.
  * Nothing is written until Save, and Back with unsaved changes asks first. Under the phases, RUN starts the schedule
- * from a chosen date, or pauses, resumes or ends the run (#202).
+ * from a chosen date, or pauses, resumes or ends the run (#202); a running schedule's start date can be changed, or it
+ * can start again from day 1, each with Undo (#229). Only the last phase can be ongoing (#228): it can't be moved or
+ * duplicated, a new phase goes in before it, and Repeat is hidden while it's there.
  */
 
 /** A phase in the editor with a stable [key]; doses carry their own keys so moving keeps each row with its dose. */
@@ -124,6 +126,11 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     var startDate by rememberSaveable(id) { mutableStateOf(Dates.today()) }
     var pickStart by remember { mutableStateOf(false) }
     var confirmEnd by remember { mutableStateOf(false) }
+    // A changed start or a restart (#229): first the date picker, then a confirm with the picked date.
+    var pickNewStart by remember { mutableStateOf(false) }
+    var newStart by rememberSaveable { mutableStateOf<String?>(null) }
+    var pickRestart by remember { mutableStateOf(false) }
+    var restartOn by rememberSaveable { mutableStateOf<String?>(null) }
 
     val draft = MedSchedule(original.id, name, notes.ifBlank { null }, repeats, original.sortOrder, phases.map { it.phase })
     val dirty = draft.name != original.name || draft.notes.orEmpty() != original.notes.orEmpty() ||
@@ -156,6 +163,11 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     BackHandler(enabled = dirty) { confirmLeave = true }
 
     val current = if (original.id == 0L) null else snap.medPlan.current(original.id)
+    // The last run, when it has ended: RUN then offers to start again (#229).
+    val lastRun = if (original.id == 0L) null else snap.medPlan.activationsBySchedule[original.id].orEmpty().lastOrNull()
+    val endedRun = lastRun?.takeIf { current == null && it.endedOn != null }
+    // An ongoing last phase (#228) stays last.
+    val endsOngoing = phases.lastOrNull()?.phase?.unit == PhaseUnit.ONGOING
 
     Column(Modifier.fillMaxSize()) {
         FitTopBar(
@@ -186,10 +198,17 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                         value = notes, onValueChange = { notes = it }, label = { Text(stringResource(R.string.workout_notes_label)) },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    SwitchLine(stringResource(R.string.md_repeat), stringResource(R.string.md_repeat_note), repeats) { repeats = it }
+                    if (endsOngoing) {
+                        Text(stringResource(R.string.md_ongoing_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else {
+                        SwitchLine(stringResource(R.string.md_repeat), stringResource(R.string.md_repeat_note), repeats) { repeats = it }
+                    }
                 }
             }
             phases.forEachIndexed { pi, draftPhase ->
+                // An ongoing phase never moves, and nothing moves below it.
+                val fixed = draftPhase.phase.unit == PhaseUnit.ONGOING
+                val belowFixed = pi + 1 <= phases.lastIndex && phases[pi + 1].phase.unit == PhaseUnit.ONGOING
                 item(key = "phase-${draftPhase.key}") {
                     PhaseCard(
                         draft = draftPhase,
@@ -197,13 +216,13 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                         onEdit = { editingPhase = draftPhase.key },
                         onAddDose = { editingDose = draftPhase.key to null },
                         onEditDose = { k -> editingDose = draftPhase.key to k },
-                        onDuplicate = {
+                        onDuplicate = if (fixed) null else ({
                             val p = draftPhase.phase
                             phases.add(pi + 1, PhaseDraft(key(), p.copy(id = 0L, doses = p.doses.map { it.copy(id = 0L) }), p.doses.map { key() }))
-                        },
+                        }),
                         onDelete = { phases.removeAt(pi) },
-                        onMoveUp = if (pi > 0) ({ phases.add(pi - 1, phases.removeAt(pi)) }) else null,
-                        onMoveDown = if (pi < phases.lastIndex) ({ phases.add(pi + 1, phases.removeAt(pi)) }) else null,
+                        onMoveUp = if (pi > 0 && !fixed) ({ phases.add(pi - 1, phases.removeAt(pi)) }) else null,
+                        onMoveDown = if (pi < phases.lastIndex && !fixed && !belowFixed) ({ phases.add(pi + 1, phases.removeAt(pi)) }) else null,
                         onChange = { doses, doseKeys -> updatePhase(draftPhase.key) { it.copy(phase = it.phase.copy(doses = doses), doseKeys = doseKeys) } }
                     )
                 }
@@ -224,7 +243,11 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                 Column(Modifier.padding(horizontal = Spacing.lg), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     SectionLabel(stringResource(R.string.md_run), Modifier.padding(top = Spacing.lg))
                     if (current == null) {
-                        Text(stringResource(R.string.md_run_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            if (endedRun != null) stringResource(R.string.md_run_again_note, Dates.medium(Dates.parse(endedRun.endedOn!!)!!.minusDays(1).format(Dates.ISO)))
+                            else stringResource(R.string.md_run_note),
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                         GlassOutlinedButton(onClick = { pickStart = true }, modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.touch)) {
                             Text(stringResource(R.string.md_start_on, Dates.medium(startDate)))
                         }
@@ -242,11 +265,18 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                             },
                             enabled = name.isNotBlank() && phases.isNotEmpty(),
                             modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.row)
-                        ) { Text(stringResource(R.string.md_start)) }
+                        ) { Text(stringResource(if (endedRun != null) R.string.md_start_again else R.string.md_start)) }
                     } else {
-                        Text(
-                            stringResource(R.string.md_started_on, Dates.medium(current.start)) + " · " + phaseText(res, original, current, Dates.today()),
-                            style = MaterialTheme.typography.bodyLarge
+                        // The start line (#229): a tap changes the start date; its menu also starts again from day 1.
+                        ListRowWithMenu(
+                            title = stringResource(if (current.start > Dates.today()) R.string.md_starts else R.string.md_started_on, Dates.medium(current.start)),
+                            subtitle = phaseText(res, original, current, Dates.today()),
+                            onClick = { pickNewStart = true },
+                            menu = listOf(
+                                MenuAction(stringResource(R.string.md_change_start)) { pickNewStart = true },
+                                MenuAction(stringResource(R.string.md_restart)) { pickRestart = true }
+                            ),
+                            handle = false
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                             GlassOutlinedButton(
@@ -281,13 +311,14 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     }
 
     if (addingPhase) {
-        PhaseSheet(null, onDismiss = { addingPhase = false }) { p ->
-            phases.add(PhaseDraft(key(), p, emptyList()))
+        // A new phase goes last, or just before an ongoing last phase, which is the only one that can be ongoing.
+        PhaseSheet(null, canBeOngoing = !endsOngoing, onDismiss = { addingPhase = false }) { p ->
+            if (endsOngoing) phases.add(phases.lastIndex, PhaseDraft(key(), p, emptyList())) else phases.add(PhaseDraft(key(), p, emptyList()))
             addingPhase = false
         }
     }
     editingPhase?.let { k -> phases.firstOrNull { it.key == k } }?.let { d ->
-        PhaseSheet(d.phase, onDismiss = { editingPhase = null }) { p ->
+        PhaseSheet(d.phase, canBeOngoing = phases.lastOrNull()?.key == d.key, onDismiss = { editingPhase = null }) { p ->
             updatePhase(d.key) { it.copy(phase = it.phase.copy(on = p.on, length = p.length, unit = p.unit)) }
             editingPhase = null
         }
@@ -304,6 +335,52 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
         }
     }
     if (pickStart) PickDateDialog(startDate, onDismiss = { pickStart = false }) { startDate = it }
+    if (pickNewStart && current != null) PickDateDialog(current.start, onDismiss = { pickNewStart = false }) { picked ->
+        if (MedSchedules.withStart(current, picked) == null) UiEvents.show(res.getString(R.string.md_start_after_end))
+        else if (picked != current.start) newStart = picked
+    }
+    if (pickRestart) PickDateDialog(Dates.today(), onDismiss = { pickRestart = false }) { restartOn = it }
+    val newStartDate = newStart
+    if (newStartDate != null && current != null) {
+        val date = newStartDate
+        val before = current
+        ConfirmSheet(
+            title = stringResource(R.string.md_change_start_title, Dates.medium(date)),
+            message = stringResource(R.string.md_change_start_body, Dates.medium(before.start), Dates.medium(date)),
+            confirmLabel = stringResource(R.string.md_change_start_confirm),
+            destructive = false,
+            onDismiss = { newStart = null },
+            onConfirm = {
+                AppScope.scope.launch {
+                    if (MedSchedules.setStart(before, date)) {
+                        UiEvents.show(res.getString(R.string.md_start_changed, original.name, Dates.medium(date)), res.getString(R.string.bm_undo)) {
+                            AppScope.scope.launch { MedSchedules.restore(before) }
+                        }
+                    }
+                }
+            }
+        )
+    }
+    val restartOnDate = restartOn
+    if (restartOnDate != null && current != null) {
+        val date = restartOnDate
+        val before = current
+        ConfirmSheet(
+            title = stringResource(R.string.md_restart_title, original.name),
+            message = stringResource(R.string.md_restart_body, Dates.medium(date)),
+            confirmLabel = stringResource(R.string.md_restart_confirm),
+            destructive = false,
+            onDismiss = { restartOn = null },
+            onConfirm = {
+                AppScope.scope.launch {
+                    val runId = MedSchedules.restart(before, date)
+                    UiEvents.show(res.getString(R.string.md_restarted, original.name, Dates.medium(date)), res.getString(R.string.bm_undo)) {
+                        AppScope.scope.launch { MedSchedules.undoRestart(before, runId) }
+                    }
+                }
+            }
+        )
+    }
     if (confirmEnd && current != null) {
         ConfirmSheet(
             title = stringResource(R.string.md_end_title, original.name),
@@ -370,7 +447,7 @@ private fun PhaseCard(
     onEdit: () -> Unit,
     onAddDose: () -> Unit,
     onEditDose: (Long) -> Unit,
-    onDuplicate: () -> Unit,
+    onDuplicate: (() -> Unit)?,
     onDelete: () -> Unit,
     onMoveUp: (() -> Unit)?,
     onMoveDown: (() -> Unit)?,
@@ -395,9 +472,9 @@ private fun PhaseCard(
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.ms_options_for, label)) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    listOf(
+                    listOfNotNull(
                         MenuAction(stringResource(R.string.md_edit_phase), onClick = onEdit),
-                        MenuAction(stringResource(R.string.md_duplicate_phase), onClick = onDuplicate),
+                        onDuplicate?.let { MenuAction(stringResource(R.string.md_duplicate_phase), onClick = it) },
                         MenuAction(stringResource(R.string.md_delete_phase), onClick = onDelete)
                     ).forEach { a -> DropdownMenuItem(text = { Text(a.label) }, onClick = { menu = false; a.onClick() }) }
                 }
@@ -461,21 +538,28 @@ internal fun daysText(res: Resources, days: MedDays): String = when {
     else -> res.getString(R.string.md_every_day)
 }
 
-/** A phase's sheet: on or off, and how long. [existing] null adds one. */
+/**
+ * A phase's sheet: on or off, and how long. [existing] null adds one. [canBeOngoing] (the last phase, or a new one
+ * after a fixed-length last phase) offers "Ongoing (no end)" for an on phase (#228).
+ */
 @Composable
-private fun PhaseSheet(existing: MedPhase?, onDismiss: () -> Unit, onSave: (MedPhase) -> Unit) {
+private fun PhaseSheet(existing: MedPhase?, canBeOngoing: Boolean, onDismiss: () -> Unit, onSave: (MedPhase) -> Unit) {
     val res = LocalContext.current.resources
     var on by remember { mutableStateOf(existing?.on ?: true) }
     var length by remember { mutableStateOf((existing?.length ?: 4).toString()) }
     var unit by remember { mutableStateOf(existing?.unit ?: PhaseUnit.WEEKS) }
+    val offered = PhaseUnit.entries.filter { it != PhaseUnit.ONGOING || (canBeOngoing && on) }
+    // Turning a phase off (or a phase that can't be ongoing) falls back to weeks.
+    val chosen = if (unit in offered) unit else PhaseUnit.WEEKS
+    val ongoing = chosen == PhaseUnit.ONGOING
     FitSheet(
         title = stringResource(if (existing == null) R.string.md_add_phase else R.string.md_edit_phase),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.type_save),
-        confirmEnabled = (length.toIntOrNull() ?: 0) > 0,
+        confirmEnabled = ongoing || (length.toIntOrNull() ?: 0) > 0,
         onConfirm = {
-            val n = (length.toIntOrNull() ?: 1).coerceIn(1, 999)
-            onSave(MedPhase(existing?.id ?: 0L, on, n, unit, existing?.doses.orEmpty()))
+            val n = if (ongoing) 1 else (length.toIntOrNull() ?: 1).coerceIn(1, 999)
+            onSave(MedPhase(existing?.id ?: 0L, on, n, chosen, existing?.doses.orEmpty()))
         }
     ) {
         SegmentedSwitch(listOf(stringResource(R.string.md_on), stringResource(R.string.md_off)), if (on) 0 else 1, { on = it == 0 })
@@ -483,21 +567,26 @@ private fun PhaseSheet(existing: MedPhase?, onDismiss: () -> Unit, onSave: (MedP
             stringResource(if (on) R.string.md_on_note else R.string.md_off_note),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        StepperField(
-            label = stringResource(R.string.md_length),
-            value = length,
-            onValue = { length = it.filter { c -> c.isDigit() }.take(3) },
-            onStep = { dir -> length = max(1, (length.toIntOrNull() ?: 1) + dir).toString() },
-            keyboard = KeyboardType.Number
-        )
+        if (!ongoing) {
+            StepperField(
+                label = stringResource(R.string.md_length),
+                value = length,
+                onValue = { length = it.filter { c -> c.isDigit() }.take(3) },
+                onStep = { dir -> length = max(1, (length.toIntOrNull() ?: 1) + dir).toString() },
+                keyboard = KeyboardType.Number
+            )
+        }
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            PhaseUnit.entries.forEach { u ->
+            offered.forEach { u ->
                 val n = length.toIntOrNull() ?: 1
                 FilterChip(
-                    selected = unit == u, onClick = { unit = u },
-                    label = { Text(phaseLength(res, n, u).substringAfter(' ')) }
+                    selected = chosen == u, onClick = { unit = u },
+                    label = { Text(if (u == PhaseUnit.ONGOING) stringResource(R.string.md_ongoing_choice) else phaseLength(res, n, u).substringAfter(' ')) }
                 )
             }
+        }
+        if (ongoing) {
+            Text(stringResource(R.string.md_ongoing_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

@@ -121,21 +121,13 @@ object MedicationReport {
                     run.start > today -> res.getString(R.string.md_starts, Dates.medium(run.start))
                     run.paused -> res.getString(R.string.mdr_paused)
                     else -> MedSchedules.phaseOn(s, run, today)?.let { st ->
-                        res.getString(if (st.phase.on) R.string.md_phase_on else R.string.mdr_off_day, st.day, st.days)
+                        val days = st.days
+                        // An ongoing phase (#228) has no length to count towards.
+                        if (days == null) res.getString(if (st.phase.on) R.string.md_phase_on_ongoing else R.string.md_phase_off_ongoing, st.day)
+                        else res.getString(if (st.phase.on) R.string.md_phase_on else R.string.mdr_off_day, st.day, days)
                     } ?: res.getString(R.string.md_finished)
                 }
-                val phases = s.phases.joinToString(" · ") { p ->
-                    val len = res.getQuantityString(
-                        when (p.unit) {
-                            com.fitlens.companion.data.PhaseUnit.DAYS -> R.plurals.md_days
-                            com.fitlens.companion.data.PhaseUnit.WEEKS -> R.plurals.md_weeks
-                            com.fitlens.companion.data.PhaseUnit.MONTHS -> R.plurals.md_months
-                            com.fitlens.companion.data.PhaseUnit.YEARS -> R.plurals.md_years
-                        },
-                        p.length, p.length
-                    )
-                    res.getString(if (p.on) R.string.md_summary_on else R.string.md_summary_off, len)
-                } + if (s.repeats) res.getString(R.string.mdr_repeating) else ""
+                val phases = com.fitlens.companion.ui.scheduleSummary(res, s)
                 para(w, "${s.name}: $phases. $state", 9f, muted = true, indent = 12f)
                 s.phases.filter { it.on }.flatMap { it.doses }.filter { it.medication == n }.distinctBy { listOf(it.time, it.amount, it.days) }.forEach { d ->
                     val days = when {
