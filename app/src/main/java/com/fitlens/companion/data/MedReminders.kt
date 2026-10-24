@@ -369,7 +369,7 @@ class MedAlarmReceiver : BroadcastReceiver() {
     }
 }
 
-/** Sets the next reminder again after a reboot, a time or time-zone change, or an app update (#203). */
+/** Sets the next reminder again after a reboot, a time or time-zone change, or an app update (#203), the logging ones too (#219). */
 class MedBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
@@ -383,6 +383,8 @@ class MedBootReceiver : BroadcastReceiver() {
                 withTimeoutOrNull(25_000) {
                     MedReminders.ensureLoaded()
                     MedReminders.arm(context)
+                    // The logging reminders (#219) are set again with them.
+                    LogReminders.arm(context)
                 }
             } finally {
                 result.finish()

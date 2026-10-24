@@ -1,6 +1,7 @@
 package com.fitlens.companion.ui
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -355,6 +356,24 @@ class MainActivity : ComponentActivity() {
 
     private fun openBackups() = openSettingsPage(SettingsSection.Backups)
 
+    /**
+     * The screen a logging reminder (#219) or the home-screen widget (#220) opens: the weight's Track tab (Body tracker
+     * when there's no weight yet), the Body tracker, the camera (Photos on a phone without one) or today's day log.
+     */
+    private fun openForLog(kind: com.fitlens.companion.data.LogKind) {
+        nav.home()
+        when (kind) {
+            com.fitlens.companion.data.LogKind.WEIGH_IN -> {
+                val weight = Store.snapshot.value?.let { com.fitlens.companion.data.LogReminders.weightName(it) }
+                nav.push(if (weight != null) Screen.BodyMeasurement(weight) else Screen.Body)
+            }
+            com.fitlens.companion.data.LogKind.MEASUREMENTS -> nav.push(Screen.Body)
+            com.fitlens.companion.data.LogKind.PHOTOS ->
+                nav.push(if (packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) Screen.Camera(Dates.today()) else Screen.Photos)
+            com.fitlens.companion.data.LogKind.WORKOUT -> Unit
+        }
+    }
+
     private suspend fun handleIntent(intent: Intent?) {
         if (intent == null) return
         if (intent.getBooleanExtra(AutoBackup.EXTRA_OPEN_BACKUPS, false)) {
@@ -368,6 +387,12 @@ class MainActivity : ComponentActivity() {
             intent.removeExtra(com.fitlens.companion.data.MedReminders.EXTRA_OPEN_MEDICATIONS)
             nav.home()
             nav.push(Screen.Medications)
+            return
+        }
+        com.fitlens.companion.data.LogKind.of(intent.getStringExtra(com.fitlens.companion.data.LogReminders.EXTRA_OPEN_LOG))?.let { kind ->
+            // Opened from a logging reminder (#219): where that is logged, today.
+            intent.removeExtra(com.fitlens.companion.data.LogReminders.EXTRA_OPEN_LOG)
+            openForLog(kind)
             return
         }
         if (intent.action == HC_RATIONALE || intent.action == Intent.ACTION_VIEW_PERMISSION_USAGE) {

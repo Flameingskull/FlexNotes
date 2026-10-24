@@ -3,6 +3,7 @@ package com.fitlens.companion
 import android.app.Application
 import com.fitlens.companion.data.AutoBackup
 import com.fitlens.companion.data.HealthConnect
+import com.fitlens.companion.data.LogReminders
 import com.fitlens.companion.data.MedReminders
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Steps
@@ -27,5 +28,7 @@ class App : Application() {
         TimerService.watch(this)
         // Medication reminders (#203): the next one is set once the data has loaded, and after every change.
         MedReminders.init(this)
+        // Reminders for weigh-ins, measurements, photos and workout days (#219).
+        LogReminders.init(this)
     }
 }

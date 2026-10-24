@@ -145,6 +145,10 @@
         <receiver
             android:name=".data.MedAlarmReceiver"
             android:exported="false" />
+        <!-- Reminders for other logging (#219): weigh-ins, measurements, photos and workout days. -->
+        <receiver
+            android:name=".data.LogAlarmReceiver"
+            android:exported="false" />
         <!-- Sets the next reminder again. Only the system can send these broadcasts. -->
         <receiver
             android:name=".data.MedBootReceiver"

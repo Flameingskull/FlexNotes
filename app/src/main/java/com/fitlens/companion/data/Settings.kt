@@ -83,6 +83,8 @@ data class DeviceSettings(
     val medNudgeMinutes: Int = 30,
     /** Snoozed reminders (#203), `MedReminders.Snoozes.encode`: due time to when it rings again. Phone state. */
     val medSnoozes: String? = null,
+    /** Reminders for other logging (#219), `LogReminderSet.encode`: weigh-ins, measurements, photos, workout days. */
+    val logReminders: String? = null,
     /** The camera's last photo behind the body outline (#230): its opacity in percent, 0 to 60. */
     val cameraPhotoOpacity: Int = 30,
     /** The camera's body outline (#230): `BodyOutline.THIN`, `MEDIUM` or `BOLD`. */
@@ -532,6 +534,7 @@ object Settings {
     private const val D_MED_LOCK = "med_lock"
     private const val D_MED_NUDGE = "med_nudge_minutes"
     private const val D_MED_SNOOZES = "med_snoozes"
+    private const val D_LOG_REMINDERS = "log_reminders"
     private const val D_CAM_OPACITY = "camera_photo_opacity"
     private const val D_CAM_LINE = "camera_outline_line"
 
@@ -660,6 +663,7 @@ object Settings {
         medLock = bool(get(D_MED_LOCK)),
         medNudgeMinutes = get(D_MED_NUDGE)?.toIntOrNull()?.coerceIn(0, 240) ?: 30,
         medSnoozes = get(D_MED_SNOOZES),
+        logReminders = get(D_LOG_REMINDERS),
         cameraPhotoOpacity = get(D_CAM_OPACITY)?.toIntOrNull()?.coerceIn(0, 60) ?: 30,
         cameraOutlineLine = get(D_CAM_LINE)?.toIntOrNull()?.takeIf { it in BodyOutline.THIN..BodyOutline.BOLD } ?: BodyOutline.BOLD
     )
@@ -696,6 +700,7 @@ object Settings {
         D_MED_LOCK to if (medLock) "1" else null,
         D_MED_NUDGE to medNudgeMinutes.takeIf { it != 30 }?.toString(),
         D_MED_SNOOZES to medSnoozes,
+        D_LOG_REMINDERS to logReminders,
         D_CAM_OPACITY to cameraPhotoOpacity.takeIf { it != 30 }?.toString(),
         D_CAM_LINE to cameraOutlineLine.takeIf { it != BodyOutline.BOLD }?.toString()
     )

@@ -40,6 +40,8 @@ import com.fitlens.companion.data.WeightUnits
 import com.fitlens.companion.data.Effort
 import com.fitlens.companion.data.ImportSummary
 import com.fitlens.companion.data.LengthUnits
+import com.fitlens.companion.data.LogKind
+import com.fitlens.companion.data.LogReminderSet
 import com.fitlens.companion.data.PortableSettings
 import com.fitlens.companion.data.Poses
 import com.fitlens.companion.data.PreferenceGroup
@@ -88,6 +90,8 @@ enum class SettingsSection(@StringRes val title: Int, val group: PreferenceGroup
     HealthConnect(R.string.settings_page_hc),
     // Medication reminders and their privacy (#203).
     Medications(R.string.settings_page_meds),
+    // Reminders to weigh in, measure, take photos and train (#219).
+    Reminders(R.string.settings_page_reminders),
     // In-app help and About (#33).
     Help(R.string.settings_page_help),
     About(R.string.settings_page_about)
@@ -109,6 +113,7 @@ private data class SettingEntry(
 /** What a search result reads its value from (#158): the same settings and wording as the page row. */
 private class SettingValues(val res: Resources, val prefs: PortableSettings, val device: DeviceSettings) {
     fun onOff(on: Boolean): String = res.getString(if (on) R.string.settings_value_on else R.string.settings_value_off)
+    fun logReminder(kind: LogKind): String = reminderValue(res, LogReminderSet.decode(device.logReminders), kind, prefs.weekStart)
 }
 
 /** Every setting on a page, for search. A row added to a page belongs here too; main-list rows search themselves. */
@@ -190,6 +195,10 @@ private val CATALOGUE = listOf(
     },
     SettingEntry(R.string.mr_names, SettingsSection.Medications, R.string.search_mr_names_kw) { onOff(device.medNamesOnLockScreen) },
     SettingEntry(R.string.ml_lock, SettingsSection.Medications, R.string.search_ml_lock_kw) { onOff(device.medLock) },
+    SettingEntry(R.string.lr_weigh, SettingsSection.Reminders, R.string.search_lr_weigh_kw) { logReminder(LogKind.WEIGH_IN) },
+    SettingEntry(R.string.lr_measure, SettingsSection.Reminders, R.string.search_lr_measure_kw) { logReminder(LogKind.MEASUREMENTS) },
+    SettingEntry(R.string.lr_photos, SettingsSection.Reminders, R.string.search_lr_photos_kw) { logReminder(LogKind.PHOTOS) },
+    SettingEntry(R.string.lr_workout, SettingsSection.Reminders, R.string.search_lr_workout_kw) { logReminder(LogKind.WORKOUT) },
     SettingEntry(R.string.hc_exercise, SettingsSection.HealthConnect, R.string.search_hc_exercise_kw) { onOff(prefs.hcExercise) },
     SettingEntry(R.string.hc_sleep, SettingsSection.HealthConnect, R.string.search_hc_sleep_kw) { onOff(prefs.hcSleep) },
     SettingEntry(R.string.hc_bp, SettingsSection.HealthConnect, R.string.search_hc_bp_kw) { onOff(prefs.hcBloodPressure) },
@@ -481,6 +490,15 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
                 value = stringResource(if (device.medReminders) R.string.settings_value_on else R.string.settings_value_off)
             ) { open(SettingsSection.Medications) }
         },
+        // Reminders to weigh in, measure, take photos and train (#219).
+        mainRow(s, R.string.settings_page_reminders, R.string.settings_reminders_kw) { title ->
+            val on = LogReminderSet.decode(device.logReminders).all.count { it.on }
+            SettingsActionRow(
+                title,
+                stringResource(R.string.settings_reminders_summary),
+                value = if (on == 0) stringResource(R.string.settings_value_off) else pluralStringResource(R.plurals.lr_on_count, on, on)
+            ) { open(SettingsSection.Reminders) }
+        },
         mainRow(d, R.string.settings_backup, R.string.settings_backup_kw) { title ->
             SettingsActionRow(title, stringResource(R.string.settings_backup_summary)) { open(SettingsSection.Backups) }
         },
@@ -642,6 +660,7 @@ fun SettingsPageScreen(snap: Snapshot, nav: Nav, section: SettingsSection, targe
                     SettingsSection.Profile -> ProfilePage(nav)
                     SettingsSection.HealthConnect -> HealthConnectPage()
                     SettingsSection.Medications -> MedicationsPage()
+                    SettingsSection.Reminders -> RemindersPage()
                     SettingsSection.Help -> HelpPage()
                     SettingsSection.About -> AboutPage()
                 }
