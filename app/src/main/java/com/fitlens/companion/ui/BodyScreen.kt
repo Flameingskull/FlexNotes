@@ -512,6 +512,8 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
             } ?: emptyList()
             val photoDays = remember(snap.photosKey) { snap.photosByDate.keys.map { Dates.epochDay(it) }.toSet() }
             val unit = def?.unit ?: shown.lastOrNull()?.unit ?: ""
+            // The menstrual cycle's phases behind the values (#222), when there are Period values.
+            val cycleBands = rememberCycleBands(snap)
             // A measurement with a goal judges each move by it, as its changes do (changeColour, #198).
             val better: (Double, Double) -> Boolean? = { from, to ->
                 def?.let { MeasurementGoals.isImprovement(it.goalType, it.goalValue, from, to) } ?: higherIsBetter(from, to)
@@ -531,7 +533,8 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                 yFromZero = fromZero,
                 onExpand = { ChartHints.expanded(); fullScreen = true },
                 overlay = symptomOverlay,
-                overlayUnit = overlayUnit
+                overlayUnit = overlayUnit,
+                bands = cycleBands
             )
             ChartHint()
             if (fullScreen) {
@@ -573,7 +576,8 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                         viewport = vp,
                         onExpand = resetZoom,
                         overlay = symptomOverlay,
-                        overlayUnit = overlayUnit
+                        overlayUnit = overlayUnit,
+                        bands = cycleBands
                     )
                 }
             }

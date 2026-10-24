@@ -10,7 +10,8 @@ import kotlin.math.pow
  * Caffeine still active at bedtime is estimated with first-order elimination, a [HALF_LIFE_HOURS] half-life: each
  * drink's caffeine × 0.5^(hours to bedtime ÷ half-life). It's set against the sleep logged for that night, which
  * Health Connect dates by the day it ends (#189), so the night after a date's bedtime is the next date's Sleep.
- * Plain Kotlin, tested in `DrinksTest`. An adult's half-life varies from about 3 to 7 hours, so it's a guide.
+ * Drinks can also be read from Health Connect (#226), each at its own time; which ones count on a day follows the
+ * primary source rule ([counted]). Plain Kotlin, tested in `DrinksTest`. An adult's half-life varies from about 3 to 7 hours, so it's a guide.
  */
 object Drinks {
     enum class Kind(val label: String, val unit: String) {
@@ -65,16 +66,24 @@ object Drinks {
     fun recordsOn(snap: Snapshot, date: String, kind: Kind? = null): List<MRecord> =
         snap.recordsByDate[date].orEmpty().filter { r -> if (kind == null) isDrink(r.name) else kind.matches(r.name) }
 
-    /** [date]'s total of [kind]. */
-    fun total(snap: Snapshot, date: String, kind: Kind): Double = recordsOn(snap, date, kind).sumOf { it.value }
+    /**
+     * [date]'s [kind] drinks that count, by the primary source rule (#226): with Health Connect chosen ([hcPrimary]),
+     * the drinks read from it when the day has any; otherwise the ones typed, falling back to Health Connect's.
+     */
+    fun counted(snap: Snapshot, date: String, kind: Kind, hcPrimary: Boolean): List<MRecord> =
+        Sources.dayValues(recordsOn(snap, date, kind), hcPrimary)
 
-    /** [date]'s caffeine as doses. */
-    fun caffeineDoses(snap: Snapshot, date: String): List<Dose> =
-        recordsOn(snap, date, Kind.CAFFEINE).mapNotNull { r -> minutesOf(r.time)?.let { Dose(it, r.value) } }
+    /** [date]'s total of [kind]. */
+    fun total(snap: Snapshot, date: String, kind: Kind, hcPrimary: Boolean = false): Double =
+        counted(snap, date, kind, hcPrimary).sumOf { it.value }
+
+    /** [date]'s caffeine as doses, each at its own time (typed or read from Health Connect). */
+    fun caffeineDoses(snap: Snapshot, date: String, hcPrimary: Boolean = false): List<Dose> =
+        counted(snap, date, Kind.CAFFEINE, hcPrimary).mapNotNull { r -> minutesOf(r.time)?.let { Dose(it, r.value) } }
 
     /** Caffeine still active at [date]'s [bedtime], or null when none was logged that day. */
-    fun atBedtime(snap: Snapshot, date: String, bedtime: String): Double? =
-        caffeineDoses(snap, date).takeIf { it.isNotEmpty() }?.let { activeAt(it, bedtimeMinutes(bedtime)) }
+    fun atBedtime(snap: Snapshot, date: String, bedtime: String, hcPrimary: Boolean = false): Double? =
+        caffeineDoses(snap, date, hcPrimary).takeIf { it.isNotEmpty() }?.let { activeAt(it, bedtimeMinutes(bedtime)) }
 
     /** The hours slept the night after [date]'s bedtime (the next date's Sleep), by the primary source rule. */
     fun sleepAfter(snap: Snapshot, date: String, hcPrimary: Boolean): Double? {
@@ -87,10 +96,10 @@ object Drinks {
     data class Night(val date: String, val caffeineMg: Double?, val sleepHours: Double?)
 
     /** The [days] nights up to [date] that have caffeine or sleep, latest first. */
-    fun nights(snap: Snapshot, date: String, bedtime: String, hcPrimary: Boolean, days: Int = 7): List<Night> {
+    fun nights(snap: Snapshot, date: String, bedtime: String, hcPrimary: Boolean, days: Int = 7, hcCaffeine: Boolean = false): List<Night> {
         val end = Dates.parse(date) ?: return emptyList()
         return (0 until days).map { end.minusDays(it.toLong()).format(Dates.ISO) }
-            .map { d -> Night(d, atBedtime(snap, d, bedtime), sleepAfter(snap, d, hcPrimary)) }
+            .map { d -> Night(d, atBedtime(snap, d, bedtime, hcCaffeine), sleepAfter(snap, d, hcPrimary)) }
             .filter { it.caffeineMg != null || it.sleepHours != null }
     }
 }

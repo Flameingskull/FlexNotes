@@ -335,6 +335,15 @@ internal fun HealthConnectPage() {
         stringResource(R.string.hc_active_own), stringResource(R.string.hc_active_own_desc),
         stringResource(R.string.hc_active_hc_desc, ActiveCalories.MIN_DAYS), R.string.hc_what_active
     )
+    // Drinks (#226): each read at its own time; typed drinks are kept too.
+    HealthConnectSourceRow(
+        HealthConnect.Kind.WATER, access, prefs.hcWater, R.string.hc_water, R.string.hc_water_summary,
+        typed, typedDesc, stringResource(R.string.hc_water_hc_desc), R.string.hc_what_water
+    )
+    HealthConnectSourceRow(
+        HealthConnect.Kind.CAFFEINE, access, prefs.hcCaffeine, R.string.hc_caffeine, R.string.hc_caffeine_summary,
+        typed, typedDesc, stringResource(R.string.hc_caffeine_hc_desc), R.string.hc_what_caffeine
+    )
 
     SettingsGroup(stringResource(R.string.hc_group_body))
     HealthConnectSourceRow(
@@ -353,6 +362,16 @@ internal fun HealthConnectPage() {
         HealthConnect.Kind.SLEEP, access, prefs.hcSleep, R.string.hc_sleep, R.string.hc_sleep_summary,
         typed, typedDesc, stringResource(R.string.hc_sleep_hc_desc), R.string.hc_what_sleep
     )
+    // The menstrual cycle (#222): period days, whose phases are shaded on body and exercise graphs.
+    HealthConnectSourceRow(
+        HealthConnect.Kind.CYCLE, access, prefs.hcCycle, R.string.hc_cycle, R.string.hc_cycle_summary,
+        typed, stringResource(R.string.hc_cycle_typed_desc), stringResource(R.string.hc_cycle_hc_desc), R.string.hc_what_cycle
+    )
+    SettingsSwitchRow(
+        stringResource(R.string.hc_cycle_bands),
+        !prefs.cycleBandsOff,
+        summary = stringResource(R.string.hc_cycle_bands_summary)
+    ) { on -> Settings.updatePortable { it.copy(cycleBandsOff = !on) } }
 
     // Vitals (#212): each a reading at its own time, also logged by hand in the Body tracker.
     SettingsGroup(stringResource(R.string.hc_group_vitals))

@@ -196,6 +196,13 @@ data class PortableSettings(
     val hcSpo2: Boolean = false,
     val hcHrv: Boolean = false,
     val hcTemperature: Boolean = false,
+    /** Water and caffeine read from Health Connect (#226): each drink at its own time. */
+    val hcWater: Boolean = false,
+    val hcCaffeine: Boolean = false,
+    /** Menstrual cycle read from Health Connect (#222): period days, kept as Period values. */
+    val hcCycle: Boolean = false,
+    /** The cycle's phases are left off body and exercise graphs (#222); shown by default when there are Period values. */
+    val cycleBandsOff: Boolean = false,
     /** Bodyweight logged in FlexNotes is written to Health Connect (#191). */
     val hcWriteWeight: Boolean = false,
     /** Body fat logged in FlexNotes is written to Health Connect (#191). */
@@ -457,6 +464,10 @@ object Settings {
             P_HC_SPO2 to if (s.hcSpo2) "1" else null,
             P_HC_HRV to if (s.hcHrv) "1" else null,
             P_HC_TEMPERATURE to if (s.hcTemperature) "1" else null,
+            P_HC_WATER to if (s.hcWater) "1" else null,
+            P_HC_CAFFEINE to if (s.hcCaffeine) "1" else null,
+            P_HC_CYCLE to if (s.hcCycle) "1" else null,
+            P_CYCLE_BANDS_OFF to if (s.cycleBandsOff) "1" else null,
             P_HCW_WEIGHT to if (s.hcWriteWeight) "1" else null,
             P_HCW_BODY_FAT to if (s.hcWriteBodyFat) "1" else null,
             P_HCW_WORKOUTS to if (s.hcWriteWorkouts) "1" else null,
@@ -578,6 +589,10 @@ object Settings {
     private const val P_HC_SPO2 = "hc_spo2"
     private const val P_HC_HRV = "hc_hrv"
     private const val P_HC_TEMPERATURE = "hc_temperature"
+    private const val P_HC_WATER = "hc_water"
+    private const val P_HC_CAFFEINE = "hc_caffeine"
+    private const val P_HC_CYCLE = "hc_cycle"
+    private const val P_CYCLE_BANDS_OFF = "cycle_bands_off"
     private const val P_HCW_WEIGHT = "hc_write_weight"
     private const val P_HCW_BODY_FAT = "hc_write_body_fat"
     private const val P_HCW_WORKOUTS = "hc_write_workouts"
@@ -735,6 +750,10 @@ object Settings {
         hcSpo2 = bool(get(P_HC_SPO2)),
         hcHrv = bool(get(P_HC_HRV)),
         hcTemperature = bool(get(P_HC_TEMPERATURE)),
+        hcWater = bool(get(P_HC_WATER)),
+        hcCaffeine = bool(get(P_HC_CAFFEINE)),
+        hcCycle = bool(get(P_HC_CYCLE)),
+        cycleBandsOff = bool(get(P_CYCLE_BANDS_OFF)),
         hcWriteWeight = bool(get(P_HCW_WEIGHT)),
         hcWriteBodyFat = bool(get(P_HCW_BODY_FAT)),
         hcWriteWorkouts = bool(get(P_HCW_WORKOUTS)),
@@ -812,6 +831,9 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     hcSpo2 = hcSpo2,
     hcHrv = hcHrv,
     hcTemperature = hcTemperature,
+    hcWater = hcWater,
+    hcCaffeine = hcCaffeine,
+    hcCycle = hcCycle,
     hcWriteWeight = hcWriteWeight,
     hcWriteBodyFat = hcWriteBodyFat,
     hcWriteWorkouts = hcWriteWorkouts,

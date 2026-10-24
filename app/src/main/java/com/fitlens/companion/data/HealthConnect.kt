@@ -18,6 +18,9 @@ import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
+import androidx.health.connect.client.records.HydrationRecord
+import androidx.health.connect.client.records.MenstruationFlowRecord
+import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
@@ -55,7 +58,7 @@ import kotlin.reflect.KClass
 
 /**
  * Reading Google Health Connect (#184), so values other apps record on the phone (steps, #185; what was eaten, #186;
- * bodyweight and body fat, #187; active calories, #188; resting heart rate and sleep, #189; vitals, #212) can be the primary source
+ * bodyweight and body fat, #187; active calories, #188; resting heart rate and sleep, #189; vitals, #212; water and caffeine, #226; the menstrual cycle, #222) can be the primary source
  * for what FlexNotes records and calculates, and exercise sessions become cardio sets (#190, `HealthSessions`).
  * Health Connect runs on the phone, so this stays local: no internet permission, accounts or cloud. Since #191 what
  * FlexNotes logs can also be written to it (`HealthWrite`), each type only when the user switches it on.
@@ -136,7 +139,12 @@ object HealthConnect {
         GLUCOSE(BloodGlucoseRecord::class),
         SPO2(OxygenSaturationRecord::class),
         HRV(HeartRateVariabilityRmssdRecord::class),
-        TEMPERATURE(BodyTemperatureRecord::class);
+        TEMPERATURE(BodyTemperatureRecord::class),
+        // Drinks (#226): each one at its own time, as the Water and Caffeine values `Drinks` adds up.
+        WATER(HydrationRecord::class),
+        CAFFEINE(NutritionRecord::class),
+        // The menstrual cycle (#222): period days, and the flow logged on each where an app records it.
+        CYCLE(MenstruationPeriodRecord::class, also = setOf(MenstruationFlowRecord::class));
 
         /** The read permission Health Connect asks the user for. */
         val permission: String get() = HealthPermission.getReadPermission(record)
@@ -156,6 +164,9 @@ object HealthConnect {
             SPO2 -> p.hcSpo2
             HRV -> p.hcHrv
             TEMPERATURE -> p.hcTemperature
+            WATER -> p.hcWater
+            CAFFEINE -> p.hcCaffeine
+            CYCLE -> p.hcCycle
         }
 
         /**
@@ -176,6 +187,9 @@ object HealthConnect {
             SPO2 -> p.copy(hcSpo2 = on)
             HRV -> p.copy(hcHrv = on)
             TEMPERATURE -> p.copy(hcTemperature = on)
+            WATER -> p.copy(hcWater = on)
+            CAFFEINE -> p.copy(hcCaffeine = on)
+            CYCLE -> p.copy(hcCycle = on)
         }
     }
 
@@ -401,6 +415,19 @@ object HealthConnect {
                     it.time to it.temperature.inCelsius
                 }
             )
+            // Each drink keeps its time (#226), so the caffeine still active at bedtime uses it.
+            Kind.WATER -> return listOf(
+                readings(context, client, HydrationRecord::class, from, to, Drinks.Kind.WATER.label, Drinks.Kind.WATER.unit, dates, own = true) {
+                    it.startTime to it.volume.inMilliliters
+                }
+            )
+            // A meal or drink without caffeine reads as 0, which isn't kept.
+            Kind.CAFFEINE -> return listOf(
+                readings(context, client, NutritionRecord::class, from, to, Drinks.Kind.CAFFEINE.label, Drinks.Kind.CAFFEINE.unit, dates, own = true) {
+                    it.startTime to (it.caffeine?.inMilligrams ?: 0.0)
+                }
+            )
+            Kind.CYCLE -> return listOf(cycle(context, client, from, to, dates))
             else -> {}
         }
         // Sleep is grouped from the evening before, so each night counts on the day it ends (#189).
@@ -444,8 +471,64 @@ object HealthConnect {
             Kind.SLEEP -> listOf(
                 series(Names.SLEEP, Names.SLEEP_UNIT, true) { r -> r[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.let { it.seconds / 3600.0 } }
             )
-            Kind.WEIGHT, Kind.BODY_FAT, Kind.EXERCISE, Kind.BLOOD_PRESSURE, Kind.GLUCOSE, Kind.SPO2, Kind.HRV, Kind.TEMPERATURE -> emptyList()
+            Kind.WEIGHT, Kind.BODY_FAT, Kind.EXERCISE, Kind.BLOOD_PRESSURE, Kind.GLUCOSE, Kind.SPO2, Kind.HRV, Kind.TEMPERATURE,
+            Kind.WATER, Kind.CAFFEINE, Kind.CYCLE -> emptyList()
         }
+    }
+
+    /**
+     * Period days from [from] to [to] (#222), as one Period value a day ([Cycle.NAME]): the heaviest flow logged that day
+     * (1 light, 2 medium, 3 heavy), or 1 for a day inside a logged period without a flow. Kept as FlexNotes's own
+     * measurement, so a period can be typed in the Body tracker too, and [Cycle] works out the phases from either.
+     */
+    private suspend fun cycle(context: Context, client: HealthConnectClient, from: LocalDate, to: LocalDate, dates: List<String>): Store.HealthSeries {
+        val zone = ZoneId.systemDefault()
+        val filter = TimeRangeFilter.between(from.atStartOfDay(), to.plusDays(1).atStartOfDay())
+        val levels = mutableMapOf<String, Double>()
+        val apps = mutableMapOf<String, MutableSet<String>>()
+        fun mark(day: LocalDate, level: Double, pkg: String) {
+            if (day.isBefore(from) || day.isAfter(to)) return
+            val d = day.format(Dates.ISO)
+            levels[d] = maxOf(levels[d] ?: 0.0, level)
+            appLabel(context, pkg)?.let { apps.getOrPut(d) { mutableSetOf() } += it }
+        }
+        var page: String? = null
+        do {
+            val response = client.readRecords(ReadRecordsRequest(MenstruationPeriodRecord::class, filter, pageToken = page))
+            response.records.forEach { r ->
+                val first = LocalDateTime.ofInstant(r.startTime, r.startZoneOffset ?: zone).toLocalDate()
+                // The end is the moment the period stopped, so a period ending at midnight doesn't take the next day.
+                val last = LocalDateTime.ofInstant(r.endTime.minusMillis(1), r.endZoneOffset ?: zone).toLocalDate()
+                var day = first
+                var guard = 0
+                while (!day.isAfter(last) && guard++ < Cycle.MAX_PERIOD_DAYS) {
+                    mark(day, 1.0, r.metadata.dataOrigin.packageName)
+                    day = day.plusDays(1)
+                }
+            }
+            page = response.pageToken
+        } while (!page.isNullOrEmpty())
+        // The flow logged on a day; both records share the one menstruation permission.
+        page = null
+        do {
+            val response = client.readRecords(ReadRecordsRequest(MenstruationFlowRecord::class, filter, pageToken = page))
+            response.records.forEach { r ->
+                val day = LocalDateTime.ofInstant(r.time, r.zoneOffset ?: zone).toLocalDate()
+                val level = when (r.flow) {
+                    MenstruationFlowRecord.FLOW_LIGHT -> 1.0
+                    MenstruationFlowRecord.FLOW_MEDIUM -> 2.0
+                    MenstruationFlowRecord.FLOW_HEAVY -> 3.0
+                    else -> 1.0
+                }
+                mark(day, level, r.metadata.dataOrigin.packageName)
+            }
+            page = response.pageToken
+        } while (!page.isNullOrEmpty())
+        return Store.HealthSeries.daily(
+            Cycle.NAME, Cycle.UNIT,
+            dates.associateWith { d -> levels[d]?.let { Store.HealthDay(it, commentFor(apps[d].orEmpty().sorted())) } },
+            own = true
+        )
     }
 
     /**

@@ -40,6 +40,7 @@ import com.fitlens.companion.data.Drinks
 import com.fitlens.companion.data.MRecord
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
+import com.fitlens.companion.data.Sources
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.FitSheet
@@ -78,9 +79,9 @@ private fun typedTime(text: String): String? =
 internal fun DrinksCard(snap: Snapshot, date: String, onOpen: () -> Unit) {
     val res = LocalContext.current.resources
     val prefs by Settings.portable.collectAsState()
-    val water = remember(snap.bodyKey, date) { Drinks.total(snap, date, Drinks.Kind.WATER) }
-    val caffeine = remember(snap.bodyKey, date) { Drinks.total(snap, date, Drinks.Kind.CAFFEINE) }
-    val atBed = remember(snap.bodyKey, date, prefs.bedtime) { Drinks.atBedtime(snap, date, prefs.bedtime) }
+    val water = remember(snap.bodyKey, date, prefs.hcWater) { Drinks.total(snap, date, Drinks.Kind.WATER, prefs.hcWater) }
+    val caffeine = remember(snap.bodyKey, date, prefs.hcCaffeine) { Drinks.total(snap, date, Drinks.Kind.CAFFEINE, prefs.hcCaffeine) }
+    val atBed = remember(snap.bodyKey, date, prefs.bedtime, prefs.hcCaffeine) { Drinks.atBedtime(snap, date, prefs.bedtime, prefs.hcCaffeine) }
     val sleep = remember(snap.bodyKey, date, prefs.hcSleep) { Drinks.sleepAfter(snap, date, prefs.hcSleep) }
     Column(
         Modifier
@@ -116,9 +117,12 @@ internal fun DrinksCard(snap: Snapshot, date: String, onOpen: () -> Unit) {
     }
 }
 
-/** One logged drink: time, kind and amount; tap edits it, the bin deletes it with Undo. */
+/**
+ * One logged drink: time, kind and amount; tap edits it, the bin deletes it with Undo. A drink read from Health Connect
+ * (#226) says so, and one the primary source rule leaves out of the day's total ([counted] false) says that too.
+ */
 @Composable
-private fun DrinkRow(r: MRecord, onOpen: () -> Unit, onDelete: () -> Unit) {
+private fun DrinkRow(r: MRecord, counted: Boolean, onOpen: () -> Unit, onDelete: () -> Unit) {
     val res = LocalContext.current.resources
     val kind = Drinks.Kind.entries.firstOrNull { it.matches(r.name) } ?: Drinks.Kind.WATER
     Row(
@@ -126,11 +130,16 @@ private fun DrinkRow(r: MRecord, onOpen: () -> Unit, onDelete: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(r.time.take(5), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(end = Spacing.md))
-        Text(
-            res.getString(if (kind == Drinks.Kind.WATER) R.string.dr_water else R.string.dr_caffeine),
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
-        )
+        Column(Modifier.weight(1f)) {
+            Text(res.getString(if (kind == Drinks.Kind.WATER) R.string.dr_water else R.string.dr_caffeine), style = MaterialTheme.typography.bodyLarge)
+            val notes = listOfNotNull(
+                r.comment?.takeIf { r.source == Sources.HEALTH_CONNECT && it.isNotBlank() },
+                if (counted) null else stringResource(R.string.dr_not_counted)
+            )
+            if (notes.isNotEmpty()) {
+                Text(notes.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         Text(amountText(r.value, kind), style = MaterialTheme.typography.titleSmall)
         IconButton(onClick = onDelete) {
             Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.dr_delete), tint = MaterialTheme.colorScheme.primary)
@@ -155,7 +164,14 @@ internal fun DrinksSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
     val at = typedTime(time)
     val typed = amount.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it > 0 && it < 10_000 }
     val drinks = remember(snap.bodyKey, date) { Drinks.recordsOn(snap, date).sortedBy { it.time } }
-    val nights = remember(snap.bodyKey, date, prefs.bedtime, prefs.hcSleep) { Drinks.nights(snap, date, prefs.bedtime, prefs.hcSleep) }
+    val nights = remember(snap.bodyKey, date, prefs.bedtime, prefs.hcSleep, prefs.hcCaffeine) {
+        Drinks.nights(snap, date, prefs.bedtime, prefs.hcSleep, hcCaffeine = prefs.hcCaffeine)
+    }
+    // The drinks that count toward the day (#226): the rest stay listed, marked as not counted.
+    val countedIds = remember(snap.bodyKey, date, prefs.hcWater, prefs.hcCaffeine) {
+        (Drinks.counted(snap, date, Drinks.Kind.WATER, prefs.hcWater) + Drinks.counted(snap, date, Drinks.Kind.CAFFEINE, prefs.hcCaffeine))
+            .mapTo(HashSet()) { it.id }
+    }
     val dayLabel = relativeDayLabel(date)
 
     fun add(kind: Drinks.Kind, v: Double) {
@@ -215,9 +231,9 @@ internal fun DrinksSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
         if (drinks.isEmpty()) {
             Text(stringResource(R.string.dr_none), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {
-            drinks.forEach { r -> DrinkRow(r, onOpen = { editing = r }, onDelete = { deleteBodyValue(res, r) }) }
-            Figure(stringResource(R.string.dr_water), amountText(Drinks.total(snap, date, Drinks.Kind.WATER), Drinks.Kind.WATER))
-            Figure(stringResource(R.string.dr_caffeine), amountText(Drinks.total(snap, date, Drinks.Kind.CAFFEINE), Drinks.Kind.CAFFEINE))
+            drinks.forEach { r -> DrinkRow(r, r.id in countedIds, onOpen = { editing = r }, onDelete = { deleteBodyValue(res, r) }) }
+            Figure(stringResource(R.string.dr_water), amountText(Drinks.total(snap, date, Drinks.Kind.WATER, prefs.hcWater), Drinks.Kind.WATER))
+            Figure(stringResource(R.string.dr_caffeine), amountText(Drinks.total(snap, date, Drinks.Kind.CAFFEINE, prefs.hcCaffeine), Drinks.Kind.CAFFEINE))
         }
 
         SectionLabel(stringResource(R.string.dr_bed_and_sleep))
