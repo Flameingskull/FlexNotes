@@ -351,4 +351,18 @@ class ExportedSchemaTest {
         db.row("med_info", "medication" to "Ibuprofen", "as_needed" to 1, "max_per_day" to 3)
         assertEquals(1, db.count("SELECT COUNT(*) FROM med_info WHERE as_needed = 1 AND max_per_day = 3"))
     }
+
+    @Test
+    fun aV28DatabaseGainsTrainingBlocksAndKeepsEveryWorkout() {
+        // A database as 1.0.165 left it, made from the committed 28.json, upgraded to v29 (#218).
+        helper.createDatabase(Db.NAME, 28).use { db ->
+            db.row("routine", "id" to 1L, "name" to "Push Pull Legs", "notes" to "Three days", "sort_order" to 0)
+            db.row("routine_day", "id" to 1L, "routine_id" to 1L, "name" to "Push Day", "sort_order" to 0)
+        }
+        val db = helper.runMigrationsAndValidate(Db.NAME, Db.VERSION, true, *migrations)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM routine WHERE name = 'Push Pull Legs' AND notes = 'Three days' AND blocks IS NULL AND block_start IS NULL AND block_repeat = 0"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM routine_day WHERE routine_id = 1 AND name = 'Push Day'"))
+        db.execSQL("UPDATE routine SET blocks = '3|w|0|Build', block_start = '2026-11-02', block_repeat = 1 WHERE id = 1")
+        assertEquals(1, db.count("SELECT COUNT(*) FROM routine WHERE block_repeat = 1 AND block_start = '2026-11-02'"))
+    }
 }

@@ -873,6 +873,10 @@ interface RoutineDao {
     @Query("UPDATE routine SET name = :name, notes = :notes WHERE id = :id")
     fun updateRoutine(id: Long, name: String, notes: String?)
 
+    /** A workout's training blocks (#218); null [blocks] and [start] remove them. */
+    @Query("UPDATE routine SET blocks = :blocks, block_start = :start, block_repeat = :repeat WHERE id = :id")
+    fun updateRoutinePlan(id: Long, blocks: String?, start: String?, repeat: Int)
+
     @Query("DELETE FROM routine WHERE id = :id")
     fun deleteRoutine(id: Long)
 

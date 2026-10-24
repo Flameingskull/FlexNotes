@@ -79,6 +79,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
+import com.fitlens.companion.data.TrainingBlocks
 import com.fitlens.companion.data.ExerciseTypes
 import com.fitlens.companion.data.Drinks
 import com.fitlens.companion.data.Intake
@@ -347,7 +348,15 @@ private fun DayContent(
     val dragOrder = rememberInPlaceOrder(shownOrder)
     val groupOf: (Long) -> Int = { ex -> byExercise.firstOrNull { it.first == ex }?.second?.maxOf { s -> s.superset } ?: 0 }
 
+    // Where each workout's training blocks are on this day (#218).
+    val blocks = remember(snap.routines, date) { TrainingBlocks.runningOn(snap.routines, date) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(top = Spacing.sm, bottom = Spacing.xl)) {
+        // The current training block first: it frames the whole day (#218). Tapping opens the workout's blocks.
+        blocks.forEach { (routine, st) ->
+            item(key = "block-${routine.id}") {
+                TrainingBlockCard(routine, st) { nav.push(Screen.WorkoutEditor(routine.id)) }
+            }
+        }
         // As in FitNotes: the day's body values in one card at the top.
         if (records.isNotEmpty()) {
             item(key = "body") {

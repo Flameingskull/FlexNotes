@@ -212,7 +212,13 @@ data class RoutineRow(
     @PrimaryKey(autoGenerate = true) val id: Long,
     val name: String,
     val notes: String?,
-    @ColumnInfo(defaultValue = "0") val sort_order: Int
+    @ColumnInfo(defaultValue = "0") val sort_order: Int,
+    /** Training blocks (#218, v29): `TrainingBlocks.encode`, one block per line, or null for none. */
+    val blocks: String? = null,
+    /** The day the first block starts (ISO). */
+    val block_start: String? = null,
+    /** 1 when the blocks start again after the last one. */
+    @ColumnInfo(defaultValue = "0") val block_repeat: Int = 0
 )
 
 @Entity(tableName = "routine_day")

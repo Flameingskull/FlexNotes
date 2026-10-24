@@ -53,13 +53,14 @@ data class PlannedExercise(
 /** One day of a workout, named by the user. An [id] of 0 is one not saved yet. */
 data class RoutineDay(val id: Long, val name: String, val exercises: List<PlannedExercise> = emptyList())
 
-/** A workout: its name, notes and days in order. An [id] of 0 is one not saved yet. */
+/** A workout: its name, notes, days in order and any training blocks (#218). An [id] of 0 is one not saved yet. */
 data class Routine(
     val id: Long,
     val name: String,
     val notes: String? = null,
     val sortOrder: Int = 0,
-    val days: List<RoutineDay> = emptyList()
+    val days: List<RoutineDay> = emptyList(),
+    val plan: TrainingPlan? = null
 )
 
 /** Which workout ([workoutId], a `routine` id) and which of its days a logged date was started from. */
@@ -130,7 +131,9 @@ object Routines {
         }
         val days = HashMap<Long, MutableList<RoutineDay>>()
         r.routineDays().forEach { days.getOrPut(it.routine_id) { ArrayList() }.add(RoutineDay(it.id, it.name, items[it.id].orEmpty())) }
-        return r.routines().map { Routine(it.id, it.name, it.notes, it.sort_order, days[it.id].orEmpty()) }
+        return r.routines().map {
+            Routine(it.id, it.name, it.notes, it.sort_order, days[it.id].orEmpty(), TrainingBlocks.plan(it.blocks, it.block_start, it.block_repeat == 1))
+        }
     }
 
     fun loadOrigins(r: SnapshotDao): Map<String, WorkoutOrigin> =
@@ -154,6 +157,8 @@ object Routines {
             r.updateRoutine(routine.id, name, notes)
             routine.id
         }
+        val plan = routine.plan?.let { it.copy(blocks = TrainingBlocks.normalised(it.blocks)) }?.takeIf { it.blocks.isNotEmpty() }
+        r.updateRoutinePlan(id, plan?.let { TrainingBlocks.encode(it.blocks) }, plan?.start, if (plan?.repeats == true && !plan.ongoing) 1 else 0)
         val kept = routine.days.map { it.id }.filter { it > 0 }
         r.dayIds(id).filter { it !in kept }.forEach { deleteDayRows(r, it) }
         val known = r.exerciseIds().toHashSet()

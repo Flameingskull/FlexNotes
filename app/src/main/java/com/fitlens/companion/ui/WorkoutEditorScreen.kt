@@ -109,6 +109,8 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     val original = remember(id) { snap.routinesById[id] ?: Routine(0L, "", days = listOf(RoutineDay(0L, dayN(1)))) }
     var name by remember(id) { mutableStateOf(original.name) }
     var notes by remember(id) { mutableStateOf(original.notes.orEmpty()) }
+    // Training blocks (#218), saved with the workout.
+    var plan by remember(id) { mutableStateOf(original.plan) }
     // Stable keys for days and rows; a plain counter, since handing one out needn't recompose anything.
     val keys = remember(id) { longArrayOf(0L) }
     fun key(): Long = keys[0]++
@@ -131,9 +133,11 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
 
     val draft = Routine(
         original.id, name, notes, original.sortOrder,
-        days.mapIndexed { i, d -> RoutineDay(d.id, d.name.ifBlank { dayN(i + 1) }, d.slots.map { it.planned }) }
+        days.mapIndexed { i, d -> RoutineDay(d.id, d.name.ifBlank { dayN(i + 1) }, d.slots.map { it.planned }) },
+        plan
     )
-    val dirty = draft.name != original.name || draft.notes.orEmpty() != original.notes.orEmpty() || draft.days != original.days
+    val dirty = draft.name != original.name || draft.notes.orEmpty() != original.notes.orEmpty() || draft.days != original.days ||
+        draft.plan != original.plan
 
     fun updateDay(dayKey: Long, change: (DayDraft) -> DayDraft) {
         val at = days.indexOfFirst { it.key == dayKey }
@@ -168,7 +172,7 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             onBack = { if (dirty) confirmLeave = true else nav.pop() },
             actions = listOf(TopBarAction(Icons.Filled.Check, stringResource(R.string.workout_save), enabled = name.isNotBlank()) { save() }),
             trailing = {
-                if (days.size > 1 || days.any { it.slots.size > 1 }) ReorderToggle(reordering) { reordering = it }
+                if (days.size > 1 || days.any { it.slots.size > 1 } || (plan?.blocks?.size ?: 0) > 1) ReorderToggle(reordering) { reordering = it }
             },
             overflow = if (original.id == 0L) emptyList() else listOf(
                 MenuAction(stringResource(R.string.workout_duplicate)) {
@@ -229,6 +233,10 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                         .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                     style = MaterialTheme.typography.labelMedium
                 )
+            }
+            // The workout's training blocks (#218), after its days.
+            item(key = "blocks") {
+                TrainingBlocksSection(plan, reordering) { plan = it }
             }
         }
         GoldHairline()
