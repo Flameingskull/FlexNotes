@@ -551,6 +551,54 @@ object MedSchedules {
         r.updateActivation(before.id, before.start, MedActivation.encodePauses(before.pauses), before.endedOn)
     }
 
+    // ---------- Past runs (#231) ----------
+
+    /** One run for the schedule's RUNS list: its last day (null while it runs), the days it ran, and % taken. */
+    data class RunSummary(val run: MedActivation, val lastDay: String?, val days: Long, val adherence: Int?)
+
+    /** [a]'s last day with doses, or null while it runs. */
+    fun lastDayOf(a: MedActivation): String? = a.endedOn?.let { Dates.parse(it)?.minusDays(1)?.format(Dates.ISO) }
+
+    /** [a]'s dates, length (to [today] at most) and the share of its doses taken, counting only doses whose day came. */
+    fun runSummary(plan: MedPlan, records: List<MRecord>, a: MedActivation, today: String): RunSummary {
+        val last = lastDayOf(a)
+        val to = minOf(last ?: today, today)
+        val first = Dates.parse(a.start)
+        val end = Dates.parse(to)
+        val days = if (first == null || end == null) 0L else (ChronoUnit.DAYS.between(first, end) + 1).coerceAtLeast(0L)
+        val s = plan.schedulesById[a.scheduleId]
+        val adherence = if (s == null || days <= 0L) null else {
+            val only = MedPlan(listOf(s), listOf(a), plan.skipped, plan.changes)
+            val counted = doseLog(only, records, a.start, to, today).filter { it.due != null && it.outcome != Outcome.DUE }
+            if (counted.isEmpty()) null else Math.round(counted.count { it.outcome == Outcome.TAKEN } * 100.0 / counted.size).toInt()
+        }
+        return RunSummary(a, last, days, adherence)
+    }
+
+    /** Whether [moved] would overlap another run of its schedule in [runs]: two at once would double every dose. */
+    fun overlaps(runs: List<MedActivation>, moved: MedActivation): Boolean {
+        val never = "9999-12-31"
+        return runs.any { b ->
+            b.id != moved.id && b.scheduleId == moved.scheduleId &&
+                moved.start < (b.endedOn ?: never) && b.start < (moved.endedOn ?: never)
+        }
+    }
+
+    /** [a] ending after [lastDay] (its last day with doses), or null when that's before it starts. */
+    fun withLastDay(a: MedActivation, lastDay: String): MedActivation? {
+        val day = Dates.parse(lastDay) ?: return null
+        if (lastDay < a.start) return null
+        val end = day.plusDays(1).format(Dates.ISO)
+        val pauses = a.pauses.filter { it.from < end }.map { if (it.to == null || it.to > end) MedPause(it.from, end) else it }
+        return a.copy(pauses = pauses, endedOn = end)
+    }
+
+    /** Puts back a run removed with [deleteActivation], with the same id and its [changes], for Undo (#231). */
+    suspend fun restoreRun(a: MedActivation, changes: List<MedDoseChange>): Unit = write { r ->
+        r.addActivation(MedActivationRow(a.id, a.scheduleId, a.start, MedActivation.encodePauses(a.pauses), a.endedOn))
+        changes.forEach { r.addChange(MedDoseChangeRow(0L, a.id, it.doseId, it.fromDate, it.toDate, it.amount)) }
+    }
+
     /** Puts [a] back as it was, for Undo after a pause, resume, end or a changed start. */
     suspend fun restore(a: MedActivation): Unit = write { r ->
         r.updateActivation(a.id, a.start, MedActivation.encodePauses(a.pauses), a.endedOn)

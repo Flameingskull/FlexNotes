@@ -1770,6 +1770,18 @@
     <string name="md_restart_body">The schedule starts again from day 1 on %1$s. The current run ends the day before, so its doses and adherence stay in your history.</string>
     <string name="md_restart_confirm">Start again</string>
     <string name="md_restarted">%1$s starts again %2$s</string>
+    <!-- Earlier runs of a schedule (#231). -->
+    <string name="md_runs">Earlier runs</string>
+    <string name="md_run_dates">%1$s – %2$s</string>
+    <string name="md_run_taken">%1$d%% taken</string>
+    <string name="md_run_change_end">Change last day</string>
+    <string name="md_run_delete">Delete run</string>
+    <string name="md_run_delete_title">Delete this run?</string>
+    <string name="md_run_delete_body">Its dates and dose changes go from the schedule. Doses you ticked stay as medication values.</string>
+    <string name="md_run_deleted">Run deleted</string>
+    <string name="md_run_changed">Run dates changed</string>
+    <string name="md_run_dates_invalid">A run has to start before it ends.</string>
+    <string name="md_run_overlaps">That would overlap another run of this schedule.</string>
     <!-- Dose changes (#204) -->
     <string name="md_change_amount">Change amount</string>
     <string name="md_change_title">Change %1$s</string>

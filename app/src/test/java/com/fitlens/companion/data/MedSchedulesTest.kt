@@ -251,4 +251,41 @@ class MedSchedulesTest {
         assertEquals("2026-09-25", same.start)
         assertTrue(same.pauses.isEmpty())
     }
+
+    // ---------- Earlier runs (#231) ----------
+
+    @Test
+    fun runsOfOneScheduleMayNotOverlap() {
+        val old = MedActivation(1, 1, "2026-09-01", endedOn = "2026-09-15")
+        val now = MedActivation(2, 1, "2026-09-15")
+        assertFalse(MedSchedules.overlaps(listOf(old, now), old))
+        // Moving the old run's last day past the new start overlaps; another schedule's run never does.
+        assertTrue(MedSchedules.overlaps(listOf(old, now), MedSchedules.withLastDay(old, "2026-09-20")!!))
+        assertFalse(MedSchedules.overlaps(listOf(MedActivation(3, 2, "2026-09-01")), MedSchedules.withLastDay(old, "2026-09-20")!!))
+        assertTrue(MedSchedules.overlaps(listOf(old, now), MedSchedules.withStart(now, "2026-09-10")!!))
+    }
+
+    @Test
+    fun aRunsLastDayCanMoveButNotBeforeItStarts() {
+        val a = run("2026-10-01", MedPause("2026-10-05", "2026-10-12"), ended = "2026-10-20")
+        assertEquals("2026-10-19", MedSchedules.lastDayOf(a))
+        val shorter = MedSchedules.withLastDay(a, "2026-10-07")!!
+        assertEquals("2026-10-08", shorter.endedOn)
+        assertEquals(listOf(MedPause("2026-10-05", "2026-10-08")), shorter.pauses)
+        assertNull(MedSchedules.withLastDay(a, "2026-09-30"))
+        assertNull(MedSchedules.lastDayOf(run("2026-10-01")))
+    }
+
+    @Test
+    fun aRunSummaryCountsItsDaysAndDosesTaken() {
+        val s = schedule(on(1, PhaseUnit.ONGOING, dose(1)))
+        val a = run("2026-10-01", ended = "2026-10-05")
+        val taken = (1..3).map { d ->
+            MRecord(d.toLong(), "Creatine", "g", "2026-10-0$d", "08:00:00", 5.0, null, Sources.FLEXNOTES, doseId = 1, due = "2026-10-0$d 08:00")
+        }
+        val summary = MedSchedules.runSummary(MedPlan(listOf(s), listOf(a)), taken, a, "2026-10-24")
+        assertEquals("2026-10-04", summary.lastDay)
+        assertEquals(4L, summary.days)
+        assertEquals(75, summary.adherence)
+    }
 }

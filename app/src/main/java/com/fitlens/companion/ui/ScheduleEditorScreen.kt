@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -91,7 +92,8 @@ import kotlin.math.max
  * Nothing is written until Save, and Back with unsaved changes asks first. Under the phases, RUN starts the schedule
  * from a chosen date, or pauses, resumes or ends the run (#202); a running schedule's start date can be changed, or it
  * can start again from day 1, each with Undo (#229). Only the last phase can be ongoing (#228): it can't be moved or
- * duplicated, a new phase goes in before it, and Repeat is hidden while it's there.
+ * duplicated, a new phase goes in before it, and Repeat is hidden while it's there. EARLIER RUNS lists ended runs,
+ * whose dates can be changed or which can be deleted, with Undo (#231); no two runs of a schedule may overlap.
  */
 
 /** A phase in the editor with a stable [key]; doses carry their own keys so moving keeps each row with its dose. */
@@ -131,6 +133,9 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     var newStart by rememberSaveable { mutableStateOf<String?>(null) }
     var pickRestart by remember { mutableStateOf(false) }
     var restartOn by rememberSaveable { mutableStateOf<String?>(null) }
+    // An earlier run being changed (#231): its id, and whether its first day (else its last) is picked; one to delete.
+    var runEdit by remember { mutableStateOf<Pair<Long, Boolean>?>(null) }
+    var runDelete by remember { mutableStateOf<Long?>(null) }
 
     val draft = MedSchedule(original.id, name, notes.ifBlank { null }, repeats, original.sortOrder, phases.map { it.phase })
     val dirty = draft.name != original.name || draft.notes.orEmpty() != original.notes.orEmpty() ||
@@ -164,7 +169,10 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
 
     val current = if (original.id == 0L) null else snap.medPlan.current(original.id)
     // The last run, when it has ended: RUN then offers to start again (#229).
-    val lastRun = if (original.id == 0L) null else snap.medPlan.activationsBySchedule[original.id].orEmpty().lastOrNull()
+    val runs = if (original.id == 0L) emptyList() else snap.medPlan.activationsBySchedule[original.id].orEmpty()
+    val lastRun = runs.lastOrNull()
+    // Earlier runs (#231), newest first; the current one is RUN's.
+    val pastRuns = runs.filter { it.endedOn != null && it.id != current?.id }.sortedByDescending { it.start }
     val endedRun = lastRun?.takeIf { current == null && it.endedOn != null }
     // An ongoing last phase (#228) stays last.
     val endsOngoing = phases.lastOrNull()?.phase?.unit == PhaseUnit.ONGOING
@@ -301,6 +309,7 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             }
             // This run's dose changes (#204), each removable with Undo.
             if (current != null) doseChangeRows(snap, snap.medPlan.changes.filter { it.activationId == current.id })
+            pastRunRows(snap, pastRuns, onEdit = { a, first -> runEdit = a.id to first }, onDelete = { runDelete = it.id })
         }
         GoldHairline()
         GoldButton(
@@ -336,8 +345,12 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     }
     if (pickStart) PickDateDialog(startDate, onDismiss = { pickStart = false }) { startDate = it }
     if (pickNewStart && current != null) PickDateDialog(current.start, onDismiss = { pickNewStart = false }) { picked ->
-        if (MedSchedules.withStart(current, picked) == null) UiEvents.show(res.getString(R.string.md_start_after_end))
-        else if (picked != current.start) newStart = picked
+        val moved = MedSchedules.withStart(current, picked)
+        when {
+            moved == null -> UiEvents.show(res.getString(R.string.md_start_after_end))
+            MedSchedules.overlaps(runs, moved) -> UiEvents.show(res.getString(R.string.md_run_overlaps))
+            picked != current.start -> newStart = picked
+        }
     }
     if (pickRestart) PickDateDialog(Dates.today(), onDismiss = { pickRestart = false }) { restartOn = it }
     val newStartDate = newStart
@@ -398,6 +411,38 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             }
         )
     }
+    runEdit?.let { (runId, first) -> runs.firstOrNull { it.id == runId }?.let { it to first } }?.let { (a, first) ->
+        PickDateDialog(if (first) a.start else MedSchedules.lastDayOf(a), onDismiss = { runEdit = null }) { picked ->
+            val moved = if (first) MedSchedules.withStart(a, picked) else MedSchedules.withLastDay(a, picked)
+            when {
+                moved == null -> UiEvents.show(res.getString(R.string.md_run_dates_invalid))
+                MedSchedules.overlaps(runs, moved) -> UiEvents.show(res.getString(R.string.md_run_overlaps))
+                moved != a -> AppScope.scope.launch {
+                    MedSchedules.restore(moved)
+                    UiEvents.show(res.getString(R.string.md_run_changed), res.getString(R.string.bm_undo)) {
+                        AppScope.scope.launch { MedSchedules.restore(a) }
+                    }
+                }
+            }
+        }
+    }
+    runDelete?.let { runId -> runs.firstOrNull { it.id == runId } }?.let { a ->
+        ConfirmSheet(
+            title = stringResource(R.string.md_run_delete_title),
+            message = stringResource(R.string.md_run_delete_body),
+            confirmLabel = stringResource(R.string.md_run_delete),
+            onDismiss = { runDelete = null },
+            onConfirm = {
+                val changes = snap.medPlan.changes.filter { it.activationId == a.id }
+                AppScope.scope.launch {
+                    MedSchedules.deleteActivation(a)
+                    UiEvents.show(res.getString(R.string.md_run_deleted), res.getString(R.string.bm_undo)) {
+                        AppScope.scope.launch { MedSchedules.restoreRun(a, changes) }
+                    }
+                }
+            }
+        )
+    }
     if (confirmLeave) {
         ConfirmSheet(
             title = stringResource(R.string.workout_discard_title),
@@ -420,6 +465,33 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                     UiEvents.show(res.getString(R.string.md_schedule_deleted, original.name))
                 }
             }
+        )
+    }
+}
+
+/**
+ * EARLIER RUNS (#231): each ended run's dates, how many days it ran and the share of doses taken. Its menu changes
+ * its first or last day ([onEdit] with true for the first) or deletes it ([onDelete]), each with Undo.
+ */
+private fun LazyListScope.pastRunRows(snap: Snapshot, runs: List<MedActivation>, onEdit: (MedActivation, Boolean) -> Unit, onDelete: (MedActivation) -> Unit) {
+    if (runs.isEmpty()) return
+    item(key = "runs-label") { SectionTitle(stringResource(R.string.md_runs)) }
+    items(runs.size, key = { "run-${runs[it].id}" }) { i ->
+        val a = runs[i]
+        val res = LocalContext.current.resources
+        val today = Dates.today()
+        val summary = remember(snap.bodyKey, a) { MedSchedules.runSummary(snap.medPlan, snap.medicationView.records, a, today) }
+        val days = res.getQuantityString(R.plurals.md_days, summary.days.toInt(), summary.days.toInt())
+        ListRowWithMenu(
+            title = res.getString(R.string.md_run_dates, Dates.medium(a.start), Dates.medium(summary.lastDay ?: today)),
+            subtitle = days + (summary.adherence?.let { " · " + res.getString(R.string.md_run_taken, it) } ?: ""),
+            onClick = { onEdit(a, true) },
+            menu = listOf(
+                MenuAction(stringResource(R.string.md_change_start)) { onEdit(a, true) },
+                MenuAction(stringResource(R.string.md_run_change_end)) { onEdit(a, false) },
+                MenuAction(stringResource(R.string.md_run_delete)) { onDelete(a) }
+            ),
+            handle = false
         )
     }
 }
