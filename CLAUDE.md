@@ -102,8 +102,15 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
   whatever its source (FitNotes import or typed in). No separate screen for what the screen showing the data can do,
   and no dead controls. Reordering is in place: drag handles, hidden until a Reorder toggle is on. Plan:
   `docs/plans/2026-10-14-in-place-editing.md` (#164–#174, audit epic #171).
+- **Any user, any pattern (owner principle, 2026-10-24):** FlexNotes is for any kind of user. No feature may lock
+  people into one pattern (for example cycles only). Every function is easy to understand and use: plain wording,
+  sensible defaults, and every mistake fixable from the screen that shows it.
 
 ## Plans (check at the start of every session)
+
+**One live roadmap:** `docs/plans/2026-10-24-roadmap.md` holds all open planned work, in build order. New approved
+work is added to it as a new build stage, not given a parallel plan file, unless the owner asks for a separate
+initiative. Its Status block names the next command.
 
 Every multi-build plan is kept in **two places**, so nothing in it slips:
 - **The plan file, in git:** `docs/plans/YYYY-MM-DD-<name>.md`. It starts with a `> **Status**` block: what's done,

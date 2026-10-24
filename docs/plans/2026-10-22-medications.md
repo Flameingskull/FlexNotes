@@ -12,8 +12,8 @@
 > Build C done in 1.0.156 (#203, #204: `MedReminders.kt` alarm chain, notification with Taken / Snooze / Skip,
 > Settings › Medications, and dose changes for a day or the rest of a run; no database change).
 > Build D done in 1.0.157 (#205: `report/MedicationReport.kt`, `CsvExport.medications`, the dose log and adherence in
-> `MedSchedules`, and the Report for a doctor sheet), closing epic #206. Nothing remains; follow-ups are in
-> `docs/plans/2026-10-22-health-and-medications-follow-ups.md`.
+> `MedSchedules`, and the Report for a doctor sheet), closing epic #206. Nothing remains; follow-ups were in
+> `docs/plans/2026-10-22-health-and-medications-follow-ups.md` and now live in the roadmap, `docs/plans/2026-10-24-roadmap.md`.
 >
 > Issue map: Epic #206 · M1 #199 · M2 #200 · M3 #201 · M4 #202 · M5 #203 · M6 #204 · M7 #205.
 

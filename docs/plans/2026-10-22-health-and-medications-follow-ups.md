@@ -1,6 +1,7 @@
 # Health and medications follow-ups: plan across builds (2026-10-22)
 
-> **Status (2026-10-24, 1.0.163): In progress.** All 16 suggestions from the Medications plan
+> **Superseded (2026-10-24)** by `docs/plans/2026-10-24-roadmap.md`: #218, #219, #220, #222 and #225 moved there.
+> History (1.0.163): All 16 suggestions from the Medications plan
 > (`docs/plans/2026-10-22-medications.md`) were picked by the owner and filed as #207–#222, each imported into the
 > tracker; tracker plan item "Health and medications follow-ups: plan across builds (2026-10-22)".
 > Build 1 done in 1.0.158 (the medication extras #207, #209, #210: database v26 with `med_info`, `mrecord.site` and the
@@ -20,8 +21,6 @@
 > `ui/ReadinessViews.kt`, the day log's Readiness card; #217, training load, `TrainingLoad.kt`, both in the new
 > Analysis › Readiness tab, `ui/ReadinessTab.kt`; #221, water and caffeine with caffeine at bedtime against sleep,
 > `Drinks.kt`, `ui/DrinksViews.kt`). No database change: check-ins and drinks are body values, like intake.
-> Left: #218, #219, #220, #222 and #225. #222 and #225 can start any time; the rest depend on shipped work.
-> Next: `/new-build` to triage these (all still `needs-triage`).
 
 ## Context
 
