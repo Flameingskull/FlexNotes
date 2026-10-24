@@ -22,7 +22,11 @@ data class MedInfo(
     val supplyFrom: String? = null,
     val warnDays: Int = DEFAULT_WARN_DAYS,
     val expires: String? = null,
-    val injected: Boolean = false
+    val injected: Boolean = false,
+    /** Taken only when needed (#233): Today offers Take now, and the report counts these doses as their own group. */
+    val asNeeded: Boolean = false,
+    /** The most as-needed doses a day, warned about when reached; null for no limit. */
+    val maxPerDay: Int? = null
 ) {
     val tracksSupply: Boolean get() = supply != null
 
@@ -195,7 +199,8 @@ object MedExtras {
 
     private fun row(i: MedInfo) = MedInfoRow(
         i.medication, i.supply, i.supplyFrom, i.warnDays.coerceIn(0, 365),
-        i.expires?.takeIf { Dates.parse(it) != null }, if (i.injected) 1 else 0
+        i.expires?.takeIf { Dates.parse(it) != null }, if (i.injected) 1 else 0,
+        if (i.asNeeded) 1 else 0, i.maxPerDay?.takeIf { it > 0 }?.coerceAtMost(99)
     )
 
     /** Saves [info] as it is (for the supply sheet, the injected switch and Undo). */

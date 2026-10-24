@@ -1796,6 +1796,25 @@
     <string name="md_setup_on_for">On for</string>
     <string name="md_setup_off_for">Then off for</string>
     <string name="md_setup_next">Next: add the dose</string>
+    <!-- Tapering and step-up doses (#234). -->
+    <string name="md_step_label">Change over time</string>
+    <string name="md_step_none">Same</string>
+    <string name="md_step_down">Taper down</string>
+    <string name="md_step_up">Step up</string>
+    <string name="md_step_by">By how much (%1$s)</string>
+    <string name="md_step_every_days">Every how many days</string>
+    <string name="md_step_floor">Down to, at the lowest (%1$s)</string>
+    <string name="md_step_ceiling">Up to, at the most (%1$s, optional)</string>
+    <string name="md_step_note">The dose changes from the start of its phase, and the count starts again each phase. A dose change on Today still overrides it for a day or the rest of the run.</string>
+    <string name="md_step_preview">Amounts: %1$s</string>
+    <string name="md_step_needs">Enter how much the dose changes by each time.</string>
+    <string name="md_taper_down">Down %1$s %2$s, to %3$s</string>
+    <string name="md_taper_up">Up %1$s %2$s, to %3$s</string>
+    <string name="md_taper_up_open">Up %1$s %2$s</string>
+    <plurals name="md_step_every">
+        <item quantity="one">every day</item>
+        <item quantity="other">every %1$d days</item>
+    </plurals>
     <!-- Dose changes (#204) -->
     <string name="md_change_amount">Change amount</string>
     <string name="md_change_title">Change %1$s</string>

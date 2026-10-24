@@ -107,7 +107,7 @@ object CsvExport {
                         null -> "Logged"
                     },
                     d?.schedule?.name.orEmpty(),
-                    if (d?.change != null) "Changed from ${fmtNum(d.dose.amount, 3)}" else "",
+                    if (d?.change != null) "Changed from ${fmtNum(d.planned, 3)}" else "",
                     r?.comment ?: d?.dose?.comment.orEmpty(),
                     // Where an injected dose went (#223), added last so older spreadsheets keep their columns.
                     InjectionSite.of(r?.site)?.label.orEmpty()

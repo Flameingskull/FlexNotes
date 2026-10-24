@@ -335,4 +335,20 @@ class ExportedSchemaTest {
             }
         }
     }
+
+    @Test
+    fun aV27DatabaseGainsTapersAndAsNeededAndKeepsEveryDose() {
+        // A database as 1.0.162 to 1.0.164 left it, made from the committed 27.json, upgraded to v28 (#233, #234).
+        helper.createDatabase(Db.NAME, 27).use { db ->
+            db.row("med_schedule", "id" to 1L, "name" to "Daily")
+            db.row("med_phase", "id" to 1L, "schedule_id" to 1L, "position" to 0, "active" to 1, "length" to 1, "unit" to "o")
+            db.row("med_dose", "id" to 1L, "phase_id" to 1L, "medication" to "Metformin", "amount" to 500.0, "unit" to "mg", "time" to "08:00")
+            db.row("med_info", "medication" to "Metformin", "supply" to 60.0, "injected" to 0)
+        }
+        val db = helper.runMigrationsAndValidate(Db.NAME, Db.VERSION, true, *migrations)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM med_dose WHERE id = 1 AND amount = 500.0 AND step = 0 AND step_days = 0 AND step_limit IS NULL"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM med_info WHERE supply = 60.0 AND as_needed = 0 AND max_per_day IS NULL"))
+        db.row("med_info", "medication" to "Ibuprofen", "as_needed" to 1, "max_per_day" to 3)
+        assertEquals(1, db.count("SELECT COUNT(*) FROM med_info WHERE as_needed = 1 AND max_per_day = 3"))
+    }
 }

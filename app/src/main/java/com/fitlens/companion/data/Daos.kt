@@ -990,11 +990,12 @@ interface MedDao {
 
     @Query(
         "UPDATE med_dose SET phase_id = :phaseId, position = :position, medication = :medication, amount = :amount, " +
-            "unit = :unit, time = :time, days = :days, comment = :comment WHERE id = :id"
+            "unit = :unit, time = :time, days = :days, comment = :comment, step = :step, step_days = :stepDays, " +
+            "step_limit = :stepLimit WHERE id = :id"
     )
     fun updateDose(
         id: Long, phaseId: Long, position: Int, medication: String, amount: Double, unit: String, time: String,
-        days: String, comment: String?
+        days: String, comment: String?, step: Double, stepDays: Int, stepLimit: Double?
     )
 
     @Query("DELETE FROM med_dose WHERE id = :id")

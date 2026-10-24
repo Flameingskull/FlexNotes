@@ -303,10 +303,12 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
             }
             if (due.change != null) {
                 Text(
-                    res.getString(R.string.md_changed_from, "${fmtNum(due.dose.amount)} ${due.dose.unit}".trim()),
+                    res.getString(R.string.md_changed_from, "${fmtNum(due.planned)} ${due.dose.unit}".trim()),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+            // A tapering dose (#234) says how it changes.
+            taperText(res, due.dose)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (!due.dose.comment.isNullOrBlank()) Text("“${due.dose.comment}”", style = MaterialTheme.typography.bodySmall)
             GlassOutlinedButton(onClick = { changing = true }, modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.touch)) {
                 Text(stringResource(R.string.md_change_amount))

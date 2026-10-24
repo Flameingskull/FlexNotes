@@ -129,13 +129,14 @@ object MedicationReport {
                 }
                 val phases = com.fitlens.companion.ui.scheduleSummary(res, s)
                 para(w, "${s.name}: $phases. $state", 9f, muted = true, indent = 12f)
-                s.phases.filter { it.on }.flatMap { it.doses }.filter { it.medication == n }.distinctBy { listOf(it.time, it.amount, it.days) }.forEach { d ->
+                s.phases.filter { it.on }.flatMap { it.doses }.filter { it.medication == n }.distinctBy { listOf(it.time, it.amount, it.days, it.step, it.stepEvery, it.stepLimit) }.forEach { d ->
                     val days = when {
                         d.days.weekdays.isNotEmpty() -> MedSchedules.weekOrder(1).filter { it in d.days.weekdays }.joinToString(", ") { MedSchedules.weekdayShort(it) }
                         d.days.every > 1 -> res.getString(R.string.md_every_n_days, d.days.every)
                         else -> res.getString(R.string.md_every_day)
                     }
-                    para(w, "${fmtNum(d.amount)} ${d.unit} · ${d.time} · $days", 9f, indent = 24f)
+                    val taper = com.fitlens.companion.ui.taperText(res, d)?.let { " · $it" }.orEmpty()
+                    para(w, "${fmtNum(d.amount)} ${d.unit} · ${d.time} · $days$taper", 9f, indent = 24f)
                 }
                 plan.changes.filter { c -> run != null && c.activationId == run.id && plan.dosesById[c.doseId]?.second?.medication == n }.forEach { c ->
                     val unit = plan.dosesById[c.doseId]?.second?.unit.orEmpty()

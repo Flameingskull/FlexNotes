@@ -308,4 +308,44 @@ class MedSchedulesTest {
         assertTrue(cycle.days.everyDay)
         assertEquals(1, MedSchedules.cycleStarter(0, PhaseUnit.DAYS, 1, PhaseUnit.DAYS).phases.first().length)
     }
+
+    @Test
+    fun aTaperStepsDownEveryWeekToItsFloor() {
+        // 20 mg, down 5 mg every 7 days, to 10 mg at the lowest (#234).
+        val d = MedDose(1, "Prednisolone", 20.0, "mg", step = -5.0, stepEvery = 7, stepLimit = 10.0)
+        assertEquals(20.0, d.amountOn(0), 0.0)
+        assertEquals(20.0, d.amountOn(6), 0.0)
+        assertEquals(15.0, d.amountOn(7), 0.0)
+        assertEquals(10.0, d.amountOn(14), 0.0)
+        assertEquals(10.0, d.amountOn(100), 0.0)
+        // With no floor it stops at 0, never below.
+        assertEquals(0.0, d.copy(stepLimit = null).amountOn(70), 0.0)
+        // A step-up with no ceiling keeps rising; small steps don't pile up float error.
+        val up = MedDose(2, "Vitamin D", 0.1, "mg", step = 0.1, stepEvery = 1)
+        assertEquals(0.3, up.amountOn(2), 0.0)
+        assertEquals(0.2, up.copy(stepLimit = 0.2).amountOn(5), 0.0)
+        // No interval or no step means no taper.
+        assertEquals(20.0, d.copy(stepEvery = 0).amountOn(30), 0.0)
+        assertFalse(d.copy(step = 0.0).steps)
+    }
+
+    @Test
+    fun dueDosesUseTheTaperedAmountCountedFromThePhaseAndPauses() {
+        val tapering = MedDose(1, "Prednisolone", 20.0, "mg", step = -5.0, stepEvery = 7, stepLimit = 5.0)
+        val s = schedule(MedPhase(10L, true, 1, PhaseUnit.ONGOING, listOf(tapering)))
+        val a = run("2026-10-01")
+        assertEquals(20.0, MedSchedules.dosesOn(s, a, "2026-10-07").single().amount, 0.0)
+        val second = MedSchedules.dosesOn(s, a, "2026-10-08").single()
+        assertEquals(15.0, second.amount, 0.0)
+        assertEquals(15.0, second.planned, 0.0)
+        // A three-day pause holds the taper back by three days.
+        val paused = run("2026-10-01", MedPause("2026-10-03", "2026-10-06"))
+        assertEquals(20.0, MedSchedules.dosesOn(s, paused, "2026-10-10").single().amount, 0.0)
+        assertEquals(15.0, MedSchedules.dosesOn(s, paused, "2026-10-11").single().amount, 0.0)
+        // A dose change still wins for its day, and the planned amount is kept beside it.
+        val change = MedDoseChange(1, 1, 1, "2026-10-08", "2026-10-08", 12.5)
+        val changed = MedSchedules.dosesOn(s, a, "2026-10-08", listOf(change)).single()
+        assertEquals(12.5, changed.amount, 0.0)
+        assertEquals(15.0, changed.planned, 0.0)
+    }
 }

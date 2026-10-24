@@ -332,7 +332,11 @@ data class MedDoseRow(
     @ColumnInfo(defaultValue = "''") val unit: String,
     @ColumnInfo(defaultValue = "'08:00'") val time: String,
     @ColumnInfo(defaultValue = "''") val days: String,
-    val comment: String?
+    val comment: String?,
+    /** A taper or step-up (#234, v28): [step] added every [step_days] days of the phase, stopping at [step_limit]. */
+    @ColumnInfo(defaultValue = "0") val step: Double = 0.0,
+    @ColumnInfo(defaultValue = "0") val step_days: Int = 0,
+    val step_limit: Double? = null
 )
 
 /** A schedule running from [start]; [pauses] lists `from/to` ranges (an open one ends `/`), [ended_on] the first day without doses. */
@@ -377,7 +381,10 @@ data class MedInfoRow(
     val supply_from: String?,
     @ColumnInfo(defaultValue = "7") val warn_days: Int,
     val expires: String?,
-    @ColumnInfo(defaultValue = "0") val injected: Int
+    @ColumnInfo(defaultValue = "0") val injected: Int,
+    /** Taken only when needed (#233, v28), with an optional most doses a day. */
+    @ColumnInfo(defaultValue = "0") val as_needed: Int = 0,
+    val max_per_day: Int? = null
 )
 
 /** A symptom the user rates (#207), in their own list's order. */

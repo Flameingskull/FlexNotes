@@ -25,7 +25,7 @@ class Db(context: Context) : Closeable {
     companion object {
         const val NAME = "fitlens.db"
         /** 21: Room takes over the file (#36). 22: an exercise's own activity for its calories (#174). */
-        const val VERSION = 27
+        const val VERSION = 28
 
         /** The most ids one query binds, inside the 999-variable limit of older phones' SQLite. */
         const val MAX_IDS = 500
@@ -322,6 +322,21 @@ class Db(context: Context) : Closeable {
                     addColumn(db, "measurement", "ref_low", "REAL")
                     addColumn(db, "measurement", "ref_high", "REAL")
                     addColumn(db, "measurement", "lab", "INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+            if (oldVersion < 28) {
+                // ---- 1.0.165: tapering doses (#234) and as-needed medications (#233) -------------------------------------
+                // A dose gains a step (0, so every dose keeps its amount), its interval and an optional floor or
+                // ceiling; a medication's details gain "as needed" (off) and an optional most per day. Every row is
+                // kept as it is. Replays safely (#77).
+                if (hasTable(db, "med_dose")) {
+                    addColumn(db, "med_dose", "step", "REAL NOT NULL DEFAULT 0")
+                    addColumn(db, "med_dose", "step_days", "INTEGER NOT NULL DEFAULT 0")
+                    addColumn(db, "med_dose", "step_limit", "REAL")
+                }
+                if (hasTable(db, "med_info")) {
+                    addColumn(db, "med_info", "as_needed", "INTEGER NOT NULL DEFAULT 0")
+                    addColumn(db, "med_info", "max_per_day", "INTEGER")
                 }
             }
         }

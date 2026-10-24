@@ -84,6 +84,7 @@ import com.fitlens.companion.ui.design.StepperField
 import com.fitlens.companion.ui.design.TopBarAction
 import com.fitlens.companion.ui.design.raisedGlass
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.max
 
 /**
@@ -705,7 +706,8 @@ private fun PhaseCard(
             key(doseKey) {
                 ListRowWithMenu(
                     title = "${d.medication} ${fmtNum(d.amount)} ${d.unit}".trim(),
-                    subtitle = d.time + " · " + daysText(res, d.days) + (d.comment?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+                    subtitle = d.time + " · " + daysText(res, d.days) + (taperText(res, d)?.let { " · $it" } ?: "") +
+                        (d.comment?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
                     onClick = { onEditDose(doseKey) },
                     menu = listOf(
                         MenuAction(stringResource(R.string.lib_edit)) { onEditDose(doseKey) },
@@ -731,6 +733,33 @@ private fun PhaseCard(
 /** "ON · 8 weeks" or "OFF · 4 weeks". */
 internal fun phaseLabel(res: Resources, p: MedPhase): String =
     res.getString(if (p.on) R.string.md_phase_label_on else R.string.md_phase_label_off, phaseLength(res, p.length, p.unit))
+
+/** "Down 5 mg every 7 days, to 10 mg" or "Up 2.5 mg every 14 days", a dose's taper or step-up (#234); null without one. */
+internal fun taperText(res: Resources, d: MedDose): String? {
+    if (!d.steps) return null
+    val every = res.getQuantityString(R.plurals.md_step_every, d.stepEvery, d.stepEvery)
+    fun amount(v: Double) = "${fmtNum(v)} ${d.unit}".trim()
+    val by = amount(abs(d.step))
+    return when {
+        d.step < 0 -> res.getString(R.string.md_taper_down, by, every, amount(minOf(d.stepLimit ?: 0.0, d.amount)))
+        d.stepLimit != null -> res.getString(R.string.md_taper_up, by, every, amount(maxOf(d.stepLimit, d.amount)))
+        else -> res.getString(R.string.md_taper_up_open, by, every)
+    }
+}
+
+/** "20 → 15 → 10 mg": the amounts a taper or step-up (#234) goes through, up to [max] of them. */
+internal fun taperPreview(d: MedDose, max: Int = 6): String {
+    val amounts = ArrayList<Double>()
+    var day = 0L
+    while (amounts.size < max) {
+        val a = d.amountOn(day)
+        if (amounts.lastOrNull() == a) break
+        amounts += a
+        day += d.stepEvery.coerceAtLeast(1)
+    }
+    val more = d.amountOn(day) != amounts.last()
+    return amounts.joinToString(" → ") { fmtNum(it) } + (if (more) " → …" else "") + " " + d.unit
+}
 
 /** "Every day", "Mon, Wed, Fri", "Every 2 days". */
 internal fun daysText(res: Resources, days: MedDays): String = when {
@@ -811,12 +840,29 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
     var weekdays by remember { mutableStateOf(startDays.weekdays.ifEmpty { setOf(1, 2, 3, 4, 5, 6, 7) }) }
     var every by remember { mutableStateOf((startDays.every.takeIf { it > 1 } ?: 2).toString()) }
     var comment by remember { mutableStateOf(existing?.comment.orEmpty()) }
+    // A taper or step-up (#234): 0 the same every day, 1 down, 2 up; by how much, how often, and the floor or ceiling.
+    val stepped = existing?.takeIf { it.steps }
+    var stepMode by remember { mutableStateOf(if (stepped == null) 0 else if (stepped.step < 0) 1 else 2) }
+    var stepBy by remember { mutableStateOf(stepped?.let { fmtNum(abs(it.step)) }.orEmpty()) }
+    var stepEvery by remember { mutableStateOf((stepped?.stepEvery ?: 7).toString()) }
+    var stepLimit by remember { mutableStateOf(stepped?.stepLimit?.let { fmtNum(it) }.orEmpty()) }
+    fun number(text: String) = text.trim().replace(',', '.').toDoubleOrNull()
+
+    /** The taper fields as a dose's step, amount and limit: null when they're asked for but not filled in. */
+    fun step(): Triple<Double, Int, Double?>? {
+        if (stepMode == 0) return Triple(0.0, 0, null)
+        val by = number(stepBy)?.takeIf { it > 0 } ?: return null
+        val days = (stepEvery.toIntOrNull() ?: 7).coerceIn(1, 365)
+        return Triple(if (stepMode == 1) -by else by, days, number(stepLimit)?.takeIf { it >= 0 })
+    }
 
     fun save() {
         val n = medication.trim()
-        val a = amount.trim().replace(',', '.').toDoubleOrNull()
+        val a = number(amount)
+        val s = step()
         when {
             n.isBlank() || a == null -> UiEvents.show(res.getString(R.string.md_dose_needs))
+            s == null -> UiEvents.show(res.getString(R.string.md_step_needs))
             snap.medicationView.inOtherHalf(n) -> UiEvents.show(res.getString(R.string.md_is_body, n))
             !Medications.canBeMedication(n) -> UiEvents.show(res.getString(R.string.md_refused, n))
             else -> {
@@ -825,7 +871,12 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
                     2 -> MedDays(every = (every.toIntOrNull() ?: 2).coerceIn(2, 365))
                     else -> MedDays()
                 }
-                onSave(MedDose(existing?.id ?: 0L, n, a, unit.trim(), MedSchedules.cleanTime(time), days, comment.trim().ifBlank { null }))
+                onSave(
+                    MedDose(
+                        existing?.id ?: 0L, n, a, unit.trim(), MedSchedules.cleanTime(time), days, comment.trim().ifBlank { null },
+                        s.first, s.second, s.third
+                    )
+                )
             }
         }
     }
@@ -891,6 +942,37 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
                 onStep = { dir -> every = max(2, (every.toIntOrNull() ?: 2) + dir).toString() },
                 keyboard = KeyboardType.Number
             )
+        }
+        SectionLabel(stringResource(R.string.md_step_label), Modifier.padding(top = Spacing.sm))
+        SegmentedSwitch(
+            listOf(stringResource(R.string.md_step_none), stringResource(R.string.md_step_down), stringResource(R.string.md_step_up)),
+            stepMode, { stepMode = it }
+        )
+        if (stepMode != 0) {
+            val unitLabel = unit.trim().ifBlank { "-" }
+            OutlinedTextField(
+                value = stepBy, onValueChange = { stepBy = it }, label = { Text(stringResource(R.string.md_step_by, unitLabel)) },
+                singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth()
+            )
+            StepperField(
+                label = stringResource(R.string.md_step_every_days),
+                value = stepEvery,
+                onValue = { stepEvery = it.filter { c -> c.isDigit() }.take(3) },
+                onStep = { dir -> stepEvery = max(1, (stepEvery.toIntOrNull() ?: 7) + dir).toString() },
+                keyboard = KeyboardType.Number
+            )
+            OutlinedTextField(
+                value = stepLimit, onValueChange = { stepLimit = it },
+                label = { Text(stringResource(if (stepMode == 1) R.string.md_step_floor else R.string.md_step_ceiling, unitLabel)) },
+                singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth()
+            )
+            val a = number(amount)
+            val s = step()
+            if (a != null && s != null) {
+                val preview = MedDose(0L, medication, a, unit.trim(), step = s.first, stepEvery = s.second, stepLimit = s.third)
+                Text(stringResource(R.string.md_step_preview, taperPreview(preview)), style = MaterialTheme.typography.bodyMedium)
+            }
+            Text(stringResource(R.string.md_step_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         OutlinedTextField(
             value = comment, onValueChange = { comment = it },

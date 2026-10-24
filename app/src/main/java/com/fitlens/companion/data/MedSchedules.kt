@@ -77,7 +77,11 @@ data class MedDays(val weekdays: Set<Int> = emptySet(), val every: Int = 1) {
     }
 }
 
-/** One dose of an on phase. An [id] of 0 is one not saved yet. [time] is `HH:mm`. */
+/**
+ * One dose of an on phase. An [id] of 0 is one not saved yet. [time] is `HH:mm`. A taper or step-up (#234) changes
+ * [amount] by [step] (negative tapers down) every [stepEvery] days of the phase, stopping at [stepLimit]: a floor when
+ * tapering (0 when none is set), a ceiling when stepping up (none when not set). The count starts again each phase.
+ */
 data class MedDose(
     val id: Long,
     val medication: String,
@@ -85,8 +89,23 @@ data class MedDose(
     val unit: String,
     val time: String = "08:00",
     val days: MedDays = MedDays(),
-    val comment: String? = null
-)
+    val comment: String? = null,
+    val step: Double = 0.0,
+    val stepEvery: Int = 0,
+    val stepLimit: Double? = null
+) {
+    val steps: Boolean get() = step != 0.0 && stepEvery > 0
+
+    /** The amount on day [dayInPhase] of the phase (0 on its first day), after any taper or step-up. */
+    fun amountOn(dayInPhase: Long): Double {
+        if (!steps || dayInPhase < 0) return amount
+        val raw = amount + step * (dayInPhase / stepEvery)
+        val bounded = if (step < 0) maxOf(raw, minOf(stepLimit ?: 0.0, amount))
+            else stepLimit?.let { minOf(raw, maxOf(it, amount)) } ?: raw
+        // Steps like 0.1 add up with float error; amounts are kept to six decimals.
+        return Math.round(bounded * 1_000_000.0) / 1_000_000.0
+    }
+}
 
 /** One phase: on (with [doses]) or off, [length] [unit]s long. An [id] of 0 is one not saved yet. */
 data class MedPhase(
@@ -199,10 +218,12 @@ data class DueDose(
     val date: String,
     /** `HH:mm`. */
     val time: String,
-    /** The amount after any dose change (#204). */
+    /** The amount after any taper (#234) and dose change (#204). */
     val amount: Double,
     /** The change that set [amount], if one did. */
-    val change: MedDoseChange? = null
+    val change: MedDoseChange? = null,
+    /** What the schedule (with any taper, #234) gives that day, before a dose change. */
+    val planned: Double = amount
 ) {
     /** `yyyy-MM-dd HH:mm`: with the dose's id, what a taken value and a skip are keyed by. */
     val due: String get() = "$date $time"
@@ -290,7 +311,8 @@ object MedSchedules {
             .filter { it.days.matches(day, state.day - 1) }
             .map { d ->
                 val change = changeFor(changes, a.id, d.id, date)
-                DueDose(a, schedule, d, date, cleanTime(d.time), change?.amount ?: d.amount, change)
+                val planned = d.amountOn(state.day - 1)
+                DueDose(a, schedule, d, date, cleanTime(d.time), change?.amount ?: planned, change, planned)
             }
             .sortedBy { it.time }
     }
@@ -384,7 +406,7 @@ object MedSchedules {
         val doses = HashMap<Long, MutableList<MedDose>>()
         r.doses().forEach {
             doses.getOrPut(it.phase_id) { ArrayList() }.add(
-                MedDose(it.id, it.medication, it.amount, it.unit, it.time, MedDays.decode(it.days), it.comment)
+                MedDose(it.id, it.medication, it.amount, it.unit, it.time, MedDays.decode(it.days), it.comment, it.step, it.step_days, it.step_limit)
             )
         }
         val phases = HashMap<Long, MutableList<MedPhase>>()
@@ -400,7 +422,9 @@ object MedSchedules {
         val skipped = HashMap<Long, MutableSet<String>>()
         r.statuses().filter { it.status == SKIPPED }.forEach { skipped.getOrPut(it.dose_id) { HashSet() }.add(it.due) }
         val changes = r.changes().map { MedDoseChange(it.id, it.activation_id, it.dose_id, it.from_date, it.to_date, it.amount) }
-        val info = r.infos().associate { it.medication to MedInfo(it.medication, it.supply, it.supply_from, it.warn_days, it.expires, it.injected != 0) }
+        val info = r.infos().associate {
+            it.medication to MedInfo(it.medication, it.supply, it.supply_from, it.warn_days, it.expires, it.injected != 0, it.as_needed != 0, it.max_per_day)
+        }
         val symptoms = r.symptoms().map { Symptom(it.id, it.name, it.sort_order) }
         val ratings = r.ratings().map { SymptomRating(it.id, it.symptom_id, it.date, it.rating, it.comment) }
         return MedPlan(schedules, activations, skipped, changes, info, symptoms, ratings)
@@ -447,8 +471,12 @@ object MedSchedules {
             doses.forEachIndexed { j, d ->
                 val time = cleanTime(d.time)
                 val comment = d.comment?.trim()?.ifBlank { null }
-                if (d.id > 0) r.updateDose(d.id, phaseId, j, d.medication.trim(), d.amount, d.unit.trim(), time, d.days.encode(), comment)
-                else r.addDose(MedDoseRow(0L, phaseId, j, d.medication.trim(), d.amount, d.unit.trim(), time, d.days.encode(), comment))
+                // A step needs both an amount and an interval (#234); anything else is a plain dose.
+                val step = if (d.steps) d.step else 0.0
+                val stepDays = if (d.steps) d.stepEvery.coerceIn(1, 365) else 0
+                val limit = if (d.steps) d.stepLimit else null
+                if (d.id > 0) r.updateDose(d.id, phaseId, j, d.medication.trim(), d.amount, d.unit.trim(), time, d.days.encode(), comment, step, stepDays, limit)
+                else r.addDose(MedDoseRow(0L, phaseId, j, d.medication.trim(), d.amount, d.unit.trim(), time, d.days.encode(), comment, step, stepDays, limit))
                 // A dose names a medication: make sure it is one, so its values show on Medications.
                 r.ensureMedication(d.medication.trim(), d.unit.trim())
             }
