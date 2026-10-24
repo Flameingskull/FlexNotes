@@ -218,6 +218,10 @@ data class PortableSettings(
     val homeShowCalories: Boolean = true,
     /** Show the readiness card on the day log (#216). */
     val homeShowReadiness: Boolean = true,
+    /** Show the water and caffeine card on the day log (#221). */
+    val homeShowDrinks: Boolean = true,
+    /** Usual bedtime, HH:mm (#221): when the caffeine still active is estimated. */
+    val bedtime: String = Drinks.DEFAULT_BEDTIME,
     /** The pose new photos get (#46): null to ask each time, [Poses.NONE] for none, or one of [Poses.all]. */
     val photoDefaultPose: String? = null,
     /** How the Photos grid is grouped (#46), one of [MediaPrefs.GROUPS]. */
@@ -463,6 +467,8 @@ object Settings {
             P_TDEE_SOURCE to s.tdeeSource.takeIf { it != EnergyEstimates.SOURCE_ESTIMATE },
             P_HOME_CALORIES to if (s.homeShowCalories) null else "0",
             P_HOME_READINESS to if (s.homeShowReadiness) null else "0",
+            P_HOME_DRINKS to if (s.homeShowDrinks) null else "0",
+            P_BEDTIME to s.bedtime.takeIf { it != Drinks.DEFAULT_BEDTIME },
             P_PHOTO_POSE to MediaPrefs.storeDefaultPose(s.photoDefaultPose),
             P_PHOTO_GROUP to s.photoGroupBy.takeIf { it != MediaPrefs.GROUP_MONTH },
             P_REMEMBER_VIDEO to if (s.rememberVideoOpts) null else "0",
@@ -581,6 +587,8 @@ object Settings {
     private const val P_TDEE_SOURCE = "tdee_source"
     private const val P_HOME_CALORIES = "home_show_calories"
     private const val P_HOME_READINESS = "home_show_readiness"
+    private const val P_HOME_DRINKS = "home_show_drinks"
+    private const val P_BEDTIME = "bedtime"
     // Progress photos and media (#46), with the names the issue gave them.
     private const val P_PHOTO_POSE = "photo_default_pose"
     private const val P_PHOTO_GROUP = "photo_group_by"
@@ -731,6 +739,8 @@ object Settings {
         tdeeSource = if (get(P_TDEE_SOURCE) == EnergyEstimates.SOURCE_MEASURED) EnergyEstimates.SOURCE_MEASURED else EnergyEstimates.SOURCE_ESTIMATE,
         homeShowCalories = get(P_HOME_CALORIES) != "0",
         homeShowReadiness = get(P_HOME_READINESS) != "0",
+        homeShowDrinks = get(P_HOME_DRINKS) != "0",
+        bedtime = get(P_BEDTIME)?.takeIf { Drinks.minutesOf(it) != null } ?: Drinks.DEFAULT_BEDTIME,
         // Unknown values (from a later build's backup) fall back to the defaults (#46).
         photoDefaultPose = MediaPrefs.defaultPoseOf(get(P_PHOTO_POSE)),
         photoGroupBy = MediaPrefs.groupOf(get(P_PHOTO_GROUP)),
@@ -830,7 +840,7 @@ enum class PreferenceGroup {
 internal fun PortableSettings.withGroupFrom(group: PreferenceGroup, other: PortableSettings): PortableSettings = when (group) {
     PreferenceGroup.HOME -> copy(
         homeShowCategories = other.homeShowCategories, homeSetsShown = other.homeSetsShown, homeShowCalories = other.homeShowCalories,
-        homeShowReadiness = other.homeShowReadiness
+        homeShowReadiness = other.homeShowReadiness, homeShowDrinks = other.homeShowDrinks
     )
     PreferenceGroup.REST -> copy(
         restSeconds = other.restSeconds, restAutoStart = other.restAutoStart, restVibrate = other.restVibrate,

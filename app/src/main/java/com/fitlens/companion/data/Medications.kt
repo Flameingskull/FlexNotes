@@ -19,7 +19,7 @@ object Medications {
         if (n.isEmpty()) return false
         return !(
             n.equals(HealthConnect.Names.BODYWEIGHT, true) || n.equals("Body Weight", true) ||
-                BodyFat.isBodyFat(n) || BodyFat.Input.HEIGHT.matches(n) || Intake.isIntake(n) || Readiness.isCheckIn(n) ||
+                BodyFat.isBodyFat(n) || BodyFat.Input.HEIGHT.matches(n) || Intake.isIntake(n) || Readiness.isCheckIn(n) || Drinks.isDrink(n) ||
                 n.equals(Steps.NAME, true) || n.equals(HealthConnect.Names.ACTIVE, true) ||
                 n.equals(HealthConnect.Names.RESTING_HR, true) || n.equals(HealthConnect.Names.SLEEP, true) ||
                 HealthConnect.Names.vitals.any { n.equals(it.first, true) }

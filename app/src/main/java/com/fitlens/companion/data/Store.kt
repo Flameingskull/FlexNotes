@@ -891,6 +891,17 @@ object Store {
             refresh(Area.BODY)
         }
 
+    /** Logs one drink (#221) at [time] on [date], making its measurement as FlexNotes's own the first time. */
+    suspend fun addDrink(date: String, time: String, kind: Drinks.Kind, amount: Double) = withContext(Dispatchers.IO) {
+        val body = db.bodyDao
+        db.transaction {
+            val name = body.definitionNames().firstOrNull { kind.matches(it) }
+                ?: kind.label.also { body.addOwn(it, kind.unit, body.lastOrder() + 1) }
+            body.addManualRecord(name, kind.unit, date, time, amount, null)
+        }
+        refresh(Area.BODY)
+    }
+
     /** Sets a measurement's goal (#27), and marks it so a FitNotes import keeps the user's choice. */
     suspend fun setMeasurementGoal(name: String, unit: String, type: Int, value: Double) = withContext(Dispatchers.IO) {
         val body = db.bodyDao
