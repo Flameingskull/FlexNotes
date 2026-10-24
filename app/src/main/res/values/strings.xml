@@ -1815,6 +1815,43 @@
         <item quantity="one">every day</item>
         <item quantity="other">every %1$d days</item>
     </plurals>
+    <!-- As-needed medications (#233). -->
+    <string name="prn_title">As needed</string>
+    <string name="prn_menu">Taken as needed…</string>
+    <string name="prn_sheet_title">%1$s as needed</string>
+    <string name="prn_switch">Taken only when needed</string>
+    <string name="prn_switch_note">It shows on Today with Take now and the time since your last dose, instead of on a schedule.</string>
+    <string name="prn_most">Most a day (optional)</string>
+    <string name="prn_most_note">You\'re warned before taking more than this in a day. Leave it blank for no limit.</string>
+    <string name="prn_on">%1$s is taken as needed</string>
+    <string name="prn_off">%1$s is no longer taken as needed</string>
+    <string name="prn_take_now">Take %1$s</string>
+    <string name="prn_take_first">Log first dose</string>
+    <string name="prn_never">Not taken yet</string>
+    <string name="prn_since_minutes">Last taken %1$d min ago</string>
+    <string name="prn_since_hours">Last taken %1$d h %2$d min ago</string>
+    <plurals name="prn_since_days">
+        <item quantity="one">Last taken %1$d day ago</item>
+        <item quantity="other">Last taken %1$d days ago</item>
+    </plurals>
+    <string name="prn_count">%1$d today</string>
+    <string name="prn_count_of">%1$d of %2$d today</string>
+    <string name="prn_limit_reached">Today\'s most is reached</string>
+    <string name="prn_limit_title">Take more %1$s?</string>
+    <string name="prn_limit_body">You\'ve taken %1$d today, and your most a day is %2$d. Check with your doctor or the leaflet if you\'re unsure.</string>
+    <string name="prn_take_anyway">Take anyway</string>
+    <string name="mdr_prn">As needed</string>
+    <string name="mdr_prn_line">%1$s: %2$s %3$s, %4$s in all, at most %5$d in one day</string>
+    <plurals name="mdr_prn_times">
+        <item quantity="one">taken once</item>
+        <item quantity="other">taken %1$d times</item>
+    </plurals>
+    <plurals name="mdr_prn_days">
+        <item quantity="one">on %1$d day</item>
+        <item quantity="other">on %1$d days</item>
+    </plurals>
+    <string name="mdr_prn_none">%1$s: not taken in this range</string>
+    <string name="mdr_prn_note">Taken only when needed, so these aren\'t counted in adherence.</string>
     <!-- Dose changes (#204) -->
     <string name="md_change_amount">Change amount</string>
     <string name="md_change_title">Change %1$s</string>

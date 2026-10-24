@@ -4,6 +4,7 @@ import android.content.res.Resources
 import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
 import com.fitlens.companion.R
+import com.fitlens.companion.data.AsNeeded
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.InjectionSite
 import com.fitlens.companion.data.MedSchedules
@@ -59,6 +60,7 @@ object MedicationReport {
                 heading(w, o, names)
                 if (o.schedules) schedules(w, snap, names, today)
                 if (o.adherence) adherence(w, MedSchedules.adherence(log))
+                if (o.adherence) asNeeded(w, snap, o, names)
                 if (o.graphs) graphs(w, snap, o, names)
                 if (o.symptoms) symptoms(w, snap, o)
                 if (o.summary) bodyValues(w, snap, o)
@@ -174,6 +176,24 @@ object MedicationReport {
             w.y += 16f
         }
         para(w, res.getString(R.string.mdr_adherence_note), 8f, muted = true)
+        w.y += 6f
+    }
+
+    /** AS NEEDED (#233): each as-needed medication's use over the range, its own group outside adherence. */
+    private fun asNeeded(w: PageWriter, snap: Snapshot, o: MedicationReportOptions, names: Set<String>) {
+        val res = w.res
+        val meds = AsNeeded.medications(snap.medPlan, names)
+        if (meds.isEmpty()) return
+        label(w, res.getString(R.string.mdr_prn))
+        AsNeeded.use(meds, snap.medicationView.records, o.from, o.to).forEach { u ->
+            val text = if (u.doses == 0) res.getString(R.string.mdr_prn_none, u.medication)
+                else res.getString(
+                    R.string.mdr_prn_line, u.medication, res.getQuantityString(R.plurals.mdr_prn_times, u.doses, u.doses),
+                    res.getQuantityString(R.plurals.mdr_prn_days, u.days, u.days), "${fmtNum(u.total)} ${u.unit}".trim(), u.mostInADay
+                )
+            para(w, text, 9.5f)
+        }
+        para(w, res.getString(R.string.mdr_prn_note), 8f, muted = true)
         w.y += 6f
     }
 

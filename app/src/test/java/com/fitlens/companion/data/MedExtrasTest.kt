@@ -111,4 +111,32 @@ class MedExtrasTest {
         assertEquals(listOf(6, 2), Symptoms.series(plan, 2).map { it.rating })
         assertTrue(Symptoms.ratingsOn(plan, "2026-10-03").isEmpty())
     }
+
+    @Test
+    fun anAsNeededMedicationCountsTodayAndItsUseOverARange() {
+        // Ibuprofen as needed, at most 3 a day (#233).
+        val info = MedInfo("Ibuprofen", asNeeded = true, maxPerDay = 3)
+        val records = listOf(
+            value(1, "2026-10-20", "09:00:00", 400.0, name = "Ibuprofen"),
+            value(2, "2026-10-22", "08:00:00", 400.0, name = "Ibuprofen"),
+            value(3, "2026-10-22", "14:30:00", 200.0, name = "Ibuprofen"),
+            value(4, "2026-10-22", "20:00:00", 400.0, name = "Ibuprofen"),
+            value(5, "2026-10-22", "21:00:00", 5.0)
+        )
+        val today = AsNeeded.state(info, records, "2026-10-22")
+        assertEquals(3, today.today)
+        assertTrue(today.atLimit)
+        assertEquals(4L, today.last!!.id)
+        assertFalse(AsNeeded.state(info.copy(maxPerDay = null), records, "2026-10-22").atLimit)
+        assertEquals(150L, AsNeeded.minutesSince(today.last!!, java.time.LocalDateTime.of(2026, 10, 22, 22, 30)))
+        // Only medications marked as needed, and only those asked for.
+        val plan = MedPlan(info = mapOf("Ibuprofen" to info, "Creatine" to MedInfo("Creatine")))
+        assertEquals(listOf("Ibuprofen"), AsNeeded.medications(plan, listOf("Ibuprofen", "Creatine")).map { it.medication })
+        assertTrue(AsNeeded.medications(plan, listOf("Creatine")).isEmpty())
+        val use = AsNeeded.use(listOf(info), records, "2026-10-21", "2026-10-22").single()
+        assertEquals(3, use.doses)
+        assertEquals(1, use.days)
+        assertEquals(1000.0, use.total, 0.0)
+        assertEquals(3, use.mostInADay)
+    }
 }

@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 /**
  * What the Medications screens keep about a medication beyond its values and schedules (#209, #210), and the symptoms
@@ -176,6 +177,43 @@ object InjectionSites {
             .sortedByDescending { Supply.stamp(it) }.take(count)
 }
 
+/** An as-needed medication on a day (#233): its latest value, how many were logged that day, and the most allowed. */
+data class AsNeededState(val medication: String, val last: MRecord?, val today: Int, val maxPerDay: Int?) {
+    val atLimit: Boolean get() = maxPerDay != null && today >= maxPerDay
+}
+
+/** One as-needed medication's use over a range (#233): values, days used, the total, and the most in one day. */
+data class AsNeededUse(val medication: String, val unit: String, val doses: Int, val days: Int, val total: Double, val mostInADay: Int)
+
+object AsNeeded {
+    /** The medications of [plan] marked as needed, among [names], in name order. */
+    fun medications(plan: MedPlan, names: Collection<String>): List<MedInfo> =
+        plan.info.values.filter { it.asNeeded && it.medication in names }.sortedBy { it.medication.lowercase() }
+
+    /** [info]'s state on [today]: every value of it counts, scheduled or not, since the limit is about what's taken. */
+    fun state(info: MedInfo, records: List<MRecord>, today: String): AsNeededState {
+        val mine = records.filter { it.name == info.medication }
+        return AsNeededState(info.medication, mine.maxByOrNull { Supply.stamp(it) }, mine.count { it.date.take(10) == today }, info.maxPerDay)
+    }
+
+    /** Whole minutes from [last]'s moment to [now], never below 0, or null when its date can't be read. */
+    fun minutesSince(last: MRecord, now: LocalDateTime): Long? {
+        val at = runCatching { LocalDateTime.parse(Supply.stamp(last).replace(' ', 'T')) }.getOrNull() ?: return null
+        return ChronoUnit.MINUTES.between(at, now).coerceAtLeast(0L)
+    }
+
+    /** How each of [medications] was used from [from] to [to] (inclusive), for the doctor's report. */
+    fun use(medications: List<MedInfo>, records: List<MRecord>, from: String, to: String): List<AsNeededUse> =
+        medications.map { info ->
+            val mine = records.filter { it.name == info.medication && it.date.take(10) in from..to }
+            val perDay = mine.groupingBy { it.date.take(10) }.eachCount()
+            AsNeededUse(
+                info.medication, mine.lastOrNull()?.unit.orEmpty(), mine.size, perDay.size, mine.sumOf { it.value },
+                perDay.values.maxOrNull() ?: 0
+            )
+        }
+}
+
 object Symptoms {
     const val MAX = 10
 
@@ -210,6 +248,22 @@ object MedExtras {
     suspend fun count(info: MedInfo, amount: Double): Unit = write { r ->
         r.setInfo(row(info.copy(supply = amount.coerceAtLeast(0.0), supplyFrom = Supply.now())))
     }
+
+    /**
+     * Logs an as-needed dose (#233) of [name]: [value] in [unit], converted to the unit its values are stored in, at
+     * [site] for an injected one. Returns the value's id, for Undo.
+     */
+    suspend fun takeAsNeeded(name: String, unit: String, date: String, time: String, value: Double, site: String?): Long =
+        withContext(Dispatchers.IO) {
+            val db = Store.db
+            val id = db.transaction {
+                val stored = db.bodyDao.definition(name)?.unit?.takeIf { MeasureUnits.sameKind(it, unit) } ?: unit
+                db.medDao.ensureMedication(name, stored)
+                db.medDao.addAsNeeded(name, stored, date, time, MeasureUnits.convert(value, unit, stored), null, site)
+            }
+            Store.refresh(Area.BODY)
+            id
+        }
 
     /** Sets the site of a value (#210), or clears it with null. */
     suspend fun setSite(recordId: Long, site: InjectionSite?): Unit = write { r -> r.setSite(recordId, site?.key) }

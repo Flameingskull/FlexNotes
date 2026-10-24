@@ -1043,6 +1043,13 @@ interface MedDao {
     @Query("INSERT OR IGNORE INTO measurement(name, unit, sort_order, medication) VALUES(:name, :unit, 999, 1)")
     fun ensureMedication(name: String, unit: String)
 
+    /** An as-needed dose (#233): an ordinary value with no schedule dose, returning its id for Undo. */
+    @Query(
+        "INSERT INTO mrecord(name, unit, date, time, value, comment, source, site) " +
+            "VALUES(:name, :unit, :date, :time, :value, :comment, 'manual', :site)"
+    )
+    fun addAsNeeded(name: String, unit: String, date: String, time: String, value: Double, comment: String?, site: String?): Long
+
     @Query("DELETE FROM mrecord WHERE dose_id = :doseId AND due = :due")
     fun deleteTaken(doseId: Long, due: String)
 

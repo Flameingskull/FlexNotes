@@ -133,7 +133,11 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     // due today (so a reminder's tap lands there), otherwise on the medication list.
     val listPage = if (medications) MED_LIST_PAGE else 0
     val pager = rememberPagerState(
-        initialPage = if (medications && com.fitlens.companion.data.MedSchedules.dueOn(snap.medPlan, Dates.today()).isEmpty()) MED_LIST_PAGE else 0,
+        // Today first when a dose is due or something is taken as needed (#233), else the list.
+        initialPage = if (
+            medications && com.fitlens.companion.data.MedSchedules.dueOn(snap.medPlan, Dates.today()).isEmpty() &&
+            snap.medPlan.info.values.none { it.asNeeded }
+        ) MED_LIST_PAGE else 0,
         pageCount = { if (medications) 5 else 3 }
     )
     val scope = rememberCoroutineScope()

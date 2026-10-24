@@ -98,6 +98,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
     var calculating by remember { mutableStateOf(false) }
     // A medication's supply sheet (#209), and the site of a new injected dose (#210): null means the suggested one.
     var editingSupply by remember { mutableStateOf(false) }
+    var editingAsNeeded by remember { mutableStateOf(false) }
     val injected = snap.isInjected(name)
     val suggestedSite = remember(snap.bodyKey, name) { InjectionSites.suggest(records, name) }
     var site by remember(name) { mutableStateOf<InjectionSite?>(null) }
@@ -181,7 +182,9 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                     MenuAction(stringResource(if (injected) R.string.inj_menu_off else R.string.inj_menu_on)) {
                         setInjected(res, snap, name, !injected)
                     }
-                } else null
+                } else null,
+                // Taken only when needed (#233), with an optional most a day.
+                if (def != null && snap.showsMedications) MenuAction(stringResource(R.string.prn_menu)) { editingAsNeeded = true } else null
             )
         )
         FitTabRow(
@@ -312,6 +315,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
         }
     }
     if (editingSupply) SupplySheet(snap, name, unit) { editingSupply = false }
+    if (editingAsNeeded) AsNeededSheet(snap, name) { editingAsNeeded = false }
     if (editingGoal && def != null) MeasurementGoalSheet(def) { editingGoal = false }
     if (editingMetric && def != null) CustomMetricEditor(snap, def) { editingMetric = false }
     if (editingRange && def != null) ReferenceRangeSheet(def) { editingRange = false }

@@ -107,6 +107,8 @@ internal fun LazyListScope.medicationTodayTab(snap: Snapshot, nav: Nav, onSchedu
     items(due.size, key = { "due-${due[it].dose.id}-${due[it].due}" }) { i ->
         DueDoseRow(snap, due[i], i + 1, onOpen = { onDose(due[i]) })
     }
+    // Medications taken only when needed (#233), each with Take now.
+    asNeededRows(snap, nav)
     // Medications running low, run out or expiring (#209), then today's symptom ratings (#207).
     supplyAlertRows(snap, nav)
     symptomRows(snap, onSymptoms)
