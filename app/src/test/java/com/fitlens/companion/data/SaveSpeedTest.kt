@@ -17,7 +17,9 @@ import java.time.LocalDate
 
 /**
  * #60's measured criterion, run on every build: saving a set, through `Workouts` and `Store` as the app does it,
- * costs about the same with four years of history and a large photo library as with one. Also checks, end to end,
+ * costs about the same with four years of history and a large photo library as with one. The guard is a count (#236):
+ * a save reads only its own day's set rows back from the database, however long the history, so a slow or busy build
+ * machine can't fail it. The time is still measured, best of three rounds, as a loose check. Also checks, end to end,
  * that the patched snapshot a set write leaves behind equals a full reload. Synthetic data only.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -86,16 +88,27 @@ class SaveSpeedTest {
         }
     }
 
-    /** The median time, in nanoseconds, of saving and then ticking a set today, after a warm-up. */
-    private fun medianSaveNs(exercise: Long): Long = io {
+    /** What saving and ticking sets costs: the median time in nanoseconds, and set rows read per save. */
+    private class SaveCost(val medianNs: Long, val rowsPerSave: Long)
+
+    /** Saves and then ticks [SAVES] sets today, after a warm-up, timing each and counting the set rows read back. */
+    private fun measureSaves(exercise: Long): SaveCost = io {
         val times = ArrayList<Long>()
+        var rowsBefore = 0L
         repeat(WARM_UP + SAVES) { i ->
+            if (i == WARM_UP) rowsBefore = Store.setRowsRead
             val start = System.nanoTime()
             val id = Workouts.addSet(exercise, TODAY, 100.0 + i, 5)
             Workouts.setDone(id, true)
             if (i >= WARM_UP) times += System.nanoTime() - start
         }
-        times.sorted()[times.size / 2]
+        SaveCost(times.sorted()[times.size / 2], (Store.setRowsRead - rowsBefore) / SAVES)
+    }
+
+    /** The lowest median of [ROUNDS] rounds, so one busy moment on the build machine doesn't count. */
+    private fun bestOf(exercise: Long): SaveCost {
+        val rounds = List(ROUNDS) { measureSaves(exercise) }
+        return SaveCost(rounds.minOf { it.medianNs }, rounds.maxOf { it.rowsPerSave })
     }
 
     @Test
@@ -104,21 +117,30 @@ class SaveSpeedTest {
         val today = LocalDate.parse(TODAY)
         seedYear(exercises, today)
         io { Store.reload() }
-        val oneYear = medianSaveNs(exercises[0])
         val setsOneYear = Store.snapshot.value!!.sets.size
+        val oneYear = bestOf(exercises[0])
 
         // Three earlier years, so the history is four times as long.
         (1..3).forEach { seedYear(exercises, today.minusYears(it.toLong())) }
         io { Store.reload() }
-        val fourYears = medianSaveNs(exercises[1])
+        val fourYears = bestOf(exercises[1])
         val snap = Store.snapshot.value!!
 
-        println("#60 save speed: ${oneYear / 1000} µs with $setsOneYear sets, ${fourYears / 1000} µs with ${snap.sets.size} sets and ${snap.photos.size} photos")
+        println(
+            "#60 save speed: ${oneYear.medianNs / 1000} µs and ${oneYear.rowsPerSave} rows read with $setsOneYear sets, " +
+                "${fourYears.medianNs / 1000} µs and ${fourYears.rowsPerSave} rows with ${snap.sets.size} sets and ${snap.photos.size} photos"
+        )
         assertTrue(snap.sets.size > 3 * setsOneYear)
-        // Flat, with room for a noisy build machine: four times the history may not double the time.
+        // The guard (#236): a save reads back only its exercise's sets on its own day. Today holds at most the sets
+        // saved here, read once when a set is added and once when it's ticked, so a save reads no more than twice that:
+        // never a whole exercise's history (over a thousand rows a year here) or the whole history.
+        val todayAtMost = 2L * (WARM_UP + SAVES) * ROUNDS
+        assertTrue("A set save read ${oneYear.rowsPerSave} set rows with 1 year of history", oneYear.rowsPerSave in 1..todayAtMost)
+        assertTrue("A set save read ${fourYears.rowsPerSave} set rows with 4 years of history", fourYears.rowsPerSave in 1..todayAtMost)
+        // A loose check on time as well, best of three rounds: four times the history may not triple it.
         assertTrue(
-            "Saving a set took ${fourYears / 1000} µs with 4 years of history, ${oneYear / 1000} µs with 1",
-            fourYears <= oneYear * 2 + 5_000_000
+            "Saving a set took ${fourYears.medianNs / 1000} µs with 4 years of history, ${oneYear.medianNs / 1000} µs with 1",
+            fourYears.medianNs <= oneYear.medianNs * 3 + 10_000_000
         )
     }
 
@@ -165,5 +187,6 @@ class SaveSpeedTest {
         const val PHOTOS_PER_YEAR = 500
         const val WARM_UP = 10
         const val SAVES = 30
+        const val ROUNDS = 3
     }
 }

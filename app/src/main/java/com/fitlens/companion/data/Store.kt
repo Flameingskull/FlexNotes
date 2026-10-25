@@ -611,8 +611,8 @@ object Store {
             val part = when {
                 ex.isNotEmpty() -> {
                     val pairKeys = pairs.map { it.exercise_id to it.day }.toSet()
-                    val fresh = r.setsFor(ex.toList(), ds.toList()).map { it.toModel() } +
-                        pairs.flatMap { p -> r.setsOfOn(p.exercise_id, p.day, p.day + DAY_END).map { it.toModel() } }
+                    val fresh = (r.setsFor(ex.toList(), ds.toList()).map { it.toModel() } +
+                        pairs.flatMap { p -> r.setsOfOn(p.exercise_id, p.day, p.day + DAY_END).map { it.toModel() } }).also(::countRead)
                     val merged = mergeSets(base.sets, fresh.sortedWith(SET_ORDER)) {
                         it.exerciseId in ex || it.date.take(10) in ds || (it.exerciseId to it.date.take(10)) in pairKeys
                     }
@@ -620,8 +620,8 @@ object Store {
                 }
                 ds.isNotEmpty() || pairs.isNotEmpty() -> {
                     val pairKeys = pairs.map { it.exercise_id to it.day }.toSet()
-                    val fresh = ds.flatMap { d -> r.setsOn(d, d + DAY_END).map { it.toModel() } } +
-                        pairs.flatMap { p -> r.setsOfOn(p.exercise_id, p.day, p.day + DAY_END).map { it.toModel() } }
+                    val fresh = (ds.flatMap { d -> r.setsOn(d, d + DAY_END).map { it.toModel() } } +
+                        pairs.flatMap { p -> r.setsOfOn(p.exercise_id, p.day, p.day + DAY_END).map { it.toModel() } }).also(::countRead)
                     base.setPart.withWarmups(warmups).patched(ds + pairs.map { it.day }, fresh) {
                         val day = it.date.take(10)
                         day in ds || (it.exerciseId to day) in pairKeys
@@ -631,6 +631,18 @@ object Store {
             }
             _snapshot.value = if (part == null) base else base.replacing(part)
         }
+    }
+
+    /**
+     * How many set rows have been read from the database into snapshots (#236). #60's test checks with it that saving a
+     * set reads only its own day, however long the history: a count, so a slow build machine can't fail it.
+     */
+    @Volatile
+    internal var setRowsRead = 0L
+        private set
+
+    private fun countRead(rows: List<SetRow>) {
+        setRowsRead += rows.size
     }
 
     /** The most days and exercise-days [refreshSets] reads one by one and patches in. */
@@ -644,7 +656,7 @@ object Store {
         Analysis.weekStart = java.time.DayOfWeek.of(prefs.weekStart)
         return Snapshot(
             library = if (old == null || Area.LIBRARY in areas) loadLibrary(r) else old.library,
-            setPart = if (old == null || Area.SETS in areas) SetPart(r.sets().map { it.toModel() }, prefs.warmupsCount)
+            setPart = if (old == null || Area.SETS in areas) SetPart(r.sets().map { it.toModel() }.also(::countRead), prefs.warmupsCount)
                 else old.setPart.withWarmups(prefs.warmupsCount),
             notes = if (old == null || Area.NOTES in areas) loadNotes(r) else old.notes,
             body = (if (old == null || Area.BODY in areas) loadBody(r, prefs.weightUnit) else old.body)
