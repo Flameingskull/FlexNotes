@@ -9,7 +9,7 @@ This update makes the Medications screens read the way people plan: every date i
 - **Dates you can plan by.** Schedules now say where they are with a date instead of a count: "On until Mon 3 Nov", "Off · on again Tue 4 Nov", "Ongoing since Mon 6 Oct". Every medication date shows the weekday, including starts, pauses, due times, dose changes, runs and the doctor's PDF.
 - **Training blocks show dates too.** A block reads "Build · week 2 of 3, until Sun 9 Nov" or "Deload until Sun 2 Nov".
 - **Tidy dose rows.** Each dose on the Today tab shows its time at the start, the medication's name beside it (wrapping onto a second line when it's long), the amount under the name, then the done box. Long and short names now look the same.
-- **No more stacked values.** Body, medication and set rows keep their values on one line when one value is long, such as an injection site. They wrap neatly only when there's truly no room.
+- **Injection sites on their own line.** In a medication's history, the site sits under the dose instead of squeezing in beside it, so every row keeps the same layout.
 
 ## Removed
 

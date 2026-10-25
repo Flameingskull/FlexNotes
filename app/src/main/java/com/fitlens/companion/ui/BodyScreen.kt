@@ -681,6 +681,8 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
                             index = i + 1,
                             summary = "${fmtNum(r.value)} ${r.unit}",
                             cells = valueCells(res, r, def),
+                            effort = valueSite(res, r),
+                            effortSpoken = valueSite(res, r),
                             comment = r.comment,
                             framed = false,
                             showIndex = false,
@@ -715,8 +717,13 @@ internal fun valueCells(res: Resources, r: MRecord, def: MeasurementDef? = null)
     return listOfNotNull(
         SetCell(fmtNum(r.value), r.unit, "${fmtNum(r.value)} ${r.unit}"),
         flagText(res, def, r.value)?.let { SetCell(it, spoken = it, unitSlot = false) },
-        time.takeIf { it.isNotBlank() }?.let { SetCell(it, spoken = res.getString(R.string.body_at_time, it), unitSlot = false) },
-        // An injected dose's site (#210).
-        com.fitlens.companion.data.InjectionSite.of(r.site)?.let { siteName(res, it) }?.let { SetCell(it, spoken = it, unitSlot = false) }
+        time.takeIf { it.isNotBlank() }?.let { SetCell(it, spoken = res.getString(R.string.body_at_time, it), unitSlot = false) }
     )
 }
+
+/**
+ * An injected dose's site (#210), shown on its own line under the values rather than as a column (#238): a long site
+ * name in a column would stack that row while its neighbours stayed on one line.
+ */
+internal fun valueSite(res: Resources, r: MRecord): String? =
+    com.fitlens.companion.data.InjectionSite.of(r.site)?.let { siteName(res, it) }

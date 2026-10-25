@@ -286,6 +286,8 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                                 index = i + 1,
                                 summary = "${fmtNum(r.value)} ${r.unit}",
                                 cells = valueCells(res, r, def),
+                                effort = valueSite(res, r),
+                                effortSpoken = valueSite(res, r),
                                 comment = r.comment,
                                 selected = selected == r.id,
                                 noun = stringResource(R.string.body_value),

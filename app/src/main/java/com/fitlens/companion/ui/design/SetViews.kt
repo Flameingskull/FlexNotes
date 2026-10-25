@@ -54,7 +54,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
-import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -241,63 +240,30 @@ private fun setInnerPadding(framed: Boolean, hasCommentButton: Boolean) = when {
 
 /**
  * A set's value columns (#112): side by side in equal columns, each right-aligned, as FitNotes shows them. When one
- * value is too wide for an equal column (a long injection site, a small phone at a large font size, #157, #238), the
- * columns take their own widths and share the space left over, so the row keeps one line. Only when the values can't
- * fit one line together do they wrap, as few to a line as needed and right-aligned, never one stacked per line.
+ * doesn't fit its column (a small phone at a large font size, #157) they stack instead, each right-aligned on its own
+ * line, so figures never run into each other.
  */
 @Composable
 private fun SetCells(cells: List<SetCell>) {
     Layout(content = { cells.forEach { SetCellText(it) } }) { measurables, constraints ->
         if (measurables.isEmpty()) return@Layout layout(constraints.minWidth, constraints.minHeight) {}
-        val widths = measurables.map { it.maxIntrinsicWidth(constraints.maxHeight) }
-        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else widths.sum()
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth
+            else measurables.sumOf { it.maxIntrinsicWidth(constraints.maxHeight) }
         val share = width / measurables.size
+        val fits = measurables.all { it.maxIntrinsicWidth(constraints.maxHeight) <= share }
         val loose = constraints.copy(minHeight = 0)
-        val gap = 12.dp.roundToPx()
-        when {
-            // Equal columns, so figures line up down the list.
-            widths.all { it <= share } -> {
-                val placeables = measurables.map { it.measure(loose.copy(minWidth = share, maxWidth = share)) }
-                val height = maxOf(placeables.maxOf { it.height }, constraints.minHeight)
-                layout(width, height) {
-                    placeables.forEachIndexed { i, p -> p.placeRelative(i * share, (height - p.height) / 2) }
-                }
+        if (fits) {
+            val placeables = measurables.map { it.measure(loose.copy(minWidth = share, maxWidth = share)) }
+            val height = maxOf(placeables.maxOf { it.height }, constraints.minHeight)
+            layout(width, height) {
+                placeables.forEachIndexed { i, p -> p.placeRelative(i * share, (height - p.height) / 2) }
             }
-            // One line still: each value its own width plus an equal part of what's left.
-            widths.sum() <= width -> {
-                val extra = (width - widths.sum()) / measurables.size
-                val placeables = measurables.mapIndexed { i, m -> (widths[i] + extra).let { w -> m.measure(loose.copy(minWidth = w, maxWidth = w)) } }
-                val height = maxOf(placeables.maxOf { it.height }, constraints.minHeight)
-                layout(width, height) {
-                    var x = 0
-                    placeables.forEach { p -> p.placeRelative(x, (height - p.height) / 2); x += p.width }
-                }
-            }
-            // Too wide for one line: fill each line in order, right-aligned like the columns above it.
-            else -> {
-                val placeables = measurables.mapIndexed { i, m -> minOf(widths[i], width).let { w -> m.measure(loose.copy(minWidth = w, maxWidth = w)) } }
-                val lines = mutableListOf<MutableList<Placeable>>()
-                var used = 0
-                placeables.forEach { p ->
-                    val line = lines.lastOrNull()
-                    if (line == null || used + gap + p.width > width) {
-                        lines += mutableListOf(p)
-                        used = p.width
-                    } else {
-                        line += p
-                        used += gap + p.width
-                    }
-                }
-                val height = maxOf(lines.sumOf { line -> line.maxOf { it.height } }, constraints.minHeight)
-                layout(width, height) {
-                    var y = 0
-                    lines.forEach { line ->
-                        val lineHeight = line.maxOf { it.height }
-                        var x = width - (line.sumOf { it.width } + gap * (line.size - 1))
-                        line.forEach { p -> p.placeRelative(x, y + (lineHeight - p.height) / 2); x += p.width + gap }
-                        y += lineHeight
-                    }
-                }
+        } else {
+            val placeables = measurables.map { it.measure(loose.copy(minWidth = width, maxWidth = width)) }
+            val height = maxOf(placeables.sumOf { it.height }, constraints.minHeight)
+            layout(width, height) {
+                var y = 0
+                placeables.forEach { p -> p.placeRelative(0, y); y += p.height }
             }
         }
     }
