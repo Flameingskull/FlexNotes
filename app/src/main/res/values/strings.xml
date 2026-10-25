@@ -3700,5 +3700,6 @@
     </plurals>
     <string name="tb_summary_change">%1$s · %2$s</string>
     <string name="tb_card_change">Logged workout days this block: %1$s.</string>
+    <string name="tb_logged_change">%1$s (%2$s)</string>
     <string name="tb_review_change">%1$s block: %2$s. Every set can still be changed after logging.</string>
 </resources>

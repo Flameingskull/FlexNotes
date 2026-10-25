@@ -139,7 +139,10 @@ fun logWorkoutDay(
                 did = Store.snapshot.value?.routinesById?.get(wid)?.days?.firstOrNull()?.id
             }
             val ids = if (rows.isNotEmpty() || rests.isNotEmpty()) Workouts.logPlanned(date, rows, wid, did, groups, rests) else emptyList()
-            UiEvents.show(res.getString(R.string.wk_day_added, label, res.getQuantityString(R.plurals.sets_count, ids.size, ids.size)), res.getString(R.string.undo)) {
+            val added = res.getString(R.string.wk_day_added, label, res.getQuantityString(R.plurals.sets_count, ids.size, ids.size))
+            // Logging from the library has no review step, so the message says what the training block changed (#235).
+            val message = block?.let { b -> blockChangeText(res, b)?.let { res.getString(R.string.tb_logged_change, added, it) } } ?: added
+            UiEvents.show(message, res.getString(R.string.undo)) {
                 AppScope.scope.launch {
                     try {
                         Workouts.deleteSets(ids)

@@ -29,8 +29,9 @@ custom metrics.
   measurements (with body fat calculated from them) and custom metrics, shows the nearest progress photo beside a
   graph point, makes slideshows, videos and PDF reports that remember your options, exports photos as ordinary image files, reads
   steps, food, body values, vitals, sleep and other apps' workouts from Health Connect on the phone, keeps medications
-  with dose schedules and reminders, lab results with reference ranges, a daily readiness check-in with training
-  load, and water and caffeine, and backs everything up locally. Every
+  with dose schedules (including tapering and as-needed doses) and reminders, lab results with reference ranges, a
+  daily readiness check-in with training load, water and caffeine, your menstrual cycle on graphs, training blocks,
+  reminders to log, and a home-screen widget, and backs everything up locally. Every
   exercise, set and workout records whether it came from FitNotes or was created in FlexNotes, so the two histories sit
   side by side without colliding.
 - **In progress:** FitNotes is the guide for every screen that does what a FitNotes screen does, so moving across
@@ -81,11 +82,13 @@ custom metrics.
   Health Connect and adds lab results with reference ranges ([#212](https://github.com/Flameingskull/FlexNotes/issues/212), [#211](https://github.com/Flameingskull/FlexNotes/issues/211)); 1.0.163 adds the daily readiness
   check-in and score, training load, and water and caffeine ([#216](https://github.com/Flameingskull/FlexNotes/issues/216), [#217](https://github.com/Flameingskull/FlexNotes/issues/217), [#221](https://github.com/Flameingskull/FlexNotes/issues/221)). 1.0.164 splits
   Medications into Today, Schedules and Medications tabs, adds doses with no end, and lets a running schedule's start
-  date be fixed or the schedule start again from day 1 ([#227](https://github.com/Flameingskull/FlexNotes/issues/227), [#228](https://github.com/Flameingskull/FlexNotes/issues/228), [#229](https://github.com/Flameingskull/FlexNotes/issues/229)). What comes next is one
-  roadmap, `docs/plans/2026-10-24-roadmap.md`: a body outline on the camera ([#230](https://github.com/Flameingskull/FlexNotes/issues/230)), past runs and a simpler
-  schedule setup ([#231](https://github.com/Flameingskull/FlexNotes/issues/231), [#232](https://github.com/Flameingskull/FlexNotes/issues/232)), as-needed and tapering doses ([#233](https://github.com/Flameingskull/FlexNotes/issues/233), [#234](https://github.com/Flameingskull/FlexNotes/issues/234)), training blocks
-  ([#218](https://github.com/Flameingskull/FlexNotes/issues/218)), more from Health Connect ([#222](https://github.com/Flameingskull/FlexNotes/issues/222), [#225](https://github.com/Flameingskull/FlexNotes/issues/225), [#226](https://github.com/Flameingskull/FlexNotes/issues/226)), other reminders and a home-screen widget
-  ([#219](https://github.com/Flameingskull/FlexNotes/issues/219), [#220](https://github.com/Flameingskull/FlexNotes/issues/220)), and the accessibility checks that need a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)). Ideas beyond it are on the
+  date be fixed or the schedule start again from day 1 ([#227](https://github.com/Flameingskull/FlexNotes/issues/227), [#228](https://github.com/Flameingskull/FlexNotes/issues/228), [#229](https://github.com/Flameingskull/FlexNotes/issues/229)). 1.0.165 adds a simpler
+  schedule setup, tapering and step-up doses, and as-needed medications ([#232](https://github.com/Flameingskull/FlexNotes/issues/232), [#234](https://github.com/Flameingskull/FlexNotes/issues/234), [#233](https://github.com/Flameingskull/FlexNotes/issues/233)).
+  1.0.166 adds training blocks for workouts and a body outline on the camera ([#218](https://github.com/Flameingskull/FlexNotes/issues/218), [#230](https://github.com/Flameingskull/FlexNotes/issues/230)); 1.0.167
+  reads water, caffeine, your menstrual cycle and lab results from Health Connect ([#226](https://github.com/Flameingskull/FlexNotes/issues/226), [#222](https://github.com/Flameingskull/FlexNotes/issues/222), [#225](https://github.com/Flameingskull/FlexNotes/issues/225));
+  1.0.168 adds reminders to weigh in, measure, take photos and train, and a home-screen widget ([#219](https://github.com/Flameingskull/FlexNotes/issues/219), [#220](https://github.com/Flameingskull/FlexNotes/issues/220));
+  and 1.0.169 lets a training block lighten or add to a workout's planned sets ([#235](https://github.com/Flameingskull/FlexNotes/issues/235)). That finishes the
+  roadmap, `docs/plans/2026-10-24-roadmap.md`, apart from the accessibility checks that need a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)). Ideas beyond it are on the
   [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
   Imports always merge and never overwrite FlexNotes data. There's no export back to FitNotes.
@@ -172,6 +175,13 @@ custom metrics.
   after an exercise's last set it uses the planned break before the next one. A day keeps the rests it was logged with,
   even if the workout changes later. Both timers keep running with the screen off, in a notification with its own
   buttons.
+- **Training blocks.** A workout's editor can plan it in blocks from a start date: **Add training blocks** starts with
+  three weeks of **Build** and a one-week **Deload**, and every block can be renamed, lengthened in weeks or days,
+  marked as a deload, duplicated, deleted or reordered. The last block can be **Ongoing**, and the plan can start
+  again after its last block. A block can also **change the planned sets**: weights a percentage lighter or heavier
+  (rounded to the exercise's weight step) and sets added or taken away per exercise, applied when a day of that
+  workout is logged during the block and shown in the review first. The day log opens with a card for the block
+  you're in, how far through it you are and what comes next.
 - **Reorder, supersets and ticking sets off.** Drag exercises into a new order in the workout drawer, or choose
   **⋮ → Reorder exercises** on the day log to drag them there; a superset always moves as one. Group
   exercises into **supersets**: they sit together with a gold bar, and saving a set moves you round-robin to the next
@@ -192,8 +202,8 @@ custom metrics.
   backups, then tap **Sync now**, or turn on automatic sync to import the newest backup whenever FlexNotes opens.
   Automatic sync is **off by default**. You can also share a backup from FitNotes straight into FlexNotes.
 - **FlexNotes's own camera:** the camera button on the day log (and Take photo on the Photos screen's +) opens a
-  viewfinder inside FlexNotes. Choose the pose first, turn on a faint outline of your last photo in that pose so the
-  shots line up week to week, set a 3 or 10 second self-timer for full-body shots, and switch between the front and
+  viewfinder inside FlexNotes. Choose the pose first, turn on a faint copy of your last photo in that pose with a bold
+  white outline of your body traced from it (found on the phone, nothing uploaded) so the shots line up week to week, set a 3 or 10 second self-timer for full-body shots, and switch between the front and
   back cameras. After each shot, Retake or Use photo: a kept photo goes onto that day with its pose, into your
   backups, and never into your phone's gallery. The camera permission is asked for only when the camera opens.
 - **Bulk photo import:** choose many photos or a whole folder, or share photos from your gallery. You pick the pose
@@ -223,8 +233,12 @@ custom metrics.
   Connect's values stay body measurements, because other features use them.
 - **Dose schedules:** a schedule is built like a workout, from **on** and **off** phases lasting days, weeks, months
   or years (calendar months and years), each on phase holding its doses: medication, amount, time, and every day,
-  chosen weekdays or every few days. The last phase can be **Ongoing (no end)**, for a medication taken for good, and
-  otherwise the cycle can repeat. Start a schedule from any date, then pause, resume or end it; several can run at
+  chosen weekdays or every few days. **New schedule** first asks how you take it (every day, set weekdays, every few
+  days or in cycles) and builds it for you. The last phase can be **Ongoing (no end)**, for a medication taken for
+  good, and otherwise the cycle can repeat. A dose can **taper down** or **step up** by a set amount every few days,
+  to a floor or ceiling, and every screen, reminder and report uses each day's amount. A medication can be **taken as
+  needed**, with an optional most a day: Today lists it with the time since the last dose and a **Take** button.
+  A schedule's earlier runs are listed, with their dates fixable and each one deletable. Start a schedule from any date, then pause, resume or end it; several can run at
   once. A running schedule's start date can be changed, or it can **start again from day 1**, keeping the earlier
   run's history; an ended one offers **Start again**. Each has Undo. The **Today** tab lists the doses due, each with
   a done box like a set's, where each schedule is in its cycle ("On · day 12 of 56", "Off · on again 3 Dec",
@@ -320,7 +334,13 @@ custom metrics.
   read everything before that once. Values you type are never replaced. Under **Write to Health Connect** you can
   switch on writing your bodyweight, body fat and workouts (each logged day with a start and end, as a strength
   training session) so other apps see them: each is written once, kept up to date as you edit it, and deleted there
-  when you delete it in FlexNotes. Nothing read from Health Connect is written back.
+  when you delete it in FlexNotes. Nothing read from Health Connect is written back. Water and caffeine, your
+  menstrual cycle (shaded as phases behind body and exercise graphs, or logged yourself as **Period** values) and, on
+  Android 16 and later, lab results from medical records can be read too.
+- **Reminders and widget:** **Settings › Reminders** has reminders to weigh in, measure, take progress photos and
+  train, each at your own time and days, and quiet when that day's already done; tapping one opens the right screen.
+  The **FlexNotes today** home-screen widget lists today's doses with **Taken**, as-needed medications with **Take**,
+  and today's workout with its training block.
 - **Data tools** (in Settings):
   - **CSV export:** workouts (with set and exercise comments) or body data for any date range, in kilograms or
     pounds, saved to a file or shared, for spreadsheets. The columns are listed on the page, with a custom metric's
@@ -543,8 +563,10 @@ The first time FlexNotes opens, a short guided setup walks through the steps bel
   **Older data** permission, only the last 30 days are read.
 - FlexNotes never gives drug interaction or dosing advice: that would need an online, licensed database. The
   emergency card shows only what you entered and logged; it isn't a medical record. Readiness and training load are
-  guides, not medical advice. Medications taken only when needed, and tapering doses, aren't scheduled yet
-  ([#233](https://github.com/Flameingskull/FlexNotes/issues/233), [#234](https://github.com/Flameingskull/FlexNotes/issues/234)); log them by hand with **+**.
+  guides, not medical advice. Cycle phases after a period are estimates.
+- A training block's change to the planned sets applies when a workout day is logged from **Add workout** or **Log
+  all**; sets typed one by one are logged as typed. Reminders follow the days and times you set, not a training
+  plan's rest days.
 - Some storage providers don't let apps set a file's modified date, so exported photo files can show the export time
   there; their photo details always carry the date taken. Formats whose details can't be written, such as HEIC, are
   exported unchanged.
