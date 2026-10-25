@@ -10,6 +10,7 @@ import com.fitlens.companion.data.Steps
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.ui.BrandFonts
 import com.fitlens.companion.ui.TimerService
+import com.fitlens.companion.ui.TodayWidgets
 import com.fitlens.companion.ui.AppScope
 
 class App : Application() {
@@ -30,5 +31,7 @@ class App : Application() {
         MedReminders.init(this)
         // Reminders for weigh-ins, measurements, photos and workout days (#219).
         LogReminders.init(this)
+        // The home-screen widget (#220) is drawn again after every change to the data.
+        TodayWidgets.init(this)
     }
 }

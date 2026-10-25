@@ -149,6 +149,22 @@
         <receiver
             android:name=".data.LogAlarmReceiver"
             android:exported="false" />
+        <!-- The home-screen widget (#220). Only the system's widget host sends APPWIDGET_UPDATE. -->
+        <receiver
+            android:name=".ui.TodayWidget"
+            android:exported="true"
+            android:label="@string/tw_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/today_widget_info" />
+        </receiver>
+        <!-- The widget's Taken and Take buttons (#220), sent only by FlexNotes. -->
+        <receiver
+            android:name=".ui.TodayWidgetActions"
+            android:exported="false" />
         <!-- Sets the next reminder again. Only the system can send these broadcasts. -->
         <receiver
             android:name=".data.MedBootReceiver"

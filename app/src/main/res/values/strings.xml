@@ -2053,6 +2053,24 @@
     <string name="search_lr_measure_kw">measurements measure tape waist chest arms reminder</string>
     <string name="search_lr_photos_kw">progress photos pictures camera selfie reminder</string>
     <string name="search_lr_workout_kw">workout training gym day routine session reminder</string>
+    <!-- The home-screen widget (#220) -->
+    <string name="tw_name">FlexNotes today</string>
+    <string name="tw_description">Today\'s doses with Taken, and today\'s workout</string>
+    <string name="tw_title">Today · %1$s</string>
+    <string name="tw_dose_line">%1$s  %2$s</string>
+    <string name="tw_dose_hidden">Medication due</string>
+    <string name="tw_prn_line">%1$s · %2$s</string>
+    <string name="tw_take">Take</string>
+    <plurals name="tw_more">
+        <item quantity="one">%1$d more in Medications</item>
+        <item quantity="other">%1$d more in Medications</item>
+    </plurals>
+    <string name="tw_all_done">Nothing left to take today</string>
+    <string name="tw_no_medications">No medication schedules running</string>
+    <string name="tw_workout_label">Workout</string>
+    <string name="tw_workout_next">%1$s (%2$s)</string>
+    <string name="tw_workout_logged">%1$s (%2$s) · logged today</string>
+    <string name="tw_no_workout">No workout planned. Tap to log one.</string>
     <string name="ml_lock">Lock Medications</string>
     <string name="ml_lock_summary">Open Medications with your fingerprint, face or phone PIN, and keep reminders from naming any medication</string>
     <string name="ml_no_screen_lock">Set a screen lock on your phone first</string>
