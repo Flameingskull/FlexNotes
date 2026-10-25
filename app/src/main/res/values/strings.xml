@@ -1662,7 +1662,8 @@
     <string name="md_paused_since">Paused since %1$s</string>
     <string name="md_ended">Ended</string>
     <string name="md_finished">Finished</string>
-    <string name="md_phase_on">On · day %1$d of %2$d</string>
+    <string name="md_phase_on">On until %1$s</string>
+    <string name="md_phase_off_last">Off until %1$s, then it ends</string>
     <string name="md_phase_off">Off · on again %1$s</string>
     <string name="md_not_running">Not running</string>
     <string name="md_no_phases">No phases yet</string>
@@ -1750,8 +1751,8 @@
     <string name="md_today_not_running">No schedule is running today. Start one from Schedules, or log a dose with +.</string>
     <string name="md_go_schedules">Go to Schedules</string>
     <string name="md_schedules_none">No schedules yet. A schedule says what to take, how much and when.</string>
-    <string name="md_phase_on_ongoing">On · day %1$d · ongoing</string>
-    <string name="md_phase_off_ongoing">Off · day %1$d</string>
+    <string name="md_phase_on_ongoing">Ongoing since %1$s</string>
+    <string name="md_phase_off_ongoing">Off, no more doses</string>
     <string name="md_summary_on_ongoing">Ongoing</string>
     <string name="md_summary_off_ongoing">Off for good</string>
     <string name="md_ongoing">ongoing</string>
@@ -1894,8 +1895,6 @@
     <string name="mdr_disclaimer">Recorded by the patient in FlexNotes. Doses and times are as logged and haven\'t been checked by a clinician.</string>
     <string name="mdr_current">Current medications and schedules</string>
     <string name="mdr_last_dose">%1$s · last dose %2$s on %3$s</string>
-    <string name="mdr_paused">Paused</string>
-    <string name="mdr_off_day">Off · day %1$d of %2$d</string>
     <string name="mdr_change_day">Changed for %1$s only: %2$s</string>
     <string name="mdr_change_rest">Changed from %1$s: %2$s</string>
     <string name="mdr_adherence">Adherence</string>
@@ -3676,8 +3675,8 @@
     <string name="tb_ongoing_hint">This block has no end. It can only be the last block.</string>
     <string name="tb_deload_switch">Deload block</string>
     <string name="tb_deload_summary">A lighter block for recovery. The day log reminds you to go easier.</string>
-    <string name="tb_state_week">%1$s · week %2$d of %3$d</string>
-    <string name="tb_state_day">%1$s · day %2$d of %3$d</string>
+    <string name="tb_state_week">%1$s · week %2$d of %3$d, until %4$s</string>
+    <string name="tb_state_day">%1$s until %2$s</string>
     <string name="tb_state_ongoing">%1$s · week %2$d</string>
     <string name="tb_card_label">%1$s · training block</string>
     <string name="tb_card_open">Edit the training blocks of %1$s</string>

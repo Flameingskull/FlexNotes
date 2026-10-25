@@ -76,18 +76,18 @@ import kotlin.math.abs
 internal fun supplyLine(res: Resources, s: SupplyState, unit: String): String {
     val left = res.getString(R.string.sup_left, "${fmtNum(s.left)} $unit".trim())
     val out = s.runsOut ?: return left
-    return res.getString(R.string.sup_line, left, Dates.medium(out))
+    return res.getString(R.string.sup_line, left, Dates.day(out))
 }
 
 /** The warnings for [s], in words (never colour alone): run out, runs low, expired, expiring. */
 internal fun supplyWarnings(res: Resources, s: SupplyState, info: MedInfo): List<String> = buildList {
     when {
         s.left <= 0.0 -> add(res.getString(R.string.sup_empty))
-        s.low -> add(res.getString(R.string.sup_low, Dates.medium(s.runsOut ?: Dates.today())))
+        s.low -> add(res.getString(R.string.sup_low, Dates.day(s.runsOut ?: Dates.today())))
     }
     val expires = info.expires
-    if (expires != null && s.expired) add(res.getString(R.string.sup_expired, Dates.medium(expires)))
-    else if (expires != null && s.expiresSoon) add(res.getString(R.string.sup_expires_soon, Dates.medium(expires)))
+    if (expires != null && s.expired) add(res.getString(R.string.sup_expired, Dates.day(expires)))
+    else if (expires != null && s.expiresSoon) add(res.getString(R.string.sup_expires_soon, Dates.day(expires)))
 }
 
 /**
@@ -140,7 +140,7 @@ internal fun LazyListScope.medicationExtras(snap: Snapshot, name: String, unit: 
                 )
                 Text(
                     when {
-                        state.runsOut != null -> res.getString(R.string.sup_runs_out, Dates.medium(state.runsOut))
+                        state.runsOut != null -> res.getString(R.string.sup_runs_out, Dates.day(state.runsOut))
                         state.scheduled -> res.getString(R.string.sup_lasts)
                         else -> res.getString(R.string.sup_unused)
                     },
@@ -149,10 +149,10 @@ internal fun LazyListScope.medicationExtras(snap: Snapshot, name: String, unit: 
                 supplyWarnings(res, state, info).forEach { WarningLine(it) }
                 val expires = info.expires
                 if (expires != null && !state.expired && !state.expiresSoon) {
-                    Text(res.getString(R.string.sup_expires, Dates.medium(expires)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(res.getString(R.string.sup_expires, Dates.day(expires)), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 info.supplyFrom?.let {
-                    Text(res.getString(R.string.sup_counted, Dates.medium(it.take(10))), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(res.getString(R.string.sup_counted, Dates.day(it.take(10))), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             GlassOutlinedButton(onClick = onSupply, modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.touch)) {
@@ -178,7 +178,7 @@ internal fun LazyListScope.medicationExtras(snap: Snapshot, name: String, unit: 
         val res = LocalContext.current.resources
         ListRowWithMenu(
             title = InjectionSite.of(r.site)?.let { siteName(res, it) }.orEmpty(),
-            subtitle = "${Dates.medium(r.date.take(10))} · ${r.time.take(5)} · ${fmtNum(r.value)} ${r.unit}".trim(),
+            subtitle = "${Dates.day(r.date.take(10))} · ${r.time.take(5)} · ${fmtNum(r.value)} ${r.unit}".trim(),
             onClick = { onOpen(r) },
             handle = false
         )
@@ -267,7 +267,7 @@ internal fun SupplySheet(snap: Snapshot, name: String, unit: String, onDismiss: 
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             GlassOutlinedButton(onClick = { picking = true }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {
-                Text(expires?.let { stringResource(R.string.sup_expires, Dates.medium(it)) } ?: stringResource(R.string.sup_set_expiry))
+                Text(expires?.let { stringResource(R.string.sup_expires, Dates.day(it)) } ?: stringResource(R.string.sup_set_expiry))
             }
             if (expires != null) TextButton(onClick = { expires = null }) { Text(stringResource(R.string.sup_clear_expiry)) }
         }

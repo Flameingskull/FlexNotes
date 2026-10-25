@@ -270,12 +270,12 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                     SectionLabel(stringResource(R.string.md_run), Modifier.padding(top = Spacing.lg))
                     if (current == null) {
                         Text(
-                            if (endedRun != null) stringResource(R.string.md_run_again_note, Dates.medium(Dates.parse(endedRun.endedOn!!)!!.minusDays(1).format(Dates.ISO)))
+                            if (endedRun != null) stringResource(R.string.md_run_again_note, Dates.day(Dates.parse(endedRun.endedOn!!)!!.minusDays(1).format(Dates.ISO)))
                             else stringResource(R.string.md_run_note),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         GlassOutlinedButton(onClick = { pickStart = true }, modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.touch)) {
-                            Text(stringResource(R.string.md_start_on, Dates.medium(startDate)))
+                            Text(stringResource(R.string.md_start_on, Dates.day(startDate)))
                         }
                         GoldButton(
                             onClick = {
@@ -283,7 +283,7 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                                 AppScope.scope.launch {
                                     val saved = (if (dirty || original.id == 0L) saveNow() else original.id) ?: return@launch
                                     val runId = MedSchedules.activate(saved, start)
-                                    UiEvents.show(res.getString(R.string.md_started, draft.name.trim(), Dates.medium(start)), res.getString(R.string.bm_undo)) {
+                                    UiEvents.show(res.getString(R.string.md_started, draft.name.trim(), Dates.day(start)), res.getString(R.string.bm_undo)) {
                                         AppScope.scope.launch { MedSchedules.deleteActivation(MedActivation(runId, saved, start)) }
                                     }
                                 }
@@ -295,7 +295,7 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                     } else {
                         // The start line (#229): a tap changes the start date; its menu also starts again from day 1.
                         ListRowWithMenu(
-                            title = stringResource(if (current.start > Dates.today()) R.string.md_starts else R.string.md_started_on, Dates.medium(current.start)),
+                            title = stringResource(if (current.start > Dates.today()) R.string.md_starts else R.string.md_started_on, Dates.day(current.start)),
                             subtitle = phaseText(res, original, current, Dates.today()),
                             onClick = { pickNewStart = true },
                             menu = listOf(
@@ -376,15 +376,15 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
         val date = newStartDate
         val before = current
         ConfirmSheet(
-            title = stringResource(R.string.md_change_start_title, Dates.medium(date)),
-            message = stringResource(R.string.md_change_start_body, Dates.medium(before.start), Dates.medium(date)),
+            title = stringResource(R.string.md_change_start_title, Dates.day(date)),
+            message = stringResource(R.string.md_change_start_body, Dates.day(before.start), Dates.day(date)),
             confirmLabel = stringResource(R.string.md_change_start_confirm),
             destructive = false,
             onDismiss = { newStart = null },
             onConfirm = {
                 AppScope.scope.launch {
                     if (MedSchedules.setStart(before, date)) {
-                        UiEvents.show(res.getString(R.string.md_start_changed, original.name, Dates.medium(date)), res.getString(R.string.bm_undo)) {
+                        UiEvents.show(res.getString(R.string.md_start_changed, original.name, Dates.day(date)), res.getString(R.string.bm_undo)) {
                             AppScope.scope.launch { MedSchedules.restore(before) }
                         }
                     }
@@ -398,14 +398,14 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
         val before = current
         ConfirmSheet(
             title = stringResource(R.string.md_restart_title, original.name),
-            message = stringResource(R.string.md_restart_body, Dates.medium(date)),
+            message = stringResource(R.string.md_restart_body, Dates.day(date)),
             confirmLabel = stringResource(R.string.md_restart_confirm),
             destructive = false,
             onDismiss = { restartOn = null },
             onConfirm = {
                 AppScope.scope.launch {
                     val runId = MedSchedules.restart(before, date)
-                    UiEvents.show(res.getString(R.string.md_restarted, original.name, Dates.medium(date)), res.getString(R.string.bm_undo)) {
+                    UiEvents.show(res.getString(R.string.md_restarted, original.name, Dates.day(date)), res.getString(R.string.bm_undo)) {
                         AppScope.scope.launch { MedSchedules.undoRestart(before, runId) }
                     }
                 }
@@ -613,7 +613,7 @@ private fun LazyListScope.pastRunRows(snap: Snapshot, runs: List<MedActivation>,
         val summary = remember(snap.bodyKey, a) { MedSchedules.runSummary(snap.medPlan, snap.medicationView.records, a, today) }
         val days = res.getQuantityString(R.plurals.md_days, summary.days.toInt(), summary.days.toInt())
         ListRowWithMenu(
-            title = res.getString(R.string.md_run_dates, Dates.medium(a.start), Dates.medium(summary.lastDay ?: today)),
+            title = res.getString(R.string.md_run_dates, Dates.day(a.start), Dates.day(summary.lastDay ?: today)),
             subtitle = days + (summary.adherence?.let { " · " + res.getString(R.string.md_run_taken, it) } ?: ""),
             onClick = { onEdit(a, true) },
             menu = listOf(

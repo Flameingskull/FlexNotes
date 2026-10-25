@@ -139,10 +139,10 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
         SectionLabel(stringResource(R.string.mdr_dates))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             GlassOutlinedButton(onClick = { picking = 0 }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {
-                Text(stringResource(R.string.mdr_from, Dates.medium(from)))
+                Text(stringResource(R.string.mdr_from, Dates.day(from)))
             }
             GlassOutlinedButton(onClick = { picking = 1 }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {
-                Text(stringResource(R.string.mdr_to, Dates.medium(to)))
+                Text(stringResource(R.string.mdr_to, Dates.day(to)))
             }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {

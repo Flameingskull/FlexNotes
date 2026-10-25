@@ -355,6 +355,7 @@ object Dates {
     private val long = DateTimeFormatter.ofPattern("EEE d MMM yyyy", Locale.getDefault())
     private val medium = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())
     private val short = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+    private val weekday = DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault())
     private val monthYear = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())
     private val monthYearShort = DateTimeFormatter.ofPattern("MMM yy", Locale.getDefault())
 
@@ -367,6 +368,11 @@ object Dates {
     fun long(s: String): String = parse(s)?.format(long) ?: s
     fun medium(s: String): String = parse(s)?.format(medium) ?: s
     fun short(s: String): String = parse(s)?.format(short) ?: s
+    /** The weekday and date people plan by, "Mon 27 Oct", with the year only when it isn't this year ("Mon 2 Nov 2027"). */
+    fun day(s: String): String {
+        val d = parse(s) ?: return s
+        return if (d.year == LocalDate.now().year) d.format(weekday) else d.format(long)
+    }
     fun monthYear(d: LocalDate): String = d.format(monthYear)
     fun monthYearShort(d: LocalDate): String = d.format(monthYearShort)
     fun epochDay(s: String): Long = parse(s)?.toEpochDay() ?: 0L

@@ -53,7 +53,7 @@ object MedicationReport {
         withContext(Dispatchers.Default) {
             val doc = PdfDocument()
             try {
-                val w = PageWriter(res, doc, if (o.dark) DARK else LIGHT, res.getString(R.string.mdr_footer, Dates.medium(o.from), Dates.medium(o.to)))
+                val w = PageWriter(res, doc, if (o.dark) DARK else LIGHT, res.getString(R.string.mdr_footer, Dates.long(o.from), Dates.long(o.to)))
                 val meds = snap.medicationView
                 val names = o.names.ifEmpty { snap.medications.map { it.name }.toSet() }
                 val log = MedSchedules.doseLog(snap.medPlan, meds.records, o.from, o.to, today, names)
@@ -99,8 +99,8 @@ object MedicationReport {
         w.c.drawText(res.getString(if (o.summary) R.string.mdr_title_summary else R.string.mdr_title), M, w.y + 24f, paint(w.p.text, 24f, bold = true))
         w.y += 38f
         if (o.patient.isNotBlank()) para(w, res.getString(R.string.mdr_patient, o.patient.trim()), 11f)
-        para(w, res.getString(R.string.mdr_range, Dates.medium(o.from), Dates.medium(o.to)), 10f, muted = true)
-        para(w, res.getString(R.string.mdr_generated, Dates.medium(Dates.today())), 9f, muted = true)
+        para(w, res.getString(R.string.mdr_range, Dates.long(o.from), Dates.long(o.to)), 10f, muted = true)
+        para(w, res.getString(R.string.mdr_generated, Dates.long(Dates.today())), 9f, muted = true)
         para(w, res.getString(R.string.mdr_medications, names.sorted().joinToString(", ").ifEmpty { "–" }), 9.5f)
         para(w, res.getString(R.string.mdr_disclaimer), 8f, muted = true)
         w.y += 8f
@@ -113,22 +113,13 @@ object MedicationReport {
         // Each medication with its latest value, then each schedule that doses it and where that schedule is.
         names.sorted().forEach { n ->
             val last = snap.medicationView.recordsByName[n]?.lastOrNull()
-            val head = if (last != null) res.getString(R.string.mdr_last_dose, n, "${fmtNum(last.value)} ${last.unit}".trim(), Dates.medium(last.date))
+            val head = if (last != null) res.getString(R.string.mdr_last_dose, n, "${fmtNum(last.value)} ${last.unit}".trim(), Dates.day(last.date))
                 else n
             para(w, head, 10.5f)
             plan.schedules.filter { s -> s.phases.any { p -> p.doses.any { it.medication == n } } }.forEach { s ->
                 val run = plan.current(s.id, today)
-                val state = when {
-                    run == null -> res.getString(R.string.md_not_running)
-                    run.start > today -> res.getString(R.string.md_starts, Dates.medium(run.start))
-                    run.paused -> res.getString(R.string.mdr_paused)
-                    else -> MedSchedules.phaseOn(s, run, today)?.let { st ->
-                        val days = st.days
-                        // An ongoing phase (#228) has no length to count towards.
-                        if (days == null) res.getString(if (st.phase.on) R.string.md_phase_on_ongoing else R.string.md_phase_off_ongoing, st.day)
-                        else res.getString(if (st.phase.on) R.string.md_phase_on else R.string.mdr_off_day, st.day, days)
-                    } ?: res.getString(R.string.md_finished)
-                }
+                // Where the schedule is, in the same words and dates as the Medications screen (#237).
+                val state = if (run == null) res.getString(R.string.md_not_running) else com.fitlens.companion.ui.phaseText(res, s, run, today)
                 val phases = com.fitlens.companion.ui.scheduleSummary(res, s)
                 para(w, "${s.name}: $phases. $state", 9f, muted = true, indent = 12f)
                 s.phases.filter { it.on }.flatMap { it.doses }.filter { it.medication == n }.distinctBy { listOf(it.time, it.amount, it.days, it.step, it.stepEvery, it.stepLimit) }.forEach { d ->
@@ -142,8 +133,8 @@ object MedicationReport {
                 }
                 plan.changes.filter { c -> run != null && c.activationId == run.id && plan.dosesById[c.doseId]?.second?.medication == n }.forEach { c ->
                     val unit = plan.dosesById[c.doseId]?.second?.unit.orEmpty()
-                    val text = if (c.toDate == c.fromDate) res.getString(R.string.mdr_change_day, Dates.medium(c.fromDate), "${fmtNum(c.amount)} $unit".trim())
-                        else res.getString(R.string.mdr_change_rest, Dates.medium(c.fromDate), "${fmtNum(c.amount)} $unit".trim())
+                    val text = if (c.toDate == c.fromDate) res.getString(R.string.mdr_change_day, Dates.day(c.fromDate), "${fmtNum(c.amount)} $unit".trim())
+                        else res.getString(R.string.mdr_change_rest, Dates.day(c.fromDate), "${fmtNum(c.amount)} $unit".trim())
                     para(w, text, 9f, muted = true, indent = 24f)
                 }
             }
@@ -240,10 +231,10 @@ object MedicationReport {
             w.ensure(h + 44f)
             w.c.drawText(s.name, M, w.y + 10f, paint(w.p.text, 10f, bold = true))
             w.y += 16f
-            val summary = if (pts.size == 1) res.getString(R.string.mdr_symptom_one, latest.rating, Dates.medium(latest.date))
+            val summary = if (pts.size == 1) res.getString(R.string.mdr_symptom_one, latest.rating, Dates.day(latest.date))
                 else res.getString(
                     R.string.mdr_symptom_summary, pts.size, fmtNum(avg, 1),
-                    pts.minOf { it.rating }, pts.maxOf { it.rating }, latest.rating, Dates.medium(latest.date)
+                    pts.minOf { it.rating }, pts.maxOf { it.rating }, latest.rating, Dates.day(latest.date)
                 )
             para(w, summary, 9f, muted = true)
             if (h > 0f) {
@@ -255,7 +246,7 @@ object MedicationReport {
                 w.y = r.bottom + 20f
             }
             pts.filter { !it.comment.isNullOrBlank() }.forEach { rt ->
-                para(w, "${Dates.medium(rt.date)} · ${rt.rating}/${Symptoms.MAX} · “${rt.comment!!.trim()}”", 8.5f, indent = 8f)
+                para(w, "${Dates.day(rt.date)} · ${rt.rating}/${Symptoms.MAX} · “${rt.comment!!.trim()}”", 8.5f, indent = 8f)
             }
             w.y += 6f
         }
@@ -285,10 +276,10 @@ object MedicationReport {
             val first = pts.first()
             val last = pts.last()
             val count = res.getQuantityString(R.plurals.mdr_body_count, pts.size, pts.size)
-            val summary = if (pts.size == 1) res.getString(R.string.mdr_body_one, count, v(last.value), Dates.medium(last.date))
+            val summary = if (pts.size == 1) res.getString(R.string.mdr_body_one, count, v(last.value), Dates.day(last.date))
                 else res.getString(
-                    R.string.mdr_body_summary, count, v(last.value), Dates.medium(last.date),
-                    "${com.fitlens.companion.data.fmtSigned(last.value - first.value, 1)} $unit".trim(), v(first.value), Dates.medium(first.date),
+                    R.string.mdr_body_summary, count, v(last.value), Dates.day(last.date),
+                    "${com.fitlens.companion.data.fmtSigned(last.value - first.value, 1)} $unit".trim(), v(first.value), Dates.day(first.date),
                     v(pts.minOf { it.value }), v(pts.maxOf { it.value })
                 )
             para(w, summary, 9f, muted = true)
@@ -371,7 +362,7 @@ object MedicationReport {
         if (notes.isEmpty()) return
         label(w, res.getString(R.string.mdr_comments))
         notes.forEach { (e, text) ->
-            para(w, "${Dates.medium(e.date)} · ${e.medication}", 8.5f, muted = true)
+            para(w, "${Dates.day(e.date)} · ${e.medication}", 8.5f, muted = true)
             para(w, "“$text”", 9.5f, indent = 8f)
             w.y += 3f
         }

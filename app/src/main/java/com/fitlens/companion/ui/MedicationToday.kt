@@ -24,6 +24,19 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.Checkbox
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
 import com.fitlens.companion.data.MedDoseChange
@@ -51,8 +64,6 @@ import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.Haptics
 import com.fitlens.companion.ui.design.ListRowWithMenu
 import com.fitlens.companion.ui.design.SectionLabel
-import com.fitlens.companion.ui.design.SetCell
-import com.fitlens.companion.ui.design.SetRow as SetRowView
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -61,7 +72,7 @@ private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
 /**
  * The Medications **Today** tab (#227, from #202): every dose due today across the running schedules with a done box
- * like a set's (#19), each schedule's phase ("On · day 12 of 56", "Off · on again 3 Dec"), missed doses flagged;
+ * like a set's (#19), each schedule's phase ("On until Mon 3 Nov", "Off · on again Wed 3 Dec", #237), missed doses flagged;
  * supply warnings (#209) and SYMPTOMS (#207, [onSymptoms] opens the rating sheet). With nothing running it says so and
  * [onSchedules] opens the Schedules tab. [onDose] opens a dose's sheet.
  */
@@ -149,7 +160,11 @@ internal fun LazyListScope.medicationSchedulesTab(snap: Snapshot, nav: Nav) {
     }
 }
 
-/** One dose due today, as a set row: time, medication and amount, a done box, and Missed or Skipped beside it. */
+/**
+ * One dose due today (#238): its time at the start, the medication's name in the space left (wrapping onto a second
+ * line when it's long, so every row keeps the same layout), the amount under it, Missed or Skipped, and a done box like
+ * a set's. TalkBack reads the row as one sentence; the done box is its own stop.
+ */
 @Composable
 private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> Unit) {
     val res = LocalContext.current.resources
@@ -157,35 +172,91 @@ private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> U
     val taken = MedSchedules.takenRecord(snap.medicationView.records, due)
     val skipped = taken == null && snap.medPlan.isSkipped(due.dose.id, due.due)
     val missed = taken == null && !skipped && due.date == Dates.today() && due.time < LocalTime.now().toString().take(5)
-    SetRowView(
-        index = index,
-        summary = doseLine(due),
-        cells = listOf(
-            SetCell(due.time, spoken = res.getString(R.string.body_at_time, due.time), unitSlot = false),
-            SetCell(due.dose.medication, spoken = due.dose.medication, unitSlot = false),
-            SetCell(fmtNum(due.amount), due.dose.unit, "${fmtNum(due.amount)} ${due.dose.unit}".trim())
-        ),
-        comment = due.dose.comment,
-        done = taken != null,
-        onDoneChange = { on ->
-            if (on && snap.isInjected(due.dose.medication)) {
-                // An injected dose needs its site (#210): the sheet asks, with the next site chosen.
-                onOpen()
-            } else if (on) {
-                Haptics.confirm(view)
-                takeDose(res, due)
-            } else {
-                AppScope.scope.launch { MedSchedules.untake(due) }
+    val amount = "${fmtNum(due.amount)} ${due.dose.unit}".trim()
+    val hint = when {
+        skipped -> res.getString(R.string.md_skipped)
+        missed -> res.getString(R.string.md_missed)
+        else -> null
+    }
+    val spoken = listOfNotNull(
+        "${res.getString(R.string.md_dose)} $index",
+        res.getString(R.string.body_at_time, due.time),
+        due.dose.medication,
+        amount,
+        hint,
+        due.dose.comment?.takeIf { it.isNotBlank() }
+    ).joinToString(", ")
+    val rule = Brand.Hairline
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Spacing.lg)
+            .drawBehind {
+                val y = size.height - 1.dp.toPx() / 2
+                drawLine(rule, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
             }
-        },
-        trailingHint = when {
-            skipped -> res.getString(R.string.md_skipped)
-            missed -> res.getString(R.string.md_missed)
-            else -> null
-        },
-        noun = res.getString(R.string.md_dose),
-        onClick = onOpen
-    )
+            .heightIn(min = Spacing.touch),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            Modifier
+                .weight(1f)
+                .clickable(onClick = onOpen)
+                .clearAndSetSemantics {
+                    contentDescription = spoken
+                    role = Role.Button
+                    onClick(label = null) { onOpen(); true }
+                }
+                .padding(start = Spacing.md, top = Spacing.sm, bottom = Spacing.sm),
+            verticalAlignment = Alignment.Top
+        ) {
+            Text(
+                due.time,
+                Modifier.widthIn(min = 56.dp),
+                style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                softWrap = false
+            )
+            Column(Modifier.weight(1f).padding(start = Spacing.sm)) {
+                Text(due.dose.medication, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                Text(amount, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (!due.dose.comment.isNullOrBlank()) {
+                    Text(
+                        "“${due.dose.comment}”",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            if (hint != null) {
+                Text(
+                    hint,
+                    Modifier.padding(start = Spacing.sm),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        val doneLabel = res.getString(R.string.md_take) + ", " + doseLine(due)
+        Checkbox(
+            checked = taken != null,
+            onCheckedChange = { on ->
+                if (on && snap.isInjected(due.dose.medication)) {
+                    // An injected dose needs its site (#210): the sheet asks, with the next site chosen.
+                    onOpen()
+                } else if (on) {
+                    Haptics.confirm(view)
+                    takeDose(res, due)
+                } else {
+                    AppScope.scope.launch { MedSchedules.untake(due) }
+                }
+            },
+            modifier = Modifier.semantics { contentDescription = doneLabel }
+        )
+    }
 }
 
 /** Takes [due] now (or at its due time on another day), at [site] for an injected dose (#210), with Undo. */
@@ -212,23 +283,30 @@ internal fun skipDose(res: Resources, due: DueDose) {
 /** "Creatine 5 g", a dose in one line. */
 internal fun doseLine(due: DueDose): String = "${due.dose.medication} ${fmtNum(due.amount)} ${due.dose.unit}".trim()
 
-/** Where [a] is on [date]: "On · day 12 of 56", "Off · on again 3 Dec", "Paused since 4 Oct", "Starts 1 Nov", "Finished". */
+/**
+ * Where [a] is on [date], as dates people plan by (#237), never a day count: "On until Mon 3 Nov", "Off · on again
+ * Tue 4 Nov", "Off until Fri 14 Nov, then it ends", "Ongoing since Mon 6 Oct", "Paused since Sat 4 Oct",
+ * "Starts Sat 1 Nov", "Finished".
+ */
 internal fun phaseText(res: Resources, s: MedSchedule, a: MedActivation, date: String): String {
     val pause = a.pauses.firstOrNull { it.to == null }
     return when {
-        a.start > date -> res.getString(R.string.md_starts, Dates.medium(a.start))
-        pause != null && date >= pause.from -> res.getString(R.string.md_paused_since, Dates.medium(pause.from))
+        a.start > date -> res.getString(R.string.md_starts, Dates.day(a.start))
+        pause != null && date >= pause.from -> res.getString(R.string.md_paused_since, Dates.day(pause.from))
         !a.runsOn(date) -> res.getString(R.string.md_ended)
         else -> {
             val st = MedSchedules.phaseOn(s, a, date) ?: return res.getString(R.string.md_finished)
-            val days = st.days
-            val last = st.lastDay?.let { Dates.parse(it) }
+            val last = st.lastDay
+            val phases = s.phases.filter { it.length > 0 }
+            // Another phase follows unless this is the last one of a schedule that doesn't repeat.
+            val more = s.repeats || phases.indexOf(st.phase) < phases.size - 1
             when {
-                // An ongoing phase (#228) has no end to count towards.
-                days == null || last == null ->
-                    res.getString(if (st.phase.on) R.string.md_phase_on_ongoing else R.string.md_phase_off_ongoing, st.day)
-                st.phase.on -> res.getString(R.string.md_phase_on, st.day, days)
-                else -> res.getString(R.string.md_phase_off, Dates.medium(last.plusDays(1).format(Dates.ISO)))
+                // An ongoing phase (#228) has no end: when the run began says more than a count of days.
+                last == null -> if (st.phase.on) res.getString(R.string.md_phase_on_ongoing, Dates.day(a.start))
+                    else res.getString(R.string.md_phase_off_ongoing)
+                st.phase.on -> res.getString(R.string.md_phase_on, Dates.day(last))
+                !more -> res.getString(R.string.md_phase_off_last, Dates.day(last))
+                else -> res.getString(R.string.md_phase_off, Dates.day(Dates.parse(last)!!.plusDays(1).format(Dates.ISO)))
             }
         }
     }
@@ -295,7 +373,7 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
         }
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            Text(res.getString(R.string.md_due_at, Dates.medium(due.date), due.time), style = MaterialTheme.typography.bodyLarge)
+            Text(res.getString(R.string.md_due_at, Dates.day(due.date), due.time), style = MaterialTheme.typography.bodyLarge)
             Text(due.schedule.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (taken != null) {
                 Text(
@@ -382,7 +460,7 @@ internal fun DoseChangeSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(selected = dayOnly == only, onClick = null)
-                    Text(stringResource(label, Dates.medium(due.date)), Modifier.padding(start = Spacing.sm))
+                    Text(stringResource(label, Dates.day(due.date)), Modifier.padding(start = Spacing.sm))
                 }
             }
         }
@@ -413,8 +491,8 @@ internal fun DoseChangeRow(snap: Snapshot, c: MedDoseChange) {
     val amount = "${fmtNum(c.amount)} ${dose.unit}".trim()
     val was = "${fmtNum(dose.amount)} ${dose.unit}".trim()
     ListRowWithMenu(
-        title = if (c.toDate == c.fromDate) res.getString(R.string.md_change_row_day, Dates.medium(c.fromDate), dose.medication, amount)
-            else res.getString(R.string.md_change_row_rest, Dates.medium(c.fromDate), dose.medication, amount),
+        title = if (c.toDate == c.fromDate) res.getString(R.string.md_change_row_day, Dates.day(c.fromDate), dose.medication, amount)
+            else res.getString(R.string.md_change_row_rest, Dates.day(c.fromDate), dose.medication, amount),
         subtitle = res.getString(R.string.md_change_row_was, was, schedule.name, dose.time),
         menu = listOf(
             MenuAction(stringResource(R.string.md_change_remove)) {
