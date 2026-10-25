@@ -1,34 +1,29 @@
+# FlexNotes 1.0.170
+
 ## Overview
 
-Training blocks can now do more than remind you. A block, such as a deload week, can **change the planned sets**:
-lighter or heavier weights by a percentage, and fewer or more sets per exercise. FlexNotes applies the change when you
-log a day of that workout during the block, and every set stays yours to edit. This update also makes the automatic
-checks behind each release steadier, so updates reach you without needless delays.
-
-## What's new
-
-- **Blocks that change your planned sets.** In a workout's editor, open a training block and switch on **Change the
-  planned sets**. Set a **weight change in percent** (for example −10 for a lighter week, or +5 for a heavier one)
-  and the **sets per exercise** to add or take away. For a deload block it starts at 10% lighter and one set fewer.
-- **Applied when you log the day.** When you add a day of that workout during the block, with **Add workout** or the
-  library's **Log all**, its planned weights and sets change before they're logged. Weights are rounded to the
-  exercise's own weight step, in its own unit, and every exercise always keeps at least one set.
-- **You see it before you log.** The review in **Add workout** names the block and what it changes, and every
-  exercise shows the sets as they'll be logged. The message after logging says what was changed too.
+This update makes the Medications screens read the way people plan: every date is a real weekday and date, and every dose looks the same whatever its name. It also narrows FlexNotes to what it's for. FlexNotes is a workout, fitness and medication log, so it no longer reads water, caffeine, the menstrual cycle or lab results from other apps.
 
 ## Improved
 
-- The day log's training block card says what the current block does to your planned sets, for example "Logged
-  workout days this block: weights 10% lighter, 1 set fewer per exercise".
-- The workout editor's block list shows each block's change next to its length.
-- Exercises timed or measured by distance take the set change only, and exercises with no planned sets stay
-  without.
-- The check that keeps saving a set fast with years of history now counts what each save reads back instead of
-  timing it, so a busy build machine can no longer hold up a release.
+- **Dates you can plan by.** Schedules now say where they are with a date instead of a count: "On until Mon 3 Nov", "Off · on again Tue 4 Nov", "Ongoing since Mon 6 Oct". Every medication date shows the weekday, including starts, pauses, due times, dose changes, runs and the doctor's PDF.
+- **Training blocks show dates too.** A block reads "Build · week 2 of 3, until Sun 9 Nov" or "Deload until Sun 2 Nov".
+- **Tidy dose rows.** Each dose on the Today tab shows its time at the start, the medication's name beside it (wrapping onto a second line when it's long), the amount under the name, then the done box. Long and short names now look the same.
+- **No more stacked values.** Body, medication and set rows keep their values on one line when one value is long, such as an injection site. They wrap neatly only when there's truly no room.
+
+## Removed
+
+- **Water and caffeine.** The day-log card, its sheet, the Home setting and the Health Connect reads are gone. Your food or drink app already records these.
+- **Menstrual cycle.** The Period read from Health Connect, the phase shading on body and exercise graphs, and its setting are gone.
+- **Lab results from medical records.** FlexNotes no longer reads them from Health Connect. You can still type lab markers in yourself in the Body tracker.
+- FlexNotes no longer asks Health Connect for hydration, menstruation or medical lab results permission.
+
+## Your data
+
+- Water, caffeine and period values that were read from Health Connect are removed on the first start. The apps that recorded them still have them.
+- Any values you typed in yourself are kept as ordinary Body tracker entries. You can edit or delete them there.
+- Lab results already added from medical records stay under their lab markers.
 
 ## Known limitations
 
-- The change applies to workout days logged in one go. Sets you type one at a time are logged exactly as you type them.
-- Days logged before this update, or before you switched the change on, keep the sets they were logged with.
-- The accessibility checks that need a real phone (TalkBack, switch access and very large text on whole screens)
-  are still to be done by hand.
+- The accessibility pass on a real phone (TalkBack, 200% font, small screens and switch access) is still to be done.

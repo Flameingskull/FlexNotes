@@ -106,12 +106,22 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
 - **Any user, any pattern (owner principle, 2026-10-24):** FlexNotes is for any kind of user. No feature may lock
   people into one pattern (for example cycles only). Every function is easy to understand and use: plain wording,
   sensible defaults, and every mistake fixable from the screen that shows it.
+- **Human first, value-add only (owner imperatives, 2026-10-25; never make the owner repeat them):** every display,
+  function and feature must suit real people, not just technically work: real dates with the weekday ("Mon 27 Oct"),
+  never counters like "day 12 of 56"; text that lays out the same way for every entry. FlexNotes is a workout, fitness
+  and medication log: build only what helps that. Data from other apps is used only for value it can't give (calories
+  for the TDEE and active-calorie requirement), never to duplicate them (water, caffeine) or to go outside the app's
+  purpose (menstrual cycle), or to import what the user already has elsewhere (lab results: typed in by hand
+  if wanted, never read from another app). An approved issue that breaks this is flagged to the owner, not built. The build skills
+  apply both at every step.
 
 ## Plans (check at the start of every session)
 
 **One live roadmap:** `docs/plans/2026-10-24-roadmap.md` holds all open planned work, in build order. New approved
 work is added to it as a new build stage, not given a parallel plan file, unless the owner asks for a separate
-initiative. Its Status block names the next command.
+initiative. Its Status block names the next command. **Every open bug and feature issue is part of roadmap delivery
+(owner, 2026-10-25):** build triage maps each one to a roadmap build stage, adding any that aren't there, and builds
+work through the stages in order.
 
 Every multi-build plan is kept in **two places**, so nothing in it slips:
 - **The plan file, in git:** `docs/plans/YYYY-MM-DD-<name>.md`. It starts with a `> **Status**` block: what's done,
@@ -189,10 +199,11 @@ A tracker bug or feature with no issue gets one filed (rule 5) and is re-importe
 
 **Making a new build:** the owner runs `/new-build` (`.claude/skills/new-build/SKILL.md`). With no arguments it asks
 which items to include; `/new-build auto` builds everything `ready`; `/new-build 12 15` builds those issues.
-**Budget-limited builds:** `/safe-build` (`.claude/skills/safe-build/SKILL.md`) gets the most high-quality
-development into one release within the current usage limits. It cuts overhead rather than scope. It spawns no
-agents, plans a substantial build (typically two to four related issues) as core and stretch stages, commits each
-stage locally with a checkpoint, keeps a reserve for review and CI fixes, and pushes once.
+**Budget-limited builds:** `/safe-build` (`.claude/skills/safe-build/SKILL.md`) works exactly like `/new-build`
+(same arguments, agent triage, owner's choice, agent implementation, review and release) but keeps the usage limits
+in mind (owner, 2026-10-25): it sizes the build to the usage left as core and stretch stages, commits each stage
+locally behind a budget checkpoint, keeps a reserve for review and CI fixes, and pushes once, instead of running
+until told to stop.
 **Single-slice builds:** `/slice-build` (`.claude/skills/slice-build/SKILL.md`) is the smallest safe release. It spawns no
 agents and ships one item or one complete slice of an issue (`Refs #N` until every acceptance criterion is met),
 capped at about 6 files and 400 lines, with two CI attempts.

@@ -58,10 +58,15 @@ and list it under "New requests filed" in your report.
    - Look for duplicates, and close them with a link to the original.
    - Find the relevant code: `docs/CODEMAP.md` names the file, then `grep` for the symbol. Name the likely root
      cause with file and line references. A bug needs this code check; keep it to the files involved.
+   - **Owner imperatives (CLAUDE.md, "Human first, value-add only"):** check every issue against both. Mark one that
+     would duplicate another app or fall outside workout, fitness and medication `needs-info`, and say why in your
+     report. Every fix or build must suit real people: real weekday dates, consistent text layout, no placeholders.
    - Set one priority label, and swap `needs-triage` for `triaged` (plus `ready` if it's fixable now).
    - If key details are missing (steps, device, what they expected), add `needs-info` and post one short comment asking
      for exactly what's missing.
-3. Report back a prioritised table: issue, title, priority, root cause, fix size (S/M/L), proposed fix.
+3. Report back a prioritised table: issue, title, priority, root cause, fix size (S/M/L), proposed fix, and
+   **Roadmap**: the build stage of `docs/plans/2026-10-24-roadmap.md` the bug is in (from the brief), or `none` so
+   the main session adds it.
 
 ## Fixing (when told which bugs to fix, or "fix the ready bugs")
 

@@ -67,8 +67,12 @@ under "New requests filed" in your report.
    - Check it against the current code: use the body's current-state section, and `docs/CODEMAP.md` for which
      files are affected. Open code only if neither answers it.
    - Post one comment with a short plan: the approach, files affected, any data or schema change, and risks.
+   - **Owner imperatives (CLAUDE.md, "Human first, value-add only"):** check every issue against both. Mark one that
+     would duplicate another app or fall outside workout, fitness and medication `needs-info`, and say why in your
+     report. Every fix or build must suit real people: real weekday dates, consistent text layout, no placeholders.
    - Set a priority, and swap `needs-triage` for `triaged` (plus `ready` if it fits in the next build).
-3. Report back a prioritised table: issue, title, priority, size (S/M/L), plan summary.
+3. Report back a prioritised table: issue, title, priority, size (S/M/L), plan summary, and **Roadmap**: the build
+   stage of `docs/plans/2026-10-24-roadmap.md` the issue is in (from the brief), or `none` so the main session adds it.
 
 ## Building (when told which features to build, or "build the ready features")
 
