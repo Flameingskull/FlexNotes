@@ -28,7 +28,10 @@ import com.fitlens.companion.R
 import com.fitlens.companion.data.BlockState
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.PhaseUnit
+import com.fitlens.companion.data.PlannedSet
 import com.fitlens.companion.data.Routine
+import com.fitlens.companion.data.Settings
+import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.TrainingBlock
 import com.fitlens.companion.data.TrainingBlocks
 import com.fitlens.companion.data.TrainingPlan
@@ -133,15 +136,30 @@ private fun BlockSheet(block: TrainingBlock, adding: Boolean, canBeOngoing: Bool
     var length by remember(block) { mutableStateOf(block.length.toString()) }
     var unit by remember(block) { mutableStateOf(if (!canBeOngoing && block.unit == PhaseUnit.ONGOING) PhaseUnit.WEEKS else block.unit) }
     var deload by remember(block) { mutableStateOf(block.deload) }
+    // Changing the planned sets (#235): off by default; turned on, a deload starts at 10% lighter and one set fewer.
+    var changing by remember(block) { mutableStateOf(block.adjusts) }
+    var pct by remember(block) { mutableStateOf(block.weightPct.toString()) }
+    var sets by remember(block) { mutableStateOf(block.setChange.toString()) }
     val units = TrainingBlocks.UNITS.filter { canBeOngoing || it != PhaseUnit.ONGOING }
     val n = length.toIntOrNull()
-    val valid = unit == PhaseUnit.ONGOING || (n != null && n in 1..999)
+    val pctValue = pct.toIntOrNull()
+    val setsValue = sets.toIntOrNull()
+    val valid = (unit == PhaseUnit.ONGOING || (n != null && n in 1..999)) &&
+        (!changing || (pctValue != null && pctValue in TrainingBlocks.WEIGHT_PCT && setsValue != null && setsValue in TrainingBlocks.SET_CHANGE))
     FitSheet(
         title = stringResource(if (adding) R.string.tb_new_block else R.string.tb_edit_block),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.tb_done),
         confirmEnabled = valid,
-        onConfirm = { onDone(TrainingBlock(name, if (unit == PhaseUnit.ONGOING) 1 else n ?: 1, unit, deload)) }
+        onConfirm = {
+            onDone(
+                TrainingBlock(
+                    name, if (unit == PhaseUnit.ONGOING) 1 else n ?: 1, unit, deload,
+                    weightPct = if (changing) pctValue ?: 0 else 0,
+                    setChange = if (changing) setsValue ?: 0 else 0
+                )
+            )
+        }
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.md)) {
             OutlinedTextField(
@@ -172,8 +190,67 @@ private fun BlockSheet(block: TrainingBlock, adding: Boolean, canBeOngoing: Bool
                 summary = stringResource(R.string.tb_deload_summary),
                 checked = deload
             ) { deload = it }
+            SettingsSwitchRow(
+                title = stringResource(R.string.tb_change_switch),
+                summary = stringResource(R.string.tb_change_summary),
+                checked = changing
+            ) { on ->
+                changing = on
+                if (on && pct.toIntOrNull() == 0 && sets.toIntOrNull() == 0 && deload) {
+                    pct = "-10"
+                    sets = "-1"
+                }
+            }
+            if (changing) {
+                StepperField(
+                    label = stringResource(R.string.tb_weight_change),
+                    value = pct,
+                    onValue = { v -> pct = signedDigits(v, 3) },
+                    onStep = { d -> pct = ((pct.toIntOrNull() ?: 0) + d * 5).coerceIn(TrainingBlocks.WEIGHT_PCT).toString() },
+                    keyboard = KeyboardType.Number
+                )
+                StepperField(
+                    label = stringResource(R.string.tb_set_change),
+                    value = sets,
+                    onValue = { v -> sets = signedDigits(v, 2) },
+                    onStep = { d -> sets = ((sets.toIntOrNull() ?: 0) + d).coerceIn(TrainingBlocks.SET_CHANGE).toString() },
+                    keyboard = KeyboardType.Number
+                )
+            }
         }
     }
+}
+
+/** Typed text kept to an optional leading minus and up to [digits] digits. */
+private fun signedDigits(v: String, digits: Int): String {
+    val minus = v.trimStart().startsWith("-") || v.trimStart().startsWith("−")
+    return (if (minus) "-" else "") + v.filter { it.isDigit() }.take(digits)
+}
+
+/** What a block does to the planned sets (#235), such as "weights 10% lighter, 1 set fewer per exercise", or null. */
+internal fun blockChangeText(res: Resources, b: TrainingBlock): String? {
+    if (!b.adjusts) return null
+    val parts = ArrayList<String>()
+    if (b.weightPct < 0) parts += res.getString(R.string.tb_weights_down, -b.weightPct)
+    if (b.weightPct > 0) parts += res.getString(R.string.tb_weights_up, b.weightPct)
+    if (b.setChange < 0) parts += res.getQuantityString(R.plurals.tb_sets_fewer, -b.setChange, -b.setChange)
+    if (b.setChange > 0) parts += res.getQuantityString(R.plurals.tb_sets_more, b.setChange, b.setChange)
+    return parts.joinToString(", ")
+}
+
+/** The training block that changes [workoutId]'s planned sets on [date] (#235), or null when none does. */
+internal fun adjustingBlock(snap: Snapshot, workoutId: Long, date: String): TrainingBlock? =
+    snap.routinesById[workoutId]?.plan?.let { TrainingBlocks.on(it, date) }?.block?.takeIf { it.adjusts }
+
+/**
+ * [exerciseId]'s planned [sets] as [block] changes them (#235), each weight rounded to the exercise's + and − step in
+ * its own unit (#15, #7), as set entry steps it. No block leaves them as they are.
+ */
+internal fun blockAdjusted(snap: Snapshot, block: TrainingBlock?, exerciseId: Long, sets: List<PlannedSet>): List<PlannedSet> {
+    if (block == null) return sets
+    val globalStepKg = Settings.currentPortable().weightIncrementKg?.takeIf { snap.weightUnitOf(exerciseId) == snap.weightUnit }
+    val step = (snap.exercises[exerciseId]?.weightStepKg ?: globalStepKg)?.let { snap.weight(it, exerciseId) } ?: DEFAULT_WEIGHT_STEP
+    return TrainingBlocks.adjust(sets, block) { kg -> snap.toKg(TrainingBlocks.roundTo(snap.weight(kg, exerciseId), step), exerciseId) }
 }
 
 @Composable
@@ -192,7 +269,8 @@ internal fun blockName(res: Resources, b: TrainingBlock, index: Int): String =
 /** "3 weeks", or "1 week · Deload". */
 private fun blockSummary(res: Resources, b: TrainingBlock): String {
     val length = phaseLength(res, b.length, b.unit)
-    return if (b.deload) res.getString(R.string.tb_summary_deload, length) else length
+    val base = if (b.deload) res.getString(R.string.tb_summary_deload, length) else length
+    return blockChangeText(res, b)?.let { res.getString(R.string.tb_summary_change, base, it) } ?: base
 }
 
 /** Where the plan is on [date]: "Today: Build, week 2 of 3", "Starts on …" or "Finished". */
@@ -238,7 +316,10 @@ internal fun TrainingBlockCard(routine: Routine, st: BlockState, onOpen: () -> U
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(blockStateText(res, st), style = MaterialTheme.typography.titleMedium, color = if (st.block.deload) Brand.Gold else MaterialTheme.colorScheme.onSurface)
+        // A block that changes the planned sets (#235) says what it does; a plain deload reminds to go lighter.
+        val change = blockChangeText(res, st.block)
         val nextLine = when {
+            change != null -> stringResource(R.string.tb_card_change, change)
             st.block.deload -> stringResource(R.string.tb_card_deload)
             else -> null
         }

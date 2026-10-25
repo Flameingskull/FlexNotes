@@ -3683,4 +3683,22 @@
     <string name="tb_card_open">Edit the training blocks of %1$s</string>
     <string name="tb_card_deload">Deload: go lighter this block, with less weight or fewer sets.</string>
     <string name="tb_card_next">Next: %1$s from %2$s</string>
+    <!-- Training blocks that change the planned sets (#235). -->
+    <string name="tb_change_switch">Change the planned sets</string>
+    <string name="tb_change_summary">When a day of this workout is logged during this block, its planned weights and sets change. You can still edit every set afterwards.</string>
+    <string name="tb_weight_change">Weight change in percent</string>
+    <string name="tb_set_change">Sets per exercise (+ or −)</string>
+    <string name="tb_weights_down">weights %1$d%% lighter</string>
+    <string name="tb_weights_up">weights %1$d%% heavier</string>
+    <plurals name="tb_sets_fewer">
+        <item quantity="one">%1$d set fewer per exercise</item>
+        <item quantity="other">%1$d sets fewer per exercise</item>
+    </plurals>
+    <plurals name="tb_sets_more">
+        <item quantity="one">%1$d more set per exercise</item>
+        <item quantity="other">%1$d more sets per exercise</item>
+    </plurals>
+    <string name="tb_summary_change">%1$s · %2$s</string>
+    <string name="tb_card_change">Logged workout days this block: %1$s.</string>
+    <string name="tb_review_change">%1$s block: %2$s. Every set can still be changed after logging.</string>
 </resources>

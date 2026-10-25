@@ -118,7 +118,9 @@ fun logWorkoutDay(
     replace: Boolean = false,
     saveAs: Routine? = null
 ): List<Long> {
-    val resolved = exercises.map { it to Routines.resolve(snap, it, date) }
+    // A training block running on the date can lighten or add to the planned sets (#235).
+    val block = adjustingBlock(snap, workoutId, date)
+    val resolved = exercises.map { it to blockAdjusted(snap, block, it.exerciseId, Routines.resolve(snap, it, date)) }
     val rows = resolved.flatMap { (p, sets) -> sets.map { p.exerciseId to it } }
     val toOpen = resolved.filter { it.second.isEmpty() }.map { it.first.exerciseId }.distinct()
     val old = if (replace) snap.setsByDate[date].orEmpty() else emptyList<SetRow>()
@@ -262,7 +264,11 @@ private fun ReviewWorkoutSheet(
     onDismiss: () -> Unit
 ) {
     val exercises = choice.day.exercises
-    val resolved = remember(snap.trainingKey, choice, date) { exercises.map { Routines.resolve(snap, it, date) } }
+    // The sets as they'll be logged, with any change the running training block makes (#235).
+    val block = remember(snap.routines, choice, date) { choice.workout?.let { adjustingBlock(snap, it.id, date) } }
+    val resolved = remember(snap.trainingKey, choice, date, block) {
+        exercises.map { blockAdjusted(snap, block, it.exerciseId, Routines.resolve(snap, it, date)) }
+    }
     var ticked by remember(choice) { mutableStateOf(exercises.indices.toSet()) }
     val isNew = choice.workout == null
     var saveIt by remember(choice) { mutableStateOf(false) }
@@ -295,6 +301,14 @@ private fun ReviewWorkoutSheet(
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+        if (block != null) {
+            val index = choice.workout?.plan?.blocks?.indexOf(block) ?: 0
+            Text(
+                stringResource(R.string.tb_review_change, blockName(res, block, index.coerceAtLeast(0)), blockChangeText(res, block).orEmpty()),
+                style = MaterialTheme.typography.bodySmall,
+                color = Brand.Gold
+            )
+        }
         exercises.forEachIndexed { i, p ->
             val sets = resolved[i]
             val on = i in ticked

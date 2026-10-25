@@ -88,6 +88,44 @@ class TrainingBlocksTest {
     }
 
     @Test
+    fun aBlockThatChangesTheSetsRoundTripsAndOldTextReadsUnchanged() {
+        val lighter = deload().copy(weightPct = -10, setChange = -1)
+        val blocks = listOf(build(), lighter)
+        val text = TrainingBlocks.encode(blocks)!!
+        assertEquals(blocks, TrainingBlocks.decode(text))
+        assertTrue(text.contains("|1,-10,-1|"))
+        // Blocks saved before #235 change nothing.
+        assertFalse(TrainingBlocks.decode("1|w|1|Deload").single().adjusts)
+        // Out-of-range values are kept within bounds.
+        val wild = TrainingBlocks.decode("1|w|1,-500,40|Deload").single()
+        assertEquals(-90, wild.weightPct)
+        assertEquals(10, wild.setChange)
+    }
+
+    @Test
+    fun aDeloadLightensWeightsToThePlateStepAndDropsASet() {
+        val sets = listOf(PlannedSet(100.0, 5), PlannedSet(100.0, 5), PlannedSet(100.0, 5))
+        val block = deload().copy(weightPct = -10, setChange = -1)
+        val out = TrainingBlocks.adjust(sets, block) { TrainingBlocks.roundTo(it, 2.5) }
+        assertEquals(listOf(PlannedSet(90.0, 5), PlannedSet(90.0, 5)), out)
+        // 87 kg -15% is 73.95, on the 2.5 kg step 75.
+        assertEquals(75.0, TrainingBlocks.adjust(listOf(PlannedSet(87.0, 5)), deload().copy(weightPct = -15)) { TrainingBlocks.roundTo(it, 2.5) }.single().weightKg, 1e-9)
+        // Never fewer than one set, and a light weight never rounds to nothing.
+        val one = TrainingBlocks.adjust(listOf(PlannedSet(2.0, 10)), deload().copy(weightPct = -50, setChange = -5)) { TrainingBlocks.roundTo(it, 2.5) }
+        assertEquals(1, one.size)
+        assertEquals(1.0, one.single().weightKg, 1e-9)
+    }
+
+    @Test
+    fun aBlockCanAddSetsAndLeavesTimedSetsAndEmptyPlansAlone() {
+        val run = listOf(PlannedSet(durationSec = 600))
+        val more = TrainingBlocks.adjust(run, build().copy(weightPct = 5, setChange = 2)) { it }
+        assertEquals(List(3) { PlannedSet(durationSec = 600) }, more)
+        assertTrue(TrainingBlocks.adjust(emptyList(), deload().copy(setChange = 2)) { it }.isEmpty())
+        assertEquals(run, TrainingBlocks.adjust(run, deload()) { it })
+    }
+
+    @Test
     fun runningOnListsOnlyWorkoutsWithARunningPlan() {
         val withPlan = Routine(1, "Push Pull Legs", plan = TrainingPlan(listOf(build()), "2026-11-02"))
         val without = Routine(2, "Stretching")

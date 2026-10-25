@@ -107,7 +107,7 @@ import kotlinx.coroutines.launch
  */
 
 /** Global fallback increments. Per-exercise increments are #15, the global weight setting is #7. */
-private const val DEFAULT_WEIGHT_STEP = 2.5
+internal const val DEFAULT_WEIGHT_STEP = 2.5
 private const val DISTANCE_STEP = 0.5
 private const val DURATION_STEP = 15
 
