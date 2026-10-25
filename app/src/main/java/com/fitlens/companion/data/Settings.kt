@@ -69,9 +69,6 @@ data class DeviceSettings(
     /** The Health Connect types whose full history has been read on this phone (#192), as `Kind` names separated by
      *  commas. Cleared when older data is no longer allowed, so allowing it again reads the history again. */
     val hcHistoryKinds: String? = null,
-    /** The lab results from Health Connect already added on this phone (#225), one key a line (`LabResults.seen`), so
-     *  a result is added once and stays as the user left it after an edit or a delete. */
-    val hcLabIds: String? = null,
     /** Medication reminders (#203): a notification when a scheduled dose is due. On unless switched off. */
     val medReminders: Boolean = true,
     /** Medication names on the lock screen (#203). Off: the lock screen shows only "Medication reminder". */
@@ -201,15 +198,6 @@ data class PortableSettings(
     val hcSpo2: Boolean = false,
     val hcHrv: Boolean = false,
     val hcTemperature: Boolean = false,
-    /** Water and caffeine read from Health Connect (#226): each drink at its own time. */
-    val hcWater: Boolean = false,
-    val hcCaffeine: Boolean = false,
-    /** Menstrual cycle read from Health Connect (#222): period days, kept as Period values. */
-    val hcCycle: Boolean = false,
-    /** The cycle's phases are left off body and exercise graphs (#222); shown by default when there are Period values. */
-    val cycleBandsOff: Boolean = false,
-    /** Lab results read from Health Connect's medical records (#225), where the phone offers them. */
-    val hcLabs: Boolean = false,
     /** Bodyweight logged in FlexNotes is written to Health Connect (#191). */
     val hcWriteWeight: Boolean = false,
     /** Body fat logged in FlexNotes is written to Health Connect (#191). */
@@ -236,10 +224,6 @@ data class PortableSettings(
     val homeShowCalories: Boolean = true,
     /** Show the readiness card on the day log (#216). */
     val homeShowReadiness: Boolean = true,
-    /** Show the water and caffeine card on the day log (#221). */
-    val homeShowDrinks: Boolean = true,
-    /** Usual bedtime, HH:mm (#221): when the caffeine still active is estimated. */
-    val bedtime: String = Drinks.DEFAULT_BEDTIME,
     /** The pose new photos get (#46): null to ask each time, [Poses.NONE] for none, or one of [Poses.all]. */
     val photoDefaultPose: String? = null,
     /** How the Photos grid is grouped (#46), one of [MediaPrefs.GROUPS]. */
@@ -471,11 +455,6 @@ object Settings {
             P_HC_SPO2 to if (s.hcSpo2) "1" else null,
             P_HC_HRV to if (s.hcHrv) "1" else null,
             P_HC_TEMPERATURE to if (s.hcTemperature) "1" else null,
-            P_HC_WATER to if (s.hcWater) "1" else null,
-            P_HC_CAFFEINE to if (s.hcCaffeine) "1" else null,
-            P_HC_CYCLE to if (s.hcCycle) "1" else null,
-            P_CYCLE_BANDS_OFF to if (s.cycleBandsOff) "1" else null,
-            P_HC_LABS to if (s.hcLabs) "1" else null,
             P_HCW_WEIGHT to if (s.hcWriteWeight) "1" else null,
             P_HCW_BODY_FAT to if (s.hcWriteBodyFat) "1" else null,
             P_HCW_WORKOUTS to if (s.hcWriteWorkouts) "1" else null,
@@ -490,8 +469,6 @@ object Settings {
             P_TDEE_SOURCE to s.tdeeSource.takeIf { it != EnergyEstimates.SOURCE_ESTIMATE },
             P_HOME_CALORIES to if (s.homeShowCalories) null else "0",
             P_HOME_READINESS to if (s.homeShowReadiness) null else "0",
-            P_HOME_DRINKS to if (s.homeShowDrinks) null else "0",
-            P_BEDTIME to s.bedtime.takeIf { it != Drinks.DEFAULT_BEDTIME },
             P_PHOTO_POSE to MediaPrefs.storeDefaultPose(s.photoDefaultPose),
             P_PHOTO_GROUP to s.photoGroupBy.takeIf { it != MediaPrefs.GROUP_MONTH },
             P_REMEMBER_VIDEO to if (s.rememberVideoOpts) null else "0",
@@ -528,7 +505,6 @@ object Settings {
     private const val D_HC_SYNCED = "hc_synced_at"
     private const val D_BACKUP_PHOTOS = "backup_photos"
     private const val D_HC_HISTORY = "hc_history_kinds"
-    private const val D_HC_LAB_IDS = "hc_lab_ids"
     private const val D_MED_REMINDERS = "med_reminders"
     private const val D_MED_NAMES = "med_names_lock_screen"
     private const val D_MED_LOCK = "med_lock"
@@ -599,11 +575,6 @@ object Settings {
     private const val P_HC_SPO2 = "hc_spo2"
     private const val P_HC_HRV = "hc_hrv"
     private const val P_HC_TEMPERATURE = "hc_temperature"
-    private const val P_HC_WATER = "hc_water"
-    private const val P_HC_CAFFEINE = "hc_caffeine"
-    private const val P_HC_CYCLE = "hc_cycle"
-    private const val P_CYCLE_BANDS_OFF = "cycle_bands_off"
-    private const val P_HC_LABS = "hc_labs"
     private const val P_HCW_WEIGHT = "hc_write_weight"
     private const val P_HCW_BODY_FAT = "hc_write_body_fat"
     private const val P_HCW_WORKOUTS = "hc_write_workouts"
@@ -619,8 +590,6 @@ object Settings {
     private const val P_TDEE_SOURCE = "tdee_source"
     private const val P_HOME_CALORIES = "home_show_calories"
     private const val P_HOME_READINESS = "home_show_readiness"
-    private const val P_HOME_DRINKS = "home_show_drinks"
-    private const val P_BEDTIME = "bedtime"
     // Progress photos and media (#46), with the names the issue gave them.
     private const val P_PHOTO_POSE = "photo_default_pose"
     private const val P_PHOTO_GROUP = "photo_group_by"
@@ -657,7 +626,6 @@ object Settings {
         stepsLast = get(D_STEPS_LAST),
         hcSyncedAt = get(D_HC_SYNCED)?.toLongOrNull(),
         hcHistoryKinds = get(D_HC_HISTORY),
-        hcLabIds = get(D_HC_LAB_IDS),
         medReminders = get(D_MED_REMINDERS) != "0",
         medNamesOnLockScreen = bool(get(D_MED_NAMES)),
         medLock = bool(get(D_MED_LOCK)),
@@ -694,7 +662,6 @@ object Settings {
         D_STEPS_LAST to stepsLast,
         D_HC_SYNCED to hcSyncedAt?.toString(),
         D_HC_HISTORY to hcHistoryKinds,
-        D_HC_LAB_IDS to hcLabIds,
         D_MED_REMINDERS to if (medReminders) null else "0",
         D_MED_NAMES to if (medNamesOnLockScreen) "1" else null,
         D_MED_LOCK to if (medLock) "1" else null,
@@ -765,11 +732,6 @@ object Settings {
         hcSpo2 = bool(get(P_HC_SPO2)),
         hcHrv = bool(get(P_HC_HRV)),
         hcTemperature = bool(get(P_HC_TEMPERATURE)),
-        hcWater = bool(get(P_HC_WATER)),
-        hcCaffeine = bool(get(P_HC_CAFFEINE)),
-        hcCycle = bool(get(P_HC_CYCLE)),
-        cycleBandsOff = bool(get(P_CYCLE_BANDS_OFF)),
-        hcLabs = bool(get(P_HC_LABS)),
         hcWriteWeight = bool(get(P_HCW_WEIGHT)),
         hcWriteBodyFat = bool(get(P_HCW_BODY_FAT)),
         hcWriteWorkouts = bool(get(P_HCW_WORKOUTS)),
@@ -784,8 +746,6 @@ object Settings {
         tdeeSource = if (get(P_TDEE_SOURCE) == EnergyEstimates.SOURCE_MEASURED) EnergyEstimates.SOURCE_MEASURED else EnergyEstimates.SOURCE_ESTIMATE,
         homeShowCalories = get(P_HOME_CALORIES) != "0",
         homeShowReadiness = get(P_HOME_READINESS) != "0",
-        homeShowDrinks = get(P_HOME_DRINKS) != "0",
-        bedtime = get(P_BEDTIME)?.takeIf { Drinks.minutesOf(it) != null } ?: Drinks.DEFAULT_BEDTIME,
         // Unknown values (from a later build's backup) fall back to the defaults (#46).
         photoDefaultPose = MediaPrefs.defaultPoseOf(get(P_PHOTO_POSE)),
         photoGroupBy = MediaPrefs.groupOf(get(P_PHOTO_GROUP)),
@@ -847,10 +807,6 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     hcSpo2 = hcSpo2,
     hcHrv = hcHrv,
     hcTemperature = hcTemperature,
-    hcWater = hcWater,
-    hcCaffeine = hcCaffeine,
-    hcCycle = hcCycle,
-    hcLabs = hcLabs,
     hcWriteWeight = hcWriteWeight,
     hcWriteBodyFat = hcWriteBodyFat,
     hcWriteWorkouts = hcWriteWorkouts,
@@ -889,7 +845,7 @@ enum class PreferenceGroup {
 internal fun PortableSettings.withGroupFrom(group: PreferenceGroup, other: PortableSettings): PortableSettings = when (group) {
     PreferenceGroup.HOME -> copy(
         homeShowCategories = other.homeShowCategories, homeSetsShown = other.homeSetsShown, homeShowCalories = other.homeShowCalories,
-        homeShowReadiness = other.homeShowReadiness, homeShowDrinks = other.homeShowDrinks
+        homeShowReadiness = other.homeShowReadiness
     )
     PreferenceGroup.REST -> copy(
         restSeconds = other.restSeconds, restAutoStart = other.restAutoStart, restVibrate = other.restVibrate,

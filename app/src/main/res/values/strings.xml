@@ -3187,7 +3187,7 @@
     <string name="hc_history_ask_title">Read older data?</string>
     <string name="hc_history_ask_text">Health Connect will ask whether FlexNotes may read data older than %1$d days. If you allow it, FlexNotes reads the whole history of each type you chose to take from Health Connect, once, in the background. It\'s kept on this phone, marked Health Connect, and what you typed yourself is never replaced. If you don\'t, nothing changes: the last %1$d days are still read.</string>
     <string name="hc_history_ask_go">Continue</string>
-    <string name="hc_privacy">FlexNotes reads from Health Connect only the types you switch to it here: steps; the calories, protein, fat and carbs you ate; active calories burned; bodyweight and body fat; resting heart rate; sleep; exercise sessions; the vitals: blood pressure, blood glucose, blood oxygen, heart rate variability and body temperature; water and caffeine; your menstrual cycle; and lab results from your medical records. It reads them on this phone and keeps them in FlexNotes\'s own data and your backups. It writes to Health Connect only what you switch on under Write to Health Connect: your bodyweight, body fat and workouts. Nothing is sent anywhere: FlexNotes has no internet permission. Values already read stay if you switch a type back, and values already written stay in Health Connect, where you can delete them.</string>
+    <string name="hc_privacy">FlexNotes reads from Health Connect only the types you switch to it here: steps; the calories, protein, fat and carbs you ate; active calories burned; bodyweight and body fat; resting heart rate; sleep; exercise sessions; the vitals: blood pressure, blood glucose, blood oxygen, heart rate variability and body temperature. It reads them on this phone and keeps them in FlexNotes\'s own data and your backups. It writes to Health Connect only what you switch on under Write to Health Connect: your bodyweight, body fat and workouts. Nothing is sent anywhere: FlexNotes has no internet permission. Values already read stay if you switch a type back, and values already written stay in Health Connect, where you can delete them.</string>
     <!-- Vitals (#212) -->
     <string name="hc_group_vitals">Vitals</string>
     <string name="hc_bp">Blood pressure</string>
@@ -3215,38 +3215,6 @@
     <string name="search_hc_spo2_kw">blood oxygen spo2 saturation oximeter vitals health connect</string>
     <string name="search_hc_hrv_kw">heart rate variability hrv rmssd vitals health connect</string>
     <string name="search_hc_temperature_kw">body temperature fever celsius fahrenheit vitals health connect</string>
-    <!-- Water and caffeine from Health Connect (#226) -->
-    <string name="hc_water">Water</string>
-    <string name="hc_water_summary">Each drink of water, at its own time, toward the day\'s water.</string>
-    <string name="hc_water_hc_desc">Each drink logged in a water or health app, at its own time, in ml. On a day with drinks from Health Connect they\'re the ones counted; what you type is kept too.</string>
-    <string name="hc_what_water">water</string>
-    <string name="hc_caffeine">Caffeine</string>
-    <string name="hc_caffeine_summary">The caffeine in each drink or meal, at its own time, so caffeine at bedtime uses it.</string>
-    <string name="hc_caffeine_hc_desc">The caffeine a food or drink app records, at its own time, in mg. On a day with caffeine from Health Connect it\'s what\'s counted; what you type is kept too.</string>
-    <string name="hc_what_caffeine">caffeine</string>
-    <string name="search_hc_water_kw">water hydration drink ml health connect</string>
-    <string name="search_hc_caffeine_kw">caffeine coffee tea energy drink mg bedtime health connect</string>
-    <string name="dr_not_counted">Not counted: the other source is used today</string>
-    <!-- Menstrual cycle from Health Connect (#222) -->
-    <string name="hc_cycle">Menstrual cycle</string>
-    <string name="hc_cycle_summary">Period days, with the cycle\'s phases shaded on body and exercise graphs.</string>
-    <string name="hc_cycle_typed_desc">Log period days yourself as a Period value in the Body tracker (1 light, 2 medium, 3 heavy).</string>
-    <string name="hc_cycle_hc_desc">Period days and flow from a cycle-tracking app, kept as Period values. What you type is kept too.</string>
-    <string name="hc_what_cycle">your menstrual cycle</string>
-    <string name="hc_cycle_bands">Cycle phases on graphs</string>
-    <string name="hc_cycle_bands_summary">Shade the period, follicular, ovulation and luteal phases on body and exercise graphs. Ovulation and the phases after it are estimated from your cycle length, so they\'re a guide.</string>
-    <string name="search_hc_cycle_kw">menstrual cycle period flow ovulation luteal follicular health connect</string>
-    <string name="search_hc_cycle_bands_kw">cycle phases bands graph period ovulation shade</string>
-    <string name="cy_period">Period</string>
-    <string name="cy_follicular">Follicular</string>
-    <string name="cy_ovulation">Ovulation (estimated)</string>
-    <string name="cy_luteal">Luteal</string>
-    <!-- Lab results from Health Connect medical records (#225) -->
-    <string name="hc_labs">Lab results</string>
-    <string name="hc_labs_summary">Each laboratory result in your medical records, filed under its lab marker with its reference range. Results you edit or delete stay as you left them.</string>
-    <string name="hc_labs_unavailable">This phone\'s Health Connect doesn\'t have medical records (they need Android 16 or later).</string>
-    <string name="hc_what_labs">lab results</string>
-    <string name="search_hc_labs_kw">lab results blood test medical records fhir markers health connect</string>
     <string name="vit_add">Add vitals (%1$d)</string>
     <!-- Lab results and reference ranges (#211) -->
     <string name="lab_new">New lab marker</string>
@@ -3609,43 +3577,6 @@
     <string name="load_monotony_high">Monotony is above %1$s: the days are very alike. Varying hard and easy days lowers the strain.</string>
     <string name="load_empty">Log some training to see its load.</string>
     <string name="load_note">Acute load is the average day over the last %1$d days, chronic over the last %2$d, rest days counted as nothing. Volume counts weight × reps; Sets counts every set, cardio included. Warm-ups count when Count Warm-up Sets is on.</string>
-    <!-- Water and caffeine (#221) -->
-    <string name="home_show_drinks">Show water and caffeine</string>
-    <string name="home_show_drinks_summary">A card under readiness shows the day’s water and caffeine, and the caffeine still active at bedtime.</string>
-    <string name="search_home_drinks_kw">water hydration caffeine coffee tea drink bedtime sleep card</string>
-    <string name="dr_title">Water and caffeine</string>
-    <string name="dr_card_open">Open water and caffeine</string>
-    <string name="dr_card_hint">Tap to log water, coffee, tea or any caffeine, with the time.</string>
-    <string name="dr_card_value">Water %1$s · Caffeine %2$s</string>
-    <string name="dr_at_bed">≈ %1$s mg caffeine still active at bedtime (%2$s)</string>
-    <string name="dr_at_bed_sleep">≈ %1$s mg caffeine at bedtime (%2$s) · slept %3$s h that night</string>
-    <string name="dr_sheet_title">Water and caffeine · %1$s</string>
-    <string name="dr_done">Done</string>
-    <string name="dr_log">Log a drink</string>
-    <string name="dr_time">Time (HH:mm)</string>
-    <string name="dr_amount">Amount</string>
-    <string name="dr_add_water_ml">Add as water (ml)</string>
-    <string name="dr_add_caffeine_mg">Add as caffeine (mg)</string>
-    <string name="dr_water">Water</string>
-    <string name="dr_caffeine">Caffeine</string>
-    <string name="dr_serving">%1$s · %2$s mg</string>
-    <string name="dr_espresso">Espresso</string>
-    <string name="dr_coffee">Coffee</string>
-    <string name="dr_tea">Tea</string>
-    <string name="dr_energy_drink">Energy drink</string>
-    <string name="dr_cola">Cola</string>
-    <string name="dr_added">Logged %1$s at %2$s</string>
-    <string name="dr_today_list">Drinks · %1$s</string>
-    <string name="dr_none">Nothing logged yet.</string>
-    <string name="dr_edit">Edit this drink</string>
-    <string name="dr_delete">Delete this drink</string>
-    <string name="dr_bed_and_sleep">Caffeine and sleep</string>
-    <string name="dr_bedtime">Bedtime</string>
-    <string name="dr_no_nights">No caffeine or sleep logged in the last week. Sleep can come from Health Connect (Settings › Health Connect) or be typed in the Body tracker.</string>
-    <string name="dr_night_value">%1$s · %2$s</string>
-    <string name="dr_no_caffeine">No caffeine</string>
-    <string name="dr_no_sleep">sleep not logged</string>
-    <string name="dr_note">Each night shows the caffeine estimated to be still active at bedtime and the sleep that followed. The estimate halves every %1$s hours; how fast caffeine clears varies from person to person, so it’s a guide.</string>
     <!-- Training blocks (#218) -->
     <string name="tb_title">Training blocks</string>
     <string name="tb_intro">Plan your training in blocks, such as three weeks of building and then a lighter deload week. The day log shows which block you\'re in.</string>

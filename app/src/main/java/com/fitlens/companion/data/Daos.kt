@@ -842,6 +842,14 @@ interface ImportDao {
     @Query("DELETE FROM mrecord WHERE id = :id")
     fun deleteRecordById(id: Long)
 
+    /** Removes every value from [source] of the measurements named [names] (lower case), whatever their capitals and spaces (#239). */
+    @Query("DELETE FROM mrecord WHERE source = :source AND lower(trim(name)) IN (:names)")
+    fun deleteFromSource(source: String, names: List<String>): Int
+
+    /** Removes the measurements named [names] (lower case) that have no values left (#239). */
+    @Query("DELETE FROM measurement WHERE lower(trim(name)) IN (:names) AND NOT EXISTS (SELECT 1 FROM mrecord WHERE mrecord.name = measurement.name)")
+    fun deleteEmptyMeasurements(names: List<String>)
+
     @Query("UPDATE mrecord SET value = :value WHERE id = :id")
     fun setRecordValue(id: Long, value: Double)
 

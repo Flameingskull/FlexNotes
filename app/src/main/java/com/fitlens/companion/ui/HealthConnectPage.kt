@@ -50,11 +50,7 @@ internal class HealthConnectAccess(
     /** The type it last asked to write and was refused (#191). */
     val writeRefused: HealthWrite.Out? = null,
     /** Switches writing a type on, asking for its write permission first when needed (#191). */
-    val askWrite: (HealthWrite.Out) -> Unit = {},
-    /** Lab results were asked for and refused (#225). */
-    val labsRefused: Boolean = false,
-    /** Switches lab results on, asking for their permission first when needed (#225). */
-    val askLabs: () -> Unit = {}
+    val askWrite: (HealthWrite.Out) -> Unit = {}
 ) {
     /** Older data may be read (#192). */
     val history: Boolean get() = granted?.contains(HealthConnect.HISTORY) == true
@@ -83,8 +79,6 @@ internal fun rememberHealthConnectAccess(
     var pendingWrite by remember { mutableStateOf<HealthWrite.Out?>(null) }
     var writeRefused by remember { mutableStateOf<HealthWrite.Out?>(null) }
     var askingHistory by remember { mutableStateOf(false) }
-    var askingLabs by remember { mutableStateOf(false) }
-    var labsRefused by remember { mutableStateOf(false) }
     var historyRefused by remember { mutableStateOf(false) }
     var resumes by remember { mutableIntStateOf(0) }
     val allowed by rememberUpdatedState(onAllowed)
@@ -103,15 +97,6 @@ internal fun rememberHealthConnectAccess(
             askingHistory = false
             historyRefused = HealthConnect.HISTORY !in result
             if (!historyRefused) HealthConnect.syncSoon(ctx)
-            return@rememberLauncherForActivityResult
-        }
-        if (askingLabs) {
-            askingLabs = false
-            labsRefused = HealthConnect.LABS !in result
-            if (!labsRefused) {
-                Settings.updatePortable { it.copy(hcLabs = true) }
-                HealthConnect.syncSoon(ctx)
-            }
             return@rememberLauncherForActivityResult
         }
         pendingWrite?.let { out ->
@@ -149,7 +134,6 @@ internal fun rememberHealthConnectAccess(
         askHistory = {
             pending = null
             pendingWrite = null
-            askingLabs = false
             askingHistory = true
             launcher.launch(setOf(HealthConnect.HISTORY))
         },
@@ -162,20 +146,6 @@ internal fun rememberHealthConnectAccess(
                 pending = null
                 pendingWrite = out
                 launcher.launch(setOf(out.permission))
-            }
-        },
-        labsRefused = labsRefused,
-        askLabs = {
-            if (granted?.contains(HealthConnect.LABS) == true) {
-                labsRefused = false
-                Settings.updatePortable { it.copy(hcLabs = true) }
-                HealthConnect.syncSoon(ctx)
-            } else {
-                pending = null
-                pendingWrite = null
-                askingHistory = false
-                askingLabs = true
-                launcher.launch(setOf(HealthConnect.LABS))
             }
         }
     )
@@ -287,33 +257,6 @@ private fun HealthWriteRow(out: HealthWrite.Out, access: HealthConnectAccess, on
 }
 
 /**
- * Lab results from medical records (#225): on asks for their permission first; off stops reading them, and the results
- * already added stay. Where this phone's Health Connect has no medical records, the row says so and can't be switched on.
- */
-@Composable
-private fun LabsRow(access: HealthConnectAccess, on: Boolean) {
-    val ctx = LocalContext.current
-    val available = remember(access.status) { HealthConnect.labsAvailable(ctx) }
-    SettingsSwitchRow(
-        stringResource(R.string.hc_labs),
-        on,
-        summary = stringResource(R.string.hc_labs_summary),
-        enabled = available || on,
-        disabledReason = if (!available) stringResource(R.string.hc_labs_unavailable) else null
-    ) { checked ->
-        if (!checked) {
-            Settings.updatePortable { it.copy(hcLabs = false) }
-            HealthConnect.syncSoon(ctx)
-        } else {
-            access.askLabs()
-        }
-    }
-    if (access.labsRefused || (on && access.granted != null && HealthConnect.LABS !in access.granted)) {
-        HealthConnectNotAllowedRows(R.string.hc_what_labs)
-    }
-}
-
-/**
  * Full history (#192): Health Connect lets FlexNotes read the last [HealthConnect.DAYS] days. This row explains what
  * allowing older data does, in a sheet, before Health Connect's own dialog asks; refusing keeps the last
  * [HealthConnect.DAYS] days. Once allowed, it opens Health Connect, where it can be taken back.
@@ -392,15 +335,6 @@ internal fun HealthConnectPage() {
         stringResource(R.string.hc_active_own), stringResource(R.string.hc_active_own_desc),
         stringResource(R.string.hc_active_hc_desc, ActiveCalories.MIN_DAYS), R.string.hc_what_active
     )
-    // Drinks (#226): each read at its own time; typed drinks are kept too.
-    HealthConnectSourceRow(
-        HealthConnect.Kind.WATER, access, prefs.hcWater, R.string.hc_water, R.string.hc_water_summary,
-        typed, typedDesc, stringResource(R.string.hc_water_hc_desc), R.string.hc_what_water
-    )
-    HealthConnectSourceRow(
-        HealthConnect.Kind.CAFFEINE, access, prefs.hcCaffeine, R.string.hc_caffeine, R.string.hc_caffeine_summary,
-        typed, typedDesc, stringResource(R.string.hc_caffeine_hc_desc), R.string.hc_what_caffeine
-    )
 
     SettingsGroup(stringResource(R.string.hc_group_body))
     HealthConnectSourceRow(
@@ -419,16 +353,6 @@ internal fun HealthConnectPage() {
         HealthConnect.Kind.SLEEP, access, prefs.hcSleep, R.string.hc_sleep, R.string.hc_sleep_summary,
         typed, typedDesc, stringResource(R.string.hc_sleep_hc_desc), R.string.hc_what_sleep
     )
-    // The menstrual cycle (#222): period days, whose phases are shaded on body and exercise graphs.
-    HealthConnectSourceRow(
-        HealthConnect.Kind.CYCLE, access, prefs.hcCycle, R.string.hc_cycle, R.string.hc_cycle_summary,
-        typed, stringResource(R.string.hc_cycle_typed_desc), stringResource(R.string.hc_cycle_hc_desc), R.string.hc_what_cycle
-    )
-    SettingsSwitchRow(
-        stringResource(R.string.hc_cycle_bands),
-        !prefs.cycleBandsOff,
-        summary = stringResource(R.string.hc_cycle_bands_summary)
-    ) { on -> Settings.updatePortable { it.copy(cycleBandsOff = !on) } }
 
     // Vitals (#212): each a reading at its own time, also logged by hand in the Body tracker.
     SettingsGroup(stringResource(R.string.hc_group_vitals))
@@ -452,8 +376,6 @@ internal fun HealthConnectPage() {
         HealthConnect.Kind.TEMPERATURE, access, prefs.hcTemperature, R.string.hc_temperature, R.string.hc_temperature_summary,
         typed, typedDesc, stringResource(R.string.hc_temperature_hc_desc), R.string.hc_what_temperature
     )
-    // Lab results (#225): read from medical records where the phone offers them, filed under lab markers.
-    LabsRow(access, prefs.hcLabs)
 
     SettingsGroup(stringResource(R.string.hc_group_workouts))
     HealthConnectSourceRow(
@@ -480,7 +402,7 @@ internal fun HealthConnectPage() {
         ) {
             AppScope.scope.launch { UiEvents.show(outcomeText(res, HealthConnect.sync(ctx, force = true))) }
         }
-        if (HealthConnect.Kind.entries.any { it.chosen(prefs) } || prefs.hcLabs) {
+        if (HealthConnect.Kind.entries.any { it.chosen(prefs) }) {
             SettingsNote(
                 stringResource(
                     if (access.granted?.contains(HealthConnect.BACKGROUND) == true) R.string.hc_background_on else R.string.hc_background_off

@@ -147,7 +147,6 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.home_show_categories, SettingsSection.Home, R.string.search_home_categories_kw) { onOff(prefs.homeShowCategories) },
     SettingEntry(R.string.home_show_calories, SettingsSection.Home, R.string.search_home_calories_kw) { onOff(prefs.homeShowCalories) },
     SettingEntry(R.string.home_show_readiness, SettingsSection.Home, R.string.search_home_readiness_kw) { onOff(prefs.homeShowReadiness) },
-    SettingEntry(R.string.home_show_drinks, SettingsSection.Home, R.string.search_home_drinks_kw) { onOff(prefs.homeShowDrinks) },
     SettingEntry(R.string.home_sets_shown, SettingsSection.Home, R.string.search_home_sets_kw) {
         if (prefs.homeSetsShown == 0) res.getString(R.string.home_sets_all) else "${prefs.homeSetsShown}"
     },
@@ -206,11 +205,6 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.hc_spo2, SettingsSection.HealthConnect, R.string.search_hc_spo2_kw) { onOff(prefs.hcSpo2) },
     SettingEntry(R.string.hc_hrv, SettingsSection.HealthConnect, R.string.search_hc_hrv_kw) { onOff(prefs.hcHrv) },
     SettingEntry(R.string.hc_temperature, SettingsSection.HealthConnect, R.string.search_hc_temperature_kw) { onOff(prefs.hcTemperature) },
-    SettingEntry(R.string.hc_water, SettingsSection.HealthConnect, R.string.search_hc_water_kw) { onOff(prefs.hcWater) },
-    SettingEntry(R.string.hc_caffeine, SettingsSection.HealthConnect, R.string.search_hc_caffeine_kw) { onOff(prefs.hcCaffeine) },
-    SettingEntry(R.string.hc_cycle, SettingsSection.HealthConnect, R.string.search_hc_cycle_kw) { onOff(prefs.hcCycle) },
-    SettingEntry(R.string.hc_labs, SettingsSection.HealthConnect, R.string.search_hc_labs_kw) { onOff(prefs.hcLabs) },
-    SettingEntry(R.string.hc_cycle_bands, SettingsSection.HealthConnect, R.string.search_hc_cycle_bands_kw) { onOff(!prefs.cycleBandsOff) },
     SettingEntry(R.string.hcw_weight, SettingsSection.HealthConnect, R.string.search_hcw_weight_kw) { onOff(prefs.hcWriteWeight) },
     SettingEntry(R.string.hcw_body_fat, SettingsSection.HealthConnect, R.string.search_hcw_body_fat_kw) { onOff(prefs.hcWriteBodyFat) },
     SettingEntry(R.string.hcw_workouts, SettingsSection.HealthConnect, R.string.search_hcw_workouts_kw) { onOff(prefs.hcWriteWorkouts) },
@@ -723,10 +717,6 @@ private fun HomePage() {
         stringResource(R.string.home_show_readiness), prefs.homeShowReadiness,
         summary = stringResource(R.string.home_show_readiness_summary)
     ) { on -> Settings.updatePortable { it.copy(homeShowReadiness = on) } }
-    SettingsSwitchRow(
-        stringResource(R.string.home_show_drinks), prefs.homeShowDrinks,
-        summary = stringResource(R.string.home_show_drinks_summary)
-    ) { on -> Settings.updatePortable { it.copy(homeShowDrinks = on) } }
     SettingsNote(stringResource(R.string.settings_travel_note))
 }
 

@@ -157,7 +157,7 @@ class MedicationsTest {
     fun theMeasurementsOtherFeaturesReadCantBeMedications() {
         listOf(
             "Bodyweight", "Body Weight", "body fat", "Body Fat %", "Height", "Steps", "Active calories",
-            "Resting heart rate", "Sleep", "Calories eaten", "Protein eaten", "Sleep quality", "Soreness", "Water", "Caffeine", " ", ""
+            "Resting heart rate", "Sleep", "Calories eaten", "Protein eaten", "Sleep quality", "Soreness", " ", ""
         ).forEach { assertFalse(it, Medications.canBeMedication(it)) }
         listOf("Creatine", "Metformin", "Vitamin D", "Testosterone cypionate", "Waist").forEach {
             assertTrue(it, Medications.canBeMedication(it))

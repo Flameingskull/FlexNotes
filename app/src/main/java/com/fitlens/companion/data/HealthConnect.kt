@@ -7,8 +7,6 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import androidx.health.connect.client.HealthConnectClient
-import androidx.health.connect.client.HealthConnectFeatures
-import androidx.health.connect.client.feature.ExperimentalPersonalHealthRecordApi
 import androidx.health.connect.client.aggregate.AggregateMetric
 import androidx.health.connect.client.aggregate.AggregationResult
 import androidx.health.connect.client.permission.HealthPermission
@@ -20,10 +18,6 @@ import androidx.health.connect.client.records.BodyTemperatureRecord
 import androidx.health.connect.client.records.DistanceRecord
 import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateVariabilityRmssdRecord
-import androidx.health.connect.client.records.HydrationRecord
-import androidx.health.connect.client.records.MedicalResource
-import androidx.health.connect.client.records.MenstruationFlowRecord
-import androidx.health.connect.client.records.MenstruationPeriodRecord
 import androidx.health.connect.client.records.NutritionRecord
 import androidx.health.connect.client.records.OxygenSaturationRecord
 import androidx.health.connect.client.records.Record
@@ -33,9 +27,6 @@ import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.WeightRecord
 import androidx.health.connect.client.request.AggregateGroupByPeriodRequest
 import androidx.health.connect.client.request.AggregateRequest
-import androidx.health.connect.client.request.ReadMedicalResourcesInitialRequest
-import androidx.health.connect.client.request.ReadMedicalResourcesPageRequest
-import androidx.health.connect.client.request.ReadMedicalResourcesRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import androidx.work.CoroutineWorker
@@ -64,7 +55,7 @@ import kotlin.reflect.KClass
 
 /**
  * Reading Google Health Connect (#184), so values other apps record on the phone (steps, #185; what was eaten, #186;
- * bodyweight and body fat, #187; active calories, #188; resting heart rate and sleep, #189; vitals, #212; water and caffeine, #226; the menstrual cycle, #222) can be the primary source
+ * bodyweight and body fat, #187; active calories, #188; resting heart rate and sleep, #189; vitals, #212) can be the primary source
  * for what FlexNotes records and calculates, and exercise sessions become cardio sets (#190, `HealthSessions`).
  * Health Connect runs on the phone, so this stays local: no internet permission, accounts or cloud. Since #191 what
  * FlexNotes logs can also be written to it (`HealthWrite`), each type only when the user switches it on.
@@ -93,12 +84,6 @@ object HealthConnect {
      * Settings › Health Connect; without it only the last [DAYS] days are ever read.
      */
     const val HISTORY = "android.permission.health.READ_HEALTH_DATA_HISTORY"
-
-    /** Lab results from medical records (#225), asked for on its own from Settings › Health Connect where the phone offers them. */
-    const val LABS = "android.permission.health.READ_MEDICAL_DATA_LABORATORY_RESULTS"
-
-    /** The comment a lab result from Health Connect is kept with (#225). */
-    const val LAB_COMMENT = "Health Connect · lab result"
 
     /** The earliest day the full history is read from (#192). */
     val HISTORY_FROM: LocalDate = LocalDate.of(2010, 1, 1)
@@ -151,12 +136,7 @@ object HealthConnect {
         GLUCOSE(BloodGlucoseRecord::class),
         SPO2(OxygenSaturationRecord::class),
         HRV(HeartRateVariabilityRmssdRecord::class),
-        TEMPERATURE(BodyTemperatureRecord::class),
-        // Drinks (#226): each one at its own time, as the Water and Caffeine values `Drinks` adds up.
-        WATER(HydrationRecord::class),
-        CAFFEINE(NutritionRecord::class),
-        // The menstrual cycle (#222): period days, and the flow logged on each where an app records it.
-        CYCLE(MenstruationPeriodRecord::class, also = setOf(MenstruationFlowRecord::class));
+        TEMPERATURE(BodyTemperatureRecord::class);
 
         /** The read permission Health Connect asks the user for. */
         val permission: String get() = HealthPermission.getReadPermission(record)
@@ -176,9 +156,6 @@ object HealthConnect {
             SPO2 -> p.hcSpo2
             HRV -> p.hcHrv
             TEMPERATURE -> p.hcTemperature
-            WATER -> p.hcWater
-            CAFFEINE -> p.hcCaffeine
-            CYCLE -> p.hcCycle
         }
 
         /**
@@ -199,9 +176,6 @@ object HealthConnect {
             SPO2 -> p.copy(hcSpo2 = on)
             HRV -> p.copy(hcHrv = on)
             TEMPERATURE -> p.copy(hcTemperature = on)
-            WATER -> p.copy(hcWater = on)
-            CAFFEINE -> p.copy(hcCaffeine = on)
-            CYCLE -> p.copy(hcCycle = on)
         }
     }
 
@@ -248,23 +222,8 @@ object HealthConnect {
     fun permissionsFor(vararg kinds: Kind): Set<String> =
         kinds.flatMap { k -> listOf(k.permission) + k.also.map { HealthPermission.getReadPermission(it) } }.toSet() + BACKGROUND
 
-    /** Some type is read from Health Connect or written to it (#191), lab results included (#225). */
-    fun anyChosen(p: PortableSettings): Boolean = Kind.entries.any { it.chosen(p) } || p.hcLabs || HealthWrite.anyOn(p)
-
-    /**
-     * Health Connect on this phone offers medical records (#225): Android 16 and later with a Health Connect that has
-     * them. False when Health Connect can't be used, or the check itself fails.
-     */
-    @OptIn(ExperimentalPersonalHealthRecordApi::class)
-    fun labsAvailable(context: Context): Boolean {
-        if (status(context) != Status.AVAILABLE) return false
-        return try {
-            HealthConnectClient.getOrCreate(context.applicationContext).features
-                .getFeatureStatus(HealthConnectFeatures.FEATURE_PERSONAL_HEALTH_RECORD) == HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
-        } catch (e: Exception) {
-            false
-        }
-    }
+    /** Some type is read from Health Connect or written to it (#191). */
+    fun anyChosen(p: PortableSettings): Boolean = Kind.entries.any { it.chosen(p) } || HealthWrite.anyOn(p)
 
     /** The Health Connect permissions FlexNotes has, or none when Health Connect can't be used. */
     suspend fun granted(context: Context): Set<String> {
@@ -283,6 +242,8 @@ object HealthConnect {
         val app = context.applicationContext
         scope.launch {
             Settings.awaitLoaded()
+            // Water, caffeine and period values read before #239 are copies the other apps still hold.
+            runCatching { Store.dropRetiredHealthValues() }
             runCatching { schedule(app) }
         }
     }
@@ -308,7 +269,7 @@ object HealthConnect {
         val wm = WorkManager.getInstance(app)
         val p = Settings.currentPortable()
         // Reading while FlexNotes is closed needs background reading; writing (#191) doesn't.
-        if (!((Kind.entries.any { it.chosen(p) } || p.hcLabs) && BACKGROUND in granted(app)) && !HealthWrite.anyOn(p)) {
+        if (!(Kind.entries.any { it.chosen(p) } && BACKGROUND in granted(app)) && !HealthWrite.anyOn(p)) {
             wm.cancelUniqueWork(WORK)
             return
         }
@@ -327,7 +288,7 @@ object HealthConnect {
         val p = Settings.currentPortable()
         val kinds = Kind.entries.filter { it.chosen(p) }
         val outs = HealthWrite.Out.entries.filter { it.on(p) }
-        if (kinds.isEmpty() && outs.isEmpty() && !p.hcLabs) return@withLock Outcome.NOTHING_CHOSEN
+        if (kinds.isEmpty() && outs.isEmpty()) return@withLock Outcome.NOTHING_CHOSEN
         if (status(app) != Status.AVAILABLE) return@withLock Outcome.UNAVAILABLE
         val last = Settings.current().hcSyncedAt
         if (!force && last != null && System.currentTimeMillis() - last in 0 until MIN_GAP_MS) return@withLock Outcome.DONE
@@ -336,8 +297,7 @@ object HealthConnect {
             val client = HealthConnectClient.getOrCreate(app)
             val granted = client.permissionController.getGrantedPermissions()
             val allowed = kinds.filter { it.permission in granted }
-            val labs = p.hcLabs && LABS in granted
-            if (allowed.isEmpty() && !labs && outs.none { it.permission in granted }) return@withLock Outcome.NOT_ALLOWED
+            if (allowed.isEmpty() && outs.none { it.permission in granted }) return@withLock Outcome.NOT_ALLOWED
             // Reading can fail while FlexNotes is closed without background reading; writing still goes ahead.
             val reading = runCatching {
                 if (allowed.isNotEmpty()) {
@@ -350,16 +310,6 @@ object HealthConnect {
                         HealthSessions.add(sessions(app, client, from, today, distance))
                     }
                     readHistory(app, client, allowed, granted, from)
-                }
-                // Lab results never fail the regular read: they're tried again at the next sync.
-                if (labs && labsAvailable(app)) {
-                    try {
-                        readLabs(client)
-                    } catch (e: CancellationException) {
-                        throw e
-                    } catch (e: Exception) {
-                        // Left for the next sync.
-                    }
                 }
             }
             reading.exceptionOrNull()?.let { if (it is CancellationException) throw it }
@@ -414,30 +364,6 @@ object HealthConnect {
         if (finished.isNotEmpty()) Settings.updateDeviceNow { it.copy(hcHistoryKinds = (done + finished).sorted().joinToString(",")) }
     }
 
-    /**
-     * Every laboratory result in Health Connect's medical records (#225), however old: the ones not added before (by
-     * their key, kept on this phone in [DeviceSettings.hcLabIds]) are added through `Store.addLabResults`. So a re-sync
-     * never duplicates a result, and one the user edited or deleted stays as they left it.
-     */
-    @OptIn(ExperimentalPersonalHealthRecordApi::class)
-    private suspend fun readLabs(client: HealthConnectClient) {
-        val seen = LabResults.seen(Settings.current().hcLabIds)
-        val found = mutableListOf<LabResults.Result>()
-        var request: ReadMedicalResourcesRequest = ReadMedicalResourcesInitialRequest(MedicalResource.MEDICAL_RESOURCE_TYPE_LABORATORY_RESULTS, emptySet())
-        var guard = 0
-        while (guard++ < 100) {
-            val response = client.readMedicalResources(request)
-            response.medicalResources.forEach { m ->
-                LabResults.parse(m.fhirResource.data, m.dataSourceId)?.takeIf { it.key !in seen }?.let { found += it }
-            }
-            val next = response.nextPageToken
-            if (next.isNullOrEmpty()) break
-            request = ReadMedicalResourcesPageRequest(next)
-        }
-        val added = Store.addLabResults(found)
-        if (added.isNotEmpty()) Settings.updateDeviceNow { it.copy(hcLabIds = LabResults.store(seen, added)) }
-    }
-
     /** [kind]'s values from [from] to [to] (local days), as the series `Store` keeps; a day with none has none. */
     private suspend fun read(context: Context, client: HealthConnectClient, kind: Kind, from: LocalDate, to: LocalDate): List<Store.HealthSeries> {
         val dates = days(from, to)
@@ -477,19 +403,6 @@ object HealthConnect {
                     it.time to it.temperature.inCelsius
                 }
             )
-            // Each drink keeps its time (#226), so the caffeine still active at bedtime uses it.
-            Kind.WATER -> return listOf(
-                readings(context, client, HydrationRecord::class, from, to, Drinks.Kind.WATER.label, Drinks.Kind.WATER.unit, dates, own = true) {
-                    it.startTime to it.volume.inMilliliters
-                }
-            )
-            // A meal or drink without caffeine reads as 0, which isn't kept.
-            Kind.CAFFEINE -> return listOf(
-                readings(context, client, NutritionRecord::class, from, to, Drinks.Kind.CAFFEINE.label, Drinks.Kind.CAFFEINE.unit, dates, own = true) {
-                    it.startTime to (it.caffeine?.inMilligrams ?: 0.0)
-                }
-            )
-            Kind.CYCLE -> return listOf(cycle(context, client, from, to, dates))
             else -> {}
         }
         // Sleep is grouped from the evening before, so each night counts on the day it ends (#189).
@@ -533,64 +446,8 @@ object HealthConnect {
             Kind.SLEEP -> listOf(
                 series(Names.SLEEP, Names.SLEEP_UNIT, true) { r -> r[SleepSessionRecord.SLEEP_DURATION_TOTAL]?.let { it.seconds / 3600.0 } }
             )
-            Kind.WEIGHT, Kind.BODY_FAT, Kind.EXERCISE, Kind.BLOOD_PRESSURE, Kind.GLUCOSE, Kind.SPO2, Kind.HRV, Kind.TEMPERATURE,
-            Kind.WATER, Kind.CAFFEINE, Kind.CYCLE -> emptyList()
+            Kind.WEIGHT, Kind.BODY_FAT, Kind.EXERCISE, Kind.BLOOD_PRESSURE, Kind.GLUCOSE, Kind.SPO2, Kind.HRV, Kind.TEMPERATURE -> emptyList()
         }
-    }
-
-    /**
-     * Period days from [from] to [to] (#222), as one Period value a day ([Cycle.NAME]): the heaviest flow logged that day
-     * (1 light, 2 medium, 3 heavy), or 1 for a day inside a logged period without a flow. Kept as FlexNotes's own
-     * measurement, so a period can be typed in the Body tracker too, and [Cycle] works out the phases from either.
-     */
-    private suspend fun cycle(context: Context, client: HealthConnectClient, from: LocalDate, to: LocalDate, dates: List<String>): Store.HealthSeries {
-        val zone = ZoneId.systemDefault()
-        val filter = TimeRangeFilter.between(from.atStartOfDay(), to.plusDays(1).atStartOfDay())
-        val levels = mutableMapOf<String, Double>()
-        val apps = mutableMapOf<String, MutableSet<String>>()
-        fun mark(day: LocalDate, level: Double, pkg: String) {
-            if (day.isBefore(from) || day.isAfter(to)) return
-            val d = day.format(Dates.ISO)
-            levels[d] = maxOf(levels[d] ?: 0.0, level)
-            appLabel(context, pkg)?.let { apps.getOrPut(d) { mutableSetOf() } += it }
-        }
-        var page: String? = null
-        do {
-            val response = client.readRecords(ReadRecordsRequest(MenstruationPeriodRecord::class, filter, pageToken = page))
-            response.records.forEach { r ->
-                val first = LocalDateTime.ofInstant(r.startTime, r.startZoneOffset ?: zone).toLocalDate()
-                // The end is the moment the period stopped, so a period ending at midnight doesn't take the next day.
-                val last = LocalDateTime.ofInstant(r.endTime.minusMillis(1), r.endZoneOffset ?: zone).toLocalDate()
-                var day = first
-                var guard = 0
-                while (!day.isAfter(last) && guard++ < Cycle.MAX_PERIOD_DAYS) {
-                    mark(day, 1.0, r.metadata.dataOrigin.packageName)
-                    day = day.plusDays(1)
-                }
-            }
-            page = response.pageToken
-        } while (!page.isNullOrEmpty())
-        // The flow logged on a day; both records share the one menstruation permission.
-        page = null
-        do {
-            val response = client.readRecords(ReadRecordsRequest(MenstruationFlowRecord::class, filter, pageToken = page))
-            response.records.forEach { r ->
-                val day = LocalDateTime.ofInstant(r.time, r.zoneOffset ?: zone).toLocalDate()
-                val level = when (r.flow) {
-                    MenstruationFlowRecord.FLOW_LIGHT -> 1.0
-                    MenstruationFlowRecord.FLOW_MEDIUM -> 2.0
-                    MenstruationFlowRecord.FLOW_HEAVY -> 3.0
-                    else -> 1.0
-                }
-                mark(day, level, r.metadata.dataOrigin.packageName)
-            }
-            page = response.pageToken
-        } while (!page.isNullOrEmpty())
-        return Store.HealthSeries.daily(
-            Cycle.NAME, Cycle.UNIT,
-            dates.associateWith { d -> levels[d]?.let { Store.HealthDay(it, commentFor(apps[d].orEmpty().sorted())) } },
-            own = true
-        )
     }
 
     /**

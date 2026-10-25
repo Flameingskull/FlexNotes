@@ -531,8 +531,6 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                 return "${o.label} ${fmtNum(q.y, 1)} $overlayUnit".trim() + if (q.x != x) " (${Dates.medium(q.date)})" else ""
             }
             val photoDays = remember(snap.photosKey) { snap.photosByDate.keys.map { Dates.epochDay(it) }.toSet() }
-            // The menstrual cycle's phases behind the sets (#222), when there are Period values.
-            val cycleBands = rememberCycleBands(snap)
             val unit = if (isRelative) "%" else graphUnit(snap, exId, g.label)
             // Pace is graphed in minutes per distance, so its trend reads "min /km" (#152).
             val trendUnit = if (g.label == GRAPH_MAX_PACE && !isRelative) "min $unit" else unit
@@ -618,8 +616,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                     yFormat = yFormat,
                     gapDays = gapDays,
                     overlay = overlay,
-                    overlayUnit = overlayUnit,
-                    bands = cycleBands
+                    overlayUnit = overlayUnit
                 )
             }
             ChartHint()
@@ -664,8 +661,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                         yFormat = yFormat,
                         gapDays = gapDays,
                         overlay = overlay,
-                        overlayUnit = overlayUnit,
-                        bands = cycleBands
+                        overlayUnit = overlayUnit
                     )
                 }
             }
