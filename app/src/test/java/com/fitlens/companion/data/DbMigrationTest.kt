@@ -362,4 +362,43 @@ class DbMigrationTest {
             assertEquals(1, db.count("SELECT COUNT(*) FROM routine_day_set WHERE metric=0.0"))
         }
     }
+
+    @Test
+    fun v29SetsGainSessionColumnsAndKeepTheirValues() {
+        // Logged and predefined sets as v29 left them, before the session columns (#240, #241).
+        oldDatabase(
+            29,
+            v12Schema + listOf(
+                "CREATE TABLE routine_day_exercise(id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL, " +
+                    "exercise_id INTEGER NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, fill INTEGER NOT NULL DEFAULT 0, " +
+                    "superset INTEGER NOT NULL DEFAULT 0, rest_seconds INTEGER, rest_after_seconds INTEGER)",
+                "CREATE TABLE routine_day_set(id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER NOT NULL, " +
+                    "sort_order INTEGER NOT NULL DEFAULT 0, weight REAL NOT NULL DEFAULT 0, reps INTEGER NOT NULL DEFAULT 0, " +
+                    "distance REAL NOT NULL DEFAULT 0, duration INTEGER NOT NULL DEFAULT 0, set_type INTEGER NOT NULL DEFAULT 0, " +
+                    "rest_seconds INTEGER, metric REAL)"
+            )
+        ) { db ->
+            db.row("exercise", "id" to 1L, "name" to "Bench Press")
+            db.row("workout_set", "id" to 1L, "exercise_id" to 1L, "date" to "2026-10-20", "weight" to 100.0, "reps" to 5)
+            val r = db.row("routine", "name" to "Upper", "sort_order" to 0)
+            val d = db.row("routine_day", "routine_id" to r, "name" to "Push Day", "sort_order" to 0)
+            val item = db.row("routine_day_exercise", "day_id" to d, "exercise_id" to 1L, "sort_order" to 0, "fill" to 1)
+            db.row("routine_day_set", "item_id" to item, "sort_order" to 0, "weight" to 80.0, "reps" to 8, "rest_seconds" to 90)
+        }
+        Db(app).writableDatabase.use { db ->
+            assertEquals(Db.VERSION, db.version)
+            val none = "live_seconds IS NULL AND intensity IS NULL AND session_type IS NULL AND zone IS NULL"
+            assertEquals(1, db.count("SELECT COUNT(*) FROM workout_set WHERE weight=100.0 AND reps=5 AND rpe IS NULL AND $none"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM routine_day_set WHERE weight=80.0 AND reps=8 AND rest_seconds=90 AND $none"))
+            // The new columns take values.
+            db.row(
+                "workout_set", "id" to 2L, "exercise_id" to 1L, "date" to "2026-10-21", "duration" to 3600, "rpe" to 0.0,
+                "live_seconds" to 1500, "intensity" to 2, "session_type" to 2, "zone" to 4
+            )
+            assertEquals(
+                1,
+                db.count("SELECT COUNT(*) FROM workout_set WHERE live_seconds=1500 AND intensity=2 AND session_type=2 AND zone=4 AND rpe=0.0")
+            )
+        }
+    }
 }

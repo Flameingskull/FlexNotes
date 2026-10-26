@@ -13,7 +13,8 @@ object CsvExport {
 
     fun workoutColumns(unit: String) =
         listOf("Date", "Exercise", "Category", "Set", "Weight ($unit)", "Reps", "Distance", "Time (seconds)", "PR", "Comment", "set_type", "RPE", "Exercise comment", "Distance unit",
-            "Custom metric", "Custom metric value", "Custom metric unit")
+            "Custom metric", "Custom metric value", "Custom metric unit",
+            "Hard or live (seconds)", "Intensity", "Session type", "Cardio zone", "Session load")
 
     val BODY_COLUMNS = listOf("Date", "Time", "Measurement", "Value", "Unit", "Comment")
 
@@ -58,11 +59,35 @@ object CsvExport {
                         // A user-defined type's own metric (#14), also added last.
                         if (s.metric != null) metric?.metricName.orEmpty() else "",
                         s.metric?.let { fmtNum(it, 3) } ?: "",
-                        if (s.metric != null) metric?.metricUnit.orEmpty() else ""
+                        if (s.metric != null) metric?.metricUnit.orEmpty() else "",
+                        // A session's values (#240, #241), added last for the same reason.
+                        s.liveSec?.toString() ?: "",
+                        SessionIntensity.valid(s.intensity)?.let { csvIntensity(it) } ?: "",
+                        SessionTypes.valid(s.sessionType)?.let { csvSessionType(it) } ?: "",
+                        s.zone?.toString() ?: "",
+                        if (ex != null && ExerciseTypes.isSession(ex.type)) SessionLoad.of(s.rpe, s.durationSec)?.let { fmtNum(it, 1) } ?: "" else ""
                     )
                 )
             }
         return sb.toString()
+    }
+
+    /** The CSV words for a session's intensity and type: fixed, so spreadsheets keep working. */
+    fun csvIntensity(id: Int): String = when (id) {
+        SessionIntensity.TECHNICAL -> "technical"
+        SessionIntensity.HARD_LIVE -> "hard_live"
+        SessionIntensity.FIGHT_PACE -> "fight_pace"
+        else -> "class"
+    }
+
+    fun csvSessionType(id: Int): String = when (id) {
+        SessionTypes.DRILLING -> "drilling"
+        SessionTypes.LIVE_SPARRING -> "live_sparring"
+        SessionTypes.CONDITIONING -> "conditioning"
+        SessionTypes.MIXED -> "mixed"
+        SessionTypes.COMPETITION -> "competition"
+        SessionTypes.STRENGTH -> "strength"
+        else -> "technical"
     }
 
     /** Every body tracker value between [from] and [to], one row per value, oldest first. */

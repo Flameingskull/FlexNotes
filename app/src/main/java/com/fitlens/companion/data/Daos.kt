@@ -463,23 +463,26 @@ interface WorkoutDao {
     /** A new set. A [position] or [superset] of 0 lets the database's triggers place it (#70, #18). */
     @Query(
         "INSERT INTO workout_set(exercise_id, date, weight, reps, distance, duration, is_pr, comment, source, set_type, " +
-            "rpe, metric, position, superset, done, rest_seconds) VALUES(:exerciseId, :date, :weight, :reps, :distance, " +
-            ":duration, :isPr, :comment, :source, :setType, :rpe, :metric, :position, :superset, :done, :restSeconds)"
+            "rpe, metric, position, superset, done, rest_seconds, live_seconds, intensity, session_type, zone) " +
+            "VALUES(:exerciseId, :date, :weight, :reps, :distance, :duration, :isPr, :comment, :source, :setType, :rpe, " +
+            ":metric, :position, :superset, :done, :restSeconds, :liveSeconds, :intensity, :sessionType, :zone)"
     )
     fun addSet(
         exerciseId: Long, date: String, weight: Double, reps: Int, distance: Double, duration: Int, isPr: Int,
         comment: String?, source: String, setType: Int, rpe: Double?, metric: Double?, position: Long, superset: Int,
-        done: Int, restSeconds: Int?
+        done: Int, restSeconds: Int?, liveSeconds: Int?, intensity: Int?, sessionType: Int?, zone: Int?
     ): Long
 
     @Query(
         "UPDATE workout_set SET exercise_id = :exerciseId, date = :date, weight = :weight, reps = :reps, " +
             "distance = :distance, duration = :duration, is_pr = :isPr, comment = :comment, source = :source, " +
-            "set_type = :setType, rpe = :rpe, metric = :metric WHERE id = :id"
+            "set_type = :setType, rpe = :rpe, metric = :metric, live_seconds = :liveSeconds, intensity = :intensity, " +
+            "session_type = :sessionType, zone = :zone WHERE id = :id"
     )
     fun updateSet(
         id: Long, exerciseId: Long, date: String, weight: Double, reps: Int, distance: Double, duration: Int, isPr: Int,
-        comment: String?, source: String, setType: Int, rpe: Double?, metric: Double?
+        comment: String?, source: String, setType: Int, rpe: Double?, metric: Double?, liveSeconds: Int?, intensity: Int?,
+        sessionType: Int?, zone: Int?
     )
 
     /** A set from Health Connect (#190), kept with its record id. The database's triggers place it (#70, #18). */
@@ -943,11 +946,11 @@ internal fun ExerciseGoalRow.toModel() = ExerciseGoal(id, exercise_id, kind, tar
 
 internal fun WorkoutSetRow.toModel() = SetRow(
     id, exercise_id, date, weight, reps, distance, duration.toInt(), is_pr != 0, comment, source, set_type, rpe,
-    position, superset, done != 0, rest_seconds, metric
+    position, superset, done != 0, rest_seconds, metric, live_seconds, intensity, session_type, zone
 )
 
 internal fun RoutineDaySetRow.toModel() =
-    PlannedSet(weight, reps, distance, duration.toInt(), set_type, rest_seconds, metric)
+    PlannedSet(weight, reps, distance, duration.toInt(), set_type, rest_seconds, metric, live_seconds, intensity, session_type, zone)
 
 /** Medication schedules (#201, #202, #204): the snapshot's loads and every `MedSchedules` write. */
 @Dao

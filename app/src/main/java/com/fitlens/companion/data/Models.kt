@@ -51,6 +51,9 @@ object ExerciseTypes {
     const val REPS_ONLY = 8
     const val DISTANCE_ONLY = 9
 
+    /** A training session (#240): a BJJ class, tennis, or a gym day's overall effort. One set is one session. */
+    const val SESSION = 10
+
     /** The first id of a user-defined type (#14). Built-in ids stay below it, so the two can never collide. */
     const val CUSTOM_BASE = 100
 
@@ -63,8 +66,10 @@ object ExerciseTypes {
     /** Every built-in type, in the order the type picker lists them: the two main types first. */
     val all = listOf(
         WEIGHT_REPS, DISTANCE_TIME, WEIGHT_TIME, WEIGHT_DISTANCE, REPS_TIME, REPS_DISTANCE,
-        WEIGHT_ONLY, REPS_ONLY, DISTANCE_ONLY, TIME
+        WEIGHT_ONLY, REPS_ONLY, DISTANCE_ONLY, TIME, SESSION
     )
+
+    fun isSession(type: Int): Boolean = type == SESSION
 
     /**
      * A type's English name, or a custom type's own name. The screen shows `exerciseTypeText` (`ui/ModelText.kt`,
@@ -81,13 +86,14 @@ object ExerciseTypes {
         WEIGHT_ONLY -> "Weight"
         REPS_ONLY -> "Reps"
         DISTANCE_ONLY -> "Distance"
+        SESSION -> "Session"
         else -> "Weight & reps"
     }
 
     private val weightTypes = setOf(WEIGHT_REPS, WEIGHT_DISTANCE, WEIGHT_TIME, WEIGHT_ONLY)
     private val repTypes = setOf(WEIGHT_REPS, REPS_TIME, REPS_DISTANCE, REPS_ONLY)
     private val distanceTypes = setOf(DISTANCE_TIME, WEIGHT_DISTANCE, REPS_DISTANCE, DISTANCE_ONLY)
-    private val timeTypes = setOf(DISTANCE_TIME, TIME, WEIGHT_TIME, REPS_TIME)
+    private val timeTypes = setOf(DISTANCE_TIME, TIME, WEIGHT_TIME, REPS_TIME, SESSION)
 
     fun usesWeight(type: Int): Boolean = custom[type]?.weight ?: (type in weightTypes)
     fun usesReps(type: Int): Boolean = custom[type]?.reps ?: (type in repTypes)
@@ -182,7 +188,15 @@ data class SetRow(
     /** The rest prescribed after this set by the workout it was logged from (#138), or null for none. */
     val restSeconds: Int? = null,
     /** The value of its exercise's custom metric (#14), or null when it has none. */
-    val metric: Double? = null
+    val metric: Double? = null,
+    /** A Session's hard or live seconds (#240), at most [durationSec]; null when not recorded. */
+    val liveSec: Int? = null,
+    /** A Session's [SessionIntensity] id (#240), or null when unset. */
+    val intensity: Int? = null,
+    /** A Session's [SessionTypes] id (#240), or null when unset. */
+    val sessionType: Int? = null,
+    /** The cardio zone 1–5 the user trained in (#241), or null when not recorded. */
+    val zone: Int? = null
 ) {
     val imported: Boolean get() = source == Sources.FITNOTES
     val isWarmup: Boolean get() = setType == SetTypes.WARMUP
@@ -215,6 +229,93 @@ object SetTypes {
         FAILURE -> "failure"
         else -> "working"
     }
+}
+
+/**
+ * How intense a session was (#240): the stored ids never change meaning. [multiplier] scales the calories of a sport
+ * (#244 uses it); until then it is only recorded.
+ */
+object SessionIntensity {
+    const val TECHNICAL = 0
+    const val CLASS = 1
+    const val HARD_LIVE = 2
+    const val FIGHT_PACE = 3
+
+    val all = listOf(TECHNICAL, CLASS, HARD_LIVE, FIGHT_PACE)
+
+    fun multiplier(id: Int): Double = when (id) {
+        TECHNICAL -> 0.8
+        HARD_LIVE -> 1.2
+        FIGHT_PACE -> 1.4
+        else -> 1.0
+    }
+
+    fun valid(id: Int?): Int? = id?.takeIf { it in all }
+}
+
+/** What kind of session it was (#240). Stored ids never change meaning. */
+object SessionTypes {
+    const val TECHNICAL = 0
+    const val DRILLING = 1
+    const val LIVE_SPARRING = 2
+    const val CONDITIONING = 3
+    const val MIXED = 4
+    const val COMPETITION = 5
+    const val STRENGTH = 6
+
+    val all = listOf(TECHNICAL, DRILLING, LIVE_SPARRING, CONDITIONING, MIXED, COMPETITION, STRENGTH)
+
+    fun valid(id: Int?): Int? = id?.takeIf { it in all }
+}
+
+/** The cardio zones 1–5 (#241), the user's own record of how hard a session was. */
+object CardioZones {
+    val all = listOf(1, 2, 3, 4, 5)
+
+    /** The share of maximum heart rate each zone starts and ends at (percent), the conventional five bands. */
+    fun percentRange(zone: Int): IntRange = when (zone) {
+        1 -> 50..60
+        2 -> 60..70
+        3 -> 70..80
+        4 -> 80..90
+        else -> 90..100
+    }
+
+    fun valid(zone: Int?): Int? = zone?.takeIf { it in all }
+
+    /** The Tanaka estimate of maximum heart rate for [age] (208 − 0.7 × age), rounded to a whole beat per minute. */
+    fun tanakaMaxHr(age: Int): Int = Math.round(208.0 - 0.7 * age).toInt()
+
+    /** The user's maximum heart rate in bpm range (#241), which [PortableSettings] checks on read. */
+    val maxHrRange = 100..230
+
+    /** A maximum heart rate, and whether it is [estimated] from the age rather than the user's own figure. */
+    data class MaxHr(val bpm: Int, val estimated: Boolean)
+
+    /**
+     * The maximum heart rate cardio zones use on [onIso]: the profile's own figure first, else the Tanaka estimate
+     * from the profile's date of birth (marked estimated), else null (#241). A figure outside [maxHrRange] is ignored.
+     */
+    fun maxHr(profileMaxHr: Int?, birthIso: String?, onIso: String): MaxHr? {
+        profileMaxHr?.takeIf { it in maxHrRange }?.let { return MaxHr(it, false) }
+        val age = Energy.age(birthIso, onIso) ?: return null
+        return MaxHr(tanakaMaxHr(age).coerceIn(maxHrRange), true)
+    }
+
+    /** A bpm range for [zone] given a maximum heart rate. */
+    fun bpmRange(zone: Int, maxHr: Int): IntRange {
+        val p = percentRange(zone)
+        return Math.round(maxHr * p.first / 100.0).toInt()..Math.round(maxHr * p.last / 100.0).toInt()
+    }
+}
+
+/** Session load (#240): effort times minutes, the unit of training stress for a session. */
+object SessionLoad {
+    /** RPE (0–10) times minutes; null when the session has no RPE, so it doesn't count. */
+    fun of(rpe: Double?, durationSec: Int): Double? = rpe?.let { it * durationSec / 60.0 }
+
+    /** The hard minutes recorded, never more than the session's own length. */
+    fun hardMinutes(liveSec: Int?, durationSec: Int): Double? = liveSec?.let { minOf(it, durationSec) / 60.0 }
 }
 
 /** Effort per set (#44): stored as RPE, entered and shown as RPE or RIR. */

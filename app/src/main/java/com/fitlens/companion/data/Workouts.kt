@@ -240,7 +240,8 @@ object Workouts {
             w.addSet(
                 exId, d, s.weightKg, s.reps, s.distance, s.durationSec, isPr = 0, comment = null, source = Sources.FLEXNOTES,
                 setType = s.setType, rpe = null, metric = s.metric, position = 0L, superset = if (g > 0) g + offset else 0,
-                done = 0, restSeconds = s.restSeconds
+                done = 0, restSeconds = s.restSeconds, liveSeconds = s.liveSec, intensity = s.intensity,
+                sessionType = s.sessionType, zone = s.zone
             )
         }
         rests.filterValues { !it.isEmpty }.forEach { (exId, r) -> putRest(w, d, exId, r) }
@@ -548,7 +549,12 @@ object Workouts {
         setType: Int = SetTypes.WORKING,
         rpe: Double? = null,
         /** The exercise type's own metric (#14), or null when it has none. */
-        metric: Double? = null
+        metric: Double? = null,
+        /** A session's hard or live seconds, intensity, type and cardio zone (#240, #241), or null for none. */
+        liveSec: Int? = null,
+        intensity: Int? = null,
+        sessionType: Int? = null,
+        zone: Int? = null
     ): Long = writeSets { w, scope ->
         val d = checkDate(date)
         if (!w.exerciseExists(exerciseId)) throw WorkoutDataException(R.string.wde_exercise_gone)
@@ -561,7 +567,8 @@ object Workouts {
         )
         w.addSet(
             exerciseId, d, weightKg, reps, distance, durationSec, flag(pr), comment?.takeIf { it.isNotBlank() },
-            Sources.FLEXNOTES, setType, rpe, metric, position = 0L, superset = 0, done = 0, restSeconds = null
+            Sources.FLEXNOTES, setType, rpe, metric, position = 0L, superset = 0, done = 0, restSeconds = null,
+            liveSeconds = liveSec, intensity = intensity, sessionType = sessionType, zone = zone
         )
     }
 
@@ -575,7 +582,8 @@ object Workouts {
         if (old.source == Sources.FITNOTES && old.key() != newKey) w.addSkip(RULE_SET, old.key())
         w.updateSet(
             set.id, set.exerciseId, d, set.weightKg, set.reps, set.distance, set.durationSec, flag(set.isPr),
-            set.comment?.takeIf { it.isNotBlank() }, Sources.FLEXNOTES, set.setType, set.rpe, set.metric
+            set.comment?.takeIf { it.isNotBlank() }, Sources.FLEXNOTES, set.setType, set.rpe, set.metric,
+            set.liveSec, set.intensity, set.sessionType, set.zone
         )
         // A new weight, rep count or date can make or end a record, for this set and those logged after it.
         val changed = ArrayList<Long>()
@@ -684,7 +692,7 @@ object Workouts {
             w.addSet(
                 s.exerciseId, s.date.take(10), s.weightKg, s.reps, s.distance, s.durationSec, flag(s.isPr),
                 s.comment?.takeIf { it.isNotBlank() }, Sources.FLEXNOTES, s.setType, s.rpe, s.metric, s.position,
-                s.superset, flag(s.done), s.restSeconds
+                s.superset, flag(s.done), s.restSeconds, s.liveSec, s.intensity, s.sessionType, s.zone
             )
             // Deleting an imported set left one skip rule; the set is back, so drop one matching rule too (#76).
             if (s.imported) {
@@ -822,7 +830,8 @@ object Workouts {
                 w.addSet(
                     s.exercise_id, t, s.weight, s.reps, s.distance, s.duration.toInt(), isPr = 0, comment = s.comment,
                     source = Sources.FLEXNOTES, setType = s.set_type, rpe = s.rpe, metric = s.metric, position = 0L,
-                    superset = if (s.superset > 0) s.superset + offset else 0, done = 0, restSeconds = s.rest_seconds
+                    superset = if (s.superset > 0) s.superset + offset else 0, done = 0, restSeconds = s.rest_seconds,
+                    liveSeconds = s.live_seconds, intensity = s.intensity, sessionType = s.session_type, zone = s.zone
                 )
             }
             // Exercise comments and prescribed rests (#107, #138) come along for the exercises copied, unless the

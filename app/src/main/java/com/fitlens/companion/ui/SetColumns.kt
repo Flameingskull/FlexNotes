@@ -84,7 +84,10 @@ fun setCells(res: Resources, snap: Snapshot, fields: List<SetField>, s: SetRow):
             }
             else SetCell("—", spoken = res.getString(R.string.sc_no_distance))
         SetField.TIME ->
-            if (s.durationSec > 0) SetCell(fmtDuration(s.durationSec), spoken = spokenDuration(res, s.durationSec), unitSlot = false)
+            // A session is counted in minutes ("90 min"), not as a clock (#240).
+            if (s.durationSec > 0 && ExerciseTypes.isSession(snap.exercises[s.exerciseId]?.type ?: -1)) {
+                fmtNum(s.durationSec / 60.0, 1).let { SetCell(it, res.getString(R.string.session_min_unit), spokenDuration(res, s.durationSec)) }
+            } else if (s.durationSec > 0) SetCell(fmtDuration(s.durationSec), spoken = spokenDuration(res, s.durationSec), unitSlot = false)
             else SetCell("—", spoken = res.getString(R.string.sc_no_time), unitSlot = false)
         SetField.METRIC -> {
             // The type's own metric (#14), with its unit; it keeps its column even if the type later drops it.

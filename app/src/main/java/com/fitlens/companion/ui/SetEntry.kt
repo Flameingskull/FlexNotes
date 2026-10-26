@@ -66,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Effort
+import com.fitlens.companion.data.EnergyEstimates
 import com.fitlens.companion.data.PortableSettings
 import com.fitlens.companion.data.ExerciseTypes
 import com.fitlens.companion.data.SetRow
@@ -256,11 +257,13 @@ fun SetEntryScreen(
     // A user-defined type's own metric (#14), such as jump height in cm.
     val metricDef = ExerciseTypes.metricOf(type)
     val showMetric = metricDef != null || allSets.any { it.metric != null }
+    // A Session (#240) has its own fields: its length in minutes, a rating, hard minutes, intensity, type and zone.
+    val isSession = ExerciseTypes.isSession(type)
     val showDistance = ExerciseTypes.usesDistance(type) || allSets.any { it.distance > 0 }
-    val showDuration = ExerciseTypes.usesDuration(type) || allSets.any { it.durationSec > 0 }
+    val showDuration = !isSession && (ExerciseTypes.usesDuration(type) || allSets.any { it.durationSec > 0 })
     val showReps = ExerciseTypes.usesReps(type) || allSets.any { it.reps > 0 }
     val showWeight = ExerciseTypes.usesWeight(type) || allSets.any { it.weightKg != 0.0 } ||
-        (!showDistance && !showDuration && !showReps && !showMetric)
+        (!isSession && !showDistance && !showDuration && !showReps && !showMetric)
 
     val prefs by Settings.portable.collectAsState()
 
@@ -281,6 +284,12 @@ fun SetEntryScreen(
     var distance by remember(date, exerciseId) { mutableStateOf("") }
     var duration by remember(date, exerciseId) { mutableStateOf("") }
     var metric by remember(date, exerciseId) { mutableStateOf("") }
+    // A Session's length and hard or live minutes, in minutes as typed, and its intensity, type and cardio zone (#240, #241).
+    var sessionMin by remember(date, exerciseId) { mutableStateOf("") }
+    var liveMin by remember(date, exerciseId) { mutableStateOf("") }
+    var intensity by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
+    var sessionType by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
+    var zone by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
     // Set type (#43): new sets start as working sets; editing a set shows its own type.
     var setType by remember(date, exerciseId) { mutableIntStateOf(SetTypes.WORKING) }
     // Effort (#44), always held as RPE; null means not recorded.
@@ -328,6 +337,16 @@ fun SetEntryScreen(
             distance = source?.distance?.takeIf { it > 0 }?.let { fmtNum(it, 2) } ?: ""
             duration = source?.durationSec?.takeIf { it > 0 }?.let { fmtDuration(it) } ?: ""
             metric = source?.metric?.let { fmtNum(it, 2) } ?: ""
+            if (isSession) {
+                // A new session takes the day's workout time when it has one (still editable), otherwise last time's
+                // length; an edited one shows its own values.
+                val dayTime = if (chosen == null) EnergyEstimates.workoutSeconds(snap, date).toInt() else 0
+                sessionMin = if (dayTime >= 60) minutesText(dayTime) else source?.durationSec?.takeIf { it > 0 }?.let { minutesText(it) } ?: ""
+                liveMin = chosen?.liveSec?.let { minutesText(it) } ?: ""
+                intensity = source?.intensity
+                sessionType = source?.sessionType
+                zone = source?.zone
+            }
             setType = chosen?.setType ?: SetTypes.WORKING
             rpe = chosen?.rpe
         }
@@ -343,11 +362,18 @@ fun SetEntryScreen(
         val kg = if (weight == loadedWeightText) loadedWeightKg ?: 0.0 else snap.toKg(num(weight), exerciseId)
         val r = reps.trim().toIntOrNull() ?: 0
         val dist = num(distance)
-        val dur = parseDuration(duration)
+        val dur = if (isSession) minutesToSeconds(sessionMin) else parseDuration(duration)
         // Blank means not recorded; 0 is a real value for a custom metric (#14).
         val met = if (showMetric) metric.trim().replace(',', '.').toDoubleOrNull() else null
-        if (kg == 0.0 && r == 0 && dist == 0.0 && dur == 0 && met == null) {
+        val live = if (isSession && liveMin.isNotBlank()) minutesToSeconds(liveMin) else null
+        val nothing = if (isSession) dur == 0 && rpe == null else kg == 0.0 && r == 0 && dist == 0.0 && dur == 0 && met == null
+        if (nothing) {
             UiEvents.show(res.getString(R.string.set_enter_something))
+            return
+        }
+        // Hard or live minutes are part of the session, so they can't be longer than it (#240).
+        if (live != null && live > dur) {
+            UiEvents.show(res.getString(R.string.session_hard_too_long))
             return
         }
         val chosen = selected?.let { id -> sets.firstOrNull { it.id == id } }
@@ -355,7 +381,9 @@ fun SetEntryScreen(
             try {
                 if (chosen == null) {
                     val firstOfDay = Store.snapshot.value?.setsByDate?.get(date).isNullOrEmpty()
-                    val id = Workouts.addSet(exerciseId, date, kg, r, dist, dur, null, setType = setType, rpe = rpe, metric = met)
+                    val id = Workouts.addSet(exerciseId, date, kg, r, dist, dur, null, setType = setType, rpe = rpe, metric = met,
+                        liveSec = live, intensity = if (isSession) intensity else null,
+                        sessionType = if (isSession) sessionType else null, zone = if (isSession) zone else null)
                     // In a superset, saving a set moves on to the next exercise of the group, round-robin, as FitNotes
                     // does (#18). The rest timer then starts only after the round's last exercise (#20).
                     val members = supersetMembers(snap, date, supersetOf(snap, date, exerciseId))
@@ -383,7 +411,13 @@ fun SetEntryScreen(
                     }
                 } else {
                     Workouts.updateSet(
-                        chosen.copy(weightKg = kg, reps = r, distance = dist, durationSec = dur, setType = setType, rpe = rpe, metric = met)
+                        chosen.copy(
+                            weightKg = kg, reps = r, distance = dist, durationSec = dur, setType = setType, rpe = rpe, metric = met,
+                            liveSec = if (isSession) live else chosen.liveSec,
+                            intensity = if (isSession) intensity else chosen.intensity,
+                            sessionType = if (isSession) sessionType else chosen.sessionType,
+                            zone = if (isSession) zone else chosen.zone
+                        )
                     )
                     Haptics.confirm(view)
                     // With auto-select next on, the following set of the day is selected, ready to adjust (#97).
@@ -406,6 +440,7 @@ fun SetEntryScreen(
     fun clear() {
         selected = null
         weight = ""; reps = ""; distance = ""; duration = ""; metric = ""
+        sessionMin = ""; liveMin = ""; intensity = null; sessionType = null; zone = null
         loadedWeightText = ""; loadedWeightKg = null
         setType = SetTypes.WORKING; rpe = null
     }
@@ -556,9 +591,21 @@ fun SetEntryScreen(
                             }
                         )
                     }
+                    if (isSession) {
+                        SessionFields(
+                            date = date,
+                            durationText = sessionMin, onDuration = { sessionMin = it },
+                            liveText = liveMin, onLive = { liveMin = it },
+                            intensity = intensity, onIntensity = { intensity = it },
+                            sessionType = sessionType, onSessionType = { sessionType = it },
+                            zone = zone, onZone = { zone = it },
+                            onOpenProfile = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) },
+                            rpe = rpe, onRpe = { rpe = it }
+                        )
+                    }
                     // Set type (#43) and optional effort (#44) as two dropdowns on one row (#129), so the sets below
                     // get the screen. Warm-ups stay out of records unless Settings counts them.
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (!isSession) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         val types = SetTypes.all
                         DropdownPill(
                             stringResource(R.string.set_type),
@@ -651,7 +698,7 @@ fun SetEntryScreen(
             sets.forEachIndexed { i, s ->
                 item(key = "s${s.id}") {
                     val isSelected = selected == s.id
-                    val marks = setMarks(res, s, prefs)
+                    val marks = setMarks(res, s, prefs, session = isSession)
                     SetRowView(
                         index = i + 1,
                         summary = describeSet(res, snap, s.weightKg, s.reps, s.distance, s.durationSec, s.exerciseId, s.metric),

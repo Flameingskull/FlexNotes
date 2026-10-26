@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.fitlens.companion.R
 import com.fitlens.companion.data.BodyFat
+import com.fitlens.companion.data.CardioZones
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Energy
 import com.fitlens.companion.data.HealthConnect
@@ -110,6 +111,21 @@ internal fun ProfileRows(prefs: PortableSettings) {
         summary = if (prefs.profileHeightCm == null) stringResource(R.string.prof_height_unset) else stringResource(R.string.prof_height_summary),
         format = { "$it $unit" }
     ) { v -> Settings.updatePortable { it.copy(profileHeightCm = LengthUnits.convert(v.toDouble(), unit, LengthUnits.CM)) } }
+    // Maximum heart rate (#241): optional; unset, cardio zones use the estimate from the date of birth.
+    SettingsNumberRow(
+        stringResource(R.string.prof_maxhr),
+        (prefs.profileMaxHr ?: Energy.age(prefs.profileBirthDate, Dates.today())?.let { CardioZones.tanakaMaxHr(it) } ?: 190)
+            .coerceIn(CardioZones.maxHrRange),
+        CardioZones.maxHrRange,
+        summary = if (prefs.profileMaxHr == null) stringResource(R.string.prof_maxhr_unset) else stringResource(R.string.prof_maxhr_summary),
+        format = { res.getString(R.string.prof_maxhr_bpm, it) }
+    ) { v -> Settings.updatePortable { it.copy(profileMaxHr = v.coerceIn(CardioZones.maxHrRange)) } }
+    if (prefs.profileMaxHr != null) {
+        SettingsActionRow(
+            stringResource(R.string.prof_maxhr_clear),
+            stringResource(R.string.prof_maxhr_clear_summary)
+        ) { Settings.updatePortable { it.copy(profileMaxHr = null) } }
+    }
     SettingsChoiceRow(
         stringResource(R.string.prof_lifestyle),
         Energy.Lifestyle.entries.map { lifestyleText(res, it) },

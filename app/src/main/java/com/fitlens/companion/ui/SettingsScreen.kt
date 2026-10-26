@@ -177,6 +177,9 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.prof_height, SettingsSection.Profile, R.string.search_prof_height_kw) {
         prefs.profileHeightCm?.let { heightText(it, prefs.lengthUnit) } ?: res.getString(R.string.settings_not_set)
     },
+    SettingEntry(R.string.prof_maxhr, SettingsSection.Profile, R.string.search_prof_maxhr_kw) {
+        prefs.profileMaxHr?.let { res.getString(R.string.prof_maxhr_bpm, it) } ?: res.getString(R.string.settings_not_set)
+    },
     SettingEntry(R.string.prof_lifestyle, SettingsSection.Profile, R.string.search_prof_lifestyle_kw) {
         com.fitlens.companion.data.Energy.Lifestyle.of(prefs.profileLifestyle)?.let { lifestyleText(res, it) } ?: res.getString(R.string.settings_not_set)
     },

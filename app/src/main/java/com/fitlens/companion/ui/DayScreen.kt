@@ -790,7 +790,7 @@ private fun ExerciseOnDay(
         )
     ) {
         exSets.take(limit).forEachIndexed { i, s ->
-            val marks = setMarks(res, s)
+            val marks = setMarks(res, s, session = snap.isSessionExercise(s.exerciseId))
             SetRow(
                 index = i + 1,
                 summary = describeSet(res, snap, s.weightKg, s.reps, s.distance, s.durationSec, s.exerciseId),

@@ -86,7 +86,10 @@ object EnergyEstimates {
                 cardio = isCardio(snap, s.exerciseId),
                 metres = if (s.distance > 0) metres(s.distance, snap.distanceUnit(s.exerciseId)) else 0.0,
                 seconds = s.durationSec.toDouble(),
-                rpe = s.rpe,
+                // A session with no intensity takes its effort from its cardio zone when it has one (#241).
+                rpe = if (ExerciseTypes.isSession(snap.exercises[s.exerciseId]?.type ?: -1) && s.intensity == null && s.zone != null) {
+                    Energy.zoneRpe(s.zone)
+                } else s.rpe,
                 restSeconds = rest.seconds(date, s.exerciseId, s.id, s.id == lastOf[s.exerciseId]).toDouble()
             )
         }

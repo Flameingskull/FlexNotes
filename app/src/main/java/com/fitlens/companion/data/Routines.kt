@@ -26,9 +26,15 @@ data class PlannedSet(
     /** The rest after this set (#138); null uses the exercise's prescribed rest, then its own, then the global one. */
     val restSeconds: Int? = null,
     /** The value of its exercise's custom metric (#14, #155), or null when none is set. 0 is a real value. */
-    val metric: Double? = null
+    val metric: Double? = null,
+    /** A Session's predefined hard or live seconds, intensity, type and cardio zone (#240, #241); null when unset. */
+    val liveSec: Int? = null,
+    val intensity: Int? = null,
+    val sessionType: Int? = null,
+    val zone: Int? = null
 ) {
-    val isEmpty: Boolean get() = weightKg == 0.0 && reps == 0 && distance == 0.0 && durationSec == 0 && metric == null
+    val isEmpty: Boolean get() = weightKg == 0.0 && reps == 0 && distance == 0.0 && durationSec == 0 && metric == null &&
+        liveSec == null && intensity == null && sessionType == null && zone == null
 }
 
 /**
@@ -218,7 +224,8 @@ object Routines {
             p.sets.forEachIndexed { j, s ->
                 r.addPlannedSet(
                     RoutineDaySetRow(
-                        0L, itemId, j, s.weightKg, s.reps, s.distance, s.durationSec.toLong(), s.setType, s.restSeconds, s.metric
+                        0L, itemId, j, s.weightKg, s.reps, s.distance, s.durationSec.toLong(), s.setType, s.restSeconds, s.metric,
+                        s.liveSec, s.intensity, s.sessionType, s.zone
                     )
                 )
             }
@@ -290,7 +297,7 @@ object Routines {
                 PlannedExercise(exId, fill, sets.map { it.toPlanned() }, sets.maxOf { it.superset }, rest?.restSeconds, rest?.restAfterSeconds)
             }
 
-    private fun SetRow.toPlanned() = PlannedSet(weightKg, reps, distance, durationSec, setType, restSeconds, metric)
+    private fun SetRow.toPlanned() = PlannedSet(weightKg, reps, distance, durationSec, setType, restSeconds, metric, liveSec, intensity, sessionType, zone)
 
     /** How the sets read in lists, for example "3 sets · 100 kg · 5 reps", in the words of `strings.xml` (#94). */
     fun describe(res: Resources, snap: Snapshot, sets: List<PlannedSet>, exerciseId: Long? = null): String {
@@ -300,7 +307,12 @@ object Routines {
         if (first.weightKg != 0.0) parts.add("${snap.fmtWeight(first.weightKg, exerciseId)} ${snap.weightUnitOf(exerciseId)}")
         if (first.reps > 0) parts.add(res.getQuantityString(R.plurals.plan_reps, first.reps, first.reps))
         if (first.distance > 0) parts.add("${fmtNum(first.distance)} ${exerciseId?.let { snap.distanceUnit(it) } ?: snap.globalDistanceUnit}")
-        if (first.durationSec > 0) parts.add(fmtDuration(first.durationSec))
+        if (first.durationSec > 0) {
+            // A session is counted in minutes (#240).
+            val session = exerciseId?.let { snap.exercises[it] }?.let { ExerciseTypes.isSession(it.type) } == true
+            parts.add(if (session) res.getString(R.string.session_minutes_n, fmtNum(first.durationSec / 60.0, 1)) else fmtDuration(first.durationSec))
+        }
+        CardioZones.valid(first.zone)?.let { parts.add(res.getString(R.string.session_zone_n, it)) }
         first.metric?.let { m ->
             val unit = exerciseId?.let { snap.exercises[it] }?.let { ExerciseTypes.metricOf(it.type) }?.metricUnit
             parts.add(fmtNum(m) + unit?.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty())

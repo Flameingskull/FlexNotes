@@ -279,6 +279,16 @@ object Energy {
     /** About how long one strength set takes to do, before its rest, when no time was logged. */
     const val STRENGTH_SET_SECONDS = 40.0
 
+    /**
+     * The effort a cardio zone stands for when a session has no intensity (#241): zones 1 and 2 are light, 3 moderate,
+     * 4 and 5 vigorous, as the RPE [Effort.fromRpe] reads them.
+     */
+    fun zoneRpe(zone: Int): Double = when {
+        zone <= 2 -> 5.0
+        zone == 3 -> 7.0
+        else -> 9.0
+    }
+
     /** One logged set as the estimate needs it. */
     data class SetInput(
         val exerciseId: Long,

@@ -284,7 +284,10 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     val setsSlot = slotAt(setsAt)
     if (setsAt != null && setsSlot != null) {
         val (dayKey, slotKey) = setsAt
-        PlannedSetsSheet(snap, setsSlot.planned, onDismiss = { editingSets = null }) { updated ->
+        PlannedSetsSheet(
+            snap, setsSlot.planned, onDismiss = { editingSets = null },
+            onProfile = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) }
+        ) { updated ->
             updateSlot(dayKey, slotKey) { updated }
             editingSets = null
         }
@@ -562,7 +565,12 @@ private data class SetDraft(
     /** The rest after this set in seconds, or m:ss; blank for none of its own (#138). */
     val rest: String = "",
     /** The custom type's metric (#155); blank copies it from last time. */
-    val metric: String = ""
+    val metric: String = "",
+    /** A Session's (#240) hard or live minutes as typed, its intensity, type and cardio zone; [time] is then in minutes. */
+    val live: String = "",
+    val intensity: Int? = null,
+    val sessionType: Int? = null,
+    val zone: Int? = null
 )
 
 private fun num(s: String): Double = s.trim().replace(',', '.').toDoubleOrNull() ?: 0.0
@@ -588,9 +596,13 @@ private fun seconds(s: String): Int {
  * unset, so the exercise's own rest and then the global one apply.
  */
 @Composable
-private fun PlannedSetsSheet(snap: Snapshot, planned: PlannedExercise, onDismiss: () -> Unit, onDone: (PlannedExercise) -> Unit) {
+private fun PlannedSetsSheet(
+    snap: Snapshot, planned: PlannedExercise, onDismiss: () -> Unit, onProfile: () -> Unit, onDone: (PlannedExercise) -> Unit
+) {
     val ex = snap.exercises[planned.exerciseId]
     val type = ex?.type ?: ExerciseTypes.WEIGHT_REPS
+    // A Session's length is typed in minutes, with its own fields (#240, #241).
+    val isSession = ExerciseTypes.isSession(type)
     // A user-defined type's own metric (#14), predefined like the other values (#155).
     val metricDef = ExerciseTypes.metricOf(type)
     val last = remember(snap.trainingKey, planned.exerciseId) {
@@ -606,10 +618,14 @@ private fun PlannedSetsSheet(snap: Snapshot, planned: PlannedExercise, onDismiss
                         weight = s.weightKg.takeIf { it != 0.0 }?.let { fmtNum(snap.weight(it, planned.exerciseId), 2) } ?: "",
                         reps = s.reps.takeIf { it > 0 }?.toString() ?: "",
                         distance = s.distance.takeIf { it > 0 }?.let { fmtNum(it, 2) } ?: "",
-                        time = s.durationSec.takeIf { it > 0 }?.let { fmtDuration(it) } ?: "",
+                        time = s.durationSec.takeIf { it > 0 }?.let { if (isSession) minutesText(it) else fmtDuration(it) } ?: "",
                         type = s.setType,
                         rest = s.restSeconds?.toString() ?: "",
-                        metric = s.metric?.let { fmtNum(it, 2) } ?: ""
+                        metric = s.metric?.let { fmtNum(it, 2) } ?: "",
+                        live = s.liveSec?.let { minutesText(it) } ?: "",
+                        intensity = s.intensity,
+                        sessionType = s.sessionType,
+                        zone = s.zone
                     )
                 )
             }
@@ -647,10 +663,16 @@ private fun PlannedSetsSheet(snap: Snapshot, planned: PlannedExercise, onDismiss
             // Set type rides along with each row; a row counts when it has any value.
             val sets = rows.map {
                 PlannedSet(
-                    snap.toKg(num(it.weight), planned.exerciseId), it.reps.trim().toIntOrNull() ?: 0, num(it.distance), seconds(it.time), it.type,
+                    snap.toKg(num(it.weight), planned.exerciseId), it.reps.trim().toIntOrNull() ?: 0, num(it.distance),
+                    if (isSession) minutesToSeconds(it.time) else seconds(it.time), it.type,
                     restSeconds = if (perSet) seconds(it.rest).takeIf { r -> r in REST_MIN..REST_MAX } else null,
                     // Blank is no value; 0 is a real one for a custom metric (#155).
-                    metric = if (metricDef != null) it.metric.trim().replace(',', '.').toDoubleOrNull() else null
+                    metric = if (metricDef != null) it.metric.trim().replace(',', '.').toDoubleOrNull() else null,
+                    // Hard or live minutes can't be longer than the session (#240).
+                    liveSec = if (isSession && it.live.isNotBlank()) minutesToSeconds(it.live).coerceAtMost(minutesToSeconds(it.time)) else null,
+                    intensity = if (isSession) it.intensity else null,
+                    sessionType = if (isSession) it.sessionType else null,
+                    zone = if (isSession) it.zone else null
                 )
             }.filter { !it.isEmpty }
             onDone(
@@ -710,7 +732,18 @@ private fun PlannedSetsSheet(snap: Snapshot, planned: PlannedExercise, onDismiss
                 if (ExerciseTypes.usesDistance(type)) {
                     StepperField(stringResource(R.string.workout_field_distance, snap.distanceUnit(planned.exerciseId)), r.distance, { rows[i] = rows[i].copy(distance = it) }, { d -> rows[i] = rows[i].copy(distance = step(rows[i].distance, d * 0.5, 2)) })
                 }
-                if (ExerciseTypes.usesDuration(type)) {
+                if (isSession) {
+                    SessionFields(
+                        date = com.fitlens.companion.data.Dates.today(),
+                        durationText = r.time, onDuration = { rows[i] = rows[i].copy(time = it) },
+                        liveText = r.live, onLive = { rows[i] = rows[i].copy(live = it) },
+                        intensity = r.intensity, onIntensity = { rows[i] = rows[i].copy(intensity = it) },
+                        sessionType = r.sessionType, onSessionType = { rows[i] = rows[i].copy(sessionType = it) },
+                        zone = r.zone, onZone = { rows[i] = rows[i].copy(zone = it) },
+                        onOpenProfile = onProfile
+                    )
+                }
+                if (!isSession && ExerciseTypes.usesDuration(type)) {
                     StepperField(stringResource(R.string.workout_field_time), r.time, { rows[i] = rows[i].copy(time = it) }, { d ->
                         val next = kotlin.math.max(0, seconds(rows[i].time) + d * 15)
                         rows[i] = rows[i].copy(time = if (next == 0) "" else fmtDuration(next))

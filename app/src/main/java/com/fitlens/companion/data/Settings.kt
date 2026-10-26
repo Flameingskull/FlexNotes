@@ -169,6 +169,8 @@ data class PortableSettings(
     val emergencyContact: String? = null,
     /** Height in cm, the profile's own value (not the Height measurement), or null. */
     val profileHeightCm: Double? = null,
+    /** Maximum heart rate in bpm if the user knows it (#241), [CardioZones.maxHrRange]; null uses the age-based estimate. */
+    val profileMaxHr: Int? = null,
     /** Daily activity outside training, `Energy.Lifestyle.key`, or null. */
     val profileLifestyle: String? = null,
     /** Daily activity from the phone's step counter (#175) instead of [profileLifestyle], once enough days are counted. */
@@ -440,6 +442,7 @@ object Settings {
             P_EMERGENCY_CONDITIONS to s.emergencyConditions?.takeIf { it.isNotBlank() },
             P_EMERGENCY_CONTACT to s.emergencyContact?.takeIf { it.isNotBlank() },
             P_PROFILE_HEIGHT to s.profileHeightCm?.toString(),
+            P_PROFILE_MAX_HR to s.profileMaxHr?.toString(),
             P_PROFILE_LIFESTYLE to s.profileLifestyle?.takeIf { it.isNotBlank() },
             P_ACTIVITY_STEPS to if (s.activityFromSteps) "1" else null,
             P_HC_STEPS to if (s.hcSteps) "1" else null,
@@ -561,6 +564,7 @@ object Settings {
     private const val P_EMERGENCY_CONDITIONS = "emergency_conditions"
     private const val P_EMERGENCY_CONTACT = "emergency_contact"
     private const val P_PROFILE_HEIGHT = "profile_height_cm"
+    private const val P_PROFILE_MAX_HR = "profile_max_hr"
     private const val P_PROFILE_LIFESTYLE = "profile_lifestyle"
     private const val P_ACTIVITY_STEPS = "activity_from_steps"
     private const val P_HC_STEPS = "hc_steps"
@@ -717,6 +721,7 @@ object Settings {
         emergencyConditions = get(P_EMERGENCY_CONDITIONS)?.takeIf { it.isNotBlank() },
         emergencyContact = get(P_EMERGENCY_CONTACT)?.takeIf { it.isNotBlank() },
         profileHeightCm = get(P_PROFILE_HEIGHT)?.toDoubleOrNull()?.takeIf { it in 50.0..260.0 },
+        profileMaxHr = get(P_PROFILE_MAX_HR)?.toIntOrNull()?.takeIf { it in CardioZones.maxHrRange },
         profileLifestyle = Energy.Lifestyle.of(get(P_PROFILE_LIFESTYLE))?.key,
         activityFromSteps = bool(get(P_ACTIVITY_STEPS)),
         hcSteps = bool(get(P_HC_STEPS)) && bool(get(P_ACTIVITY_STEPS)),
@@ -792,6 +797,7 @@ internal fun PortableSettings.resetToDefaults(): PortableSettings = PortableSett
     emergencyConditions = emergencyConditions,
     emergencyContact = emergencyContact,
     profileHeightCm = profileHeightCm,
+    profileMaxHr = profileMaxHr,
     profileLifestyle = profileLifestyle,
     activityFromSteps = activityFromSteps,
     hcSteps = hcSteps,

@@ -170,5 +170,9 @@ internal fun graphName(res: Resources, key: String): String = when (key) {
     GRAPH_MAX_DISTANCE -> res.getString(R.string.gr_max_distance)
     GRAPH_MAX_SPEED -> res.getString(R.string.gr_max_speed)
     GRAPH_MAX_PACE -> res.getString(R.string.gr_max_pace)
+    GRAPH_SESSION_LOAD -> res.getString(R.string.gr_session_load)
+    GRAPH_SESSION_RPE -> res.getString(R.string.gr_session_rpe)
+    GRAPH_SESSION_TIME -> res.getString(R.string.gr_session_time)
+    GRAPH_HARD_MINUTES -> res.getString(R.string.gr_hard_minutes)
     else -> key
 }

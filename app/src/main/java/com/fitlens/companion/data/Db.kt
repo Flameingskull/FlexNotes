@@ -25,7 +25,7 @@ class Db(context: Context) : Closeable {
     companion object {
         const val NAME = "fitlens.db"
         /** 21: Room takes over the file (#36). 22: an exercise's own activity for its calories (#174). */
-        const val VERSION = 29
+        const val VERSION = 30
 
         /** The most ids one query binds, inside the 999-variable limit of older phones' SQLite. */
         const val MAX_IDS = 500
@@ -347,6 +347,18 @@ class Db(context: Context) : Closeable {
                     addColumn(db, "routine", "blocks", "TEXT")
                     addColumn(db, "routine", "block_start", "TEXT")
                     addColumn(db, "routine", "block_repeat", "INTEGER NOT NULL DEFAULT 0")
+                }
+            }
+            if (oldVersion < 30) {
+                // ---- 1.0.172: sessions (#240) and cardio zones (#241) ----------------------------------------------
+                // Four nullable columns on logged and predefined sets (live seconds, intensity, session type, zone), so
+                // every set keeps its row and has none of them. Replays safely (#77).
+                for (table in listOf("workout_set", "routine_day_set")) {
+                    if (!hasTable(db, table)) continue
+                    addColumn(db, table, "live_seconds", "INTEGER")
+                    addColumn(db, table, "intensity", "INTEGER")
+                    addColumn(db, table, "session_type", "INTEGER")
+                    addColumn(db, table, "zone", "INTEGER")
                 }
             }
         }
