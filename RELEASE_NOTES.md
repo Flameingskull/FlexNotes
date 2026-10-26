@@ -1,27 +1,29 @@
-# FlexNotes 1.0.176
+# FlexNotes 1.0.177
 
 ## Overview
 
-Sessions are now ready to use. 1.0.173 added the Session type but tucked it away and gave you nothing to start with. This update adds a ready-made list of sports and martial arts to your exercise library. You can also set up your own sport in a few taps. Set rows on the exercise screen no longer squeeze the weight and reps into one cell.
+Your sports now get their own calorie estimate. Pick your sport for an exercise, and FlexNotes uses that sport's figures. It also adjusts the estimate for how hard the session was and how many minutes were live. Sessions now show the total they burned and how much of that was above resting. Sets in one card also share one layout at large font sizes.
 
 ## What's new
 
-- **Sports & martial arts.** A new category in your exercise library with 16 ready-made session exercises: Gym Session, Brazilian Jiu-Jitsu, Muay Thai, Boxing, Kickboxing, MMA, Wrestling, Judo, Karate, Tennis, Football, Basketball, Squash / Padel, Cardio Session, Swimming Session and Yoga / Mobility Session. Open one and log a session like any other exercise: how long it ran, how hard it felt and, where it fits, hard minutes, intensity, kind of session and cardio zone. They're added once. If you already have an exercise with the same name, yours is kept. Anything you delete stays deleted.
-- **Create your own sport.** When you make a new exercise, Session is now listed beside Weight & reps and Distance & time. Choose the kind of sport (combat sport or martial art, racket sport, team sport, cardio or endurance, mind and body, or gym). FlexNotes suggests what to record, based on the sports of the same kind in your library, and tells you which ones it matched. Tick or untick anything before you save. Length and how hard it felt are always recorded, so your training load can be worked out.
+- **Sports and martial arts in the Activity list.** An exercise's Activity can now be Brazilian jiu-jitsu, judo, wrestling, boxing, Muay Thai / kickboxing, MMA, karate / taekwondo, grappling drills, technical sparring, team sports, court and racket sports, fencing, or CrossFit / Hyrox. The list is grouped by kind of activity, and you can search it.
+- **The built-in sports know what they are.** Brazilian Jiu-Jitsu, Boxing, Tennis, Football and the other ready-made sports from 1.0.176 now have their matching Activity set. If you had already chosen an Activity for one, your choice is kept.
+- **Total and above-resting calories.** The Calories sheet lists each exercise as "X kcal (Y above resting)", and a session on the day log shows the same line under its sets. The first figure is everything the session burned. The second leaves out what you would have burned at rest anyway. Only the second is added to your day, so nothing is counted twice.
 
 ## Improved
 
-- **Each sport shows only what it records.** Tennis doesn't ask for a kind of session, and yoga doesn't ask for hard minutes. A field that already has a value always shows, so you can still fix it. Session exercises you made in 1.0.173 keep every field until you change them.
+- **Calories follow how hard you trained.** A sport session's calories go up or down with the intensity you log: Technical, Class, Hard live or Fight pace. If you logged a cardio zone instead, the zone is used. Hard or live minutes count at the sport's harder pace, and the rest of the session counts at its normal pace.
 
 ## Fixed
 
-- **Weight and reps in one cell.** On the exercise screen, a wide weight such as 102.5 kg could push the weight and reps into one stacked cell. Each value now keeps its own column on one line. Only at very large font sizes on a small phone do they stack, and then they're clearly separate.
+- **Sets in one card now line up the same way.** At large font sizes, one wide set could stack its weight and reps while the sets around it stayed on one line. Now, if one set in a card has to stack, they all do. This applies on the day log, the exercise's Track tab and its History.
 
 ## Your data
 
-- This update upgrades the database. All your sets, exercises, workouts and settings are kept, and older backups still restore.
+- No database change. Your sets, exercises, workouts and settings are kept, and older backups still restore. Exercises you set to an Activity before keep it, and so does the old "Sports, general".
 
 ## Known limitations
 
-- Each sport's own calorie figures, Rounds for sparring and bag work, and per-sport counts such as takedowns or points come in later updates.
-- The rest timer's notification, a full review of every screen and a code clean-up are planned next. They're on the roadmap as issues #250, #263 and #264.
+- Calorie figures are estimates from published averages for each sport, scaled to your logged bodyweight. They need your profile and a bodyweight logged within two weeks.
+- Rounds for sparring and bag work, and per-sport counts such as takedowns or points, come in the next update (issues #246 and #247).
+- The rest timer in the notification, a review of every screen and a code clean-up follow after that (issues #250, #263 and #264).
