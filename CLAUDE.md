@@ -119,6 +119,13 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
   in workouts, logged and edited any time. Never a timed prompt or notification. The cardio zone (1–5) is the user's
   own record, with help only on demand (an ⓘ sheet). Heart rate from Health Connect is out (it duplicates the
   wearable's app). Reference: `docs/reference/training-load-energy-expenditure.md` (roadmap Builds 10–13, #240–#247).
+- **The profile is the one place for facts about the person (owner, 2026-10-26):** Settings › Profile
+  (`ui/ProfilePage.kt`, `PortableSettings.profile*`) records sex, date of birth (age is worked out per date), height
+  and lifestyle. Any function that needs such fixed or mostly fixed data reads it from the profile and never asks
+  for it again elsewhere. If a feature needs one the profile doesn't have (for example a known max heart rate), it's
+  added to the profile, so the user records it once and every function can use it. A screen missing a value links to
+  the Profile page (or saves into the profile, as the body fat sheet does). Values that change over time, like body
+  weight, come from the body tracker on the date, not the profile.
 
 ## Plans (check at the start of every session)
 

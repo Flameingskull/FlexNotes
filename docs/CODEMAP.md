@@ -200,6 +200,11 @@ Last updated: 1.0.171.
 - **Vocabulary** (owner decisions on #79 and #106): an *exercise* is one movement; a user-made *workout* (FitNotes's
   routine, `Routine` in code) is exercises grouped by days the user names; a *logged workout* is one date's sets. A
   control that adds one exercise says "Add exercise", never "workout".
+- **Facts about the person come from the profile** (owner, 2026-10-26): sex, age (`Energy.age(prefs.profileBirthDate, date)`),
+  height and any other fixed value are read from `PortableSettings.profile*` (`ui/ProfilePage.kt` `ProfileRows`), never
+  asked for on another screen. A feature needing one the profile lacks adds it there (a checked `PortableSettings` value,
+  backed up, in Settings search); a screen missing a value links to the Profile page. Body weight is the logged
+  bodyweight on the date, not a profile value.
 - **No black text (#104):** filled controls carry gold text on a dark fill. Use `GoldButton` for primary actions and
   `errorContainer` / `onErrorContainer` for destructive ones; never fill a button or chip with the gold `primary`.
 
