@@ -10,6 +10,7 @@ import com.fitlens.companion.ui.design.exerciseTransformKey
 import com.fitlens.companion.ui.design.Haptics
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.GoldButton
+import com.fitlens.companion.ui.design.ConfirmSheet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -111,6 +112,10 @@ import kotlinx.coroutines.launch
 internal const val DEFAULT_WEIGHT_STEP = 2.5
 private const val DISTANCE_STEP = 0.5
 private const val DURATION_STEP = 15
+
+/** A session shorter or longer than this (15 and 240 minutes) is asked about once before it is saved (#243). */
+private const val SESSION_MIN_SEC = 15 * 60
+private const val SESSION_MAX_SEC = 240 * 60
 
 private fun num(s: String): Double = s.trim().replace(',', '.').toDoubleOrNull() ?: 0.0
 
@@ -356,7 +361,10 @@ fun SetEntryScreen(
     val res = LocalContext.current.resources
     var restSheet by remember { mutableStateOf(false) }
 
-    fun save() {
+    // A session that looks unusual is asked about once (#243); [unusualMinutes] is the length being asked about.
+    var unusualMinutes by remember { mutableStateOf<String?>(null) }
+
+    fun save(confirmed: Boolean = false) {
         // Untouched field: keep the stored kilograms exactly as they were, rather than round-tripping the
         // two-decimal display value back through the unit conversion (#75).
         val kg = if (weight == loadedWeightText) loadedWeightKg ?: 0.0 else snap.toKg(num(weight), exerciseId)
@@ -377,6 +385,12 @@ fun SetEntryScreen(
             return
         }
         val chosen = selected?.let { id -> sets.firstOrNull { it.id == id } }
+        // Under 15 or over 240 minutes asks "Is that right?" once. A saved session whose length hasn't changed isn't
+        // asked about again, and nothing blocks saving (#243).
+        if (isSession && !confirmed && dur > 0 && (dur < SESSION_MIN_SEC || dur > SESSION_MAX_SEC) && chosen?.durationSec != dur) {
+            unusualMinutes = minutesText(dur)
+            return
+        }
         AppScope.scope.launch {
             try {
                 if (chosen == null) {
@@ -760,6 +774,18 @@ fun SetEntryScreen(
         }
         }
     }
+    }
+
+    unusualMinutes?.let { minutes ->
+        ConfirmSheet(
+            title = stringResource(R.string.session_unusual_title),
+            message = stringResource(R.string.session_unusual_message, minutes),
+            confirmLabel = stringResource(R.string.session_save_anyway),
+            onDismiss = { unusualMinutes = null },
+            onConfirm = { save(confirmed = true) },
+            destructive = false,
+            dismissLabel = stringResource(R.string.session_fix)
+        )
     }
 
     deleting?.let { s ->

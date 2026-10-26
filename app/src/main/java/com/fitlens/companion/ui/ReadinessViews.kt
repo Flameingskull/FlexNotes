@@ -103,12 +103,16 @@ internal fun rememberReadinessHistory(snap: Snapshot): List<Readiness.Score> {
     return remember(inputs) { Readiness.history(inputs) }
 }
 
-/** [date]'s training load figures by volume (#217), or null without enough logged. */
+/** [date]'s load figures for the day log's card (#217, #242): the day itself and any jump over the last training day. */
+private class CardLoad(val day: TrainingLoad.Day?, val jump: Double?)
+
+/** [date]'s training load, by Session load once sessions are logged and otherwise by volume; null without enough logged. */
 @Composable
-private fun rememberLoadOn(snap: Snapshot, date: String): TrainingLoad.Day? =
+private fun rememberLoadOn(snap: Snapshot, date: String): CardLoad =
     remember(snap.setsKey, date) {
         val day = Dates.epochDay(date)
-        TrainingLoad.series(TrainingLoad.daily(snap.statSets, TrainingLoad.Measure.VOLUME), day, day).singleOrNull()
+        val load = TrainingLoad.daily(snap.statSets, TrainingLoad.preferredMeasure(snap), TrainingLoad.sessionTest(snap))
+        CardLoad(TrainingLoad.series(load, day, day).singleOrNull(), TrainingLoad.jumpOn(load, day))
     }
 
 /**
@@ -153,9 +157,17 @@ internal fun ReadinessCard(snap: Snapshot, date: String, onOpen: () -> Unit) {
         if (!checkedIn) {
             Text(stringResource(R.string.rd_card_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (load?.spike == true) {
+        if (load.day?.spike == true) {
             Text(
-                stringResource(R.string.load_spike_short, fmtNum(load.ratio ?: 0.0, 2)),
+                stringResource(R.string.load_spike_short, fmtNum(load.day.ratio ?: 0.0, 2)),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+        // A big rise over the last training day (#242), worded like the spike above.
+        load.jump?.let { rise ->
+            Text(
+                stringResource(R.string.load_jump_short, (rise * 100).roundToInt()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
             )

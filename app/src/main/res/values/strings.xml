@@ -3559,7 +3559,7 @@
     <string name="load_per_day">%1$s %2$s a day</string>
     <string name="load_acute">Acute load (last %1$d days)</string>
     <string name="load_chronic">Chronic load (last %1$d days)</string>
-    <string name="load_ratio">Acute:chronic ratio</string>
+    <string name="load_ratio">Load this week compared with your usual</string>
     <string name="load_ratio_value">%1$s×</string>
     <string name="load_not_yet">Not yet</string>
     <string name="load_ratio_wait">The ratio starts once training has been logged for %1$d days.</string>
@@ -3705,4 +3705,26 @@
     <string name="gr_session_rpe">Session RPE</string>
     <string name="gr_session_time">Session duration</string>
     <string name="gr_hard_minutes">Hard minutes</string>
+    <!-- Training load from sessions (#242) and unusual-session checks (#243) -->
+    <string name="load_measure_session">Session load</string>
+    <string name="load_session_unit">load points</string>
+    <string name="load_empty_session">Rate how hard a session felt to see its load. Session load is the rating times the minutes.</string>
+    <plurals name="load_unrated">
+        <item quantity="one">%1$d session in this range has no rating, so it isn\'t counted.</item>
+        <item quantity="other">%1$d sessions in this range have no rating, so they aren\'t counted.</item>
+    </plurals>
+    <string name="load_caution">Take care: this week is %1$s× your usual load, above the %2$s× that counts as a good build-up. Keep an eye on how you feel.</string>
+    <string name="load_bands">Under %1$s× is low, %1$s× to %2$s× is a good build-up, %2$s× to %3$s× needs care, and over %3$s× is a high jump.</string>
+    <string name="load_jump_short">Load jumped %1$d%% since your last training day</string>
+    <string name="load_ie_title">Effort against work done</string>
+    <string name="load_ie_session">Session load</string>
+    <string name="load_ie_hard">Hard minutes</string>
+    <string name="load_ie_volume">Volume (%1$s)</string>
+    <string name="load_ie_hint">Each line is shown against its own best week. Tap a week for the real figures.</string>
+    <string name="load_ie_week">Week ending %1$s: session load %2$s, %3$s hard minutes, volume %4$s %5$s.</string>
+    <string name="session_unusual_title">Is that right?</string>
+    <string name="session_unusual_message">You entered %1$s minutes for this session. Save it as it is, or fix the length.</string>
+    <string name="session_save_anyway">Save anyway</string>
+    <string name="session_fix">Fix</string>
+    <string name="session_no_rpe_hint">Add RPE to count it in training load</string>
 </resources>

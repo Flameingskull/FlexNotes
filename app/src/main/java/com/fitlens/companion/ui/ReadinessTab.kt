@@ -49,7 +49,9 @@ private fun ReadinessGraph(
     format: (Double) -> String,
     goal: Double? = null,
     better: (Double, Double) -> Boolean? = ::higherIsBetter,
-    fromZero: Boolean = true
+    fromZero: Boolean = true,
+    /** A shaded reference range with a line at each end (#242: the good band of the load ratio). */
+    range: Pair<Double?, Double?>? = null
 ) {
     val res = LocalContext.current.resources
     val (kind, setKind) = rememberChartKind(graphId)
@@ -66,6 +68,7 @@ private fun ReadinessGraph(
         Modifier.padding(horizontal = 8.dp),
         kind = kind,
         goal = goal,
+        range = range,
         selected = sel?.let { ChartSelection(0, it) },
         onSelect = { sel = it.index; ChartHints.tapped() },
         yFormat = format,
@@ -94,6 +97,7 @@ private fun ReadinessGraph(
                 kind = kind,
                 height = h,
                 goal = goal,
+                range = range,
                 selected = sel?.let { ChartSelection(0, it) },
                 onSelect = { sel = it.index },
                 yFormat = format,
@@ -104,6 +108,45 @@ private fun ReadinessGraph(
             )
         }
     }
+}
+
+/**
+ * Internal against external load (#242): each week's Session load, hard minutes and volume on one graph. The three
+ * are in different units, so each is drawn as a share of its own best week; picking a week lists its real figures.
+ */
+@Composable
+private fun InternalExternalGraph(snap: Snapshot, weeks: List<TrainingLoad.Week>) {
+    val res = LocalContext.current.resources
+    var sel by remember(weeks) { mutableStateOf<ChartSelection?>(null) }
+    val volumeOf: (TrainingLoad.Week) -> Double = { snap.weight(it.volumeKg, null) }
+    val parts = listOf(
+        Triple(res.getString(R.string.load_ie_session), { w: TrainingLoad.Week -> w.sessionLoad }, 0),
+        Triple(res.getString(R.string.load_ie_hard), { w: TrainingLoad.Week -> w.hardMinutes }, 1),
+        Triple(res.getString(R.string.load_ie_volume, snap.weightUnit), { w: TrainingLoad.Week -> volumeOf(w) }, 2)
+    )
+    val series = parts.map { (name, value, _) ->
+        val best = weeks.maxOf { value(it) }
+        LineSeries(name, weeks.map { w ->
+            ChartPoint(w.endDay, if (best > 0) value(w) / best * 100.0 else 0.0, LocalDate.ofEpochDay(w.endDay).format(Dates.ISO))
+        })
+    }
+    FitChart(
+        series,
+        Modifier.padding(horizontal = 8.dp),
+        selected = sel,
+        onSelect = { sel = it; ChartHints.tapped() },
+        yFormat = { fmtNum(it, 0) + "%" },
+        yFromZero = true,
+        better = noBetter
+    )
+    val picked = sel?.let { weeks.getOrNull(it.index) }
+    AnalysisNote(
+        if (picked == null) res.getString(R.string.load_ie_hint)
+        else res.getString(
+            R.string.load_ie_week, Dates.medium(LocalDate.ofEpochDay(picked.endDay).format(Dates.ISO)),
+            fmtNum(picked.sessionLoad, 0), fmtNum(picked.hardMinutes, 0), fmtNum(volumeOf(picked), 0), snap.weightUnit
+        )
+    )
 }
 
 /**
@@ -122,13 +165,18 @@ internal fun ReadinessTab(snap: Snapshot) {
     val todayIso = today.format(Dates.ISO)
     val history = rememberReadinessHistory(snap)
     val measure = TrainingLoad.Measure.entries[measureIdx]
-    val loadByDay = remember(snap.setsKey, measure) { TrainingLoad.daily(snap.statSets, measure) }
+    val isSession = remember(snap.libraryKey) { TrainingLoad.sessionTest(snap) }
+    val loadByDay = remember(snap.setsKey, snap.libraryKey, measure) { TrainingLoad.daily(snap.statSets, measure, isSession) }
     // "All" starts at the first thing logged.
     val range = RANGES[rangeIdx].second
     val from = if (range > 0) todayDay - range + 1
     else listOfNotNull(history.firstOrNull()?.day, loadByDay.keys.minOrNull()).minOrNull() ?: todayDay
     val load = remember(loadByDay, from, todayDay) { TrainingLoad.series(loadByDay, from, todayDay) }
-    val unit = if (measure == TrainingLoad.Measure.VOLUME) snap.weightUnit else res.getString(R.string.load_sets_unit)
+    val unit = when (measure) {
+        TrainingLoad.Measure.VOLUME -> snap.weightUnit
+        TrainingLoad.Measure.SETS -> res.getString(R.string.load_sets_unit)
+        TrainingLoad.Measure.SESSION -> res.getString(R.string.load_session_unit)
+    }
     val shownLoad: (Double) -> Double = { if (measure == TrainingLoad.Measure.VOLUME) snap.weight(it, null) else it }
     val loadText: (Double) -> String = { res.getString(R.string.load_per_day, fmtNum(shownLoad(it), if (measure == TrainingLoad.Measure.VOLUME) 0 else 1), unit) }
 
@@ -165,13 +213,21 @@ internal fun ReadinessTab(snap: Snapshot) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             DropdownPill(
                 stringResource(R.string.load_measure),
-                listOf(stringResource(R.string.load_measure_volume), stringResource(R.string.load_measure_sets)),
+                listOf(
+                    stringResource(R.string.load_measure_volume), stringResource(R.string.load_measure_sets),
+                    stringResource(R.string.load_measure_session)
+                ),
                 measureIdx
             ) { measureIdx = it }
         }
         val now = load.lastOrNull()
+        // Sessions with no rating can't be given a load, so the screen says how many are left out (#242).
+        if (measure == TrainingLoad.Measure.SESSION) {
+            val unrated = TrainingLoad.unrated(snap.statSets, isSession, from, todayDay)
+            if (unrated > 0) AnalysisNote(res.getQuantityString(R.plurals.load_unrated, unrated, unrated))
+        }
         if (now == null || loadByDay.isEmpty()) {
-            AnalysisNote(stringResource(R.string.load_empty))
+            AnalysisNote(stringResource(if (measure == TrainingLoad.Measure.SESSION) R.string.load_empty_session else R.string.load_empty))
         } else {
             Figure(stringResource(R.string.load_acute, TrainingLoad.ACUTE_DAYS), loadText(now.acute))
             Figure(stringResource(R.string.load_chronic, TrainingLoad.CHRONIC_DAYS), loadText(now.chronic))
@@ -183,12 +239,18 @@ internal fun ReadinessTab(snap: Snapshot) {
                     stringResource(R.string.load_spike, fmtNum(ratio, 2), fmtNum(TrainingLoad.SPIKE, 1)),
                     MaterialTheme.colorScheme.error
                 )
+                TrainingLoad.band(ratio) == TrainingLoad.Band.CAUTION -> AnalysisNote(
+                    stringResource(R.string.load_caution, fmtNum(ratio, 2), fmtNum(TrainingLoad.GOOD_MAX, 1)),
+                    Brand.Gold
+                )
                 ratio < TrainingLoad.LOW -> AnalysisNote(stringResource(R.string.load_low, fmtNum(ratio, 2)))
                 else -> AnalysisNote(stringResource(R.string.load_steady, fmtNum(ratio, 2)))
             }
             val ratioPoints = load.mapNotNull { d -> d.ratio?.let { ChartPoint(d.day, it, LocalDate.ofEpochDay(d.day).format(Dates.ISO)) } }
             if (ratioPoints.isNotEmpty()) {
-                ReadinessGraph(stringResource(R.string.load_ratio), "analysis:load_ratio", ratioPoints, { fmtNum(it, 2) }, goal = TrainingLoad.SPIKE, better = noBetter)
+                ReadinessGraph(stringResource(R.string.load_ratio), "analysis:load_ratio", ratioPoints, { fmtNum(it, 2) }, goal = TrainingLoad.SPIKE, better = noBetter,
+                    range = TrainingLoad.LOW to TrainingLoad.GOOD_MAX)
+                AnalysisNote(stringResource(R.string.load_bands, fmtNum(TrainingLoad.LOW, 1), fmtNum(TrainingLoad.GOOD_MAX, 1), fmtNum(TrainingLoad.SPIKE, 1)))
                 val spikes = load.filter { it.spike }
                 AnalysisNote(
                     if (spikes.isEmpty()) stringResource(R.string.load_no_spikes, fmtNum(TrainingLoad.SPIKE, 1))
@@ -209,6 +271,13 @@ internal fun ReadinessTab(snap: Snapshot) {
                 ReadinessGraph(stringResource(R.string.load_monotony), "analysis:monotony", monotonyPoints, { fmtNum(it, 2) }, goal = TrainingLoad.HIGH_MONOTONY, better = noBetter)
             }
             AnalysisNote(stringResource(R.string.load_note, TrainingLoad.ACUTE_DAYS, TrainingLoad.CHRONIC_DAYS))
+        }
+        // Internal against external load (#242), once any session has a load or hard minutes in the range.
+        val weekCount = (if (range > 0) range / 7 else (todayDay - from + 7) / 7).toInt().coerceIn(4, 52)
+        val weeks = remember(snap.setsKey, snap.libraryKey, weekCount, todayDay) { TrainingLoad.weekly(snap, todayDay, weekCount) }
+        if (weeks.any { it.sessionLoad > 0 || it.hardMinutes > 0 }) {
+            SectionLabel(stringResource(R.string.load_ie_title), Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
+            InternalExternalGraph(snap, weeks)
         }
         Spacer(Modifier.padding(bottom = Spacing.xl))
     }

@@ -82,11 +82,13 @@ internal fun sessionRpeWord(res: Resources, rpe: Double): String = res.getString
  */
 internal fun sessionMarks(res: Resources, s: SetRow): SetMarks {
     val parts = listOfNotNull(
+        // A session with no rating can't count in training load, so the row says so quietly (#243).
         s.rpe?.let { res.getString(R.string.session_rpe_line, fmtNum(it, 1), sessionRpeWord(res, it)) },
         SessionIntensity.valid(s.intensity)?.let { sessionIntensityName(res, it) },
         SessionTypes.valid(s.sessionType)?.let { sessionTypeText(res, it) },
         s.liveSec?.let { res.getString(R.string.session_hard_line, minutesText(it)) },
-        CardioZones.valid(s.zone)?.let { zoneText(res, it) }
+        CardioZones.valid(s.zone)?.let { zoneText(res, it) },
+        res.getString(R.string.session_no_rpe_hint).takeIf { s.rpe == null }
     )
     val line = parts.joinToString(" · ").ifBlank { null }
     return SetMarks(null, null, line, line)
