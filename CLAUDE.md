@@ -114,6 +114,11 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
   purpose (menstrual cycle), or to import what the user already has elsewhere (lab results: typed in by hand
   if wanted, never read from another app). An approved issue that breaks this is flagged to the owner, not built. The build skills
   apply both at every step.
+- **Sessions and training load (owner, 2026-10-26):** a training session (a BJJ class, tennis, "Session RPE" at the
+  end of a gym day) is an entry like any other: the built-in Session exercise type, one set per session, predefinable
+  in workouts, logged and edited any time. Never a timed prompt or notification. The cardio zone (1–5) is the user's
+  own record, with help only on demand (an ⓘ sheet). Heart rate from Health Connect is out (it duplicates the
+  wearable's app). Reference: `docs/reference/training-load-energy-expenditure.md` (roadmap Builds 10–13, #240–#247).
 
 ## Plans (check at the start of every session)
 
@@ -121,7 +126,7 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
 work is added to it as a new build stage, not given a parallel plan file, unless the owner asks for a separate
 initiative. Its Status block names the next command. **Every open bug and feature issue is part of roadmap delivery
 (owner, 2026-10-25):** build triage maps each one to a roadmap build stage, adding any that aren't there, and builds
-work through the stages in order.
+work through the stages in order. Owner-supplied reference material that issues cite lives in `docs/reference/`.
 
 Every multi-build plan is kept in **two places**, so nothing in it slips:
 - **The plan file, in git:** `docs/plans/YYYY-MM-DD-<name>.md`. It starts with a `> **Status**` block: what's done,

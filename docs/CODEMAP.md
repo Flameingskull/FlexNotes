@@ -192,6 +192,8 @@ Last updated: 1.0.171.
 | `video/FrameRenderer.kt`, `video/VideoExporter.kt` | Slideshow frames and MP4 export; `SlideOptions.words` (`SlideWords`) carries the frames' day/week counter, "≈ 3d before" and pose names from `strings.xml` (#94) |
 | `branding/` (repo root) | The owner's final art, used unedited (see `CLAUDE.md` rule 4): `full-body-icon-source.jpg` (also as `flexnotes-icon-source.png`, and `flexnotes-icon-512.png` for the store and README) and `torso/torso-icon-source.jpg`. Launcher: `res/mipmap-anydpi-v26/ic_launcher.xml`, the full body in the safe zone (`mipmap-*/ic_launcher_foreground.png`) over `@color/ic_launcher_background` (its edge colour). Full body behind every screen: `res/drawable-nodpi/backdrop_character.png` (`ui/design/Backdrop.kt`). All of them were recoloured from purple to black and the app's gold in 1.0.71 by `branding/recolour_black_gold.py` (launcher background `#0C0C0C`). Torso: `drawable-*dpi/notification_character.png` (the notification large icon, 64dp, letterboxed on its own background) and `search_character.png` (38 × 24dp, `ui/design/SearchIcon.kt`) |
 | `App.kt` | `Application`: initialises `Store` and `Settings`, then starts `AutoBackup` |
+| `docs/plans/` (repo root) | Plans, one live roadmap: `2026-10-24-roadmap.md` (Status block, issue map, builds, specs) |
+| `docs/reference/` (repo root) | Owner-supplied reference material that issues cite by section: `training-load-energy-expenditure.md` (session RPE and load, ACWR bands, MET calories and sport METs; header lists how FlexNotes applies it, #240–#247, and what it doesn't adopt) |
 
 ## Conventions
 
