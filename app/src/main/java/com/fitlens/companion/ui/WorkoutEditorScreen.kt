@@ -318,7 +318,9 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             // One rest for every exercise of the day (#138): it replaces each exercise's and each set's own.
             updateDay(day.key) { d ->
                 d.copy(slots = d.slots.map { s ->
-                    s.copy(planned = s.planned.copy(restSeconds = rest, restAfterSeconds = after, sets = s.planned.sets.map { it.copy(restSeconds = null) }))
+                    // A Rounds set's rest is the rest between its rounds, so it stays (#246).
+                    val rounds = ExerciseTypes.isRounds(snap.exercises[s.planned.exerciseId]?.type ?: -1)
+                    s.copy(planned = s.planned.copy(restSeconds = rest, restAfterSeconds = after, sets = s.planned.sets.map { if (rounds) it else it.copy(restSeconds = null) }))
                 })
             }
             restingDay = null
@@ -470,7 +472,7 @@ private fun DayCard(
                 subtitle = planSummary(LocalContext.current.resources, snap, slot.planned) +
                     (if (slot.planned.superset > 0) "  ·  " + stringResource(R.string.workout_superset, ('A' + groups.indexOf(slot.planned.superset)).toString()) else "") +
                     // Its prescribed rest on a line of its own, "Rest 90 s · then 2 min" (#138).
-                    (restSummary(LocalContext.current.resources, slot.planned)?.let { "\n$it" } ?: ""),
+                    (restSummary(LocalContext.current.resources, slot.planned, !ExerciseTypes.isRounds(snap.exercises[slot.planned.exerciseId]?.type ?: -1))?.let { "\n$it" } ?: ""),
                 leading = { Dot(categoryColour(snap.categoryOf(slot.planned.exerciseId)?.colour ?: 0), Spacing.md) },
                 onClick = { onSets(slot.key) },
                 menu = listOf(
@@ -537,13 +539,13 @@ fun restLabel(res: Resources, seconds: Int): String = when {
  * An exercise's prescribed rest in one line (#138), "Rest 90 s · then 2 min": the rest between its sets (one length,
  * or "varies" when its sets each have their own), then the rest before the next exercise. Null when none is set.
  */
-fun restSummary(res: Resources, p: PlannedExercise): String? {
+fun restSummary(res: Resources, p: PlannedExercise, setRests: Boolean = true): String? {
     // "Copy previous rest" (#151) is one choice for the whole exercise.
     if (Routines.copiesRest(p)) return res.getString(R.string.rest_summary_copy)
-    val setRests = if (p.fill == Routines.FILL_PLANNED) p.sets.mapNotNull { it.restSeconds }.distinct() else emptyList()
+    val ownRests = if (setRests && p.fill == Routines.FILL_PLANNED) p.sets.mapNotNull { it.restSeconds }.distinct() else emptyList()
     val between = when {
-        setRests.size > 1 -> res.getString(R.string.rest_summary_varies)
-        setRests.size == 1 -> res.getString(R.string.rest_summary_between, restLabel(res, setRests[0]))
+        ownRests.size > 1 -> res.getString(R.string.rest_summary_varies)
+        ownRests.size == 1 -> res.getString(R.string.rest_summary_between, restLabel(res, ownRests[0]))
         p.restSeconds != null -> res.getString(R.string.rest_summary_between, restLabel(res, p.restSeconds))
         else -> null
     }
@@ -603,6 +605,8 @@ private fun PlannedSetsSheet(
     val type = ex?.type ?: ExerciseTypes.WEIGHT_REPS
     // A Session's length is typed in minutes, with its own fields (#240, #241).
     val isSession = ExerciseTypes.isSession(type)
+    // Rounds (#246): the set's reps are its rounds, its time the round length and its rest the rest between rounds.
+    val isRounds = ExerciseTypes.isRounds(type)
     // A user-defined type's own metric (#14), predefined like the other values (#155).
     val metricDef = ExerciseTypes.metricOf(type)
     val last = remember(snap.trainingKey, planned.exerciseId) {
@@ -613,8 +617,9 @@ private fun PlannedSetsSheet(
     val rows = remember {
         mutableStateListOf<SetDraft>().apply {
             start.forEach { s ->
+                val rd = if (isRounds) RoundsDraft.of(s.reps, s.durationSec, s.restSeconds, s.liveSec) else null
                 add(
-                    SetDraft(
+                    if (rd != null) SetDraft(reps = rd.rounds, time = rd.length, type = s.setType, rest = rd.rest, live = rd.hard, zone = s.zone) else SetDraft(
                         weight = s.weightKg.takeIf { it != 0.0 }?.let { fmtNum(snap.weight(it, planned.exerciseId), 2) } ?: "",
                         reps = s.reps.takeIf { it > 0 }?.toString() ?: "",
                         distance = s.distance.takeIf { it > 0 }?.let { fmtNum(it, 2) } ?: "",
@@ -640,7 +645,7 @@ private fun PlannedSetsSheet(
     var rest by remember { mutableStateOf(planned.restSeconds?.takeIf { it > 0 }) }
     var restAfter by remember { mutableStateOf(planned.restAfterSeconds?.takeIf { it > 0 }) }
     val fallbackRest = ex?.restSeconds ?: Settings.currentPortable().restSeconds
-    val perSet = fill == Routines.FILL_PLANNED && !sameRest && !copyRest
+    val perSet = fill == Routines.FILL_PLANNED && !sameRest && !copyRest && !isRounds
     // What "Copy previous rest" would copy today, in the same words as the exercise row.
     val res = LocalContext.current.resources
     val previousRest = remember(snap.trainingKey, planned.exerciseId) {
@@ -662,6 +667,13 @@ private fun PlannedSetsSheet(
         onConfirm = {
             // Set type rides along with each row; a row counts when it has any value.
             val sets = rows.map {
+                if (isRounds) {
+                    val d = RoundsDraft(it.reps, it.time, it.rest, it.live)
+                    return@map PlannedSet(
+                        reps = d.roundCount, durationSec = d.totalSec, setType = it.type, restSeconds = d.restSec.takeIf { r -> r > 0 },
+                        liveSec = d.hardSec, zone = it.zone
+                    )
+                }
                 PlannedSet(
                     snap.toKg(num(it.weight), planned.exerciseId), it.reps.trim().toIntOrNull() ?: 0, num(it.distance),
                     if (isSession) minutesToSeconds(it.time) else seconds(it.time), it.type,
@@ -678,7 +690,7 @@ private fun PlannedSetsSheet(
             onDone(
                 planned.copy(
                     fill = fill,
-                    sets = if (fill == Routines.FILL_PLANNED) sets else planned.sets.map { it.copy(restSeconds = null) },
+                    sets = if (fill == Routines.FILL_PLANNED) sets else planned.sets.map { if (isRounds) it else it.copy(restSeconds = null) },
                     restSeconds = if (copyRest) Routines.REST_PREVIOUS else if (perSet) null else rest,
                     restAfterSeconds = if (copyRest) Routines.REST_PREVIOUS else restAfter
                 )
@@ -744,7 +756,16 @@ private fun PlannedSetsSheet(
                         fields = ex?.sessionFields
                     )
                 }
-                if (!isSession && ExerciseTypes.usesDuration(type)) {
+                if (isRounds) {
+                    RoundsFields(
+                        date = com.fitlens.companion.data.Dates.today(),
+                        draft = RoundsDraft(r.reps, r.time, r.rest, r.live),
+                        onDraft = { d -> rows[i] = rows[i].copy(reps = d.rounds, time = d.length, rest = d.rest, live = d.hard) },
+                        zone = r.zone, onZone = { rows[i] = rows[i].copy(zone = it) },
+                        onOpenProfile = onProfile
+                    )
+                }
+                if (!isSession && !isRounds && ExerciseTypes.usesDuration(type)) {
                     StepperField(stringResource(R.string.workout_field_time), r.time, { rows[i] = rows[i].copy(time = it) }, { d ->
                         val next = kotlin.math.max(0, seconds(rows[i].time) + d * 15)
                         rows[i] = rows[i].copy(time = if (next == 0) "" else fmtDuration(next))
@@ -786,7 +807,7 @@ private fun PlannedSetsSheet(
         ) { copyRest = true }
         FillChoice(stringResource(R.string.workout_rest_set), stringResource(R.string.workout_rest_set_body), !copyRest) { copyRest = false }
         if (!copyRest) {
-            if (fill == Routines.FILL_PLANNED) {
+            if (fill == Routines.FILL_PLANNED && !isRounds) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.workout_rest_same), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                     Switch(checked = sameRest, onCheckedChange = { sameRest = it })

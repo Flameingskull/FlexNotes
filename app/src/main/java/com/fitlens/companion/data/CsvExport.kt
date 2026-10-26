@@ -65,7 +65,7 @@ object CsvExport {
                         SessionIntensity.valid(s.intensity)?.let { csvIntensity(it) } ?: "",
                         SessionTypes.valid(s.sessionType)?.let { csvSessionType(it) } ?: "",
                         s.zone?.toString() ?: "",
-                        if (ex != null && ExerciseTypes.isSession(ex.type)) SessionLoad.of(s.rpe, s.durationSec)?.let { fmtNum(it, 1) } ?: "" else ""
+                        if (ex != null && ExerciseTypes.isTimedSession(ex.type)) SessionLoad.of(s.rpe, s.durationSec)?.let { fmtNum(it, 1) } ?: "" else ""
                     )
                 )
             }

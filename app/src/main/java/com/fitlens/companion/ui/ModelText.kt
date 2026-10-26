@@ -31,6 +31,7 @@ internal fun exerciseTypeText(res: Resources, type: Int): String =
             ExerciseTypes.REPS_ONLY -> R.string.xt_reps
             ExerciseTypes.DISTANCE_ONLY -> R.string.xt_distance
             ExerciseTypes.SESSION -> R.string.xt_session
+            ExerciseTypes.ROUNDS -> R.string.xt_rounds
             else -> R.string.xt_weight_reps
         }
     )
@@ -49,6 +50,7 @@ internal fun exerciseTypeExample(res: Resources, type: Int): String =
             ExerciseTypes.REPS_ONLY -> R.string.xte_reps
             ExerciseTypes.DISTANCE_ONLY -> R.string.xte_distance
             ExerciseTypes.SESSION -> R.string.xte_session
+            ExerciseTypes.ROUNDS -> R.string.xte_rounds
             else -> R.string.xte_weight_reps
         }
     )

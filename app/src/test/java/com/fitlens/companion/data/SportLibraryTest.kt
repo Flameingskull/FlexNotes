@@ -46,4 +46,33 @@ class SportLibraryTest {
         assertEquals(16, SportLibrary.exercises.map { it.name.lowercase() }.toSet().size)
         SportLibrary.exercises.forEach { assertTrue(it.kind in SessionKinds.all) }
     }
+
+    @Test
+    fun theExtraSportsHaveRealActivitiesAndAreNotTheSeededOnes() {
+        val seeded = SportLibrary.exercises.map { it.name.lowercase() }.toSet()
+        assertEquals(SportLibrary.extras.size, SportLibrary.extras.map { it.name.lowercase() }.toSet().size)
+        SportLibrary.extras.forEach {
+            assertTrue(it.name, it.name.lowercase() !in seeded)
+            assertTrue(it.name, it.kind in SessionKinds.all)
+            assertTrue(it.name, it.type == ExerciseTypes.SESSION || it.type == ExerciseTypes.ROUNDS)
+            // Every sport carries an activity that exists, so its calories use that sport's METs.
+            assertTrue(it.name, Energy.Activity.of(it.activity) != null)
+        }
+        assertTrue(SportLibrary.extras.any { it.type == ExerciseTypes.ROUNDS })
+    }
+
+    @Test
+    fun thePickerMarksWhatTheLibraryAlreadyHasIgnoringCaseAndSpacing() {
+        val picks = SportLibrary.picks(listOf("  bag   work ", "Bench Press"))
+        assertTrue(picks.first { it.sport.name == "Bag Work" }.inLibrary)
+        assertFalse(picks.first { it.sport.name == "Pad Work" }.inLibrary)
+        assertEquals(SportLibrary.extras.size, picks.size)
+    }
+
+    @Test
+    fun addingSkipsNamesAlreadyInTheLibraryAndAnythingNotPicked() {
+        val add = SportLibrary.toAdd(listOf("Bag Work", "pad work", "Fencing", "Not A Sport"), listOf("Bag Work"))
+        assertEquals(listOf("Pad Work", "Fencing"), add.map { it.name })
+        assertTrue(SportLibrary.toAdd(emptyList(), emptyList()).isEmpty())
+    }
 }

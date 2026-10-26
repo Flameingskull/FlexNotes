@@ -143,7 +143,9 @@ private fun parseDuration(s: String): Int {
 internal fun restFor(snap: Snapshot, date: String, exerciseId: Long, setId: Long? = null, last: Boolean = false): Int {
     val planned = snap.workoutRests[date.take(10)]?.get(exerciseId)
     if (last) planned?.restAfterSeconds?.let { return it }
-    val own = setId?.let { id -> snap.setsByExercise[exerciseId]?.firstOrNull { it.id == id }?.restSeconds }
+    // A Rounds set's rest is the rest between its rounds (#246), not the rest after the set.
+    val rounds = ExerciseTypes.isRounds(snap.exercises[exerciseId]?.type ?: -1)
+    val own = if (rounds) null else setId?.let { id -> snap.setsByExercise[exerciseId]?.firstOrNull { it.id == id }?.restSeconds }
     return own ?: planned?.restSeconds ?: snap.exercises[exerciseId]?.restSeconds ?: Settings.currentPortable().restSeconds
 }
 
@@ -264,11 +266,14 @@ fun SetEntryScreen(
     val showMetric = metricDef != null || allSets.any { it.metric != null }
     // A Session (#240) has its own fields: its length in minutes, a rating, hard minutes, intensity, type and zone.
     val isSession = ExerciseTypes.isSession(type)
+    // Rounds (#246) are Session-shaped: a set's reps are its rounds, with their own fields; both skip the usual ones.
+    val isRounds = ExerciseTypes.isRounds(type)
+    val isTimed = isSession || isRounds
     val showDistance = ExerciseTypes.usesDistance(type) || allSets.any { it.distance > 0 }
-    val showDuration = !isSession && (ExerciseTypes.usesDuration(type) || allSets.any { it.durationSec > 0 })
-    val showReps = ExerciseTypes.usesReps(type) || allSets.any { it.reps > 0 }
+    val showDuration = !isTimed && (ExerciseTypes.usesDuration(type) || allSets.any { it.durationSec > 0 })
+    val showReps = !isRounds && (ExerciseTypes.usesReps(type) || allSets.any { it.reps > 0 })
     val showWeight = ExerciseTypes.usesWeight(type) || allSets.any { it.weightKg != 0.0 } ||
-        (!isSession && !showDistance && !showDuration && !showReps && !showMetric)
+        (!isTimed && !showDistance && !showDuration && !showReps && !showMetric)
 
     val prefs by Settings.portable.collectAsState()
 
@@ -295,6 +300,8 @@ fun SetEntryScreen(
     var intensity by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
     var sessionType by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
     var zone by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
+    // A Rounds set's rounds, round length, rest between rounds and hard rounds as typed (#246).
+    var roundsDraft by remember(date, exerciseId) { mutableStateOf(RoundsDraft()) }
     // Set type (#43): new sets start as working sets; editing a set shows its own type.
     var setType by remember(date, exerciseId) { mutableIntStateOf(SetTypes.WORKING) }
     // Effort (#44), always held as RPE; null means not recorded.
@@ -352,6 +359,12 @@ fun SetEntryScreen(
                 sessionType = source?.sessionType
                 zone = source?.zone
             }
+            if (isRounds) {
+                // Last time's rounds and rests fill a new set; its hard rounds are only shown when editing that set.
+                roundsDraft = source?.let { RoundsDraft.of(it.reps, it.durationSec, it.restSeconds, it.liveSec) }
+                    ?.let { d -> if (chosen == null) d.copy(hard = "") else d } ?: RoundsDraft()
+                zone = source?.zone
+            }
             setType = chosen?.setType ?: SetTypes.WORKING
             rpe = chosen?.rpe
         }
@@ -368,26 +381,34 @@ fun SetEntryScreen(
         // Untouched field: keep the stored kilograms exactly as they were, rather than round-tripping the
         // two-decimal display value back through the unit conversion (#75).
         val kg = if (weight == loadedWeightText) loadedWeightKg ?: 0.0 else snap.toKg(num(weight), exerciseId)
-        val r = reps.trim().toIntOrNull() ?: 0
+        val r = if (isRounds) roundsDraft.roundCount else reps.trim().toIntOrNull() ?: 0
         val dist = num(distance)
-        val dur = if (isSession) minutesToSeconds(sessionMin) else parseDuration(duration)
+        val dur = if (isRounds) roundsDraft.totalSec else if (isSession) minutesToSeconds(sessionMin) else parseDuration(duration)
         // Blank means not recorded; 0 is a real value for a custom metric (#14).
         val met = if (showMetric) metric.trim().replace(',', '.').toDoubleOrNull() else null
-        val live = if (isSession && liveMin.isNotBlank()) minutesToSeconds(liveMin) else null
-        val nothing = if (isSession) dur == 0 && rpe == null else kg == 0.0 && r == 0 && dist == 0.0 && dur == 0 && met == null
+        val live = if (isRounds) roundsDraft.hardSec else if (isSession && liveMin.isNotBlank()) minutesToSeconds(liveMin) else null
+        // The rest between a Rounds set's rounds is kept with the set; a Session or any other set has none (#246).
+        val roundsRest = if (isRounds) roundsDraft.restSec.takeIf { it > 0 } else null
+        val nothing = if (isTimed) dur == 0 && rpe == null else kg == 0.0 && r == 0 && dist == 0.0 && dur == 0 && met == null
         if (nothing) {
             UiEvents.show(res.getString(R.string.set_enter_something))
             return
         }
+        if (isRounds && roundsDraft.hardTooMany) {
+            UiEvents.show(res.getString(R.string.rounds_hard_too_many))
+            return
+        }
         // Hard or live minutes are part of the session, so they can't be longer than it (#240).
-        if (live != null && live > dur) {
+        if (!isRounds && live != null && live > dur) {
             UiEvents.show(res.getString(R.string.session_hard_too_long))
             return
         }
         val chosen = selected?.let { id -> sets.firstOrNull { it.id == id } }
         // Under 15 or over 240 minutes asks "Is that right?" once. A saved session whose length hasn't changed isn't
         // asked about again, and nothing blocks saving (#243).
-        if (isSession && !confirmed && dur > 0 && (dur < SESSION_MIN_SEC || dur > SESSION_MAX_SEC) && chosen?.durationSec != dur) {
+        // Rounds are short by nature, so only a total over 240 minutes is asked about.
+        val unusual = if (isRounds) dur > SESSION_MAX_SEC else dur < SESSION_MIN_SEC || dur > SESSION_MAX_SEC
+        if (isTimed && !confirmed && dur > 0 && unusual && chosen?.durationSec != dur) {
             unusualMinutes = minutesText(dur)
             return
         }
@@ -397,7 +418,8 @@ fun SetEntryScreen(
                     val firstOfDay = Store.snapshot.value?.setsByDate?.get(date).isNullOrEmpty()
                     val id = Workouts.addSet(exerciseId, date, kg, r, dist, dur, null, setType = setType, rpe = rpe, metric = met,
                         liveSec = live, intensity = if (isSession) intensity else null,
-                        sessionType = if (isSession) sessionType else null, zone = if (isSession) zone else null)
+                        sessionType = if (isSession) sessionType else null, zone = if (isTimed) zone else null,
+                        restSeconds = roundsRest)
                     // In a superset, saving a set moves on to the next exercise of the group, round-robin, as FitNotes
                     // does (#18). The rest timer then starts only after the round's last exercise (#20).
                     val members = supersetMembers(snap, date, supersetOf(snap, date, exerciseId))
@@ -425,12 +447,14 @@ fun SetEntryScreen(
                     }
                 } else {
                     Workouts.updateSet(
-                        chosen.copy(
+                        writeRest = isRounds,
+                        set = chosen.copy(
                             weightKg = kg, reps = r, distance = dist, durationSec = dur, setType = setType, rpe = rpe, metric = met,
-                            liveSec = if (isSession) live else chosen.liveSec,
+                            restSeconds = if (isRounds) roundsRest else chosen.restSeconds,
+                            liveSec = if (isTimed) live else chosen.liveSec,
                             intensity = if (isSession) intensity else chosen.intensity,
                             sessionType = if (isSession) sessionType else chosen.sessionType,
-                            zone = if (isSession) zone else chosen.zone
+                            zone = if (isTimed) zone else chosen.zone
                         )
                     )
                     Haptics.confirm(view)
@@ -454,7 +478,7 @@ fun SetEntryScreen(
     fun clear() {
         selected = null
         weight = ""; reps = ""; distance = ""; duration = ""; metric = ""
-        sessionMin = ""; liveMin = ""; intensity = null; sessionType = null; zone = null
+        sessionMin = ""; liveMin = ""; intensity = null; sessionType = null; zone = null; roundsDraft = RoundsDraft()
         loadedWeightText = ""; loadedWeightKg = null
         setType = SetTypes.WORKING; rpe = null
     }
@@ -621,7 +645,16 @@ fun SetEntryScreen(
                     }
                     // Set type (#43) and optional effort (#44) as two dropdowns on one row (#129), so the sets below
                     // get the screen. Warm-ups stay out of records unless Settings counts them.
-                    if (!isSession) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (isRounds) {
+                        RoundsFields(
+                            date = date,
+                            draft = roundsDraft, onDraft = { roundsDraft = it },
+                            zone = zone, onZone = { zone = it },
+                            onOpenProfile = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) },
+                            rpe = rpe, onRpe = { rpe = it }
+                        )
+                    }
+                    if (!isTimed) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         val types = SetTypes.all
                         DropdownPill(
                             stringResource(R.string.set_type),
@@ -714,7 +747,7 @@ fun SetEntryScreen(
             sets.forEachIndexed { i, s ->
                 item(key = "s${s.id}") {
                     val isSelected = selected == s.id
-                    val marks = setMarks(res, s, prefs, session = isSession)
+                    val marks = setMarks(res, s, prefs, session = isTimed, rounds = isRounds)
                     SetRowView(
                         layoutGroup = setLayout,
                         index = i + 1,

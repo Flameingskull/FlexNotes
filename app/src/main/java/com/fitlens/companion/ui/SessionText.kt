@@ -4,6 +4,7 @@ import android.content.res.Resources
 import com.fitlens.companion.R
 import com.fitlens.companion.data.CardioZones
 import com.fitlens.companion.data.ExerciseTypes
+import com.fitlens.companion.data.Rounds
 import com.fitlens.companion.data.SessionIntensity
 import com.fitlens.companion.data.SessionTypes
 import com.fitlens.companion.data.SetRow
@@ -15,8 +16,38 @@ import com.fitlens.companion.data.fmtNum
  * only their names come from strings.xml.
  */
 
-/** Is [exerciseId] a Session exercise? */
-internal fun Snapshot.isSessionExercise(exerciseId: Long): Boolean = ExerciseTypes.isSession(exercises[exerciseId]?.type ?: -1)
+/** Is [exerciseId] a Session or a Rounds exercise (#246)? Both are timed training that counts toward load and calories. */
+internal fun Snapshot.isSessionExercise(exerciseId: Long): Boolean = ExerciseTypes.isTimedSession(exercises[exerciseId]?.type ?: -1)
+
+/** Is [exerciseId] a Rounds exercise (#246)? */
+internal fun Snapshot.isRoundsExercise(exerciseId: Long): Boolean = ExerciseTypes.isRounds(exercises[exerciseId]?.type ?: -1)
+
+/** A length of time as read in a Rounds line: "3 min", "2:30 min" or "45 s". */
+internal fun roundsTimeText(res: Resources, sec: Int): String = Rounds.timeText(res, sec)
+
+/** A round length or rest as typed: minutes ("3", "2.5", "2,5") or "m:ss" ("2:30"); blank or unreadable is 0. */
+internal fun roundsTextToSeconds(text: String): Int {
+    val t = text.trim()
+    if (t.contains(':')) {
+        val parts = t.split(':').map { it.trim().toIntOrNull() ?: return 0 }
+        return when (parts.size) {
+            2 -> (parts[0] * 60 + parts[1]).coerceAtLeast(0)
+            else -> 0
+        }
+    }
+    return minutesToSeconds(t)
+}
+
+/** The rest between rounds as typed: seconds ("60") or "m:ss" ("1:30"); blank or unreadable is 0. */
+internal fun roundsRestToSeconds(text: String): Int {
+    val t = text.trim()
+    if (t.contains(':')) return roundsTextToSeconds(t)
+    return (t.toIntOrNull() ?: 0).coerceAtLeast(0)
+}
+
+/** Seconds as shown in a round length or rest field: "3", "2.5" minutes, or "1:20" when that isn't a tidy decimal. */
+internal fun roundsSecondsToText(sec: Int): String =
+    if (sec <= 0) "" else if (sec % 30 == 0) minutesText(sec) else "${sec / 60}:${(sec % 60).toString().padStart(2, '0')}"
 
 /** A session's length in minutes as typed and shown: "90", or "7.5". */
 internal fun minutesText(sec: Int): String = fmtNum(sec / 60.0, 1)
@@ -80,13 +111,30 @@ internal fun sessionRpeWord(res: Resources, rpe: Double): String = res.getString
  * The line under a session's duration in set lists: its rating, intensity, type, hard minutes and zone, in that
  * order, each only when recorded.
  */
-internal fun sessionMarks(res: Resources, s: SetRow): SetMarks {
+internal fun sessionMarks(res: Resources, s: SetRow, rounds: Boolean = false): SetMarks {
+    if (rounds) return roundsMarks(res, s)
     val parts = listOfNotNull(
         // A session with no rating can't count in training load, so the row says so quietly (#243).
         s.rpe?.let { res.getString(R.string.session_rpe_line, fmtNum(it, 1), sessionRpeWord(res, it)) },
         SessionIntensity.valid(s.intensity)?.let { sessionIntensityName(res, it) },
         SessionTypes.valid(s.sessionType)?.let { sessionTypeText(res, it) },
         s.liveSec?.let { res.getString(R.string.session_hard_line, minutesText(it)) },
+        CardioZones.valid(s.zone)?.let { zoneText(res, it) },
+        res.getString(R.string.session_no_rpe_hint).takeIf { s.rpe == null }
+    )
+    val line = parts.joinToString(" · ").ifBlank { null }
+    return SetMarks(null, null, line, line)
+}
+
+/**
+ * The line under a Rounds set's time (#246), always in this order and each part only when recorded: "6 × 3 min · 1 min
+ * rest · 2 hard · RPE 8 (Hard) · Zone 3".
+ */
+internal fun roundsMarks(res: Resources, s: SetRow): SetMarks {
+    val roundSec = Rounds.roundSec(s)
+    val hard = Rounds.hardRounds(s)
+    val parts = Rounds.lineParts(res, s.reps, roundSec, s.restSeconds, hard) + listOfNotNull(
+        s.rpe?.let { res.getString(R.string.session_rpe_line, fmtNum(it, 1), sessionRpeWord(res, it)) },
         CardioZones.valid(s.zone)?.let { zoneText(res, it) },
         res.getString(R.string.session_no_rpe_hint).takeIf { s.rpe == null }
     )

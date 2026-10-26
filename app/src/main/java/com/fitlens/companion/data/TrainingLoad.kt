@@ -40,12 +40,12 @@ object TrainingLoad {
     }
 
     /**
-     * Whether an exercise is a Session. The one place to extend when another exercise type counts as a session
-     * (Rounds, #246).
+     * Whether an exercise is a Session or a Rounds exercise (#246): a Rounds set stores its total time and hard time in
+     * the same columns, so it counts as a session everywhere.
      */
     fun sessionTest(snap: Snapshot): (Long) -> Boolean = { id -> isSessionType(snap.exercises[id]?.type ?: -1) }
 
-    fun isSessionType(type: Int): Boolean = ExerciseTypes.isSession(type)
+    fun isSessionType(type: Int): Boolean = ExerciseTypes.isTimedSession(type)
 
     /** The measure the day log's card uses: Session load once any session is logged, otherwise volume. */
     fun preferredMeasure(snap: Snapshot): Measure {

@@ -51,6 +51,7 @@ import com.fitlens.companion.data.CustomType
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MeasureUnits
 import com.fitlens.companion.data.Records
+import com.fitlens.companion.data.Rounds
 import com.fitlens.companion.data.ExerciseTypes
 import com.fitlens.companion.data.SessionLoad
 import com.fitlens.companion.data.SetRow
@@ -88,7 +89,8 @@ internal fun isTimeBased(snap: Snapshot, exId: Long, sets: List<SetRow>): Boolea
  * are FitNotes's (#22): "Estimated 1RM", "Workout volume", "Workout reps".
  */
 fun graphLabels(type: Int, timeBased: Boolean): List<String> =
-    if (ExerciseTypes.isSession(type)) listOf(GRAPH_SESSION_LOAD, GRAPH_SESSION_RPE, GRAPH_SESSION_TIME, GRAPH_HARD_MINUTES)
+    if (ExerciseTypes.isRounds(type)) listOf(GRAPH_ROUNDS, GRAPH_HARD_ROUNDS, GRAPH_ROUNDS_TIME, GRAPH_SESSION_LOAD, GRAPH_SESSION_RPE)
+    else if (ExerciseTypes.isSession(type)) listOf(GRAPH_SESSION_LOAD, GRAPH_SESSION_RPE, GRAPH_SESSION_TIME, GRAPH_HARD_MINUTES)
     else if (ExerciseTypes.isCustom(type)) customGraphLabels(type)
     else if (timeBased) {
         listOf(GRAPH_LONGEST, GRAPH_TOTAL_TIME, GRAPH_DISTANCE) +
@@ -160,6 +162,10 @@ internal const val GRAPH_SESSION_LOAD = "Session Load"
 internal const val GRAPH_SESSION_RPE = "Session RPE"
 internal const val GRAPH_SESSION_TIME = "Session Duration"
 internal const val GRAPH_HARD_MINUTES = "Hard Minutes"
+/** A Rounds exercise's graphs (#246): the day's rounds, how many were hard, and the total time. */
+internal const val GRAPH_ROUNDS = "Rounds"
+internal const val GRAPH_HARD_ROUNDS = "Hard Rounds"
+internal const val GRAPH_ROUNDS_TIME = "Rounds Total Time"
 
 /** Speed per hour in km or mi ("km/h", "mph"); metres, as swimmers and rowers count them, per minute (#22). */
 internal fun speedUnit(distUnit: String): String = when (distUnit) {
@@ -268,7 +274,11 @@ private fun graphTypes(repsFor: Int, distUnit: String, metric: CustomType? = nul
     GraphType(GRAPH_SESSION_LOAD, { l -> l.sumOf { SessionLoad.of(it.rpe, it.durationSec) ?: 0.0 } }, false),
     GraphType(GRAPH_SESSION_RPE, { l -> l.mapNotNull { it.rpe }.takeIf { it.isNotEmpty() }?.average() ?: 0.0 }, false),
     GraphType(GRAPH_SESSION_TIME, { l -> l.sumOf { it.durationSec }.toDouble() }, false, true),
-    GraphType(GRAPH_HARD_MINUTES, { l -> l.sumOf { minOf(it.liveSec ?: 0, it.durationSec) }.toDouble() }, false, true)
+    GraphType(GRAPH_HARD_MINUTES, { l -> l.sumOf { minOf(it.liveSec ?: 0, it.durationSec) }.toDouble() }, false, true),
+    // A Rounds exercise's graphs (#246). Its reps are its rounds and its time includes the rests between them.
+    GraphType(GRAPH_ROUNDS, { l -> l.sumOf { it.reps }.toDouble() }, false),
+    GraphType(GRAPH_HARD_ROUNDS, { l -> l.sumOf { Rounds.hardRounds(it) }.toDouble() }, false),
+    GraphType(GRAPH_ROUNDS_TIME, { l -> l.sumOf { it.durationSec }.toDouble() }, false, true)
 ) + (metric?.let { m ->
     // A custom type's own metric (#14). Sets without a value are left out rather than counted as 0.
     val (best, total) = metricGraphLabels(m)
@@ -904,7 +914,7 @@ fun ExerciseHistoryPane(snap: Snapshot, nav: Nav, exId: Long) {
                         if (snap.photosByDate.containsKey(d)) Dot(LocalChartColors.current.accent)
                     }
                     l.forEachIndexed { i, s ->
-                        val marks = setMarks(res, s, session = snap.isSessionExercise(s.exerciseId))
+                        val marks = setMarks(res, s, session = snap.isSessionExercise(s.exerciseId), rounds = snap.isRoundsExercise(s.exerciseId))
                         SetRowView(
                             layoutGroup = setLayout,
                             index = i + 1,

@@ -790,7 +790,7 @@ private fun ExerciseOnDay(
         )
     ) {
         exSets.take(limit).forEachIndexed { i, s ->
-            val marks = setMarks(res, s, session = snap.isSessionExercise(s.exerciseId))
+            val marks = setMarks(res, s, session = snap.isSessionExercise(s.exerciseId), rounds = snap.isRoundsExercise(s.exerciseId))
             SetRow(
                 index = i + 1,
                 summary = describeSet(res, snap, s.weightKg, s.reps, s.distance, s.durationSec, s.exerciseId),
@@ -913,7 +913,9 @@ fun describeSet(
     val parts = ArrayList<String>()
     // A bodyweight set has no weight to show; "0 kg x 10 reps" read as though the weight had been lost (#74).
     if (weightKg != 0.0) parts.add("${snap.fmtWeight(weightKg, exerciseId)} ${snap.weightUnitOf(exerciseId)}")
-    if (reps > 0) parts.add(res.getQuantityString(R.plurals.reps_count, reps, reps))
+    // A Rounds set's reps are its rounds (#246).
+    val isRounds = exerciseId?.let { snap.exercises[it] }?.let { ExerciseTypes.isRounds(it.type) } == true
+    if (reps > 0) parts.add(res.getQuantityString(if (isRounds) R.plurals.rounds_count else R.plurals.reps_count, reps, reps))
     // Distances carry their exercise's unit, or the global one when the exercise isn't known (#7).
     if (distance > 0) parts.add("${fmtNum(distance)} ${exerciseId?.let { snap.distanceUnit(it) } ?: snap.globalDistanceUnit}")
     if (duration > 0) parts.add(fmtDuration(duration))

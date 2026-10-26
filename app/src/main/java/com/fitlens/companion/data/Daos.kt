@@ -538,6 +538,10 @@ interface WorkoutDao {
     @Query("UPDATE workout_set SET comment = :comment, source = :source WHERE id = :id")
     fun setComment(id: Long, comment: String?, source: String): Int
 
+    /** A Rounds set's rest between rounds (#246); null clears it. */
+    @Query("UPDATE workout_set SET rest_seconds = :restSeconds WHERE id = :id")
+    fun setRestSeconds(id: Long, restSeconds: Int?)
+
     @Query("UPDATE workout_set SET done = :done WHERE id = :id")
     fun setDone(id: Long, done: Int)
 

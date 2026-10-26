@@ -83,7 +83,7 @@ object EnergyEstimates {
         val inputs = sets.map { s ->
             // A Session with an activity is a sport (#244): its intensity (or cardio zone) scales the MET, and its hard
             // minutes use the activity's hard MET.
-            val sport = snap.exercises[s.exerciseId]?.takeIf { ExerciseTypes.isSession(it.type) }
+            val sport = snap.exercises[s.exerciseId]?.takeIf { ExerciseTypes.isTimedSession(it.type) }
                 ?.let { Energy.Activity.of(it.activity) }
             Energy.SetInput(
                 exerciseId = s.exerciseId,
@@ -91,7 +91,7 @@ object EnergyEstimates {
                 metres = if (s.distance > 0) metres(s.distance, snap.distanceUnit(s.exerciseId)) else 0.0,
                 seconds = s.durationSec.toDouble(),
                 // A session with no intensity takes its effort from its cardio zone when it has one (#241).
-                rpe = if (ExerciseTypes.isSession(snap.exercises[s.exerciseId]?.type ?: -1) && s.intensity == null && s.zone != null) {
+                rpe = if (ExerciseTypes.isTimedSession(snap.exercises[s.exerciseId]?.type ?: -1) && s.intensity == null && s.zone != null) {
                     Energy.zoneRpe(s.zone)
                 } else s.rpe,
                 restSeconds = rest.seconds(date, s.exerciseId, s.id, s.id == lastOf[s.exerciseId]).toDouble(),

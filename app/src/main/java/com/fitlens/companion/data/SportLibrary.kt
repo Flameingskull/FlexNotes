@@ -53,8 +53,17 @@ data class SportExercise(
     val name: String,
     val kind: String,
     val fields: Int = SessionKinds.defaults(kind),
-    val activity: String? = null
-)
+    val activity: String? = null,
+    /** [ExerciseTypes.SESSION], or [ExerciseTypes.ROUNDS] for the sports counted in rounds (#246, #247). */
+    val type: Int = ExerciseTypes.SESSION
+) {
+    /** The group the optional picker files it under (#247): its activity's category, else its kind of sport. */
+    val category: Energy.ActivityCategory?
+        get() = Energy.Activity.of(activity)?.category
+}
+
+/** One entry of the optional "Add sport exercises" picker (#247): a sport and whether the library already has it. */
+data class SportPick(val sport: SportExercise, val inLibrary: Boolean)
 
 /**
  * The Session exercises every library gets once, on the update that brings them (#249, owner 2026-10-26), filed under
@@ -86,6 +95,49 @@ object SportLibrary {
         SportExercise("Swimming Session", SessionKinds.CARDIO, activity = "swimming"),
         SportExercise("Yoga / Mobility Session", SessionKinds.MIND_BODY, activity = "yoga")
     )
+
+    /**
+     * More sports to offer, never added on their own (#247): Session sports that have an activity (#244) and the
+     * Rounds starters (#246) for sparring, bag work, pad work and rolls. [exercises] is untouched, because seeding
+     * runs from it once. Each has an activity that exists in [Energy.Activity], so its calories use that sport's METs.
+     */
+    val extras: List<SportExercise> = listOf(
+        SportExercise("Sparring Rounds", SessionKinds.COMBAT, activity = "boxing", type = ExerciseTypes.ROUNDS),
+        SportExercise("Bag Work", SessionKinds.COMBAT, activity = "boxing", type = ExerciseTypes.ROUNDS),
+        SportExercise("Pad Work", SessionKinds.COMBAT, activity = "boxing", type = ExerciseTypes.ROUNDS),
+        SportExercise("BJJ Rolls", SessionKinds.COMBAT, activity = "bjj", type = ExerciseTypes.ROUNDS),
+        SportExercise("Wrestling Live Goes", SessionKinds.COMBAT, activity = "wrestling", type = ExerciseTypes.ROUNDS),
+        SportExercise("Taekwondo", SessionKinds.COMBAT, activity = "karate_taekwondo"),
+        SportExercise("Grappling Drills", SessionKinds.COMBAT, activity = "grappling_drills"),
+        SportExercise("Fencing", SessionKinds.COMBAT, activity = "fencing"),
+        SportExercise("Volleyball", SessionKinds.TEAM, activity = "team_sports"),
+        SportExercise("Rugby", SessionKinds.TEAM, activity = "team_sports"),
+        SportExercise("Hockey", SessionKinds.TEAM, activity = "team_sports"),
+        SportExercise("Badminton", SessionKinds.RACKET, activity = "court_sports"),
+        SportExercise("Table Tennis", SessionKinds.RACKET, activity = "court_sports"),
+        SportExercise("CrossFit", SessionKinds.GYM, activity = "crossfit_hyrox"),
+        SportExercise("Hyrox", SessionKinds.GYM, activity = "crossfit_hyrox"),
+        SportExercise("HIIT Class", SessionKinds.CARDIO, activity = "hiit"),
+        SportExercise("Circuit Training", SessionKinds.GYM, activity = "circuit"),
+        SportExercise("Pilates", SessionKinds.MIND_BODY, activity = "yoga")
+    )
+
+    private fun key(name: String): String = name.trim().replace(Regex("\\s+"), " ").lowercase()
+
+    /**
+     * The picker's list (#247): every extra sport in order, each marked when [libraryNames] already has one of that
+     * name (ignoring case and spacing), so it is shown as "Already in your library" and can't be added twice.
+     */
+    fun picks(libraryNames: Collection<String>): List<SportPick> {
+        val have = libraryNames.map { key(it) }.toSet()
+        return extras.map { SportPick(it, key(it.name) in have) }
+    }
+
+    /** The sports to add from [chosen] names: the extras picked, minus any the library already has. */
+    fun toAdd(chosen: Collection<String>, libraryNames: Collection<String>): List<SportExercise> {
+        val picked = chosen.map { key(it) }.toSet()
+        return picks(libraryNames).filter { !it.inLibrary && key(it.sport.name) in picked }.map { it.sport }
+    }
 
     /** What a new sport of [kind] should record, and the exercises the suggestion was drawn from. */
     data class Suggestion(val fields: Int, val basedOn: List<String>)

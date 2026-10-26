@@ -30,7 +30,10 @@ private fun SetField.recorded(s: SetRow): Boolean = when (this) {
  * its Weight column. A value the type doesn't use but a set recorded anyway (imported FitNotes data) gets a column
  * too, so nothing logged is hidden.
  */
-fun setFields(type: Int, sets: List<SetRow>): List<SetField> = SetField.entries.filter { f ->
+fun setFields(type: Int, sets: List<SetRow>): List<SetField> = if (ExerciseTypes.isRounds(type)) {
+    // A Rounds set (#246) shows its total time; the rounds, rest and hard rounds read on its line below.
+    listOf(SetField.TIME)
+} else SetField.entries.filter { f ->
     val byType = when (f) {
         SetField.WEIGHT -> ExerciseTypes.usesWeight(type)
         SetField.REPS -> ExerciseTypes.usesReps(type)
@@ -85,7 +88,7 @@ fun setCells(res: Resources, snap: Snapshot, fields: List<SetField>, s: SetRow):
             else SetCell("—", spoken = res.getString(R.string.sc_no_distance))
         SetField.TIME ->
             // A session is counted in minutes ("90 min"), not as a clock (#240).
-            if (s.durationSec > 0 && ExerciseTypes.isSession(snap.exercises[s.exerciseId]?.type ?: -1)) {
+            if (s.durationSec > 0 && ExerciseTypes.isTimedSession(snap.exercises[s.exerciseId]?.type ?: -1)) {
                 fmtNum(s.durationSec / 60.0, 1).let { SetCell(it, res.getString(R.string.session_min_unit), spokenDuration(res, s.durationSec)) }
             } else if (s.durationSec > 0) SetCell(fmtDuration(s.durationSec), spoken = spokenDuration(res, s.durationSec), unitSlot = false)
             else SetCell("—", spoken = res.getString(R.string.sc_no_time), unitSlot = false)

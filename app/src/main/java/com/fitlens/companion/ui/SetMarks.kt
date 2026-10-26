@@ -14,9 +14,9 @@ import com.fitlens.companion.data.Settings
  */
 data class SetMarks(val badge: String?, val badgeSpoken: String?, val effort: String?, val effortSpoken: String?)
 
-fun setMarks(res: Resources, s: SetRow, prefs: PortableSettings = Settings.currentPortable(), session: Boolean = false): SetMarks {
+fun setMarks(res: Resources, s: SetRow, prefs: PortableSettings = Settings.currentPortable(), session: Boolean = false, rounds: Boolean = false): SetMarks {
     // A session (#240) shows its own line: the rating and what it recorded, whatever the effort setting.
-    if (session) return sessionMarks(res, s)
+    if (session) return sessionMarks(res, s, rounds)
     val badge = if (prefs.showSetType) SetTypes.badge(s.setType) else null
     val rpe = s.rpe?.takeIf { prefs.effortMode != Effort.OFF }
     return SetMarks(

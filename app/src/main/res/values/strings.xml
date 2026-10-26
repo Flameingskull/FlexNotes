@@ -3660,6 +3660,8 @@
     <!-- Sessions (#240) and cardio zones (#241) -->
     <string name="xt_session">Session</string>
     <string name="xte_session">BJJ class, tennis, or the Session RPE at the end of a gym day</string>
+    <string name="xt_rounds">Rounds</string>
+    <string name="xte_rounds">Sparring: 6 × 3 min</string>
     <string name="session_min_unit">min</string>
     <string name="session_minutes_n">%1$s min</string>
     <string name="session_field_duration">Duration (minutes)</string>
@@ -3752,6 +3754,48 @@
     <string name="session_save_anyway">Save anyway</string>
     <string name="session_fix">Fix</string>
     <string name="session_no_rpe_hint">Add RPE to count it in training load</string>
+
+    <!-- Rounds (#246): sparring, bag work and rolls in timed rounds -->
+    <string name="rounds_time_s">%1$d s</string>
+    <string name="rounds_time_min">%1$d min</string>
+    <string name="rounds_time_min_s">%1$d:%2$02d min</string>
+    <string name="rounds_line_head">%1$d × %2$s</string>
+    <string name="rounds_line_rest">%1$s rest</string>
+    <string name="rounds_line_hard">%1$d hard</string>
+    <plurals name="rounds_count">
+        <item quantity="one">%1$d round</item>
+        <item quantity="other">%1$d rounds</item>
+    </plurals>
+    <string name="rounds_field_rounds">Rounds</string>
+    <string name="rounds_field_length">Round length (minutes, for example 3 or 2:30)</string>
+    <string name="rounds_field_rest">Rest between rounds (seconds)</string>
+    <string name="rounds_field_hard">Hard rounds (optional)</string>
+    <string name="rounds_field_rpe">How hard was it overall? (0 to 10)</string>
+    <string name="rounds_hard_too_many">Hard rounds can\'t be more than the rounds you did.</string>
+    <string name="rounds_total">Total %1$s min, rests included</string>
+    <string name="rounds_total_hard">%1$s min hard</string>
+    <string name="gr_rounds">Rounds</string>
+    <string name="gr_hard_rounds">Hard rounds</string>
+    <string name="gr_rounds_time">Total time</string>
+
+    <!-- Add sport exercises (#247) -->
+    <string name="lib_add_sports">Add sport exercises</string>
+    <string name="sports_title">Add sport exercises</string>
+    <string name="sports_body">Tick the sports you train and add them in one go. Nothing is added until you confirm, anything already in your library is left as it is, and you can edit or delete what you add.</string>
+    <string name="sports_other">Other</string>
+    <string name="sports_kind_session">Session</string>
+    <string name="sports_kind_rounds">Rounds</string>
+    <string name="sports_already">%1$s · Already in your library</string>
+    <string name="sports_add_none">Add</string>
+    <plurals name="sports_add_n">
+        <item quantity="one">Add %1$d sport</item>
+        <item quantity="other">Add %1$d sports</item>
+    </plurals>
+    <plurals name="sports_added">
+        <item quantity="one">Added %1$d sport exercise</item>
+        <item quantity="other">Added %1$d sport exercises</item>
+    </plurals>
+    <string name="sports_failed">The sports couldn\'t be added: %1$s</string>
     <!-- Sports ready to use (#249) -->
     <string name="sport_kind">Kind of sport</string>
     <string name="sport_kind_combat">Combat sport or martial art</string>

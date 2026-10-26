@@ -560,6 +560,31 @@ object Workouts {
     }
 
     /**
+     * Adds the sports the user picked from the optional "Add sport exercises" list (#247) under [SportLibrary.CATEGORY]:
+     * [names] are [SportLibrary.extras] names. A name the library already has (ignoring case) is skipped and nothing
+     * existing is changed. Each is added with its type (Session or Rounds), kind, fields and activity, as seeding does,
+     * and can be edited or deleted like any exercise. Returns how many were added.
+     */
+    suspend fun addSportExtras(names: Collection<String>, colour: Int): Int = write(LIBRARY) { w ->
+        val exercises = w.exerciseNames().toMutableList()
+        val missing = SportLibrary.toAdd(names, exercises.map { it.name })
+        if (missing.isEmpty()) return@write 0
+        val categoryId = sameName(w.categoryNames(), SportLibrary.CATEGORY)
+            ?: w.addCategory(SportLibrary.CATEGORY, colour, w.lastCategoryOrder() + 1, Sources.FLEXNOTES)
+        var added = 0
+        missing.forEach { se ->
+            if (sameName(exercises, se.name) != null) return@forEach
+            w.clearDeletedLink(RULE_EXERCISE, se.name)
+            val id = w.addExercise(se.name, categoryId, se.type, null, Sources.FLEXNOTES)
+            w.setExerciseSession(id, se.kind, se.fields)
+            se.activity?.let { w.setExerciseActivity(id, it) }
+            exercises += IdName(id, se.name)
+            added += 1
+        }
+        added
+    }
+
+    /**
      * Gives the built-in sports added before they had an activity (#244) theirs, once per database. Only a Session
      * exercise with a built-in name and no activity is touched, so nothing the user chose is overwritten.
      */
@@ -599,7 +624,9 @@ object Workouts {
         liveSec: Int? = null,
         intensity: Int? = null,
         sessionType: Int? = null,
-        zone: Int? = null
+        zone: Int? = null,
+        /** A Rounds set's rest between rounds (#246); null for any other set. */
+        restSeconds: Int? = null
     ): Long = writeSets { w, scope ->
         val d = checkDate(date)
         if (!w.exerciseExists(exerciseId)) throw WorkoutDataException(R.string.wde_exercise_gone)
@@ -612,13 +639,16 @@ object Workouts {
         )
         w.addSet(
             exerciseId, d, weightKg, reps, distance, durationSec, flag(pr), comment?.takeIf { it.isNotBlank() },
-            Sources.FLEXNOTES, setType, rpe, metric, position = 0L, superset = 0, done = 0, restSeconds = null,
+            Sources.FLEXNOTES, setType, rpe, metric, position = 0L, superset = 0, done = 0, restSeconds = restSeconds,
             liveSeconds = liveSec, intensity = intensity, sessionType = sessionType, zone = zone
         )
     }
 
-    /** Saves changes to a set (matched by [SetRow.id]). An edited imported set becomes FlexNotes's own. */
-    suspend fun updateSet(set: SetRow): Unit = writeSets { w, scope ->
+    /**
+     * Saves changes to a set (matched by [SetRow.id]). An edited imported set becomes FlexNotes's own. A set's rest
+     * is left as it is unless [writeRest]: only a Rounds set edits its rest, the rest between its rounds (#246).
+     */
+    suspend fun updateSet(set: SetRow, writeRest: Boolean = false): Unit = writeSets { w, scope ->
         val d = checkDate(set.date)
         val old = w.setById(set.id) ?: throw WorkoutDataException(R.string.wde_set_gone)
         scope.exerciseDays += DayExercise(old.date.take(10), old.exercise_id)
@@ -630,6 +660,7 @@ object Workouts {
             set.comment?.takeIf { it.isNotBlank() }, Sources.FLEXNOTES, set.setType, set.rpe, set.metric,
             set.liveSec, set.intensity, set.sessionType, set.zone
         )
+        if (writeRest) w.setRestSeconds(set.id, set.restSeconds)
         // A new weight, rep count or date can make or end a record, for this set and those logged after it.
         val changed = ArrayList<Long>()
         replayPrs(w, setOf(old.exercise_id, set.exerciseId), changed = changed)

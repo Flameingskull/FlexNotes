@@ -54,6 +54,13 @@ object ExerciseTypes {
     /** A training session (#240): a BJJ class, tennis, or a gym day's overall effort. One set is one session. */
     const val SESSION = 10
 
+    /**
+     * Rounds (#246): sparring, bag work or rolls in timed rounds. A set stores the rounds in `reps`, the rest between
+     * rounds in `restSeconds`, the total time in `durationSec` and the hard rounds' time in `liveSec`, so everything that reads
+     * a Session's length and hard minutes reads a Rounds set too (see [Rounds]).
+     */
+    const val ROUNDS = 11
+
     /** The first id of a user-defined type (#14). Built-in ids stay below it, so the two can never collide. */
     const val CUSTOM_BASE = 100
 
@@ -66,10 +73,15 @@ object ExerciseTypes {
     /** Every built-in type, in the order the type picker lists them: the two main types first. */
     val all = listOf(
         WEIGHT_REPS, DISTANCE_TIME, WEIGHT_TIME, WEIGHT_DISTANCE, REPS_TIME, REPS_DISTANCE,
-        WEIGHT_ONLY, REPS_ONLY, DISTANCE_ONLY, TIME, SESSION
+        WEIGHT_ONLY, REPS_ONLY, DISTANCE_ONLY, TIME, SESSION, ROUNDS
     )
 
     fun isSession(type: Int): Boolean = type == SESSION
+
+    fun isRounds(type: Int): Boolean = type == ROUNDS
+
+    /** A Session or Rounds exercise (#246): a timed training entry that counts toward training load and calories. */
+    fun isTimedSession(type: Int): Boolean = type == SESSION || type == ROUNDS
 
     /**
      * A type's English name, or a custom type's own name. The screen shows `exerciseTypeText` (`ui/ModelText.kt`,
@@ -87,13 +99,14 @@ object ExerciseTypes {
         REPS_ONLY -> "Reps"
         DISTANCE_ONLY -> "Distance"
         SESSION -> "Session"
+        ROUNDS -> "Rounds"
         else -> "Weight & reps"
     }
 
     private val weightTypes = setOf(WEIGHT_REPS, WEIGHT_DISTANCE, WEIGHT_TIME, WEIGHT_ONLY)
     private val repTypes = setOf(WEIGHT_REPS, REPS_TIME, REPS_DISTANCE, REPS_ONLY)
     private val distanceTypes = setOf(DISTANCE_TIME, WEIGHT_DISTANCE, REPS_DISTANCE, DISTANCE_ONLY)
-    private val timeTypes = setOf(DISTANCE_TIME, TIME, WEIGHT_TIME, REPS_TIME, SESSION)
+    private val timeTypes = setOf(DISTANCE_TIME, TIME, WEIGHT_TIME, REPS_TIME, SESSION, ROUNDS)
 
     fun usesWeight(type: Int): Boolean = custom[type]?.weight ?: (type in weightTypes)
     fun usesReps(type: Int): Boolean = custom[type]?.reps ?: (type in repTypes)

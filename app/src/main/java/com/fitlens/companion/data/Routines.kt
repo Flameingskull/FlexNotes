@@ -272,6 +272,10 @@ object Routines {
         // "Copy previous rest" (#151) keeps each set's rest from last time; otherwise copied sets take the day's
         // prescribed rest, not the rest they were logged with (#138).
         val copyRest = copiesRest(p)
+        // A Rounds set's rest is the rest between its rounds (#246), part of the set itself: it always comes along.
+        if (ExerciseTypes.isRounds(snap.exercises[p.exerciseId]?.type ?: -1)) {
+            return if (p.fill == FILL_LAST) previous else p.sets.map { if (it.restSeconds == REST_PREVIOUS) it.copy(restSeconds = null) else it }.filter { !it.isEmpty }
+        }
         if (p.fill == FILL_LAST) return previous.map { if (copyRest) it else it.copy(restSeconds = null) }
         return p.sets.mapIndexed { i, s ->
             val before = previous.getOrNull(i) ?: previous.lastOrNull()
@@ -304,6 +308,14 @@ object Routines {
         if (sets.isEmpty()) return res.getString(R.string.plan_no_sets)
         val first = sets.first()
         val parts = ArrayList<String>()
+        // Rounds read as their own line (#246): "6 × 3 min · 1 min rest · 2 hard".
+        if (exerciseId != null && ExerciseTypes.isRounds(snap.exercises[exerciseId]?.type ?: -1)) {
+            val head = res.getQuantityString(R.plurals.plan_sets, sets.size, sets.size)
+            val rounds = Rounds.lineParts(res, first.reps, Rounds.roundSec(first), first.restSeconds, Rounds.hardRounds(first))
+            CardioZones.valid(first.zone)?.let { parts.add(res.getString(R.string.session_zone_n, it)) }
+            val all = rounds + parts
+            return if (all.isEmpty()) head else "$head · ${all.joinToString(" · ")}${if (sets.all { it == first }) "" else " …"}"
+        }
         if (first.weightKg != 0.0) parts.add("${snap.fmtWeight(first.weightKg, exerciseId)} ${snap.weightUnitOf(exerciseId)}")
         if (first.reps > 0) parts.add(res.getQuantityString(R.plurals.plan_reps, first.reps, first.reps))
         if (first.distance > 0) parts.add("${fmtNum(first.distance)} ${exerciseId?.let { snap.distanceUnit(it) } ?: snap.globalDistanceUnit}")

@@ -174,5 +174,8 @@ internal fun graphName(res: Resources, key: String): String = when (key) {
     GRAPH_SESSION_RPE -> res.getString(R.string.gr_session_rpe)
     GRAPH_SESSION_TIME -> res.getString(R.string.gr_session_time)
     GRAPH_HARD_MINUTES -> res.getString(R.string.gr_hard_minutes)
+    GRAPH_ROUNDS -> res.getString(R.string.gr_rounds)
+    GRAPH_HARD_ROUNDS -> res.getString(R.string.gr_hard_rounds)
+    GRAPH_ROUNDS_TIME -> res.getString(R.string.gr_rounds_time)
     else -> key
 }

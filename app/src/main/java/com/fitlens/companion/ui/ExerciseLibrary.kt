@@ -198,6 +198,8 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
     // Reorder in place (#170): drag handles on the categories while the toggle is on.
     var reordering by rememberSaveable { mutableStateOf(false) }
     var seeding by remember { mutableStateOf(false) }
+    // The optional "Add sport exercises" list (#247).
+    var addingSports by remember { mutableStateOf(false) }
 
     fun open(ids: List<Long>) {
         if (ids.isEmpty()) return
@@ -275,7 +277,8 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
             ),
             overflow = if (picked.isNotEmpty() || routineMode) emptyList() else listOf(
                 MenuAction(stringResource(R.string.lib_new_category)) { creatingCategory = true },
-                MenuAction(stringResource(R.string.lib_add_starter)) { seeding = true }
+                MenuAction(stringResource(R.string.lib_add_starter)) { seeding = true },
+                MenuAction(stringResource(R.string.lib_add_sports)) { addingSports = true }
             ),
             trailing = {
                 if (atTop && !routineMode && snap.categoriesSorted.size > 1) ReorderToggle(reordering) { reordering = it }
@@ -363,6 +366,7 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
     merging?.let { ex -> MergeExerciseFlow(snap, ex) { merging = null } }
     if (creatingCategory) CategoryEditorSheet(snap, existing = null, onDismiss = { creatingCategory = false })
     if (seeding) StarterLibraryDialog { seeding = false }
+    if (addingSports) SportPickerSheet(snap) { addingSports = false }
 }
 
 /**
@@ -437,7 +441,7 @@ private fun RoutineDayList(snap: Snapshot, routine: Routine, onOpen: (Long) -> U
                                 overflow = TextOverflow.Ellipsis
                             )
                             // Its prescribed rest (#138), "Rest 90 s · then 2 min".
-                            restSummary(LocalContext.current.resources, p)?.let { rest ->
+                            restSummary(LocalContext.current.resources, p, !ExerciseTypes.isRounds(snap.exercises[p.exerciseId]?.type ?: -1))?.let { rest ->
                                 Text(rest, style = MaterialTheme.typography.bodySmall, color = Brand.Gold, maxLines = 1)
                             }
                         }
