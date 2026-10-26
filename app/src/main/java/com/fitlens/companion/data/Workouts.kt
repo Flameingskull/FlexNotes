@@ -391,6 +391,11 @@ object Workouts {
         w.setExerciseActivity(id, Energy.Activity.of(activity)?.key)
     }
 
+    /** A Session exercise's kind of sport and the optional fields it records (#249); null fields records all. */
+    suspend fun setExerciseSession(id: Long, kind: String?, fields: Int?): Unit = write(LIBRARY) { w ->
+        w.setExerciseSession(id, SessionKinds.of(kind), fields?.and(SessionMetrics.ALL))
+    }
+
     // ---------- Exercise types (#14) ----------
 
     /**
@@ -529,6 +534,28 @@ object Workouts {
             }
         }
         SeedResult(categoriesAdded, exercisesAdded, skipped)
+    }
+
+    /**
+     * Adds the built-in Session exercises (#249) under [SportLibrary.CATEGORY], once per database. Only missing names
+     * are added and nothing the user has is changed; the `meta` mark keeps one the user deletes from coming back.
+     */
+    suspend fun seedSportsOnce(colour: Int) {
+        if (withContext(Dispatchers.IO) { Store.db.getMeta(SportLibrary.SEEDED_KEY) } != null) return
+        write(LIBRARY) { w ->
+            val exercises = w.exerciseNames().toMutableList()
+            val missing = SportLibrary.exercises.filter { sameName(exercises, it.name) == null }
+            if (missing.isNotEmpty()) {
+                val categoryId = sameName(w.categoryNames(), SportLibrary.CATEGORY)
+                    ?: w.addCategory(SportLibrary.CATEGORY, colour, w.lastCategoryOrder() + 1, Sources.FLEXNOTES)
+                missing.forEach { se ->
+                    val id = w.addExercise(se.name, categoryId, ExerciseTypes.SESSION, null, Sources.FLEXNOTES)
+                    w.setExerciseSession(id, se.kind, se.fields)
+                    exercises += IdName(id, se.name)
+                }
+            }
+            Store.db.setMeta(SportLibrary.SEEDED_KEY, "1")
+        }
     }
 
     // ---------- Sets ----------

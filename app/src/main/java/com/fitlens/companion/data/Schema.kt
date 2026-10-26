@@ -72,7 +72,11 @@ data class ExerciseRow(
     val distance_unit: String?,
     val weight_unit: String?,
     /** The exercise's own activity, an `Energy.Activity` key (#174), or null to work its calories out automatically. */
-    val activity: String?
+    val activity: String?,
+    /** A Session exercise's kind of sport, a `SessionKinds` key (#249), or null. */
+    val session_kind: String? = null,
+    /** Which optional session fields it records, `SessionMetrics` bits (#249), or null for all of them. */
+    val session_fields: Int? = null
 )
 
 @Entity(

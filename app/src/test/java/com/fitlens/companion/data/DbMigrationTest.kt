@@ -401,4 +401,20 @@ class DbMigrationTest {
             )
         }
     }
+
+    @Test
+    fun v30ExercisesGainSessionKindAndKeepTheirRows() {
+        // Exercises as v30 left them, before a Session's kind of sport and fields (#249).
+        oldDatabase(30, v12Schema) { db ->
+            db.row("exercise", "id" to 1L, "name" to "BJJ")
+            db.row("exercise", "id" to 2L, "name" to "Bench Press")
+        }
+        Db(app).writableDatabase.use { db ->
+            assertEquals(Db.VERSION, db.version)
+            assertEquals(2, db.count("SELECT COUNT(*) FROM exercise WHERE session_kind IS NULL AND session_fields IS NULL"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM exercise WHERE id=1 AND name='BJJ'"))
+            db.execSQL("UPDATE exercise SET session_kind='combat', session_fields=9 WHERE id=1")
+            assertEquals(1, db.count("SELECT COUNT(*) FROM exercise WHERE session_kind='combat' AND session_fields=9"))
+        }
+    }
 }

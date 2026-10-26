@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.fitlens.companion.R
 import com.fitlens.companion.data.CardioZones
 import com.fitlens.companion.data.SessionIntensity
+import com.fitlens.companion.data.SessionMetrics
 import com.fitlens.companion.data.SessionTypes
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.fmtNum
@@ -63,7 +64,9 @@ internal fun SessionFields(
     onZone: (Int?) -> Unit,
     onOpenProfile: () -> Unit,
     rpe: Double? = null,
-    onRpe: ((Double?) -> Unit)? = null
+    onRpe: ((Double?) -> Unit)? = null,
+    /** The exercise's [SessionMetrics] (#249); null shows all. A field with a value is always shown, so it can be fixed. */
+    fields: Int? = null
 ) {
     val res = LocalContext.current.resources
     var zoneHelp by remember { mutableStateOf(false) }
@@ -95,7 +98,7 @@ internal fun SessionFields(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-    StepperField(
+    if (SessionMetrics.has(fields, SessionMetrics.LIVE) || liveText.isNotBlank()) StepperField(
         label = stringResource(R.string.session_field_hard),
         value = liveText,
         onValue = onLive,
@@ -110,7 +113,7 @@ internal fun SessionFields(
         )
     }
     val notSet = stringResource(R.string.session_not_set)
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    if (SessionMetrics.has(fields, SessionMetrics.INTENSITY) || intensity != null) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         val ids = SessionIntensity.all
         DropdownPill(
             stringResource(R.string.session_intensity),
@@ -118,7 +121,7 @@ internal fun SessionFields(
             ids.indexOf(intensity) + 1
         ) { i -> onIntensity(ids.getOrNull(i - 1)) }
     }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    if (SessionMetrics.has(fields, SessionMetrics.TYPE) || sessionType != null) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         val ids = SessionTypes.all
         DropdownPill(
             stringResource(R.string.session_type),
@@ -126,7 +129,7 @@ internal fun SessionFields(
             ids.indexOf(sessionType) + 1
         ) { i -> onSessionType(ids.getOrNull(i - 1)) }
     }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    if (SessionMetrics.has(fields, SessionMetrics.ZONE) || zone != null) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         val zones = CardioZones.all
         DropdownPill(
             stringResource(R.string.session_zone),

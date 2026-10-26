@@ -398,6 +398,10 @@ interface WorkoutDao {
     @Query("UPDATE exercise SET activity = :activity WHERE id = :id")
     fun setExerciseActivity(id: Long, activity: String?)
 
+    /** A Session exercise's kind of sport and the optional fields it records (#249). */
+    @Query("UPDATE exercise SET session_kind = :kind, session_fields = :fields WHERE id = :id")
+    fun setExerciseSession(id: Long, kind: String?, fields: Int?)
+
     @Query("UPDATE exercise SET notes = :notes, favourite = :favourite, source = :source WHERE id = :id")
     fun setMergedExercise(id: Long, notes: String?, favourite: Int, source: String)
 
@@ -934,7 +938,8 @@ internal fun CategoryRow.toModel() = Category(id, name, colour.toInt(), sort_ord
 
 internal fun ExerciseRow.toModel() = Exercise(
     id, name, category_id, type, notes, source, favourite != 0, weight_step, default_graph, rest_seconds,
-    DistanceUnits.of(distance_unit), WeightUnits.of(weight_unit), Energy.Activity.of(activity)?.key
+    DistanceUnits.of(distance_unit), WeightUnits.of(weight_unit), Energy.Activity.of(activity)?.key,
+    SessionKinds.of(session_kind), session_fields
 )
 
 internal fun ExerciseTypeRow.toModel() = CustomType(

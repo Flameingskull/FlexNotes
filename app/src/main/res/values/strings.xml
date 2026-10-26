@@ -3727,4 +3727,20 @@
     <string name="session_save_anyway">Save anyway</string>
     <string name="session_fix">Fix</string>
     <string name="session_no_rpe_hint">Add RPE to count it in training load</string>
+    <!-- Sports ready to use (#249) -->
+    <string name="sport_kind">Kind of sport</string>
+    <string name="sport_kind_combat">Combat sport or martial art</string>
+    <string name="sport_kind_racket">Racket sport</string>
+    <string name="sport_kind_team">Team sport</string>
+    <string name="sport_kind_cardio">Cardio or endurance</string>
+    <string name="sport_kind_mind_body">Mind and body</string>
+    <string name="sport_kind_gym">Gym</string>
+    <string name="sport_suggest_like">Suggested to match %1$s. Change anything below.</string>
+    <string name="sport_suggest_usual">The usual fields for this kind of sport. Change anything below.</string>
+    <string name="sport_records">What to record</string>
+    <string name="sport_records_always">Length and how hard it felt are always recorded, so your training load can be worked out.</string>
+    <string name="sport_metric_live">Hard or live minutes</string>
+    <string name="sport_metric_intensity">Intensity</string>
+    <string name="sport_metric_type">Session type</string>
+    <string name="sport_metric_zone">Cardio zone</string>
 </resources>

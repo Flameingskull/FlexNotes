@@ -21,7 +21,8 @@ is to record workouts the way FitNotes does, plus what FitNotes can't: photos, p
 custom metrics.
 
 - **Today:** FlexNotes opens on today's training log and moves around the way FitNotes does. It logs your workouts
-  (an exercise library with ten exercise types plus types you make yourself, each with up to three values and a
+  (an exercise library with eleven exercise types plus types you make yourself, including **Session** for sports,
+  martial arts and classes with 16 sports ready to use, each with up to three values and a
   metric of your own, set-by-set entry with set types, effort, comments and a done tick, workouts made of days you
   name with planned sets and rests, a workout timer and a rest timer), analyses your training (with graphs you can
   compare side by side, overlay with a body measurement and pin to an overview, and strength relative to your
@@ -30,7 +31,7 @@ custom metrics.
   graph point, makes slideshows, videos and PDF reports that remember your options, exports photos as ordinary image files, reads
   steps, food, body values, vitals, sleep and other apps' workouts from Health Connect on the phone, keeps medications
   with dose schedules (including tapering and as-needed doses) and reminders, lab results with reference ranges, a
-  daily readiness check-in with training load, water and caffeine, your menstrual cycle on graphs, training blocks,
+  daily readiness check-in with training load from sets or from how hard each session felt, training blocks,
   reminders to log, and a home-screen widget, and backs everything up locally. Every
   exercise, set and workout records whether it came from FitNotes or was created in FlexNotes, so the two histories sit
   side by side without colliding.
@@ -87,9 +88,16 @@ custom metrics.
   1.0.166 adds training blocks for workouts and a body outline on the camera ([#218](https://github.com/Flameingskull/FlexNotes/issues/218), [#230](https://github.com/Flameingskull/FlexNotes/issues/230)); 1.0.167
   reads water, caffeine, your menstrual cycle and lab results from Health Connect ([#226](https://github.com/Flameingskull/FlexNotes/issues/226), [#222](https://github.com/Flameingskull/FlexNotes/issues/222), [#225](https://github.com/Flameingskull/FlexNotes/issues/225));
   1.0.168 adds reminders to weigh in, measure, take photos and train, and a home-screen widget ([#219](https://github.com/Flameingskull/FlexNotes/issues/219), [#220](https://github.com/Flameingskull/FlexNotes/issues/220));
-  and 1.0.169 lets a training block lighten or add to a workout's planned sets ([#235](https://github.com/Flameingskull/FlexNotes/issues/235)). That finishes the
-  roadmap, `docs/plans/2026-10-24-roadmap.md`, apart from the accessibility checks that need a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)). Ideas beyond it are on the
-  [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
+  1.0.169 lets a training block lighten or add to a workout's planned sets ([#235](https://github.com/Flameingskull/FlexNotes/issues/235)). 1.0.171 keeps FlexNotes to
+  what helps a workout, fitness and medication log: it removed water, caffeine, the menstrual cycle and lab results
+  read from other apps again, and medication dates read as real weekday dates ([#237](https://github.com/Flameingskull/FlexNotes/issues/237), [#238](https://github.com/Flameingskull/FlexNotes/issues/238), [#239](https://github.com/Flameingskull/FlexNotes/issues/239)).
+  1.0.173 adds **sessions**: a BJJ class, a tennis match or how hard a gym day felt, logged like any set with its
+  length, rating, hard minutes and cardio zone, and a Session load for training load ([#240](https://github.com/Flameingskull/FlexNotes/issues/240)–[#243](https://github.com/Flameingskull/FlexNotes/issues/243)). 1.0.174
+  adds 16 ready-made sports and martial arts and lets you set up your own sport ([#249](https://github.com/Flameingskull/FlexNotes/issues/249)).
+- **Next:** sport-specific calories and a Rounds type for sparring ([#244](https://github.com/Flameingskull/FlexNotes/issues/244)–[#247](https://github.com/Flameingskull/FlexNotes/issues/247)), the rest timer
+  in the phone's notification ([#250](https://github.com/Flameingskull/FlexNotes/issues/250)), a review of every screen so each one suits people first ([#263](https://github.com/Flameingskull/FlexNotes/issues/263))
+  and a clean-up of code left from earlier versions ([#264](https://github.com/Flameingskull/FlexNotes/issues/264)). The plan is `docs/plans/2026-10-24-roadmap.md`; other
+  ideas are on the [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
   Imports always merge and never overwrite FlexNotes data. There's no export back to FitNotes.
 
@@ -265,10 +273,10 @@ custom metrics.
 - **Readiness and training load:** the day log's **Readiness** card is a daily check-in (sleep quality, soreness,
   energy, stress and mood), combined with HRV, resting heart rate and sleep when Health Connect has them, gives a
   score from 0 to 100. **Analysis › Readiness** graphs it, with your acute and
-  chronic training load, a warning when this week jumps above 1.5× your usual load, and monotony and strain.
-- **Water and caffeine:** a day log card for the day's drinks, logged at any time, with how much caffeine is still
-  active at your usual bedtime, set against your sleep. Either card can be hidden in **Settings › Home Screen
-  Settings**.
+  chronic training load, a warning when this week jumps above 1.5× your usual load, and monotony and strain. Load
+  can be measured as **Session load** (how hard each session felt × its minutes), with the ratio's band in plain
+  words and a warning on the day log when a day's load jumps more than 50%. The card can be hidden in **Settings ›
+  Home Screen Settings**.
 - **Measurements:** the Body tracker's pencil switches it to editing measurements: an on/off switch for each, its
   unit and goal, the standard set (bodyweight and eight tape measurements), and your own, such as sleep, with their
   own unit. **Body fat** and **Height** are there for everyone. You can link one to a FitNotes measurement so imports
@@ -334,9 +342,7 @@ custom metrics.
   read everything before that once. Values you type are never replaced. Under **Write to Health Connect** you can
   switch on writing your bodyweight, body fat and workouts (each logged day with a start and end, as a strength
   training session) so other apps see them: each is written once, kept up to date as you edit it, and deleted there
-  when you delete it in FlexNotes. Nothing read from Health Connect is written back. Water and caffeine, your
-  menstrual cycle (shaded as phases behind body and exercise graphs, or logged yourself as **Period** values) and, on
-  Android 16 and later, lab results from medical records can be read too.
+  when you delete it in FlexNotes. Nothing read from Health Connect is written back.
 - **Reminders and widget:** **Settings › Reminders** has reminders to weigh in, measure, take progress photos and
   train, each at your own time and days, and quiet when that day's already done; tapping one opens the right screen.
   The **FlexNotes today** home-screen widget lists today's doses with **Taken**, as-needed medications with **Take**,
@@ -394,6 +400,13 @@ custom metrics.
     The exercise form's **Your types** makes exercise types of your own: pick what each set records (weight, reps,
     distance, time, or a metric of your own with its name and unit, such as jump height in cm). Set entry, history,
     graphs (**Best** and **Total** for the metric), records, predefined workout sets and CSV export follow the type.
+  - **Sports and sessions:** the **Sports & martial arts** category holds 16 ready-made Session exercises (Gym
+    Session, BJJ, Muay Thai, Boxing, Kickboxing, MMA, Wrestling, Judo, Karate, Tennis, Football, Basketball, Squash /
+    Padel, Cardio, Swimming and Yoga / Mobility). Each session records its length and how hard it felt (0 to 10),
+    and where the sport suits them, hard or live minutes, intensity, kind of session and cardio zone (the ⓘ explains
+    each zone, with your heart rate ranges from **Profile**). To add your own sport, choose **Session** as the type
+    and its kind of sport. FlexNotes suggests what to record from the sports of the same kind, and you can change
+    any of it. Sessions can be predefined in workouts and have Session load, rating, length and hard-minute graphs.
   - **Exercise screen:** **Track** (log sets: each field under an uppercase heading, its value between square − and
     + buttons, straight under the tabs, with the day's sets below as a plain list), **History** (each day under a
     FitNotes heading such as **MONDAY, SEPTEMBER 28**, every day you've done it, with its totals, that day's
@@ -563,7 +576,7 @@ The first time FlexNotes opens, a short guided setup walks through the steps bel
   **Older data** permission, only the last 30 days are read.
 - FlexNotes never gives drug interaction or dosing advice: that would need an online, licensed database. The
   emergency card shows only what you entered and logged; it isn't a medical record. Readiness and training load are
-  guides, not medical advice. Cycle phases after a period are estimates.
+  guides, not medical advice.
 - A training block's change to the planned sets applies when a workout day is logged from **Add workout** or **Log
   all**; sets typed one by one are logged as typed. Reminders follow the days and times you set, not a training
   plan's rest days.

@@ -159,7 +159,11 @@ data class Exercise(
     /** The unit this exercise's weights are shown and typed in ("kg" or "lbs"), or null for the global one (#7). */
     val weightUnit: String? = null,
     /** Its own activity for its calories, an [Energy.Activity] key (#174), or null for automatic. */
-    val activity: String? = null
+    val activity: String? = null,
+    /** A Session exercise's kind of sport, a [SessionKinds] key (#249), or null when not set. */
+    val sessionKind: String? = null,
+    /** The optional session fields it records, [SessionMetrics] bits (#249); null records all of them. */
+    val sessionFields: Int? = null
 ) {
     val imported: Boolean get() = source == Sources.FITNOTES
 }

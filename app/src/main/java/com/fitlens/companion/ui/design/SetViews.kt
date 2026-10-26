@@ -53,7 +53,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -239,24 +239,40 @@ private fun setInnerPadding(framed: Boolean, hasCommentButton: Boolean) = when {
 }
 
 /**
- * A set's value columns (#112): side by side in equal columns, each right-aligned, as FitNotes shows them. When one
- * doesn't fit its column (a small phone at a large font size, #157) they stack instead, each right-aligned on its own
- * line, so figures never run into each other.
+ * A set's value columns (#112): side by side, each right-aligned, as FitNotes shows them. Equal columns when every
+ * value fits its share; otherwise each column is as wide as its value, with the room left over shared out, so a wide
+ * weight ("102.5 kg") beside short reps still sits on one line. Only when the values can't fit side by side even in
+ * a smaller size (a small phone at a large font size, #157) do they stack, each right-aligned on its own line, so
+ * figures never run into each other or merge into one cell.
  */
 @Composable
 private fun SetCells(cells: List<SetCell>) {
-    Layout(content = { cells.forEach { SetCellText(it) } }) { measurables, constraints ->
-        if (measurables.isEmpty()) return@Layout layout(constraints.minWidth, constraints.minHeight) {}
-        val width = if (constraints.hasBoundedWidth) constraints.maxWidth
-            else measurables.sumOf { it.maxIntrinsicWidth(constraints.maxHeight) }
-        val share = width / measurables.size
-        val fits = measurables.all { it.maxIntrinsicWidth(constraints.maxHeight) <= share }
-        val loose = constraints.copy(minHeight = 0)
-        if (fits) {
-            val placeables = measurables.map { it.measure(loose.copy(minWidth = share, maxWidth = share)) }
+    SubcomposeLayout { constraints ->
+        if (cells.isEmpty()) return@SubcomposeLayout layout(constraints.minWidth, constraints.minHeight) {}
+        val loose = constraints.copy(minWidth = 0, minHeight = 0)
+        fun natural(slot: String, compact: Boolean) =
+            subcompose(slot) { cells.forEach { SetCellText(it, compact = compact) } }
+        val regular = natural("regular", false)
+        val regularWidths = regular.map { it.maxIntrinsicWidth(constraints.maxHeight) }
+        val width = if (constraints.hasBoundedWidth) constraints.maxWidth else regularWidths.sum()
+        val gaps = (cells.size - 1) * 8.dp.roundToPx()
+        val compact = regularWidths.sum() + gaps > width
+        val measurables = if (compact) natural("compact", true) else regular
+        val widths = if (compact) measurables.map { it.maxIntrinsicWidth(constraints.maxHeight) } else regularWidths
+        val share = width / cells.size
+        val sideBySide = widths.sum() + (if (compact) 0 else gaps) <= width
+        if (sideBySide) {
+            // Equal shares keep the columns lined up down the list; a value too wide for its share takes its own width.
+            val columns = if (widths.all { it <= share }) List(cells.size) { share }
+                else {
+                    val spare = (width - widths.sum()) / cells.size
+                    widths.map { it + spare }
+                }
+            val placeables = measurables.mapIndexed { i, m -> m.measure(loose.copy(minWidth = columns[i], maxWidth = columns[i])) }
             val height = maxOf(placeables.maxOf { it.height }, constraints.minHeight)
             layout(width, height) {
-                placeables.forEachIndexed { i, p -> p.placeRelative(i * share, (height - p.height) / 2) }
+                var x = width - columns.sum()
+                placeables.forEachIndexed { i, p -> p.placeRelative(x, (height - p.height) / 2); x += columns[i] }
             }
         } else {
             val placeables = measurables.map { it.measure(loose.copy(minWidth = width, maxWidth = width)) }
@@ -274,12 +290,13 @@ private fun SetCells(cells: List<SetCell>) {
  * figures so the columns line up down the list.
  */
 @Composable
-private fun SetCellText(cell: SetCell, modifier: Modifier = Modifier) {
+private fun SetCellText(cell: SetCell, modifier: Modifier = Modifier, compact: Boolean = false) {
     Row(modifier, horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
         Text(
             cell.value,
             Modifier.alignByBaseline(),
-            style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
+            style = (if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium)
+                .copy(fontFeatureSettings = "tnum"),
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             softWrap = false
@@ -287,7 +304,7 @@ private fun SetCellText(cell: SetCell, modifier: Modifier = Modifier) {
         if (cell.unitSlot) {
             Text(
                 cell.unit,
-                Modifier.alignByBaseline().padding(start = 3.dp).widthIn(min = SetUnitWidth),
+                Modifier.alignByBaseline().padding(start = 3.dp).widthIn(min = if (compact) 0.dp else SetUnitWidth),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

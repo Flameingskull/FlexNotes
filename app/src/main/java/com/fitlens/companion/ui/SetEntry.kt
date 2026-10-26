@@ -614,7 +614,8 @@ fun SetEntryScreen(
                             sessionType = sessionType, onSessionType = { sessionType = it },
                             zone = zone, onZone = { zone = it },
                             onOpenProfile = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) },
-                            rpe = rpe, onRpe = { rpe = it }
+                            rpe = rpe, onRpe = { rpe = it },
+                            fields = ex?.sessionFields
                         )
                     }
                     // Set type (#43) and optional effort (#44) as two dropdowns on one row (#129), so the sets below

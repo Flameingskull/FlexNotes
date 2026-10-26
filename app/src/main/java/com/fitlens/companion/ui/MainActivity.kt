@@ -1,5 +1,7 @@
 package com.fitlens.companion.ui
 
+import androidx.compose.ui.graphics.toArgb
+import com.fitlens.companion.data.Workouts
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -300,6 +302,14 @@ class MainActivity : ComponentActivity() {
             UiEvents.loadLastResult()
             // Safety copies (#47) are kept for a limited time only.
             Backups.pruneSafety(applicationContext)
+            // The built-in sports (#249) join the library once.
+            try {
+                Workouts.seedSportsOnce(Brand.GoldLight.toArgb())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.e("FlexNotes", "Couldn't add the built-in sports", e)
+            }
             opening?.let { handleIntent(it) }
         }
     }

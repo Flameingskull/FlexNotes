@@ -740,7 +740,8 @@ private fun PlannedSetsSheet(
                         intensity = r.intensity, onIntensity = { rows[i] = rows[i].copy(intensity = it) },
                         sessionType = r.sessionType, onSessionType = { rows[i] = rows[i].copy(sessionType = it) },
                         zone = r.zone, onZone = { rows[i] = rows[i].copy(zone = it) },
-                        onOpenProfile = onProfile
+                        onOpenProfile = onProfile,
+                        fields = ex?.sessionFields
                     )
                 }
                 if (!isSession && ExerciseTypes.usesDuration(type)) {

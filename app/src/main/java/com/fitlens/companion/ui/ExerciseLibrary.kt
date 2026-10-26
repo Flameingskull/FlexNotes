@@ -22,6 +22,11 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import com.fitlens.companion.data.SportLibrary
+import com.fitlens.companion.data.SessionMetrics
+import com.fitlens.companion.data.SessionKinds
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -801,6 +806,9 @@ fun ExerciseEditorSheet(
     var weightUnit by remember { mutableStateOf(existing?.weightUnit) }
     // Its own activity for its calories (#174), or null for automatic.
     var activity by remember { mutableStateOf(existing?.activity) }
+    // A Session's kind of sport and the optional fields it records (#249); null fields records all of them.
+    var sessionKind by remember { mutableStateOf(existing?.sessionKind) }
+    var sessionFields by remember { mutableStateOf(existing?.sessionFields) }
     val res = LocalContext.current.resources
 
     fun save(keepOpen: Boolean) {
@@ -818,6 +826,8 @@ fun ExerciseEditorSheet(
         val dUnit = distUnit
         val wUnit = weightUnit
         val act = activity
+        val kind = sessionKind
+        val fields = sessionFields
         if (!keepOpen) onDismiss()
         AppScope.scope.launch {
             try {
@@ -828,6 +838,9 @@ fun ExerciseEditorSheet(
                     existing.id
                 }
                 if (act != existing?.activity) Workouts.setExerciseActivity(id, act)
+                if (ExerciseTypes.isSession(t) && (kind != existing?.sessionKind || fields != existing?.sessionFields)) {
+                    Workouts.setExerciseSession(id, kind, fields)
+                }
                 if (step != existing?.weightStepKg || graph != (existing?.defaultGraph ?: -1) || rest != existing?.restSeconds ||
                     dUnit != existing?.distanceUnit || wUnit != existing?.weightUnit
                 ) {
@@ -905,7 +918,8 @@ fun ExerciseEditorSheet(
                     }
                     // The type decides what each set records (#14): the two main types first, as in FitNotes, then the rest.
                     SectionLabel(stringResource(R.string.lib_info_type))
-                    val main = listOf(ExerciseTypes.WEIGHT_REPS, ExerciseTypes.DISTANCE_TIME)
+                    // Session sits with the main types (#249), so a sport or a class is easy to set up.
+                    val main = listOf(ExerciseTypes.WEIGHT_REPS, ExerciseTypes.DISTANCE_TIME, ExerciseTypes.SESSION)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         main.forEach { t ->
                             FilterChip(selected = type == t, onClick = { type = t }, label = { Text(exerciseTypeText(LocalContext.current.resources, t)) })
@@ -944,6 +958,19 @@ fun ExerciseEditorSheet(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    if (ExerciseTypes.isSession(type)) {
+                        SessionSetup(
+                            snap = snap,
+                            exceptId = existing?.id ?: -1L,
+                            kind = sessionKind,
+                            fields = sessionFields,
+                            onKind = { k, suggested ->
+                                sessionKind = k
+                                sessionFields = suggested
+                            },
+                            onFields = { sessionFields = it }
+                        )
+                    }
                     if (existing != null && type != existing.type && (snap.workoutsByExercise[existing.id] ?: 0) > 0) {
                         Text(
                             stringResource(R.string.lib_type_change_note),
@@ -1300,3 +1327,78 @@ fun LibraryAction(nav: Nav) {
         Icon(Icons.Filled.List, contentDescription = stringResource(R.string.lib_title))
     }
 }
+
+/**
+ * A Session exercise's kind of sport and what it records (#249). Picking a kind fills in what the Session exercises
+ * of that kind in the library record (or the kind's usual fields when there are none), and says which ones it
+ * compared, so a new sport starts from its nearest neighbours. Every field can then be ticked on or off.
+ */
+@Composable
+private fun SessionSetup(
+    snap: Snapshot,
+    exceptId: Long,
+    kind: String?,
+    fields: Int?,
+    onKind: (String, Int) -> Unit,
+    onFields: (Int) -> Unit
+) {
+    val res = LocalContext.current.resources
+    SectionLabel(stringResource(R.string.sport_kind))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        SessionKinds.all.forEach { k ->
+            FilterChip(
+                selected = kind == k,
+                onClick = { onKind(k, SportLibrary.suggest(k, snap.exercises.values, exceptId).fields) },
+                label = { Text(sportKindText(res, k)) }
+            )
+        }
+    }
+    if (kind != null) {
+        val suggestion = remember(kind, snap.libraryKey) { SportLibrary.suggest(kind, snap.exercises.values, exceptId) }
+        val names = suggestion.basedOn.take(3).joinToString(", ")
+        Text(
+            if (suggestion.basedOn.isEmpty()) stringResource(R.string.sport_suggest_usual)
+            else stringResource(R.string.sport_suggest_like, names),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+    SectionLabel(stringResource(R.string.sport_records))
+    Text(
+        stringResource(R.string.sport_records_always),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    SessionMetrics.all.forEach { m ->
+        val on = SessionMetrics.has(fields, m)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .toggleable(value = on, role = Role.Checkbox, onValueChange = { onFields(SessionMetrics.of(fields) xor m) }),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Checkbox(checked = on, onCheckedChange = null)
+            Text(sessionMetricText(res, m), Modifier.padding(start = Spacing.sm))
+        }
+    }
+}
+
+internal fun sportKindText(res: android.content.res.Resources, kind: String): String = res.getString(
+    when (kind) {
+        SessionKinds.COMBAT -> R.string.sport_kind_combat
+        SessionKinds.RACKET -> R.string.sport_kind_racket
+        SessionKinds.TEAM -> R.string.sport_kind_team
+        SessionKinds.CARDIO -> R.string.sport_kind_cardio
+        SessionKinds.MIND_BODY -> R.string.sport_kind_mind_body
+        else -> R.string.sport_kind_gym
+    }
+)
+
+private fun sessionMetricText(res: android.content.res.Resources, metric: Int): String = res.getString(
+    when (metric) {
+        SessionMetrics.LIVE -> R.string.sport_metric_live
+        SessionMetrics.INTENSITY -> R.string.sport_metric_intensity
+        SessionMetrics.TYPE -> R.string.sport_metric_type
+        else -> R.string.sport_metric_zone
+    }
+)
