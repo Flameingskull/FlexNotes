@@ -892,6 +892,8 @@ fun ExerciseHistoryPane(snap: Snapshot, nav: Nav, exId: Long) {
         EmptyState(stringResource(R.string.ex_history_empty_title), stringResource(R.string.ex_history_empty_body))
         return
     }
+    // Every set in the history shares one layout, as in a card (#265).
+    val setLayout = com.fitlens.companion.ui.design.rememberSetLayoutGroup()
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
         byDate.entries.reversed().forEach { (d, l) ->
             item(key = d) {
@@ -904,6 +906,7 @@ fun ExerciseHistoryPane(snap: Snapshot, nav: Nav, exId: Long) {
                     l.forEachIndexed { i, s ->
                         val marks = setMarks(res, s, session = snap.isSessionExercise(s.exerciseId))
                         SetRowView(
+                            layoutGroup = setLayout,
                             index = i + 1,
                             summary = describeSet(res, snap, s.weightKg, s.reps, s.distance, s.durationSec, s.exerciseId),
                             cells = setCells(res, snap, fields, s),

@@ -527,6 +527,7 @@ fun SetEntryScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )
         }
+        val setLayout = com.fitlens.companion.ui.design.rememberSetLayoutGroup()
         HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { tab ->
         when (tab) {
         1 -> ExerciseHistoryPane(snap, nav, exerciseId)
@@ -715,6 +716,7 @@ fun SetEntryScreen(
                     val isSelected = selected == s.id
                     val marks = setMarks(res, s, prefs, session = isSession)
                     SetRowView(
+                        layoutGroup = setLayout,
                         index = i + 1,
                         summary = describeSet(res, snap, s.weightKg, s.reps, s.distance, s.durationSec, s.exerciseId, s.metric),
                         cells = setCells(res, snap, fields, s),

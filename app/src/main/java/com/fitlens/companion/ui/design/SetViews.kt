@@ -38,6 +38,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +56,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.CustomAccessibilityAction
@@ -246,7 +249,7 @@ private fun setInnerPadding(framed: Boolean, hasCommentButton: Boolean) = when {
  * figures never run into each other or merge into one cell.
  */
 @Composable
-private fun SetCells(cells: List<SetCell>) {
+private fun SetCells(cells: List<SetCell>, group: SetLayoutGroup?) {
     SubcomposeLayout { constraints ->
         if (cells.isEmpty()) return@SubcomposeLayout layout(constraints.minWidth, constraints.minHeight) {}
         val loose = constraints.copy(minWidth = 0, minHeight = 0)
@@ -256,16 +259,34 @@ private fun SetCells(cells: List<SetCell>) {
         val regularWidths = regular.map { it.maxIntrinsicWidth(constraints.maxHeight) }
         val width = if (constraints.hasBoundedWidth) constraints.maxWidth else regularWidths.sum()
         val gaps = (cells.size - 1) * 8.dp.roundToPx()
-        val compact = regularWidths.sum() + gaps > width
-        val measurables = if (compact) natural("compact", true) else regular
-        val widths = if (compact) measurables.map { it.maxIntrinsicWidth(constraints.maxHeight) } else regularWidths
+        // How this row alone would lay out: 0 regular, 1 compact, 2 stacked. The list's shared level is the largest
+        // of its rows', so every set in a card or list lays out the same way (#265).
+        var compactMeasurables: List<androidx.compose.ui.layout.Measurable>? = null
+        var compactWidths: List<Int> = emptyList()
+        var own = 0
+        if (regularWidths.sum() + gaps > width) {
+            val m = natural("compact", true)
+            compactMeasurables = m
+            compactWidths = m.map { it.maxIntrinsicWidth(constraints.maxHeight) }
+            own = if (compactWidths.sum() <= width) 1 else 2
+        }
+        val shared = group?.level ?: 0
+        if (group != null && own > shared) group.level = own
+        val level = maxOf(own, shared)
+        val compact = level >= 1
+        val measurables = if (compact) compactMeasurables ?: natural("compact", true) else regular
+        val widths = when {
+            !compact -> regularWidths
+            compactMeasurables != null -> compactWidths
+            else -> measurables.map { it.maxIntrinsicWidth(constraints.maxHeight) }
+        }
         val share = width / cells.size
-        val sideBySide = widths.sum() + (if (compact) 0 else gaps) <= width
+        val sideBySide = level < 2
         if (sideBySide) {
             // Equal shares keep the columns lined up down the list; a value too wide for its share takes its own width.
             val columns = if (widths.all { it <= share }) List(cells.size) { share }
                 else {
-                    val spare = (width - widths.sum()) / cells.size
+                    val spare = maxOf(0, (width - widths.sum()) / cells.size)
                     widths.map { it + spare }
                 }
             val placeables = measurables.mapIndexed { i, m -> m.measure(loose.copy(minWidth = columns[i], maxWidth = columns[i])) }
@@ -284,6 +305,25 @@ private fun SetCells(cells: List<SetCell>) {
         }
     }
 }
+
+/**
+ * The layout every set in one card or list shares (#265): 0 regular, 1 compact, 2 stacked. A row that can't fit raises
+ * it for all of them and it never goes back down, so no layout loop. Make one with [rememberSetLayoutGroup]; a card
+ * ([ExerciseCard]) provides one through [LocalSetLayoutGroup], and a list such as the Track tab passes it to [SetRow].
+ */
+class SetLayoutGroup {
+    var level by mutableStateOf(0)
+}
+
+/** A new group, started afresh when the font size, density or screen width changes. */
+@Composable
+fun rememberSetLayoutGroup(): SetLayoutGroup {
+    val density = LocalDensity.current
+    val widthDp = LocalConfiguration.current.screenWidthDp
+    return remember(density.density, density.fontScale, widthDp) { SetLayoutGroup() }
+}
+
+val LocalSetLayoutGroup = compositionLocalOf<SetLayoutGroup?> { null }
 
 /**
  * A value and its unit, right-aligned in its column as FitNotes shows them ("144.0 kgs   3 reps", #112), in tabular
@@ -358,7 +398,9 @@ fun SetRow(
     noun: String = stringResource(R.string.sv_set),
     /** Long-press, with what TalkBack calls it (a body value's Delete, #169). */
     onLongClick: (() -> Unit)? = null,
-    onLongClickLabel: String? = null
+    onLongClickLabel: String? = null,
+    /** The layout shared by the sets of one list (#265); a card supplies it through [LocalSetLayoutGroup]. */
+    layoutGroup: SetLayoutGroup? = LocalSetLayoutGroup.current
 ) {
     val res = LocalContext.current.resources
     val shape = FitShapes.row
@@ -452,7 +494,7 @@ fun SetRow(
                 }
                 Column(Modifier.weight(1f)) {
                     if (cells != null) {
-                        SetCells(cells)
+                        SetCells(cells, layoutGroup)
                         if (effort != null) {
                             Text(
                                 effort,
@@ -724,7 +766,7 @@ fun ExerciseCard(
         }
         Box(Modifier.fillMaxWidth().height(2.dp).background(categoryColor))
         Column(Modifier.fillMaxWidth().padding(top = Spacing.xs, bottom = Spacing.md, end = Spacing.sm)) {
-            sets()
+            CompositionLocalProvider(LocalSetLayoutGroup provides rememberSetLayoutGroup()) { sets() }
             if (!comment.isNullOrBlank()) {
                 val edit = onComment
                 Text(
