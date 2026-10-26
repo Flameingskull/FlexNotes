@@ -115,6 +115,7 @@ import com.fitlens.companion.data.fmtDuration
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.DropdownPill
+import com.fitlens.companion.ui.design.PickerPill
 import com.fitlens.companion.data.WeightUnits
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.FitTopBar
@@ -980,12 +981,35 @@ fun ExerciseEditorSheet(
                     }
                     // Its own activity for its calories (#174): Automatic works them out from effort, distance and time.
                     SectionLabel(stringResource(R.string.lib_activity))
-                    val activities = com.fitlens.companion.data.Energy.Activity.entries
-                    DropdownPill(
+                    // Grouped by kind of activity, with a search (#244); Automatic stays first.
+                    val activities = com.fitlens.companion.data.Energy.Activity.entries.sortedBy { it.category.ordinal }
+                    var pickingActivity by remember { mutableStateOf(false) }
+                    val autoLabel = stringResource(R.string.lib_activity_auto)
+                    PickerPill(
                         stringResource(R.string.lib_activity),
-                        listOf(stringResource(R.string.lib_activity_auto)) + activities.map { activityText(res, it) },
-                        activities.indexOfFirst { it.key == activity } + 1
-                    ) { i -> activity = if (i == 0) null else activities[i - 1].key }
+                        activities.firstOrNull { it.key == activity }?.let { activityName(res, it) } ?: autoLabel
+                    ) { pickingActivity = true }
+                    if (pickingActivity) {
+                        val items = listOf(PickerItem(id = 0L, title = autoLabel)) + activities.mapIndexed { i, a ->
+                            PickerItem(
+                                id = i + 1L,
+                                title = activityName(res, a),
+                                subtitle = stringResource(R.string.lib_activity_mets, fmtNum(a.met, 1)),
+                                section = activityCategoryText(res, a.category)
+                            )
+                        }
+                        SearchablePicker(
+                            title = stringResource(R.string.lib_activity),
+                            items = items,
+                            onDismiss = { pickingActivity = false },
+                            onPick = { ids ->
+                                val i = (ids.firstOrNull() ?: 0L).toInt()
+                                activity = if (i == 0) null else activities[i - 1].key
+                                pickingActivity = false
+                            },
+                            searchLabel = stringResource(R.string.lib_activity_search)
+                        )
+                    }
                     Text(
                         stringResource(R.string.lib_activity_note),
                         style = MaterialTheme.typography.bodySmall,

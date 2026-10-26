@@ -81,6 +81,10 @@ object EnergyEstimates {
         if (sets.isEmpty()) return emptyList()
         val lastOf = sets.groupBy { it.exerciseId }.mapValues { e -> e.value.last().id }
         val inputs = sets.map { s ->
+            // A Session with an activity is a sport (#244): its intensity (or cardio zone) scales the MET, and its hard
+            // minutes use the activity's hard MET.
+            val sport = snap.exercises[s.exerciseId]?.takeIf { ExerciseTypes.isSession(it.type) }
+                ?.let { Energy.Activity.of(it.activity) }
             Energy.SetInput(
                 exerciseId = s.exerciseId,
                 cardio = isCardio(snap, s.exerciseId),
@@ -90,7 +94,10 @@ object EnergyEstimates {
                 rpe = if (ExerciseTypes.isSession(snap.exercises[s.exerciseId]?.type ?: -1) && s.intensity == null && s.zone != null) {
                     Energy.zoneRpe(s.zone)
                 } else s.rpe,
-                restSeconds = rest.seconds(date, s.exerciseId, s.id, s.id == lastOf[s.exerciseId]).toDouble()
+                restSeconds = rest.seconds(date, s.exerciseId, s.id, s.id == lastOf[s.exerciseId]).toDouble(),
+                sportFactor = sport?.let { Energy.intensityFactor(s.intensity, s.zone) },
+                liveSeconds = (s.liveSec ?: 0).toDouble(),
+                hardMet = sport?.hardOrBase
             )
         }
         return Energy.bouts(inputs, workoutSeconds(snap, date), mets)

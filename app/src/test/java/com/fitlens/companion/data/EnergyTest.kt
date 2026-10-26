@@ -132,4 +132,56 @@ class EnergyTest {
         assertEquals(Energy.Plan(4, 45, Energy.Effort.VIGOROUS), Energy.Plan.decode(Energy.Plan(4, 45, Energy.Effort.VIGOROUS).encode()))
         assertNull(Energy.Plan.decode("x"))
     }
+    @Test
+    fun intensityScalesASportsMetAndAZoneStandsIn() {
+        assertEquals(0.8, Energy.intensityFactor(SessionIntensity.TECHNICAL, null), 1e-9)
+        assertEquals(1.0, Energy.intensityFactor(SessionIntensity.CLASS, null), 1e-9)
+        assertEquals(1.2, Energy.intensityFactor(SessionIntensity.HARD_LIVE, null), 1e-9)
+        assertEquals(1.4, Energy.intensityFactor(SessionIntensity.FIGHT_PACE, null), 1e-9)
+        // No intensity: the zone stands in (1-2 technical, 3 class, 4 hard live, 5 fight pace); with neither, 1.0.
+        assertEquals(0.8, Energy.intensityFactor(null, 1), 1e-9)
+        assertEquals(0.8, Energy.intensityFactor(null, 2), 1e-9)
+        assertEquals(1.0, Energy.intensityFactor(null, 3), 1e-9)
+        assertEquals(1.2, Energy.intensityFactor(null, 4), 1e-9)
+        assertEquals(1.4, Energy.intensityFactor(null, 5), 1e-9)
+        assertEquals(1.0, Energy.intensityFactor(null, null), 1e-9)
+        // An intensity beats the zone.
+        assertEquals(1.4, Energy.intensityFactor(SessionIntensity.FIGHT_PACE, 1), 1e-9)
+    }
+
+    @Test
+    fun hardMinutesUseTheHardMetAndTheRestTheBase() {
+        // BJJ, an hour, 10 minutes of it live: 50 min at 9.5 and 10 min at 12.0, at class intensity (1.0).
+        val bjj = Energy.Activity.BJJ
+        val ms = Energy.sportMetSeconds(bjj.met, bjj.hardOrBase, 3600.0, 600.0, 1.0)
+        assertEquals(3000.0 * 9.5 + 600.0 * 12.0, ms, 1e-9)
+        val sets = listOf(Energy.SetInput(7, true, 0.0, 3600.0, null, 0.0, sportFactor = 1.0, liveSeconds = 600.0, hardMet = bjj.hardOrBase))
+        val bout = Energy.bouts(sets, 0.0, mapOf(7L to bjj.met)).single()
+        val k = Energy.boutKcal(bout, 80.0)
+        val average = ms / 3600.0
+        assertEquals((average - 1.0) * 80.0, k.kcal, 1e-6)
+        assertEquals(average * 80.0, k.gross, 1e-6)
+        // Hard live scales both parts by 1.2.
+        val hard = Energy.sportMetSeconds(bjj.met, bjj.hardOrBase, 3600.0, 600.0, 1.2)
+        assertEquals(ms * 1.2, hard, 1e-9)
+        // More live time than the session lasted counts as the whole session.
+        assertEquals(3600.0 * 12.0, Energy.sportMetSeconds(bjj.met, bjj.hardOrBase, 3600.0, 9999.0, 1.0), 1e-9)
+    }
+
+    @Test
+    fun oldActivitiesAndGrossFiguresAreUnchanged() {
+        // A non-sport bout with a MET is MET x time as before; gross adds back the resting MET.
+        val old = Energy.boutKcal(Energy.Bout(3, false, 3600.0, met = Energy.Activity.SPORTS.met), 80.0)
+        assertEquals(5.0 * 80.0, old.kcal, 1e-9)
+        assertEquals(6.0 * 80.0, old.gross, 1e-9)
+        // Sets without a sport factor leave metSeconds unset.
+        val sets = listOf(Energy.SetInput(1, true, 0.0, 1800.0, null, 0.0))
+        assertNull(Energy.bouts(sets, 0.0, mapOf(1L to 6.0)).single().metSeconds)
+        // The ACSM equations are net; gross adds 1 MET.
+        val run = Energy.boutKcal(Energy.Bout(1, cardio = true, seconds = 1800.0, metres = 5000.0), 70.0)
+        assertEquals(350.0, run.kcal, 1e-6)
+        assertEquals(350.0 + 70.0 * 0.5, run.gross, 1e-6)
+        assertEquals("sports", Energy.Activity.of("sports")?.key)
+        assertNull(Energy.Activity.SPORTS.hardMet)
+    }
 }

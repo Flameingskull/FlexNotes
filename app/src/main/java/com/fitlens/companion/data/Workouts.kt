@@ -551,10 +551,28 @@ object Workouts {
                 missing.forEach { se ->
                     val id = w.addExercise(se.name, categoryId, ExerciseTypes.SESSION, null, Sources.FLEXNOTES)
                     w.setExerciseSession(id, se.kind, se.fields)
+                    se.activity?.let { w.setExerciseActivity(id, it) }
                     exercises += IdName(id, se.name)
                 }
             }
             Store.db.setMeta(SportLibrary.SEEDED_KEY, "1")
+        }
+    }
+
+    /**
+     * Gives the built-in sports added before they had an activity (#244) theirs, once per database. Only a Session
+     * exercise with a built-in name and no activity is touched, so nothing the user chose is overwritten.
+     */
+    suspend fun seedSportActivitiesOnce() {
+        if (withContext(Dispatchers.IO) { Store.db.getMeta(SportLibrary.ACTIVITY_KEY) } != null) return
+        write(LIBRARY) { w ->
+            val bare = w.exercisesWithoutActivity(ExerciseTypes.SESSION)
+            SportLibrary.exercises.forEach { se ->
+                val activity = se.activity ?: return@forEach
+                val id = sameName(bare, se.name) ?: return@forEach
+                w.setExerciseActivity(id, activity)
+            }
+            Store.db.setMeta(SportLibrary.ACTIVITY_KEY, "1")
         }
     }
 

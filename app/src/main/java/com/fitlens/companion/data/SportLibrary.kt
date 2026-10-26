@@ -45,8 +45,16 @@ object SessionKinds {
     }
 }
 
-/** One built-in Session exercise (#249). */
-data class SportExercise(val name: String, val kind: String, val fields: Int = SessionKinds.defaults(kind))
+/**
+ * One built-in Session exercise (#249). [activity] is its [Energy.Activity] key (#244), so its calories use the
+ * sport's METs; null when no activity fits (a Gym Session's sets already count their own calories).
+ */
+data class SportExercise(
+    val name: String,
+    val kind: String,
+    val fields: Int = SessionKinds.defaults(kind),
+    val activity: String? = null
+)
 
 /**
  * The Session exercises every library gets once, on the update that brings them (#249, owner 2026-10-26), filed under
@@ -57,23 +65,26 @@ object SportLibrary {
     const val CATEGORY = "Sports & martial arts"
     const val SEEDED_KEY = "sports_seeded_v1"
 
+    /** The `meta` mark of the once-only pass that gives the sports seeded in 1.0.176 their activity (#244). */
+    const val ACTIVITY_KEY = "sports_activity_v1"
+
     val exercises: List<SportExercise> = listOf(
         SportExercise("Gym Session", SessionKinds.GYM),
-        SportExercise("Brazilian Jiu-Jitsu", SessionKinds.COMBAT),
-        SportExercise("Muay Thai", SessionKinds.COMBAT),
-        SportExercise("Boxing", SessionKinds.COMBAT),
-        SportExercise("Kickboxing", SessionKinds.COMBAT),
-        SportExercise("MMA", SessionKinds.COMBAT),
-        SportExercise("Wrestling", SessionKinds.COMBAT),
-        SportExercise("Judo", SessionKinds.COMBAT),
-        SportExercise("Karate", SessionKinds.COMBAT),
-        SportExercise("Tennis", SessionKinds.RACKET),
-        SportExercise("Football", SessionKinds.TEAM),
-        SportExercise("Basketball", SessionKinds.TEAM),
-        SportExercise("Squash / Padel", SessionKinds.RACKET),
+        SportExercise("Brazilian Jiu-Jitsu", SessionKinds.COMBAT, activity = "bjj"),
+        SportExercise("Muay Thai", SessionKinds.COMBAT, activity = "muay_thai"),
+        SportExercise("Boxing", SessionKinds.COMBAT, activity = "boxing"),
+        SportExercise("Kickboxing", SessionKinds.COMBAT, activity = "muay_thai"),
+        SportExercise("MMA", SessionKinds.COMBAT, activity = "mma"),
+        SportExercise("Wrestling", SessionKinds.COMBAT, activity = "wrestling"),
+        SportExercise("Judo", SessionKinds.COMBAT, activity = "judo"),
+        SportExercise("Karate", SessionKinds.COMBAT, activity = "karate_taekwondo"),
+        SportExercise("Tennis", SessionKinds.RACKET, activity = "court_sports"),
+        SportExercise("Football", SessionKinds.TEAM, activity = "team_sports"),
+        SportExercise("Basketball", SessionKinds.TEAM, activity = "team_sports"),
+        SportExercise("Squash / Padel", SessionKinds.RACKET, activity = "court_sports"),
         SportExercise("Cardio Session", SessionKinds.CARDIO),
-        SportExercise("Swimming Session", SessionKinds.CARDIO),
-        SportExercise("Yoga / Mobility Session", SessionKinds.MIND_BODY)
+        SportExercise("Swimming Session", SessionKinds.CARDIO, activity = "swimming"),
+        SportExercise("Yoga / Mobility Session", SessionKinds.MIND_BODY, activity = "yoga")
     )
 
     /** What a new sport of [kind] should record, and the exercises the suggestion was drawn from. */

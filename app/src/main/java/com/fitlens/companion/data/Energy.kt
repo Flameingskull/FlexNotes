@@ -74,27 +74,79 @@ object Energy {
      * An exercise's own activity (#174), with its 2024 Adult Compendium MET, chosen in the exercise editor when the
      * automatic estimate doesn't fit. Stored by its key, so values that share a MET stay apart.
      */
-    enum class Activity(val key: String, val met: Double) {
-        STRENGTH_LIGHT("strength_light", 3.5),
-        STRENGTH_MODERATE("strength_moderate", 5.0),
-        STRENGTH_VIGOROUS("strength_vigorous", 6.0),
-        CIRCUIT("circuit", 8.0),
-        CALISTHENICS("calisthenics", 3.8),
-        HIIT("hiit", 8.0),
-        WALKING("walking", 3.5),
-        RUNNING("running", 9.8),
-        CYCLING("cycling", 6.8),
-        ROWING("rowing", 7.0),
-        ELLIPTICAL("elliptical", 5.0),
-        STAIRS("stairs", 9.0),
-        SWIMMING("swimming", 7.0),
-        SPORTS("sports", 6.0),
-        YOGA("yoga", 2.8),
-        STRETCHING("stretching", 2.3);
+    enum class Activity(val key: String, val met: Double, val category: ActivityCategory, val hardMet: Double? = null) {
+        STRENGTH_LIGHT("strength_light", 3.5, ActivityCategory.STRENGTH),
+        STRENGTH_MODERATE("strength_moderate", 5.0, ActivityCategory.STRENGTH),
+        STRENGTH_VIGOROUS("strength_vigorous", 6.0, ActivityCategory.STRENGTH),
+        CIRCUIT("circuit", 8.0, ActivityCategory.HYBRID),
+        CALISTHENICS("calisthenics", 3.8, ActivityCategory.STRENGTH),
+        HIIT("hiit", 8.0, ActivityCategory.HYBRID),
+        WALKING("walking", 3.5, ActivityCategory.ENDURANCE),
+        RUNNING("running", 9.8, ActivityCategory.ENDURANCE),
+        CYCLING("cycling", 6.8, ActivityCategory.ENDURANCE),
+        ROWING("rowing", 7.0, ActivityCategory.ENDURANCE),
+        ELLIPTICAL("elliptical", 5.0, ActivityCategory.ENDURANCE),
+        STAIRS("stairs", 9.0, ActivityCategory.ENDURANCE),
+        SWIMMING("swimming", 7.0, ActivityCategory.ENDURANCE),
+        SPORTS("sports", 6.0, ActivityCategory.TEAM),
+        YOGA("yoga", 2.8, ActivityCategory.FLEXIBILITY),
+        STRETCHING("stretching", 2.3, ActivityCategory.FLEXIBILITY),
+
+        // Sports (#244): a base MET for a normal session and a higher one for its hard or live minutes. The values are
+        // the middle of the Compendium ranges in docs/reference/training-load-energy-expenditure.md section 4. Drills and
+        // technical sparring have no harder pace there; the other sports' hard METs sit in the top of their range.
+        BJJ("bjj", 9.5, ActivityCategory.COMBAT, 12.0),
+        JUDO("judo", 10.8, ActivityCategory.COMBAT, 13.0),
+        WRESTLING("wrestling", 10.3, ActivityCategory.COMBAT, 13.0),
+        BOXING("boxing", 9.3, ActivityCategory.COMBAT, 12.0),
+        MUAY_THAI("muay_thai", 10.0, ActivityCategory.COMBAT, 12.5),
+        MMA("mma", 10.8, ActivityCategory.COMBAT, 13.3),
+        KARATE_TKD("karate_taekwondo", 9.8, ActivityCategory.COMBAT, 13.2),
+        GRAPPLING_DRILLS("grappling_drills", 8.0, ActivityCategory.COMBAT),
+        TECHNICAL_SPARRING("technical_sparring", 8.5, ActivityCategory.COMBAT),
+        TEAM_SPORTS("team_sports", 10.0, ActivityCategory.TEAM, 11.5),
+        COURT_SPORTS("court_sports", 9.0, ActivityCategory.COURT, 10.5),
+        FENCING("fencing", 9.0, ActivityCategory.COURT, 10.5),
+        CROSSFIT_HYROX("crossfit_hyrox", 10.5, ActivityCategory.HYBRID, 12.0);
+
+        /** The MET of the hard or live minutes; the same as [met] when the activity has no harder pace. */
+        val hardOrBase: Double get() = hardMet ?: met
 
         companion object {
             fun of(key: String?): Activity? = entries.firstOrNull { it.key == key }
         }
+    }
+
+    /** The groups the exercise editor files activities under (#244), in the order it lists them. */
+    enum class ActivityCategory { COMBAT, TEAM, COURT, ENDURANCE, STRENGTH, HYBRID, FLEXIBILITY }
+
+    /**
+     * The intensity a cardio zone stands in for when a session has none (#244): zones 1 and 2 are Technical, 3 Class,
+     * 4 Hard live and 5 Fight pace. Its multiplier is [SessionIntensity.multiplier].
+     */
+    fun zoneIntensity(zone: Int): Int = when {
+        zone <= 2 -> SessionIntensity.TECHNICAL
+        zone == 3 -> SessionIntensity.CLASS
+        zone == 4 -> SessionIntensity.HARD_LIVE
+        else -> SessionIntensity.FIGHT_PACE
+    }
+
+    /**
+     * The factor a sport's MET is scaled by (#244): its intensity's multiplier (0.8, 1.0, 1.2, 1.4), or when there is
+     * none the cardio zone's, or 1.0 with neither.
+     */
+    fun intensityFactor(intensity: Int?, zone: Int?): Double {
+        val id = SessionIntensity.valid(intensity) ?: zone?.let { zoneIntensity(it) }
+        return id?.let { SessionIntensity.multiplier(it) } ?: 1.0
+    }
+
+    /**
+     * The MET-seconds of one sport set (#244): [live] seconds at [hardMet] and the rest of [seconds] at [met], all
+     * scaled by [factor] ([intensityFactor]).
+     */
+    fun sportMetSeconds(met: Double, hardMet: Double, seconds: Double, live: Double, factor: Double): Double {
+        val hard = live.coerceIn(0.0, max(0.0, seconds))
+        return ((seconds - hard) * met + hard * hardMet) * factor
     }
 
     // ---------- Resting energy ----------
@@ -244,36 +296,51 @@ object Energy {
         val effort: Effort = Effort.MODERATE,
         /** The exercise's own MET when the user chose an activity for it (#174), else null for automatic. */
         val met: Double? = null,
-        val sets: Int = 0
+        val sets: Int = 0,
+        /**
+         * For sport sets (#244): the sum over the sets of their MET (hard minutes at the hard MET, scaled by intensity)
+         * times their seconds. When set it replaces [met] x [seconds]; null leaves the calories as they were.
+         */
+        val metSeconds: Double? = null
     )
 
     /** How a bout's calories were worked out, for the breakdown. */
     enum class Method { MET, ACSM_WALK, ACSM_RUN, CYCLING }
 
-    /** A bout's net calories and how they were found. */
-    data class BoutKcal(val bout: Bout, val kcal: Double, val method: Method, val met: Double?)
+    /**
+     * A bout's net calories (above resting, the ones the daily total adds) and how they were found. [gross] is all the
+     * calories it burned, resting energy included (#245).
+     */
+    data class BoutKcal(val bout: Bout, val kcal: Double, val method: Method, val met: Double?, val gross: Double = kcal)
 
-    /** Net kcal for [b] at [kg]. */
+    /** Calories for [met] over [hours] at [kg], resting energy included (#245). */
+    fun grossMetKcal(met: Double, kg: Double, hours: Double): Double = max(0.0, met) * kg * max(0.0, hours)
+
+    /** Net kcal for [b] at [kg], with the gross beside it (#245). */
     fun boutKcal(b: Bout, kg: Double): BoutKcal {
         val hours = b.seconds / 3600.0
-        b.met?.let { return BoutKcal(b, netMetKcal(it, kg, hours), Method.MET, it) }
-        if (!b.cardio) {
-            val met = b.effort.met
-            return BoutKcal(b, netMetKcal(met, kg, hours), Method.MET, met)
+        fun byMet(m: Double) = BoutKcal(b, netMetKcal(m, kg, hours), Method.MET, m, grossMetKcal(m, kg, hours))
+        val ms = b.metSeconds
+        if (b.met != null && ms != null && b.seconds > 0) {
+            // A sport (#244): the average MET over its segments, so hard minutes and intensity count.
+            return byMet(ms / b.seconds)
         }
+        b.met?.let { return byMet(it) }
+        if (!b.cardio) return byMet(b.effort.met)
         if (b.metres > 0 && b.seconds > 0) {
             val speed = b.metres / (b.seconds / 60.0)
+            // The ACSM equations give the net figure; resting energy (1 MET) is added back for the gross.
+            val resting = grossMetKcal(1.0, kg, hours)
             return when {
-                speed <= WALK_MAX_M_PER_MIN -> BoutKcal(b, acsmNetKcal(b.metres, b.seconds, kg), Method.ACSM_WALK, null)
-                speed <= RUN_MAX_M_PER_MIN -> BoutKcal(b, acsmNetKcal(b.metres, b.seconds, kg), Method.ACSM_RUN, null)
+                speed <= WALK_MAX_M_PER_MIN -> acsmNetKcal(b.metres, b.seconds, kg).let { BoutKcal(b, it, Method.ACSM_WALK, null, it + resting) }
+                speed <= RUN_MAX_M_PER_MIN -> acsmNetKcal(b.metres, b.seconds, kg).let { BoutKcal(b, it, Method.ACSM_RUN, null, it + resting) }
                 else -> {
-                    val met = cyclingMet(speed * 60.0 / 1000.0)
-                    BoutKcal(b, netMetKcal(met, kg, hours), Method.CYCLING, met)
+                    val m = cyclingMet(speed * 60.0 / 1000.0)
+                    BoutKcal(b, netMetKcal(m, kg, hours), Method.CYCLING, m, grossMetKcal(m, kg, hours))
                 }
             }
         }
-        val met = cardioMet(b.effort)
-        return BoutKcal(b, netMetKcal(met, kg, hours), Method.MET, met)
+        return byMet(cardioMet(b.effort))
     }
 
     /** About how long one strength set takes to do, before its rest, when no time was logged. */
@@ -297,7 +364,13 @@ object Energy {
         val seconds: Double,
         val rpe: Double?,
         /** The rest after it ([restFor] in the UI), in seconds. */
-        val restSeconds: Double
+        val restSeconds: Double,
+        /** For a sport set (#244): [intensityFactor]; null for anything else, which is worked out as before. */
+        val sportFactor: Double? = null,
+        /** A sport set's hard or live seconds (#240), at most [seconds]. */
+        val liveSeconds: Double = 0.0,
+        /** The sport's MET for its hard minutes ([Activity.hardOrBase]). */
+        val hardMet: Double? = null
     )
 
     /**
@@ -319,7 +392,15 @@ object Energy {
                 shared > 0 -> shared * l.size / strengthSets
                 else -> l.sumOf { (if (it.seconds > 0) it.seconds else STRENGTH_SET_SECONDS) + it.restSeconds }
             }
-            Bout(ex, cardio, seconds, l.sumOf { it.metres }, effort, mets[ex], l.size)
+            val met = mets[ex]
+            // Sport sets (#244) work out their own MET-seconds; everything else is MET x time as before.
+            val metSeconds = if (met != null && cardio && l.any { it.sportFactor != null }) {
+                l.sumOf { s ->
+                    val factor = s.sportFactor
+                    if (factor == null) s.seconds * met else sportMetSeconds(met, s.hardMet ?: met, s.seconds, s.liveSeconds, factor)
+                }
+            } else null
+            Bout(ex, cardio, seconds, l.sumOf { it.metres }, effort, met, l.size, metSeconds)
         }
     }
 

@@ -812,6 +812,19 @@ private fun ExerciseOnDay(
                 Text(pluralStringResource(R.plurals.day_more_sets, hidden, hidden), style = MaterialTheme.typography.labelMedium)
             }
         }
+        // A session's calories (#245): all it burned and the part above resting, as the Calories sheet works them out.
+        // Nothing shows until the profile and a bodyweight make the estimate possible.
+        if (snap.isSessionExercise(exId)) {
+            val kcal = rememberDayCalories(snap, date).first?.exercises?.firstOrNull { it.bout.exerciseId == exId }
+            if (kcal != null && kcal.gross >= 0.5) {
+                Text(
+                    stringResource(R.string.day_session_kcal, kcalText(kcal.gross), kcalText(kcal.kcal)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = Spacing.md, top = Spacing.xs)
+                )
+            }
+        }
     }
     if (grouping) {
         SearchablePicker(

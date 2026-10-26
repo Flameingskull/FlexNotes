@@ -48,6 +48,25 @@ import kotlin.math.roundToInt
 /** An exercise activity's name (#174), as the exercise editor lists it with its MET. */
 internal fun activityText(res: android.content.res.Resources, a: Energy.Activity): String = res.getString(
     R.string.lib_activity_item,
+    activityName(res, a),
+    fmtNum(a.met, 1)
+)
+
+/** A group of activities (#244), as the exercise editor's picker files them. */
+internal fun activityCategoryText(res: android.content.res.Resources, c: Energy.ActivityCategory): String = res.getString(
+    when (c) {
+        Energy.ActivityCategory.COMBAT -> R.string.act_cat_combat
+        Energy.ActivityCategory.TEAM -> R.string.act_cat_team
+        Energy.ActivityCategory.COURT -> R.string.act_cat_court
+        Energy.ActivityCategory.ENDURANCE -> R.string.act_cat_endurance
+        Energy.ActivityCategory.STRENGTH -> R.string.act_cat_strength
+        Energy.ActivityCategory.HYBRID -> R.string.act_cat_hybrid
+        Energy.ActivityCategory.FLEXIBILITY -> R.string.act_cat_flexibility
+    }
+)
+
+/** An exercise activity's plain name, without its MET. */
+internal fun activityName(res: android.content.res.Resources, a: Energy.Activity): String =
     res.getString(
         when (a) {
             Energy.Activity.STRENGTH_LIGHT -> R.string.act_strength_light
@@ -66,10 +85,21 @@ internal fun activityText(res: android.content.res.Resources, a: Energy.Activity
             Energy.Activity.SPORTS -> R.string.act_sports
             Energy.Activity.YOGA -> R.string.act_yoga
             Energy.Activity.STRETCHING -> R.string.act_stretching
+            Energy.Activity.BJJ -> R.string.act_bjj
+            Energy.Activity.JUDO -> R.string.act_judo
+            Energy.Activity.WRESTLING -> R.string.act_wrestling
+            Energy.Activity.BOXING -> R.string.act_boxing
+            Energy.Activity.MUAY_THAI -> R.string.act_muay_thai
+            Energy.Activity.MMA -> R.string.act_mma
+            Energy.Activity.KARATE_TKD -> R.string.act_karate_tkd
+            Energy.Activity.GRAPPLING_DRILLS -> R.string.act_grappling_drills
+            Energy.Activity.TECHNICAL_SPARRING -> R.string.act_technical_sparring
+            Energy.Activity.TEAM_SPORTS -> R.string.act_team_sports
+            Energy.Activity.COURT_SPORTS -> R.string.act_court_sports
+            Energy.Activity.FENCING -> R.string.act_fencing
+            Energy.Activity.CROSSFIT_HYROX -> R.string.act_crossfit_hyrox
         }
-    ),
-    fmtNum(a.met, 1)
-)
+    )
 
 /** [date]'s calories (#174), worked out once per change to the training, body and library data or the settings. */
 @Composable
@@ -279,8 +309,13 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
                     Energy.Method.ACSM_RUN -> stringResource(R.string.cal_method_run)
                     Energy.Method.CYCLING, Energy.Method.MET -> stringResource(R.string.cal_method_met, fmtNum(b.met ?: 0.0, 1))
                 }
-                Figure(stringResource(R.string.cal_sheet_exercise, name, minutes, how), stringResource(R.string.tdee_plus_kcal, kcalText(b.kcal)))
+                // All the calories it burned, and the part above resting that the day's total adds (#245).
+                Figure(
+                    stringResource(R.string.cal_sheet_exercise, name, minutes, how),
+                    stringResource(R.string.cal_sheet_gross_net, kcalText(b.gross), kcalText(b.kcal))
+                )
             }
+            if (day.exercises.isNotEmpty()) SettingsNote(stringResource(R.string.cal_sheet_gross_note))
             if (day.exercises.isEmpty()) {
                 Text(stringResource(R.string.cal_sheet_rest_day), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }

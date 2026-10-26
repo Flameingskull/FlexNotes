@@ -305,6 +305,7 @@ class MainActivity : ComponentActivity() {
             // The built-in sports (#249) join the library once.
             try {
                 Workouts.seedSportsOnce(Brand.GoldLight.toArgb())
+                Workouts.seedSportActivitiesOnce()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -368,6 +368,10 @@ interface WorkoutDao {
     @Query("SELECT id, name FROM exercise")
     fun exerciseNames(): List<IdName>
 
+    /** The exercises of [type] with no activity of their own yet (#244). */
+    @Query("SELECT id, name FROM exercise WHERE type = :type AND activity IS NULL")
+    fun exercisesWithoutActivity(type: Int): List<IdName>
+
     @Query("SELECT EXISTS(SELECT 1 FROM exercise WHERE id = :id)")
     fun exerciseExists(id: Long): Boolean
 
