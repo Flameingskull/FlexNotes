@@ -92,7 +92,7 @@ custom metrics.
   what helps a workout, fitness and medication log: it removed water, caffeine, the menstrual cycle and lab results
   read from other apps again, and medication dates read as real weekday dates ([#237](https://github.com/Flameingskull/FlexNotes/issues/237), [#238](https://github.com/Flameingskull/FlexNotes/issues/238), [#239](https://github.com/Flameingskull/FlexNotes/issues/239)).
   1.0.173 adds **sessions**: a BJJ class, a tennis match or how hard a gym day felt, logged like any set with its
-  length, rating, hard minutes and cardio zone, and a Session load for training load ([#240](https://github.com/Flameingskull/FlexNotes/issues/240)–[#243](https://github.com/Flameingskull/FlexNotes/issues/243)). 1.0.175
+  length, rating, hard minutes and cardio zone, and a Session load for training load ([#240](https://github.com/Flameingskull/FlexNotes/issues/240)–[#243](https://github.com/Flameingskull/FlexNotes/issues/243)). 1.0.176
   adds 16 ready-made sports and martial arts and lets you set up your own sport ([#249](https://github.com/Flameingskull/FlexNotes/issues/249)).
 - **Next:** sport-specific calories and a Rounds type for sparring ([#244](https://github.com/Flameingskull/FlexNotes/issues/244)–[#247](https://github.com/Flameingskull/FlexNotes/issues/247)), the rest timer
   in the phone's notification ([#250](https://github.com/Flameingskull/FlexNotes/issues/250)), a review of every screen so each one suits people first ([#263](https://github.com/Flameingskull/FlexNotes/issues/263))
