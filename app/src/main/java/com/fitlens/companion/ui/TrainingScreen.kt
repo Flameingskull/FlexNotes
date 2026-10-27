@@ -974,11 +974,13 @@ internal fun historyDay(date: String): String {
 /** One day's totals for an exercise's history: sets, then reps and volume, or distance and time (#22). */
 private fun dayTotals(res: Resources, snap: Snapshot, exId: Long, sets: List<SetRow>): String {
     val parts = mutableListOf(res.getQuantityString(R.plurals.sets_count, sets.size, sets.size))
+    // A Rounds day reads "6 rounds", not "6 reps" (#246).
+    val rounds = ExerciseTypes.isRounds(snap.exercises[exId]?.type ?: -1)
     val reps = sets.sumOf { it.reps }
     val volume = sets.sumOf { it.weightKg * it.reps }
     val distance = sets.sumOf { it.distance }
     val time = sets.sumOf { it.durationSec }
-    if (reps > 0) parts += res.getQuantityString(R.plurals.reps_count, reps, reps)
+    if (reps > 0) parts += res.getQuantityString(if (rounds) R.plurals.rounds_count else R.plurals.reps_count, reps, reps)
     if (volume > 0) parts += res.getString(R.string.ex_volume, fmtNum(snap.weight(volume, exId), 0), snap.weightUnitOf(exId))
     if (distance > 0) parts += "${fmtNum(distance)} ${snap.distanceUnit(exId)}"
     if (time > 0) parts += fmtDuration(time)

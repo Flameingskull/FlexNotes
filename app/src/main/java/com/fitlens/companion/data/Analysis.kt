@@ -92,6 +92,10 @@ object Analysis {
         Period.Year -> t.start.year.toString()
     }
 
+    /** A set's reps for the reps totals: a Rounds set's reps are its rounds (#246), so they aren't counted as reps. */
+    fun reps(snap: Snapshot?, s: SetRow): Int =
+        if (ExerciseTypes.isRounds(snap?.exercises?.get(s.exerciseId)?.type ?: -1)) 0 else s.reps
+
     fun volumeKg(s: SetRow): Double = if (s.weightKg > 0 && s.reps > 0) s.weightKg * s.reps else 0.0
 
     /** Seconds of recorded workout time on [date], or 0 when it has no start and finish. */
@@ -123,7 +127,7 @@ object Analysis {
             val value = when (metric) {
                 Metric.Workouts -> days.size.toDouble()
                 Metric.Sets -> daySets.size.toDouble()
-                Metric.Reps -> daySets.sumOf { it.reps }.toDouble()
+                Metric.Reps -> daySets.sumOf { reps(snap, it) }.toDouble()
                 Metric.Volume -> daySets.sumOf { volumeKg(it) }
                 Metric.Duration -> days.sumOf { d ->
                     workoutSeconds(snap, d).also { if (it > 0) timed++ }
@@ -179,9 +183,9 @@ object Analysis {
     }
 
     /** What [m] adds up to for [sets]. Workouts counts distinct days. */
-    fun measure(sets: List<SetRow>, m: Measure): Double = when (m) {
+    fun measure(sets: List<SetRow>, m: Measure, snap: Snapshot? = Store.snapshot.value): Double = when (m) {
         Measure.Sets -> sets.size.toDouble()
-        Measure.Reps -> sets.sumOf { it.reps }.toDouble()
+        Measure.Reps -> sets.sumOf { reps(snap, it) }.toDouble()
         Measure.Workouts -> sets.map { it.date.take(10) }.distinct().size.toDouble()
         Measure.Volume -> sets.sumOf { volumeKg(it) }
     }
