@@ -88,7 +88,13 @@ internal fun isTimeBased(snap: Snapshot, exId: Long, sets: List<SetRow>): Boolea
  * extra graphs (#22) come after the older ones, so a saved default graph keeps pointing at the same graph. The names
  * are FitNotes's (#22): "Estimated 1RM", "Workout volume", "Workout reps".
  */
-fun graphLabels(type: Int, timeBased: Boolean): List<String> =
+fun graphLabels(type: Int, timeBased: Boolean, countNames: List<String> = emptyList()): List<String> =
+    baseGraphLabels(type, timeBased) + (if (ExerciseTypes.isTimedSession(type)) countGraphLabels(countNames) else emptyList())
+
+/** A Session or Rounds exercise's count graphs (#266), after its other graphs so saved defaults hold: "Total Takedowns". */
+internal fun countGraphLabels(names: List<String>): List<String> = names.take(2).filter { it.isNotBlank() }.map { "Total $it" }
+
+private fun baseGraphLabels(type: Int, timeBased: Boolean): List<String> =
     if (ExerciseTypes.isRounds(type)) listOf(GRAPH_ROUNDS, GRAPH_HARD_ROUNDS, GRAPH_ROUNDS_TIME, GRAPH_SESSION_LOAD, GRAPH_SESSION_RPE)
     else if (ExerciseTypes.isSession(type)) listOf(GRAPH_SESSION_LOAD, GRAPH_SESSION_RPE, GRAPH_SESSION_TIME, GRAPH_HARD_MINUTES)
     else if (ExerciseTypes.isCustom(type)) customGraphLabels(type)
@@ -139,6 +145,10 @@ internal fun metricGraphLabels(m: CustomType): List<String> =
 /** The custom metric of exercise [exId]'s type, if it has one (#14). */
 private fun metricFor(snap: Snapshot, exId: Long): CustomType? =
     snap.exercises[exId]?.let { ExerciseTypes.metricOf(it.type) }
+
+/** The names of exercise [exId]'s own counts (#266), for its count graphs. */
+private fun countsFor(snap: Snapshot, exId: Long): List<String> =
+    snap.exercises[exId]?.takeIf { ExerciseTypes.isTimedSession(it.type) }?.countNames.orEmpty()
 
 internal const val GRAPH_E1RM = "Estimated 1RM"
 internal const val GRAPH_MAX_WEIGHT = "Max Weight"
@@ -247,7 +257,7 @@ fun ExerciseDetailScreen(snap: Snapshot, nav: Nav, exId: Long, initialTab: Int =
 }
 
 /** Every exercise graph by name (#22), for [ExerciseGraphPane], comparisons (#53) and pinned cards (#55). */
-private fun graphTypes(repsFor: Int, distUnit: String, metric: CustomType? = null): Map<String, GraphType> = (listOf(
+private fun graphTypes(repsFor: Int, distUnit: String, metric: CustomType? = null, countNames: List<String> = emptyList()): Map<String, GraphType> = (listOf(
     GraphType(GRAPH_LONGEST, { l -> l.maxOf { it.durationSec }.toDouble() }, false, true),
     GraphType(GRAPH_TOTAL_TIME, { l -> l.sumOf { it.durationSec }.toDouble() }, false, true),
     GraphType(GRAPH_DISTANCE, { l -> l.sumOf { it.distance } }, false),
@@ -286,7 +296,11 @@ private fun graphTypes(repsFor: Int, distUnit: String, metric: CustomType? = nul
         GraphType(best, { l -> l.mapNotNull { it.metric }.maxOrNull() ?: 0.0 }, false),
         GraphType(total, { l -> l.sumOf { it.metric ?: 0.0 } }, false)
     )
-} ?: emptyList())).associateBy { it.label }
+} ?: emptyList()) + countNames.take(2).mapIndexedNotNull { i, n ->
+    // A Session or Rounds exercise's own counts (#266): the day's total. A day without the count draws no point.
+    if (n.isBlank()) null
+    else GraphType("Total $n", { l -> l.sumOf { (if (i == 0) it.countA else it.countB) ?: 0 }.toDouble() }, false)
+}).associateBy { it.label }
 
 /**
  * Exercise [exId]'s points on graph [label], one per day, with weights in exercise [unitOf]'s unit (its own, or the
@@ -295,7 +309,7 @@ private fun graphTypes(repsFor: Int, distUnit: String, metric: CustomType? = nul
  */
 internal fun exerciseGraphPoints(snap: Snapshot, exId: Long, label: String, repsFor: Int, unitOf: Long = exId): List<ChartPoint> {
     if (label == GRAPH_RELATIVE_STRENGTH) return relativeStrength(snap, exId).points
-    val g = graphTypes(repsFor, snap.distanceUnit(exId), metricFor(snap, exId))[label] ?: return emptyList()
+    val g = graphTypes(repsFor, snap.distanceUnit(exId), metricFor(snap, exId), countsFor(snap, exId))[label] ?: return emptyList()
     val byDate = snap.statSetsByExercise[exId].orEmpty().groupBy { it.date }.toSortedMap()
     val raw = g.series?.invoke(byDate) ?: byDate.entries.map { (d, l) -> d to g.fn(l) }
     return raw.map { (d, v) ->
@@ -359,7 +373,7 @@ internal fun comparedSeries(
 internal fun graphUnit(snap: Snapshot, exId: Long, label: String): String {
     val distUnit = snap.distanceUnit(exId)
     val metric = metricFor(snap, exId)
-    val g = graphTypes(5, distUnit, metric)[label] ?: return ""
+    val g = graphTypes(5, distUnit, metric, countsFor(snap, exId))[label] ?: return ""
     return when {
         metric != null && label in metricGraphLabels(metric) -> metric.metricUnit.orEmpty()
         label == GRAPH_RELATIVE_STRENGTH -> "× bodyweight"
@@ -394,7 +408,8 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
     var repsFor by remember(exId) { mutableIntStateOf(RepsForGraph.get(exId)) }
     val distUnit = snap.distanceUnit(exId)
     // A custom type's graphs follow its definition (#14), so an edit to the type is in the key.
-    val labels = remember(timeBased, type, ExerciseTypes.custom[type]) { graphLabels(type, timeBased) }
+    val countNames = countsFor(snap, exId)
+    val labels = remember(timeBased, type, ExerciseTypes.custom[type], countNames) { graphLabels(type, timeBased, countNames) }
     // Opens on the pinned graph, or on the exercise's default graph when one is set (#15).
     var gIdx by rememberSaveable {
         mutableIntStateOf(
@@ -423,7 +438,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
     val res = ctx.resources
     val label = labels[gIdx.coerceIn(0, labels.lastIndex)]
     val metric = metricFor(snap, exId)
-    val g = remember(label, repsFor, distUnit, metric) { graphTypes(repsFor, distUnit, metric).getValue(label) }
+    val g = remember(label, repsFor, distUnit, metric) { graphTypes(repsFor, distUnit, metric, countsFor(snap, exId)).getValue(label) }
     val others = comparable(snap, exId, label, compare)
     val isRelative = relative && others.isNotEmpty()
     var sel by remember(gIdx, rangeIdx, others, isRelative) { mutableStateOf<ChartSelection?>(null) }

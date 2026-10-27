@@ -14,7 +14,8 @@ object CsvExport {
     fun workoutColumns(unit: String) =
         listOf("Date", "Exercise", "Category", "Set", "Weight ($unit)", "Reps", "Distance", "Time (seconds)", "PR", "Comment", "set_type", "RPE", "Exercise comment", "Distance unit",
             "Custom metric", "Custom metric value", "Custom metric unit",
-            "Hard or live (seconds)", "Intensity", "Session type", "Cardio zone", "Session load")
+            "Hard or live (seconds)", "Intensity", "Session type", "Cardio zone", "Session load",
+            "Count 1 name", "Count 1", "Count 2 name", "Count 2")
 
     val BODY_COLUMNS = listOf("Date", "Time", "Measurement", "Value", "Unit", "Comment")
 
@@ -65,7 +66,12 @@ object CsvExport {
                         SessionIntensity.valid(s.intensity)?.let { csvIntensity(it) } ?: "",
                         SessionTypes.valid(s.sessionType)?.let { csvSessionType(it) } ?: "",
                         s.zone?.toString() ?: "",
-                        if (ex != null && ExerciseTypes.isTimedSession(ex.type)) SessionLoad.of(s.rpe, s.durationSec)?.let { fmtNum(it, 1) } ?: "" else ""
+                        if (ex != null && ExerciseTypes.isTimedSession(ex.type)) SessionLoad.of(s.rpe, s.durationSec)?.let { fmtNum(it, 1) } ?: "" else "",
+                        // A Session or Rounds set's own counts (#266): the name the exercise gave it, then the number.
+                        if (s.countA != null) ex?.countNames?.getOrNull(0).orEmpty() else "",
+                        s.countA?.toString() ?: "",
+                        if (s.countB != null) ex?.countNames?.getOrNull(1).orEmpty() else "",
+                        s.countB?.toString() ?: ""
                     )
                 )
             }

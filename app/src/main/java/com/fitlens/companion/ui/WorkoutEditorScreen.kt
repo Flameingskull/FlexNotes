@@ -572,7 +572,10 @@ private data class SetDraft(
     val live: String = "",
     val intensity: Int? = null,
     val sessionType: Int? = null,
-    val zone: Int? = null
+    val zone: Int? = null,
+    /** A Session or Rounds set's own counts as typed (#266); blank for none. */
+    val countA: String = "",
+    val countB: String = ""
 )
 
 private fun num(s: String): Double = s.trim().replace(',', '.').toDoubleOrNull() ?: 0.0
@@ -619,7 +622,7 @@ private fun PlannedSetsSheet(
             start.forEach { s ->
                 val rd = if (isRounds) RoundsDraft.of(s.reps, s.durationSec, s.restSeconds, s.liveSec) else null
                 add(
-                    if (rd != null) SetDraft(reps = rd.rounds, time = rd.length, type = s.setType, rest = rd.rest, live = rd.hard, zone = s.zone) else SetDraft(
+                    if (rd != null) SetDraft(reps = rd.rounds, time = rd.length, type = s.setType, rest = rd.rest, live = rd.hard, zone = s.zone, countA = countText(s.countA), countB = countText(s.countB)) else SetDraft(
                         weight = s.weightKg.takeIf { it != 0.0 }?.let { fmtNum(snap.weight(it, planned.exerciseId), 2) } ?: "",
                         reps = s.reps.takeIf { it > 0 }?.toString() ?: "",
                         distance = s.distance.takeIf { it > 0 }?.let { fmtNum(it, 2) } ?: "",
@@ -630,7 +633,9 @@ private fun PlannedSetsSheet(
                         live = s.liveSec?.let { minutesText(it) } ?: "",
                         intensity = s.intensity,
                         sessionType = s.sessionType,
-                        zone = s.zone
+                        zone = s.zone,
+                        countA = countText(s.countA),
+                        countB = countText(s.countB)
                     )
                 )
             }
@@ -671,7 +676,7 @@ private fun PlannedSetsSheet(
                     val d = RoundsDraft(it.reps, it.time, it.rest, it.live)
                     return@map PlannedSet(
                         reps = d.roundCount, durationSec = d.totalSec, setType = it.type, restSeconds = d.restSec.takeIf { r -> r > 0 },
-                        liveSec = d.hardSec, zone = it.zone
+                        liveSec = d.hardSec, zone = it.zone, countA = countValue(it.countA), countB = countValue(it.countB)
                     )
                 }
                 PlannedSet(
@@ -684,7 +689,9 @@ private fun PlannedSetsSheet(
                     liveSec = if (isSession && it.live.isNotBlank()) minutesToSeconds(it.live).coerceAtMost(minutesToSeconds(it.time)) else null,
                     intensity = if (isSession) it.intensity else null,
                     sessionType = if (isSession) it.sessionType else null,
-                    zone = if (isSession) it.zone else null
+                    zone = if (isSession) it.zone else null,
+                    countA = if (isSession) countValue(it.countA) else null,
+                    countB = if (isSession) countValue(it.countB) else null
                 )
             }.filter { !it.isEmpty }
             onDone(
@@ -765,6 +772,11 @@ private fun PlannedSetsSheet(
                         onOpenProfile = onProfile
                     )
                 }
+                if (isSession || isRounds) CountFields(
+                    names = ex?.countNames.orEmpty(),
+                    aText = r.countA, onA = { rows[i] = rows[i].copy(countA = it) },
+                    bText = r.countB, onB = { rows[i] = rows[i].copy(countB = it) }
+                )
                 if (!isSession && !isRounds && ExerciseTypes.usesDuration(type)) {
                     StepperField(stringResource(R.string.workout_field_time), r.time, { rows[i] = rows[i].copy(time = it) }, { d ->
                         val next = kotlin.math.max(0, seconds(rows[i].time) + d * 15)

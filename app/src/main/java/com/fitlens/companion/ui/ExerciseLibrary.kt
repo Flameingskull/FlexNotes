@@ -731,7 +731,7 @@ fun ExerciseNotes(notes: String, modifier: Modifier = Modifier) {
 @Composable
 fun ExerciseInfoSheet(snap: Snapshot, ex: Exercise, weightStepShown: Double, onEdit: () -> Unit, onDismiss: () -> Unit) {
     val prefs by Settings.portable.collectAsState()
-    val graphs = graphLabels(ex.type, timeBased = ExerciseTypes.timeBased(ex.type, anyWeightOrReps = false))
+    val graphs = graphLabels(ex.type, timeBased = ExerciseTypes.timeBased(ex.type, anyWeightOrReps = false), countNames = ex.countNames)
     // FitNotes's rows (#142): the setting's name in bold, its value under it, a rule between.
     @Composable
     fun InfoRow(label: String, value: String) {
@@ -1091,7 +1091,7 @@ fun ExerciseEditorSheet(
                     )
                     FieldLabel(stringResource(R.string.lib_opens_graph))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        graphLabels(type, timeBased = ExerciseTypes.timeBased(type, anyWeightOrReps = false)).forEachIndexed { i, label ->
+                        graphLabels(type, timeBased = ExerciseTypes.timeBased(type, anyWeightOrReps = false), countNames = SportCounts.parse(SportCounts.join(listOf(countNameA, countNameB)))).forEachIndexed { i, label ->
                             FilterChip(
                                 selected = defaultGraph == i || (defaultGraph < 0 && i == 0),
                                 onClick = { defaultGraph = i },

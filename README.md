@@ -21,8 +21,8 @@ is to record workouts the way FitNotes does, plus what FitNotes can't: photos, p
 custom metrics.
 
 - **Today:** FlexNotes opens on today's training log and moves around the way FitNotes does. It logs your workouts
-  (an exercise library with eleven exercise types plus types you make yourself, including **Session** for sports,
-  martial arts and classes with 16 sports ready to use, each with up to three values and a
+  (an exercise library with twelve exercise types plus types you make yourself, including **Session** for sports,
+  martial arts and classes with 16 sports ready to use and **Rounds** for sparring, bag work and rolls, each with up to three values and a
   metric of your own, set-by-set entry with set types, effort, comments and a done tick, workouts made of days you
   name with planned sets and rests, a workout timer and a rest timer), analyses your training (with graphs you can
   compare side by side, overlay with a body measurement and pin to an overview, and strength relative to your
@@ -93,10 +93,14 @@ custom metrics.
   read from other apps again, and medication dates read as real weekday dates ([#237](https://github.com/Flameingskull/FlexNotes/issues/237), [#238](https://github.com/Flameingskull/FlexNotes/issues/238), [#239](https://github.com/Flameingskull/FlexNotes/issues/239)).
   1.0.173 adds **sessions**: a BJJ class, a tennis match or how hard a gym day felt, logged like any set with its
   length, rating, hard minutes and cardio zone, and a Session load for training load ([#240](https://github.com/Flameingskull/FlexNotes/issues/240)–[#243](https://github.com/Flameingskull/FlexNotes/issues/243)). 1.0.176
-  adds 16 ready-made sports and martial arts and lets you set up your own sport ([#249](https://github.com/Flameingskull/FlexNotes/issues/249)).
-- **Next:** sport-specific calories and a Rounds type for sparring ([#244](https://github.com/Flameingskull/FlexNotes/issues/244)–[#247](https://github.com/Flameingskull/FlexNotes/issues/247)), the rest timer
-  in the phone's notification ([#250](https://github.com/Flameingskull/FlexNotes/issues/250)), a review of every screen so each one suits people first ([#263](https://github.com/Flameingskull/FlexNotes/issues/263))
-  and a clean-up of code left from earlier versions ([#264](https://github.com/Flameingskull/FlexNotes/issues/264)). The plan is `docs/plans/2026-10-24-roadmap.md`; other
+  adds 16 ready-made sports and martial arts and lets you set up your own sport ([#249](https://github.com/Flameingskull/FlexNotes/issues/249)). 1.0.177 gives sports their own
+  calories, scaled by intensity, with gross and net figures ([#244](https://github.com/Flameingskull/FlexNotes/issues/244), [#245](https://github.com/Flameingskull/FlexNotes/issues/245)); 1.0.178 adds the **Rounds** type,
+  optional starter sport exercises and the rest timer in the phone's notification and lock screen ([#246](https://github.com/Flameingskull/FlexNotes/issues/246), [#247](https://github.com/Flameingskull/FlexNotes/issues/247), [#250](https://github.com/Flameingskull/FlexNotes/issues/250));
+  1.0.180 and 1.0.181 add sport counts such as takedowns or points ([#266](https://github.com/Flameingskull/FlexNotes/issues/266)) and begin a screen-by-screen review so
+  every page reads as real weekday dates and keeps its layout at large font sizes ([#251](https://github.com/Flameingskull/FlexNotes/issues/251)–[#254](https://github.com/Flameingskull/FlexNotes/issues/254)).
+- **Next:** the rest of the screen-by-screen review, so each one suits people first ([#263](https://github.com/Flameingskull/FlexNotes/issues/263): body and photos,
+  medications, settings, calendar, widget and notifications), then a clean-up of code left from earlier versions
+  ([#264](https://github.com/Flameingskull/FlexNotes/issues/264)) and an accessibility pass on a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)). The plan is `docs/plans/2026-10-24-roadmap.md`; other
   ideas are on the [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
   Imports always merge and never overwrite FlexNotes data. There's no export back to FitNotes.
@@ -178,6 +182,8 @@ custom metrics.
   clock's place, on the exercise screen and the day log. It takes any length from 1 second to 60 minutes, pauses,
   starts after each set if you like, and plays a sound (your choice of the phone's sounds, at its own volume) and
   vibrates when rest is over. The default length and these options are also in **Settings → Rest Timer**.
+  While a rest or workout timer runs, its countdown also shows in the phone's notification, on the lock screen and
+  (on Android 16) as a Live Update in the status bar; FlexNotes asks once, with the reason, before turning that on.
   An exercise can have its own rest time, and a workout can plan rests per set and between exercises: after each set
   the timer uses that set's planned rest, then the workout's, then the exercise's own, then your usual length, and
   after an exercise's last set it uses the planned break before the next one. A day keeps the rests it was logged with,
@@ -299,7 +305,8 @@ custom metrics.
   **Daily activity from my steps** (Settings → Profile) counts steps with the phone's own step counter, kept on the
   phone, and uses them for the daily activity once a few days are counted. A walk or run you log as a workout isn't
   counted a second time: its distance, at your stride, comes off that day's steps.
-  A **Calories** card on the day log shows what each day burned and needed, the same every day or following that
+  A session shows its calories both ways, "X kcal (Y above resting)", on the day log and in the Calories sheet; the
+  TDEE uses the part above resting. A **Calories** card on the day log shows what each day burned and needed, the same every day or following that
   day's training, and opens the breakdown. Every figure is an estimate.
 - **What you ate, and a measured TDEE:** tap the Calories card on any day to type that day's calories, plus protein,
   fat and carbs if you track them; the card then reads what you ate against what the day needed. They're kept as body
@@ -407,6 +414,12 @@ custom metrics.
     each zone, with your heart rate ranges from **Profile**). To add your own sport, choose **Session** as the type
     and its kind of sport. FlexNotes suggests what to record from the sports of the same kind, and you can change
     any of it. Sessions can be predefined in workouts and have Session load, rating, length and hard-minute graphs.
+    **Rounds** logs sparring, bag work or rolls as rounds, round length, rest between rounds and hard rounds, with
+    the total and hard time worked out for you. **Add sport exercises** in the library offers more ready-made sports
+    and Rounds starters, added only when you pick them. A Session or Rounds exercise can count up to two things of
+    your own (takedowns, submissions, points): set them in the exercise form, log them with each set, plan them in a
+    workout, graph them and export them to CSV. Each sport can have its own **Activity** (13 sports, with an easy and a
+    hard figure) so its calories follow its intensity and hard minutes.
   - **Exercise screen:** **Track** (log sets: each field under an uppercase heading, its value between square − and
     + buttons, straight under the tabs, with the day's sets below as a plain list), **History** (each day under a
     FitNotes heading such as **MONDAY, SEPTEMBER 28**, every day you've done it, with its totals, that day's
@@ -580,6 +593,8 @@ The first time FlexNotes opens, a short guided setup walks through the steps bel
 - A training block's change to the planned sets applies when a workout day is logged from **Add workout** or **Log
   all**; sets typed one by one are logged as typed. Reminders follow the days and times you set, not a training
   plan's rest days.
+- A Session or Rounds exercise counts at most two things of your own per set. The timer in the status bar as a Live
+  Update needs Android 16; earlier versions show it in the notification and on the lock screen.
 - Some storage providers don't let apps set a file's modified date, so exported photo files can show the export time
   there; their photo details always carry the date taken. Formats whose details can't be written, such as HEIC, are
   exported unchanged.
@@ -646,8 +661,8 @@ raising AGP and the Gradle wrapper if that level needs it, and review the behavi
 permissions, the photo picker, the foreground services and notifications used by the rest timer and automatic
 backups, and edge-to-edge. Confirm the exact level against Google's current policy page at the time.
 
-Every build also runs the unit tests in CI, including a timed set save on four years of history
-(`SaveSpeedTest`), screenshot tests of the design components, and phone-size checks at 320dp wide with the largest
+Every build also runs the unit tests in CI, including a set save on four years of history that checks how many
+set rows it reads (`SaveSpeedTest`), screenshot tests of the design components, and phone-size checks at 320dp wide with the largest
 font (`PhoneSizeTest`: 48dp touch targets, no text cut off or overlapping).
 
 Updates never change `applicationId` (`com.fitlens.companion`), the signing setup, the signing secrets or

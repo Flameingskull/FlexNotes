@@ -34,4 +34,10 @@ class SportCountsTest {
         assertEquals(true, SportCounts.suggest(SessionKinds.COMBAT).contains("Takedowns"))
         assertEquals(emptyList<String>(), SportCounts.suggest(SessionKinds.MIND_BODY))
     }
+
+    @Test
+    fun countsEndTheCsvHeaderAndAppendTheGraphs() {
+        assertEquals(listOf("Count 1 name", "Count 1", "Count 2 name", "Count 2"), CsvExport.workoutColumns("kg").takeLast(4))
+        assertEquals(listOf("Total Takedowns"), com.fitlens.companion.ui.countGraphLabels(listOf("Takedowns", " ")))
+    }
 }

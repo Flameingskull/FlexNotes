@@ -195,7 +195,7 @@ fun AnalysisOverviewTab(snap: Snapshot, onOpen: (PinnedGraph) -> Unit) {
 
 /** The graph names exercise [exId] offers (#22), as its graph pane lists them. */
 internal fun graphLabelsFor(snap: Snapshot, exId: Long): List<String> =
-    graphLabels(snap.exercises[exId]?.type ?: 0, isTimeBased(snap, exId, snap.setsByExercise[exId].orEmpty()))
+    graphLabels(snap.exercises[exId]?.type ?: 0, isTimeBased(snap, exId, snap.setsByExercise[exId].orEmpty()), snap.exercises[exId]?.countNames.orEmpty())
 
 private val CARD_HEIGHT = 140.dp
 

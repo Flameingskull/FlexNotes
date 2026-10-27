@@ -73,7 +73,7 @@ internal fun TrainingBlocksSection(plan: TrainingPlan?, reordering: Boolean, onC
         fun setBlocks(list: List<TrainingBlock>) =
             onChange(if (list.isEmpty()) null else plan.copy(blocks = TrainingBlocks.normalised(list), repeats = plan.repeats && list.last().unit != PhaseUnit.ONGOING))
         ListRowWithMenu(
-            title = stringResource(R.string.tb_starts, Dates.medium(plan.start)),
+            title = stringResource(R.string.tb_starts, Dates.day(plan.start)),
             subtitle = planStatus(res, plan, Dates.today()),
             onClick = { pickingStart = true }
         )
@@ -333,7 +333,7 @@ internal fun TrainingBlockCard(routine: Routine, st: BlockState, onOpen: () -> U
             if (from != null) {
                 val nextIndex = if (st.index < st.count) st.index else 0
                 Text(
-                    stringResource(R.string.tb_card_next, blockName(res, next, nextIndex), Dates.medium(from)),
+                    stringResource(R.string.tb_card_next, blockName(res, next, nextIndex), Dates.day(from)),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

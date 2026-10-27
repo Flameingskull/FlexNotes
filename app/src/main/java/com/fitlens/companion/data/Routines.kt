@@ -4,6 +4,7 @@ import android.content.ContentValues
 import android.content.res.Resources
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.fitlens.companion.R
+import com.fitlens.companion.ui.countParts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -316,6 +317,7 @@ object Routines {
             val head = res.getQuantityString(R.plurals.plan_sets, sets.size, sets.size)
             val rounds = Rounds.lineParts(res, first.reps, Rounds.roundSec(first), first.restSeconds, Rounds.hardRounds(first))
             CardioZones.valid(first.zone)?.let { parts.add(res.getString(R.string.session_zone_n, it)) }
+            parts.addAll(countParts(snap.exercises[exerciseId]?.countNames.orEmpty(), first.countA, first.countB))
             val all = rounds + parts
             return if (all.isEmpty()) head else "$head · ${all.joinToString(" · ")}${if (sets.all { it == first }) "" else " …"}"
         }
@@ -328,6 +330,7 @@ object Routines {
             parts.add(if (session) res.getString(R.string.session_minutes_n, fmtNum(first.durationSec / 60.0, 1)) else fmtDuration(first.durationSec))
         }
         CardioZones.valid(first.zone)?.let { parts.add(res.getString(R.string.session_zone_n, it)) }
+        parts.addAll(countParts(exerciseId?.let { snap.exercises[it] }?.countNames.orEmpty(), first.countA, first.countB))
         first.metric?.let { m ->
             val unit = exerciseId?.let { snap.exercises[it] }?.let { ExerciseTypes.metricOf(it.type) }?.metricUnit
             parts.add(fmtNum(m) + unit?.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty())
