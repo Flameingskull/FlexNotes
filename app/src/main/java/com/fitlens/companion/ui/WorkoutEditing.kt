@@ -133,9 +133,9 @@ internal fun SetChecklist(snap: Snapshot, date: String, ticked: Set<Long>, onTic
                 Spacer(Modifier.weight(0.6f))
                 cells.forEach { c ->
                     Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.Bottom) {
-                        Text(c.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text(c.value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (c.unit.isNotEmpty()) {
-                            Text(" ${c.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                            Text(" ${c.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }

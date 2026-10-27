@@ -54,6 +54,8 @@ class TrainingBlocksTest {
         assertNull(later.weeks)
         assertNull(later.lastDay)
         assertNull(later.next)
+        // The block's first day, so an ongoing block reads "since Mon 23 Nov" rather than "week 30".
+        assertEquals(Dates.epochDay("2027-06-01"), Dates.epochDay(later.firstDay) + later.day - 1)
     }
 
     @Test

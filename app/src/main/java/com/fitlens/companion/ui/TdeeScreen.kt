@@ -129,14 +129,14 @@ fun TdeeScreen(snap: Snapshot, nav: Nav) {
             SettingsActionRow(
                 stringResource(R.string.tdee_bodyweight),
                 stringResource(R.string.tdee_bodyweight_summary, EnergyEstimates.BODYWEIGHT_DAYS),
-                value = bw?.second?.let { r -> stringResource(R.string.tdee_value_on, "${fmtNum(r.value)} ${r.unit}".trim(), Dates.medium(r.date)) }
+                value = bw?.second?.let { r -> stringResource(R.string.tdee_value_on, "${fmtNum(r.value)} ${r.unit}".trim(), Dates.day(r.date)) }
                     ?: stringResource(R.string.tdee_not_logged)
             ) { logging = snap.bodyweightName ?: "Bodyweight" }
             val bf = EnergyEstimates.bodyFat(snap, today)
             SettingsActionRow(
                 stringResource(R.string.tdee_body_fat),
                 stringResource(R.string.tdee_body_fat_summary, Energy.BODY_FAT_DAYS),
-                value = bf?.second?.let { r -> stringResource(R.string.tdee_value_on, "${fmtNum(r.value, 1)} %", Dates.medium(r.date)) }
+                value = bf?.second?.let { r -> stringResource(R.string.tdee_value_on, "${fmtNum(r.value, 1)} %", Dates.day(r.date)) }
                     ?: stringResource(R.string.tdee_none_recent)
             ) { logging = EnergyEstimates.bodyFatName(snap) ?: BodyFat.NAME }
             if (prefs.profileHeightCm == null) {

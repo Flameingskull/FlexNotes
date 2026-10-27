@@ -1,26 +1,27 @@
-# FlexNotes 1.0.179
+# FlexNotes 1.0.181
 
 ## Overview
 
-This build starts the screen-by-screen review for clarity, beginning with the day log, set entry, the exercise library and the exercise screen. Dates now read the way people plan, with the weekday, and screens stay tidy when your phone uses a large font. Sessions and Rounds can also keep counts of their own, such as takedowns or points.
+This build finishes sport counts and continues the screen-by-screen review, this time for workouts, training blocks and analysis. You can now plan your counts in a workout, follow them on a graph and take them out in a CSV export. More dates read with the weekday, and long values shorten neatly instead of being cut off.
 
 ## What's new
 
-- **Counts for your sports.** A Session or Rounds exercise can now keep up to two counts of its own, such as Takedowns and Submissions, Points won, or Goals and Assists. Name them in the exercise editor under Counts. Suggestions are offered for your kind of sport, and nothing is added unless you choose it. Each set then has a field for each count on the Track tab, and the set's line reads, for example, "3 Takedowns".
+- **Plan your counts in a workout.** A Session or Rounds exercise's counts, such as Takedowns or Points, can now be set in a workout day's planned sets. The workout shows them in the exercise's summary (for example "3 Takedowns"), and logging the day fills them in.
+- **A graph for each count.** A Session or Rounds exercise's Graph tab now ends with a graph for each of its counts, such as "Total Takedowns", showing each day's total. Days without the count draw no point. You can pin these graphs, compare them and make one the exercise's default.
+- **Counts in the CSV export.** The workouts CSV now ends with four columns: each count's name and its number.
 
 ## Improved
 
-- **Dates with the weekday.** Dates now read like "Mon 27 Oct" (with the year only when it isn't this year) on the exercise screen's records, stats, goals and graph labels, on the day log's comment and remove dialogs, and in the add, copy, move and delete workout sheets. Shared workouts keep the full date.
-- **Large fonts.** Save, Clear, Update and Delete grow with the text instead of cutting it off. The Next exercise button shows long names on two lines. Long measurement names, record labels, exercise names in a workout day and the workout drawer's set lines wrap or shorten neatly instead of being clipped.
-- **Your clock.** The workout time on the day log and the time in the photo viewer follow your phone's 12 or 24 hour setting.
-- **Exercise note links** now show the site's name (for example "youtube.com") instead of a cut-off address.
+- **Training blocks show dates.** An ongoing block reads "Maintain · since Mon 27 Oct" instead of a week count, on the day log, in the workout and on the home-screen widget. A plan's start and the next block's start also show the weekday.
+- **Dates with the weekday in analysis.** The Load tab's week and spike notes, the trend summary under a graph, the bodyweight and body fat dates on the TDEE page and the spoken chart descriptions now read like "Mon 27 Oct". The year only appears when it isn't this year.
+- **Long values stay tidy.** Long values in the set lists of Save as a workout day and Share, and in the pie chart's centre, now end with "…" rather than being clipped at large font sizes.
 
 ## Your data
 
-- Database update (version 32). Your exercises, sets, workouts and settings are kept, and older backups still restore. The new counts start empty.
+- No database change. Your exercises, sets, workouts and settings are kept, and older backups still restore.
 
 ## Known limitations
 
-- Counts can't yet be set in advance in a workout day, graphed or exported to CSV. These come next (issue #266). Editing a workout day doesn't show counts yet.
-- The day log, set entry, library and exercise screen reviews (issues #251 and #252) stay open until they've been checked on a phone at a large font size.
-- Next up: the review of workouts and routines, analysis, body tracking, medications, settings and the calendar (issues #253 to #258).
+- The workouts and routines review and the analysis review (issues #253 and #254) stay open until they've been checked on a phone at a large font size, as do the day log and exercise screen reviews (#251 and #252).
+- Count graphs use the names you gave the counts. If two counts share a name, only one graph is shown.
+- Next up: the review of body tracking, photos and the camera, medications, settings and the calendar (issues #255 to #258).

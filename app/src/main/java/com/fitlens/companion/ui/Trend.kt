@@ -153,7 +153,7 @@ fun trendText(res: Resources, t: TrendLine, format: (Double) -> String, unit: St
         else -> 2
     }
     val u = if (unit.isBlank()) "" else " $unit"
-    fun day(x: Long) = Dates.medium(LocalDate.ofEpochDay(x).format(Dates.ISO))
+    fun day(x: Long) = Dates.day(LocalDate.ofEpochDay(x).format(Dates.ISO))
     val head = res.getString(
         R.string.tr_head, fmtSigned(rate, decimals) + u, per, format(t.at(t.fromX)), format(t.at(t.toX)) + u, day(t.fromX), day(t.toX)
     )

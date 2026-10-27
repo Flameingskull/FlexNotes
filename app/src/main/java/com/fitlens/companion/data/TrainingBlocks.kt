@@ -41,7 +41,9 @@ data class BlockState(
     /** Which time round the plan is (1 for the first) when it repeats. */
     val cycle: Int,
     /** The block that follows, or null after the last one of a plan that doesn't repeat. */
-    val next: TrainingBlock?
+    val next: TrainingBlock?,
+    /** The block's first day (ISO), or "" when unknown. */
+    val firstDay: String = ""
 ) {
     /** The week of the block the day falls in, 1-based. */
     val week: Long get() = (day - 1) / 7 + 1
@@ -131,7 +133,8 @@ object TrainingBlocks {
             schedule.repeats -> blocks.first()
             else -> null
         }
-        return BlockState(i + 1, blocks.size, blocks[i], state.day, state.days, state.lastDay, state.cycle, next)
+        return BlockState(i + 1, blocks.size, blocks[i], state.day, state.days, state.lastDay, state.cycle, next,
+            Dates.parse(date)?.minusDays(state.day - 1)?.format(Dates.ISO).orEmpty())
     }
 
     /** Every workout with a plan running on [date], with where it is: what the day log shows. */

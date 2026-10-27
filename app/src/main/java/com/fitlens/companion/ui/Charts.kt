@@ -592,7 +592,7 @@ private fun LinePlot(
     val description = visible.joinToString(". ") { i ->
         val pts = series[i].points
         res.getString(
-            R.string.ch_desc_series, series[i].label, Dates.medium(pts.first().date), Dates.medium(pts.last().date),
+            R.string.ch_desc_series, series[i].label, Dates.day(pts.first().date), Dates.day(pts.last().date),
             yFormat(pts.minOf { it.y }) + u, yFormat(pts.maxOf { it.y }) + u, yFormat(pts.last().y) + u
         )
     }

@@ -143,7 +143,7 @@ private fun InternalExternalGraph(snap: Snapshot, weeks: List<TrainingLoad.Week>
     AnalysisNote(
         if (picked == null) res.getString(R.string.load_ie_hint)
         else res.getString(
-            R.string.load_ie_week, Dates.medium(LocalDate.ofEpochDay(picked.endDay).format(Dates.ISO)),
+            R.string.load_ie_week, Dates.day(LocalDate.ofEpochDay(picked.endDay).format(Dates.ISO)),
             fmtNum(picked.sessionLoad, 0), fmtNum(picked.hardMinutes, 0), fmtNum(volumeOf(picked), 0), snap.weightUnit
         )
     )
@@ -256,7 +256,7 @@ internal fun ReadinessTab(snap: Snapshot) {
                     if (spikes.isEmpty()) stringResource(R.string.load_no_spikes, fmtNum(TrainingLoad.SPIKE, 1))
                     else res.getQuantityString(
                         R.plurals.load_spikes, spikes.size, spikes.size, fmtNum(TrainingLoad.SPIKE, 1),
-                        Dates.medium(LocalDate.ofEpochDay(spikes.last().day).format(Dates.ISO)), fmtNum(spikes.last().ratio ?: 0.0, 2)
+                        Dates.day(LocalDate.ofEpochDay(spikes.last().day).format(Dates.ISO)), fmtNum(spikes.last().ratio ?: 0.0, 2)
                     )
                 )
             }

@@ -280,13 +280,15 @@ private fun planStatus(res: Resources, plan: TrainingPlan, date: String): String
     return res.getString(R.string.tb_today, blockStateText(res, st))
 }
 
-/** "Build · week 2 of 3, until Sun 9 Nov", "Deload until Sun 2 Nov" (#237: a date, not a day count), or "Maintain · week 12" for an ongoing block. */
+/** "Build · week 2 of 3, until Sun 9 Nov", "Deload until Sun 2 Nov" (#237: a date, not a day count), or "Maintain · since Mon 27 Oct" for an ongoing block. */
 internal fun blockStateText(res: Resources, st: BlockState): String {
     val name = blockName(res, st.block, st.index - 1)
     val weeks = st.weeks
     val days = st.days
     return when {
-        days == null -> res.getString(R.string.tb_state_ongoing, name, st.week)
+        days == null ->
+            if (st.firstDay.isNotBlank()) res.getString(R.string.tb_state_since, name, com.fitlens.companion.data.Dates.day(st.firstDay))
+            else name
         days % 7 == 0L && weeks != null && weeks > 1 && st.lastDay != null ->
             res.getString(R.string.tb_state_week, name, st.week, weeks, com.fitlens.companion.data.Dates.day(st.lastDay))
         st.lastDay != null -> res.getString(R.string.tb_state_day, name, com.fitlens.companion.data.Dates.day(st.lastDay))
