@@ -1,27 +1,23 @@
-# FlexNotes 1.0.181
+# FlexNotes 1.0.182
 
 ## Overview
 
-This build finishes sport counts and continues the screen-by-screen review, this time for workouts, training blocks and analysis. You can now plan your counts in a workout, follow them on a graph and take them out in a CSV export. More dates read with the weekday, and long values shorten neatly instead of being cut off.
-
-## What's new
-
-- **Plan your counts in a workout.** A Session or Rounds exercise's counts, such as Takedowns or Points, can now be set in a workout day's planned sets. The workout shows them in the exercise's summary (for example "3 Takedowns"), and logging the day fills them in.
-- **A graph for each count.** A Session or Rounds exercise's Graph tab now ends with a graph for each of its counts, such as "Total Takedowns", showing each day's total. Days without the count draw no point. You can pin these graphs, compare them and make one the exercise's default.
-- **Counts in the CSV export.** The workouts CSV now ends with four columns: each count's name and its number.
+This build continues the screen-by-screen review, this time for body tracking, photos, the slideshow, the PDF reports and medications. More dates read the way you plan your week, like "Mon 27 Oct", and long names keep a tidy layout at large font sizes.
 
 ## Improved
 
-- **Training blocks show dates.** An ongoing block reads "Maintain · since Mon 27 Oct" instead of a week count, on the day log, in the workout and on the home-screen widget. A plan's start and the next block's start also show the weekday.
-- **Dates with the weekday in analysis.** The Load tab's week and spike notes, the trend summary under a graph, the bodyweight and body fat dates on the TDEE page and the spoken chart descriptions now read like "Mon 27 Oct". The year only appears when it isn't this year.
-- **Long values stay tidy.** Long values in the set lists of Save as a workout day and Share, and in the pie chart's centre, now end with "…" rather than being clipped at large font sizes.
+- **Weekday dates across body tracking and photos.** The body tracker's history, graph points and Start, Latest, Lowest and Highest figures, the body fat sheet, measurement goals, the photos grid's day and week headers, the photo viewer, Compare, export and the slideshow's date range now show the weekday. The year only appears when it isn't this year.
+- **The progress PDF reads by date.** Each day in the report is headed by its weekday date, and the "DAY 12" counter beside it is gone. While the report is being made, the progress line names the day it's on.
+- **Medication dates with the weekday.** The emergency card's last as-needed dose and the medication report's date range and "generated" date now show the weekday.
+- **Tidy rows at large font sizes.** Long measurement, medication and symptom names now wrap to two lines and end with "…" if longer, so they no longer push into the values beside them. The same goes for a dose's amount and its Skipped or Missed note, and for the labels above the body tracker's figures. The figures themselves are never cut off.
 
 ## Your data
 
-- No database change. Your exercises, sets, workouts and settings are kept, and older backups still restore.
+- No database change. Your measurements, photos, medications and settings are kept, and older backups still restore.
 
 ## Known limitations
 
-- The workouts and routines review and the analysis review (issues #253 and #254) stay open until they've been checked on a phone at a large font size, as do the day log and exercise screen reviews (#251 and #252).
-- Count graphs use the names you gave the counts. If two counts share a name, only one graph is shown.
-- Next up: the review of body tracking, photos and the camera, medications, settings and the calendar (issues #255 to #258).
+- The body and photos review and the medications review (issues #255 and #256) stay open until they've been checked on a phone at a large font size, as do the earlier reviews (#251 to #254).
+- Small date labels on photo thumbnails, chart axes and the medication report's daily table stay short ("27 Oct") to fit their space.
+- The slideshow's optional "Day 12 · Week 2" stamp is unchanged for now; how it should read is a decision for a later build (issue #267).
+- Next up: the review of settings, profile, backup and import, then the calendar, widget and notifications (issues #257 and #258).
