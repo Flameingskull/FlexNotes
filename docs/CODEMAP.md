@@ -5,7 +5,7 @@ Source root: `app/src/main/java/com/fitlens/companion/` (paths below are relativ
 **Keep it current:** any build that adds, moves or renames a file, or changes a pattern below, updates this map in the
 same commit.
 
-Last updated: 1.0.184.
+Last updated: 1.0.185.
 
 ## How data flows
 
@@ -263,6 +263,10 @@ Last updated: 1.0.184.
 - **Comments** explain why and cite the issue (`// … (#69)`), like the code around them.
 - **Toolchain:** Kotlin 2.0.21, AGP 8.9.1, Compose with Material 3, `compileSdk` and `targetSdk` 36 (#61), `minSdk` 29. There's no local Android SDK,
   so CI is the compiler.
+- **CI code checks (#260, #261):** `.github/scripts/unused_private.py` (Python standard library, no plugin) runs before the build and fails it, with
+  `error: unused private path:line: kind name` lines that reach `errors.txt`, when a `private` Kotlin declaration's name appears only once in its own
+  file (a mention in a comment counts as a use; `@Preview` ones are skipped). Run it locally: `python -I .github/scripts/unused_private.py app/src`.
+  A warning-only `lintDebug` step runs `UnusedResources` after the APK is built, prints `lint-results-debug.txt` in the run log and writes it to `lint.txt` on `ci-logs`.
 - **Tests (#40):** JVM unit tests with Robolectric in `app/src/test` (`./gradlew testDebugUnitTest`), run by CI before
   every release build; a failure stops the release and its names land in `errors.txt`. `data/DbMigrationTest.kt`
   builds older databases by hand (v1, v2, v12–v19; schemas in `OldSchemas.kt`, including the full `V20`) and opens them with `Db`; `RoomSchemaTest` opens a fresh install, a full v20 database, a replayed rebuild, a newer file and every older version through Room, which checks each against `Schema.kt`, reads every snapshot area of an upgraded database through the DAOs, and checks a main-thread query is refused (DAO calls in tests go through `offMain`);
