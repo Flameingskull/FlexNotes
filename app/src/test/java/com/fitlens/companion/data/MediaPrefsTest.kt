@@ -11,7 +11,7 @@ class MediaPrefsTest {
     @Test
     fun slideshowOptionsRoundTrip() {
         val prefs = SlideshowPrefs(
-            pose = "Side", onePerDay = false, seconds = 2.5f, fade = false, showDate = false, showDays = true,
+            pose = "Side", onePerDay = false, seconds = 2.5f, fade = false, showDate = false, showSince = true,
             showPose = false, title = "Cut: week 1 = 82 kg; 100% & more\nnext line", format = "1080x1920",
             overlays = listOf("Bodyweight" to true, "Waist (cm)" to false, "Arm: left=right" to false)
         )

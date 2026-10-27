@@ -89,6 +89,17 @@ jobs:
             exit 1
           fi
 
+      # Unused resources (#261): lint's UnusedResources check on the debug variant, a warning only. It runs after the
+      # signed APK is built and can never fail the run or stop the release; the findings go in this step's log.
+      - name: Lint unused resources (warning only)
+        if: always() && steps.build.outcome == 'success' && steps.guard.outputs.skip != 'true'
+        continue-on-error: true
+        run: |
+          ./gradlew lintDebug --console=plain 2>&1 | tee lint.log || true
+          echo "::group::Unused resources"
+          grep -E "UnusedResources|Warning:" lint.log | head -100 || echo "none found"
+          echo "::endgroup::"
+
       - name: Keep the unit test report
         if: always() && steps.guard.outputs.skip != 'true'
         uses: actions/upload-artifact@v7

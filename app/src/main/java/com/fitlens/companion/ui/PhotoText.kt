@@ -21,6 +21,20 @@ internal fun poseText(res: Resources, pose: String): String = when (pose) {
     else -> pose
 }
 
+/**
+ * The time since the first photo in plain words (#267): "First photo", "12 days in" up to two weeks, "5 weeks in" up
+ * to about three months, then "4 months in".
+ */
+internal fun sinceText(res: Resources, daysIn: Long): String {
+    val d = daysIn.coerceAtLeast(0L)
+    return when {
+        d == 0L -> res.getString(R.string.vid_first_photo)
+        d < 14 -> d.toInt().let { res.getQuantityString(R.plurals.vid_days_in, it, it) }
+        d < 91 -> (d / 7).toInt().let { res.getQuantityString(R.plurals.vid_weeks_in, it, it) }
+        else -> (d * 12 / 365).toInt().coerceAtLeast(3).let { res.getQuantityString(R.plurals.vid_months_in, it, it) }
+    }
+}
+
 /** "Day", "Week", "Month", "Year", "Pose" for a [MediaPrefs] grouping key. */
 internal fun groupText(res: Resources, key: String): String = res.getString(
     when (key) {

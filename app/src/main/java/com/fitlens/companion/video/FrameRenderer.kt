@@ -23,18 +23,18 @@ import kotlin.math.min
 data class OverlayLine(val label: String, val value: String, val delta: String?, val approxNote: String?)
 
 /** One slide overlay entry, keyed by measurement name. [lines] holds only the overlays with a value near that date. */
-data class Slide(val photo: Photo, val date: String, val dayNumber: Long, val lines: Map<String, OverlayLine>)
+/** [daysIn] counts days since the first photo in the slideshow: 0 on that photo's own day. */
+data class Slide(val photo: Photo, val date: String, val daysIn: Long, val lines: Map<String, OverlayLine>)
 
 /** A measurement shown over the photos, either as a value or as a value with a progress chart. */
 data class Overlay(val name: String, val chart: Boolean)
 
 /**
- * The words drawn on the frames (#94), read from strings.xml by the screen that builds the options: format strings
- * for the day and week counter and the "≈ 3d before" note, and each stored pose's display name.
+ * The words drawn on the frames (#94), read from strings.xml by the screen that builds the options: the time since
+ * the first photo in plain words ("12 days in", #267), the "≈ 3d before" note, and each stored pose's display name.
  */
 data class SlideWords(
-    val day: String,
-    val week: String,
+    val since: (daysIn: Long) -> String,
     val nearBefore: String,
     val nearAfter: String,
     val poses: Map<String, String> = emptyMap()
@@ -47,7 +47,8 @@ data class SlideOptions(
     val secondsPerPhoto: Float = 1.0f,
     val fade: Boolean = true,
     val showDate: Boolean = true,
-    val showDayCount: Boolean = true,
+    /** "12 days in" under the date (#267): off unless the user turns it on. */
+    val showSince: Boolean = false,
     val showPose: Boolean = true,
     /** At most [FrameRenderer.MAX_OVERLAYS], drawn in this order. */
     val overlays: List<Overlay> = emptyList(),
@@ -88,7 +89,7 @@ object FrameRenderer {
                 }
                 lines[name] = OverlayLine(name, "${fmtNum(rec.value)} ${rec.unit}".trim(), delta, note)
             }
-            Slide(p, date, Dates.epochDay(date) - startDay + 1, lines)
+            Slide(p, date, Dates.epochDay(date) - startDay, lines)
         }
     }
 
@@ -181,11 +182,9 @@ object FrameRenderer {
             c.drawText(Dates.medium(slide.date), 32 * u, y, paint(IVORY, 48 * u, bold = true, serif = true))
             y += 8 * u
         }
-        if (opts.showDayCount) {
+        if (opts.showSince) {
             y += 30 * u
-            val weeks = (slide.dayNumber - 1) / 7
-            val txt = opts.words.day.format(slide.dayNumber) + if (weeks >= 1) opts.words.week.format(weeks + 1) else ""
-            c.drawText(txt, 32 * u, y, paint(MUTED, 26 * u, tracking = 0.05f))
+            c.drawText(opts.words.since(slide.daysIn), 32 * u, y, paint(MUTED, 26 * u, tracking = 0.05f))
         }
         if (poseText != null) c.drawText(poseText, w - 32 * u - poseP.measureText(poseText), 58 * u, poseP)
 

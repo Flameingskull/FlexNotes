@@ -50,6 +50,17 @@ android {
     buildFeatures {
         compose = true
     }
+    // Unused resources (#261): the only lint check that runs, a warning that never stops a build. CI runs
+    // `lintDebug` as its own non-blocking step and prints the findings in the run log.
+    lint {
+        checkOnly += "UnusedResources"
+        abortOnError = false
+        warningsAsErrors = false
+        checkReleaseBuilds = false
+        textReport = true
+        htmlReport = false
+        xmlReport = false
+    }
     // JVM unit tests with Robolectric (#40): real SQLite without an emulator, run in CI before every release build.
     testOptions {
         unitTests {

@@ -63,7 +63,9 @@ data class SlideshowPrefs(
     val seconds: Float = 1.0f,
     val fade: Boolean = true,
     val showDate: Boolean = true,
-    val showDays: Boolean = true,
+    /** "12 days in" on the frames (#267), off by default. Stored as `showSince`: the old `showDays` key (a "Day 12 ·
+     *  Week 2" counter that was on by default) is ignored, so every install starts with it off. */
+    val showSince: Boolean = false,
     val showPose: Boolean = true,
     val title: String = "",
     /** The video size as "WIDTHxHEIGHT"; the screen falls back to its first format for one it doesn't offer. */
@@ -77,7 +79,7 @@ data class SlideshowPrefs(
         add("seconds=$seconds")
         add("fade=${flag(fade)}")
         add("showDate=${flag(showDate)}")
-        add("showDays=${flag(showDays)}")
+        add("showSince=${flag(showSince)}")
         add("showPose=${flag(showPose)}")
         if (title.isNotEmpty()) add("title=${enc(title)}")
         add("format=$format")
@@ -131,7 +133,7 @@ data class SlideshowPrefs(
                 seconds = values["seconds"]?.toFloatOrNull()?.takeIf { !it.isNaN() && it in SECONDS } ?: d.seconds,
                 fade = bool("fade", d.fade),
                 showDate = bool("showDate", d.showDate),
-                showDays = bool("showDays", d.showDays),
+                showSince = bool("showSince", d.showSince),
                 showPose = bool("showPose", d.showPose),
                 title = values["title"]?.let { dec(it) }?.take(MAX_TITLE) ?: d.title,
                 format = format,

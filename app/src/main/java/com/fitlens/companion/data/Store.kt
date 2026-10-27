@@ -810,7 +810,7 @@ object Store {
      * Removes the water, caffeine and period values read from Health Connect before FlexNotes stopped reading them
      * (#239): copies of what the apps that record them still hold. Values the user typed stay as ordinary body values,
      * and a measurement left with no values at all goes from the list. Run at start; once they're gone it changes
-     * nothing.
+     * nothing. Kept on purpose (#259): installs from before 1.0.171 may still hold those rows.
      */
     suspend fun dropRetiredHealthValues() = withContext(Dispatchers.IO) {
         val names = RETIRED_HEALTH_NAMES

@@ -2407,7 +2407,7 @@
     <string name="ss_crossfade">Cross-fade between photos</string>
     <string name="ss_overlay">Overlay</string>
     <string name="ss_date">Date</string>
-    <string name="ss_counter">Day / week counter</string>
+    <string name="ss_since">Time since the first photo (\"12 days in\")</string>
     <string name="ss_pose_label">Pose label</string>
     <string name="ss_data_on_video">Data on the video · %1$d of %2$d</string>
     <string name="ss_data_help">Choose up to %1$d metrics, including your custom ones. Show each as a value or as a value with a progress chart. Values come from that date, or the nearest within 7 days (marked ≈).</string>
@@ -2438,8 +2438,20 @@
     <string name="si_goal">Goal</string>
     <string name="si_pr">PR</string>
     <string name="si_footer">LOGGED WITH FLEXNOTES</string>
-    <string name="vid_day">Day %1$d</string>
-    <string name="vid_week">"  ·  Week %1$d"</string>
+    <!-- Time since the first photo on the video's frames (#267), in plain words. -->
+    <string name="vid_first_photo">First photo</string>
+    <plurals name="vid_days_in">
+        <item quantity="one">%1$d day in</item>
+        <item quantity="other">%1$d days in</item>
+    </plurals>
+    <plurals name="vid_weeks_in">
+        <item quantity="one">%1$d week in</item>
+        <item quantity="other">%1$d weeks in</item>
+    </plurals>
+    <plurals name="vid_months_in">
+        <item quantity="one">%1$d month in</item>
+        <item quantity="other">%1$d months in</item>
+    </plurals>
     <string name="vid_near_before">≈ %1$dd before</string>
     <string name="vid_near_after">≈ %1$dd after</string>
     <string name="su_step_welcome">Welcome</string>
@@ -3491,7 +3503,6 @@
     <string name="inj_menu_off">Stop recording injection sites</string>
     <string name="inj_on">%1$s doses now record their injection site</string>
     <string name="inj_off">%1$s doses no longer record a site</string>
-    <string name="inj_taken_at">Taken at %1$s</string>
     <!-- Symptoms (#207) -->
     <string name="sym_title">Symptoms</string>
     <string name="sym_sheet_title">Rate symptoms</string>

@@ -140,7 +140,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
     var seconds by remember { mutableFloatStateOf(start.seconds) }
     var fade by remember { mutableStateOf(start.fade) }
     var showDate by remember { mutableStateOf(start.showDate) }
-    var showDays by remember { mutableStateOf(start.showDays) }
+    var showSince by remember { mutableStateOf(start.showSince) }
     var showPose by remember { mutableStateOf(start.showPose) }
     var title by remember { mutableStateOf(start.title) }
     var formatIdx by remember { mutableIntStateOf(FORMATS.indexOfFirst { it.key == start.format }.coerceAtLeast(0)) }
@@ -177,7 +177,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
     }
     val words = remember(res) {
         SlideWords(
-            day = res.getString(R.string.vid_day), week = res.getString(R.string.vid_week),
+            since = { d -> sinceText(res, d) },
             nearBefore = res.getString(R.string.vid_near_before), nearAfter = res.getString(R.string.vid_near_after),
             poses = Poses.all.associateWith { poseText(res, it) }
         )
@@ -185,7 +185,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
     val opts = SlideOptions(
         words = words,
         width = fmt.w, height = fmt.h, secondsPerPhoto = seconds, fade = fade,
-        showDate = showDate, showDayCount = showDays, showPose = showPose,
+        showDate = showDate, showSince = showSince, showPose = showPose,
         overlays = overlays.toList(), onePerDay = onePerDay, title = title
     )
     val slides = remember(snap, photos, opts) { FrameRenderer.buildSlides(snap, photos, opts) }
@@ -195,7 +195,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
     // changed, so opening the screen doesn't turn the defaults into saved options.
     val initialText = remember { start.encode() }
     val currentText = SlideshowPrefs(
-        pose, onePerDay, seconds, fade, showDate, showDays, showPose, title, fmt.key,
+        pose, onePerDay, seconds, fade, showDate, showSince, showPose, title, fmt.key,
         overlays.map { it.name to it.chart }
     ).encode()
     fun save(text: String) {
@@ -350,7 +350,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
 
         SectionLabel(stringResource(R.string.ss_overlay))
         ToggleRow(stringResource(R.string.ss_date), showDate, inset = 0.dp) { showDate = it }
-        ToggleRow(stringResource(R.string.ss_counter), showDays, inset = 0.dp) { showDays = it }
+        ToggleRow(stringResource(R.string.ss_since), showSince, inset = 0.dp) { showSince = it }
         ToggleRow(stringResource(R.string.ss_pose_label), showPose, inset = 0.dp) { showPose = it }
 
         SectionLabel(stringResource(R.string.ss_data_on_video, overlays.size, FrameRenderer.MAX_OVERLAYS))
@@ -394,7 +394,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
         TextButton(onClick = {
             val d = SlideshowPrefs()
             pose = d.pose; onePerDay = d.onePerDay; seconds = d.seconds; fade = d.fade
-            showDate = d.showDate; showDays = d.showDays; showPose = d.showPose; title = d.title; formatIdx = 0
+            showDate = d.showDate; showSince = d.showSince; showPose = d.showPose; title = d.title; formatIdx = 0
             from = firstDate; to = lastDate; index = 0
         }) { Text(stringResource(R.string.ss_reset)) }
     }

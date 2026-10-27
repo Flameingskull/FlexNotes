@@ -81,12 +81,6 @@ import com.fitlens.companion.R
 data class ChartPoint(val x: Long, val y: Double, val date: String)
 
 /**
- * A stretch of days shaded behind a chart's series (#222: the menstrual cycle's phases), from epoch day [from] to [to],
- * both included, in [color]. [label] names it in the key under the chart.
- */
-data class ChartBand(val from: Long, val to: Long, val color: Color, val label: String)
-
-/**
  * How a graph is drawn (owner, 2026-10-02, #137; bar charts are allowed again, reversing #116). Every kind shares the
  * grid, baseline and colours: [LINE] is a red line over the gold fill, [AREA] the fill with a thin red edge and no
  * markers, [BAR] gold columns with red tops, [STEP] a red step line over the fill. The user picks one per graph and
@@ -380,9 +374,7 @@ fun FitChart(
     /** The small key under a single series that explains its marks. Off where the chart is only a preview (pinned cards). */
     showKey: Boolean = true,
     /** A reference range (#211), low and high (either may be null), shaded behind the series. */
-    range: Pair<Double?, Double?>? = null,
-    /** Stretches of days shaded behind the series (#222), with a key under the chart for those in view. */
-    bands: List<ChartBand> = emptyList()
+    range: Pair<Double?, Double?>? = null
 ) {
     var hidden by remember(series.size) { mutableStateOf(emptySet<Int>()) }
     // The overlay's legend entry follows the series, so its index is series.size.
@@ -408,7 +400,7 @@ fun FitChart(
         } else {
             LinePlot(
                 series, visible, kind, plotHeight, photoDays, goal, selected, onSelect, yFormat, unit, trends, yFromZero,
-                viewport, onExpand, gapDays, overlayShown, overlayUnit, better, range, bands
+                viewport, onExpand, gapDays, overlayShown, overlayUnit, better, range
             )
         }
         if (series.size > 1 || showTrend || overlay != null) {
@@ -424,35 +416,8 @@ fun FitChart(
             ChartKey(changes = kind != ChartKind.AREA, latest = kind != ChartKind.BAR)
         }
         if (showTrend && all.isNotEmpty()) TrendReadout(series, visible, trends, trendUnit, trendSkipLast)
-        if (all.isNotEmpty()) BandKey(bands.filter { it.to >= xMin && it.from <= xMax })
     }
 }
-
-/** The key to the bands in view (#222): a swatch and name for each kind, in the order they first appear. */
-@Composable
-private fun BandKey(inView: List<ChartBand>) {
-    val kinds = inView.distinctBy { it.label }
-    if (kinds.isEmpty()) return
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        kinds.forEach { b ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Canvas(Modifier.size(10.dp)) { drawRect(b.color.copy(alpha = BAND_ALPHA * 3)) }
-                Spacer(Modifier.width(4.dp))
-                Text(b.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-    }
-}
-
-/** How strongly a band is shaded behind the series: enough to see, never enough to hide a line. */
-private const val BAND_ALPHA = 0.13f
 
 /**
  * The time range in view, in epoch days: the whole data range (widened to two days for a single day), narrowed by
@@ -535,8 +500,7 @@ private fun LinePlot(
     overlayIn: LineSeries?,
     overlayUnit: String,
     better: (Double, Double) -> Boolean?,
-    range: Pair<Double?, Double?>?,
-    bands: List<ChartBand>
+    range: Pair<Double?, Double?>?
 ) {
     val colors = LocalChartColors.current
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -704,16 +668,6 @@ private fun LinePlot(
             drawText(mid, topLeft = Offset(midX, labelY))
         }
 
-        // Bands (#222) fill whole days, from half a day before their first to half a day after their last, clipped to the plot.
-        if (bands.isNotEmpty() && xMax > xMin) clipRect(left, top, right, bottom) {
-            val halfDay = (right - left - 2 * inset) / (xMax - xMin).toFloat() / 2f
-            bands.forEach { b ->
-                if (b.to < xMin - 1 || b.from > xMax + 1) return@forEach
-                val x0 = px(b.from) - halfDay
-                val x1 = px(b.to) + halfDay
-                drawRect(b.color.copy(alpha = BAND_ALPHA), Offset(x0, top), Size((x1 - x0).coerceAtLeast(1f), bottom - top))
-            }
-        }
         clipRect(left - 8.dp.toPx(), top - 8.dp.toPx(), right + 8.dp.toPx(), bottom + 1f) {
             // The reference range (#211): a faint mint band with fine dashed edges, open-ended where an end is missing.
             if (range != null && (range.first != null || range.second != null)) {
