@@ -67,7 +67,7 @@ fun BreakdownTab(snap: Snapshot, nav: Nav, onOpen: (Analysis.Filter) -> Unit) {
     val windowList = rememberDerived("breakdownWindows", snap.trainingKey, span) { Analysis.windows(snap, span) }
     val windows = windowList.orEmpty()
     val window: Analysis.DateWindow? = if (span == Analysis.Span.Custom) {
-        custom?.let { (a, b) -> Analysis.DateWindow(a, b, "${Dates.medium(a)} – ${Dates.medium(b)}") }
+        custom?.let { (a, b) -> Analysis.DateWindow(a, b, "${Dates.day(a)} – ${Dates.day(b)}") }
     } else {
         windows.getOrNull(windowIdx.coerceIn(0, (windows.size - 1).coerceAtLeast(0)))
     }

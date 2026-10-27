@@ -849,6 +849,12 @@
     <string name="cal_legend_measurement">Measurement</string>
     <string name="cal_legend_medication">Medication</string>
     <string name="cal_doses_taken">Medication taken</string>
+    <string name="cal_locked_link">Doses are hidden while Medications is locked. Change this</string>
+    <string name="cal_unlock_to_see">Unlock to see them</string>
+    <plurals name="cal_doses_count">
+        <item quantity="one">%d dose taken</item>
+        <item quantity="other">%d doses taken</item>
+    </plurals>
     <string name="cal_open_medications">Open Medications</string>
     <string name="cal_spoken_doses">medication taken</string>
     <string name="cal_legend_other">Other dots: categories</string>
@@ -1985,6 +1991,12 @@
     <string name="mr_minutes">%1$d min</string>
     <string name="mr_group_privacy">Privacy</string>
     <string name="mr_names">Show medication names on the lock screen</string>
+    <string name="mr_cal_lock">Calendar while Medications is locked</string>
+    <string name="mr_cal_lock_summary">What the calendar shows of your doses while Medications is locked. Unlocking always shows them in full.</string>
+    <string name="mr_cal_hide">Hide doses</string>
+    <string name="mr_cal_count">Show that a dose was taken</string>
+    <string name="mr_cal_full">Show doses in full</string>
+    <string name="search_mr_cal_lock_kw">calendar medication doses locked hide private count</string>
     <string name="mr_names_summary">Off: the lock screen says only that a medication reminder is waiting</string>
     <string name="mr_local_note">Reminders are set on this phone. Nothing about your medications leaves it.</string>
     <string name="search_mr_reminders_kw">medication dose reminder notification alarm pills</string>
@@ -2457,7 +2469,12 @@
     <string name="su_next">Next</string>
     <string name="su_welcome_head">Your training, photos and measurements, together</string>
     <string name="su_welcome_1">FlexNotes logs your workouts and keeps them next to your progress photos and body measurements. Everything stays on this phone: there\'s no account, and FlexNotes never goes online.</string>
-    <string name="su_welcome_2">A few quick steps set up your units, automatic backups and imports. Every step can be skipped, and you can run setup again any time from Settings.</string>
+    <string name="su_welcome_2">A few quick steps set up your units, a few facts about you, automatic backups and imports. Every step can be skipped, and you can run setup again any time from Settings.</string>
+    <string name="su_step_you">You</string>
+    <string name="su_step_body">Body measurements</string>
+    <string name="su_you_head">About you</string>
+    <string name="su_you_body">Your sex, date of birth, height and daily activity make body fat and calorie estimates more accurate. Each one is optional.</string>
+    <string name="su_you_more">You can skip this and fill it in later under Settings › Profile. Nothing else asks for these again.</string>
     <string name="su_moving">Moving from another phone?</string>
     <string name="su_moving_body">Restore a FlexNotes backup (.flexnotes) to bring everything back. This replaces setup, so it ends here.</string>
     <string name="su_restore">Restore a FlexNotes backup</string>

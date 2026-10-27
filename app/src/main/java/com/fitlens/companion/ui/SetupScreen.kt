@@ -71,10 +71,12 @@ import com.fitlens.companion.R
 private enum class SetupStep(@StringRes val title: Int) {
     Welcome(R.string.su_step_welcome),
     Units(R.string.su_step_units),
+    You(R.string.su_step_you),
     Backups(R.string.su_step_backups),
     FitNotes(R.string.su_step_fitnotes),
     Photos(R.string.su_step_photos),
-    Exercises(R.string.su_step_exercises)
+    Exercises(R.string.su_step_exercises),
+    BodyMeasurements(R.string.su_step_body)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,10 +125,12 @@ fun SetupScreen(snap: Snapshot, nav: Nav) {
             when (step) {
                 SetupStep.Welcome -> WelcomeStep(onRestore = { restore.launch(arrayOf("*/*")) })
                 SetupStep.Units -> UnitsStep()
+                SetupStep.You -> YouStep()
                 SetupStep.Backups -> BackupsStep()
                 SetupStep.FitNotes -> FitNotesStep(snap)
                 SetupStep.Photos -> PhotosStep(snap)
                 SetupStep.Exercises -> ExercisesStep(snap)
+                SetupStep.BodyMeasurements -> BodyMeasurementsStep(snap)
             }
         }
         GoldHairline()
@@ -280,7 +284,21 @@ private fun ExercisesStep(snap: Snapshot) {
     GoldButton(onClick = { starter = true }) { Text(stringResource(R.string.su_add_starter)) }
     StepText(stringResource(R.string.su_ex_more))
     if (starter) StarterLibraryDialog(onDismiss = { starter = false })
-    // The standard body measurements (#27), for anyone not bringing them from FitNotes.
+}
+
+/** The facts about the person (#278): the profile's own rows, every one optional, saved as they are set. */
+@Composable
+private fun YouStep() {
+    val prefs by Settings.portable.collectAsState()
+    StepHeading(stringResource(R.string.su_you_head))
+    StepText(stringResource(R.string.su_you_body))
+    ProfileRows(prefs)
+    StepText(stringResource(R.string.su_you_more))
+}
+
+/** The standard body measurements (#27), for anyone not bringing them from FitNotes. */
+@Composable
+private fun BodyMeasurementsStep(snap: Snapshot) {
     val missing = StandardMeasurements.missing(snap.measurementDefs.map { it.name } + snap.recordsByName.keys)
     StepHeading(stringResource(R.string.su_body_head))
     StepText(stringResource(R.string.su_body_body, StandardMeasurements.all.size - 3))

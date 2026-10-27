@@ -43,6 +43,8 @@ import com.fitlens.companion.data.LengthUnits
 import com.fitlens.companion.data.LogKind
 import com.fitlens.companion.data.LogReminderSet
 import com.fitlens.companion.data.PortableSettings
+import com.fitlens.companion.data.MED_CAL_COUNT
+import com.fitlens.companion.data.MED_CAL_FULL
 import com.fitlens.companion.data.Poses
 import com.fitlens.companion.data.PreferenceGroup
 import com.fitlens.companion.data.Records
@@ -197,6 +199,9 @@ private val CATALOGUE = listOf(
     },
     SettingEntry(R.string.mr_names, SettingsSection.Medications, R.string.search_mr_names_kw) { onOff(device.medNamesOnLockScreen) },
     SettingEntry(R.string.ml_lock, SettingsSection.Medications, R.string.search_ml_lock_kw) { onOff(device.medLock) },
+    SettingEntry(R.string.mr_cal_lock, SettingsSection.Medications, R.string.search_mr_cal_lock_kw) {
+        res.getString(when (device.medCalendar) { MED_CAL_COUNT -> R.string.mr_cal_count; MED_CAL_FULL -> R.string.mr_cal_full; else -> R.string.mr_cal_hide })
+    },
     SettingEntry(R.string.lr_weigh, SettingsSection.Reminders, R.string.search_lr_weigh_kw) { logReminder(LogKind.WEIGH_IN) },
     SettingEntry(R.string.lr_measure, SettingsSection.Reminders, R.string.search_lr_measure_kw) { logReminder(LogKind.MEASUREMENTS) },
     SettingEntry(R.string.lr_photos, SettingsSection.Reminders, R.string.search_lr_photos_kw) { logReminder(LogKind.PHOTOS) },

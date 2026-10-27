@@ -179,7 +179,7 @@ object FrameRenderer {
         }
         if (opts.showDate) {
             y += 48 * u
-            c.drawText(Dates.medium(slide.date), 32 * u, y, paint(IVORY, 48 * u, bold = true, serif = true))
+            c.drawText(Dates.day(slide.date), 32 * u, y, paint(IVORY, 48 * u, bold = true, serif = true))
             y += 8 * u
         }
         if (opts.showSince) {
@@ -315,8 +315,8 @@ object FrameRenderer {
         c.drawColor(0xFF050505.toInt())
         val half = w / 2f
         val dp = paint(GOLD, 44f, bold = true, serif = true)
-        c.drawText(Dates.medium(dateA), 32f, 72f, dp)
-        c.drawText(Dates.medium(dateB), half + 32f, 72f, dp)
+        c.drawText(Dates.day(dateA), 32f, 72f, dp)
+        c.drawText(Dates.day(dateB), half + 32f, 72f, dp)
         drawPhotoFit(c, a, RectF(0f, headerH.toFloat(), half - 4f, (headerH + photoH).toFloat()))
         drawPhotoFit(c, b, RectF(half + 4f, headerH.toFloat(), w.toFloat(), (headerH + photoH).toFloat()))
         hairline(c, 32f, w - 32f, headerH + photoH + 20f, 1f)

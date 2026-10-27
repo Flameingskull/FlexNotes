@@ -76,6 +76,8 @@ data class DeviceSettings(
     /** Lock Medications (#214): the Medications screens need the phone's fingerprint, face or PIN prompt, and
      *  reminders name no medication. Off unless switched on; belongs to this phone, like its screen lock. */
     val medLock: Boolean = false,
+    /** What the calendar shows of the doses while Medications is locked (#294): [MED_CAL_HIDE] (default), [MED_CAL_COUNT] or [MED_CAL_FULL]. */
+    val medCalendar: Int = MED_CAL_HIDE,
     /** Minutes after a dose is due to remind again while it isn't taken or skipped (#203); 0 for no follow-up. */
     val medNudgeMinutes: Int = 30,
     /** Snoozed reminders (#203), `MedReminders.Snoozes.encode`: due time to when it rings again. Phone state. */
@@ -89,6 +91,11 @@ data class DeviceSettings(
     /** The first rest timer has already offered to turn notifications on (#250); it never asks again unprompted. */
     val restNotifyAsked: Boolean = false
 )
+
+/** [DeviceSettings.medCalendar] (#294): leave doses off the calendar, show only how many were taken, or show them in full. */
+const val MED_CAL_HIDE = 0
+const val MED_CAL_COUNT = 1
+const val MED_CAL_FULL = 2
 
 /**
  * Preferences that belong to the user, not the phone. They stay in the database's `meta` table, so they go into
@@ -513,6 +520,7 @@ object Settings {
     private const val D_MED_REMINDERS = "med_reminders"
     private const val D_MED_NAMES = "med_names_lock_screen"
     private const val D_MED_LOCK = "med_lock"
+    private const val D_MED_CALENDAR = "med_calendar"
     private const val D_MED_NUDGE = "med_nudge_minutes"
     private const val D_MED_SNOOZES = "med_snoozes"
     private const val D_LOG_REMINDERS = "log_reminders"
@@ -636,6 +644,7 @@ object Settings {
         medReminders = get(D_MED_REMINDERS) != "0",
         medNamesOnLockScreen = bool(get(D_MED_NAMES)),
         medLock = bool(get(D_MED_LOCK)),
+        medCalendar = get(D_MED_CALENDAR)?.toIntOrNull()?.coerceIn(MED_CAL_HIDE, MED_CAL_FULL) ?: MED_CAL_HIDE,
         medNudgeMinutes = get(D_MED_NUDGE)?.toIntOrNull()?.coerceIn(0, 240) ?: 30,
         medSnoozes = get(D_MED_SNOOZES),
         logReminders = get(D_LOG_REMINDERS),
@@ -673,6 +682,7 @@ object Settings {
         D_MED_REMINDERS to if (medReminders) null else "0",
         D_MED_NAMES to if (medNamesOnLockScreen) "1" else null,
         D_MED_LOCK to if (medLock) "1" else null,
+        D_MED_CALENDAR to medCalendar.takeIf { it != MED_CAL_HIDE }?.toString(),
         D_MED_NUDGE to medNudgeMinutes.takeIf { it != 30 }?.toString(),
         D_MED_SNOOZES to medSnoozes,
         D_LOG_REMINDERS to logReminders,

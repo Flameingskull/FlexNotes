@@ -62,6 +62,9 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
+import com.fitlens.companion.data.MED_CAL_COUNT
+import com.fitlens.companion.data.MED_CAL_FULL
+import com.fitlens.companion.data.MED_CAL_HIDE
 import com.fitlens.companion.data.MRecord
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
@@ -97,8 +100,11 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
     var overview by remember { mutableStateOf<Long?>(null) }
     var sharing by remember { mutableStateOf(false) }
     // The doses taken (#282): left out while the medication lock hides them, so a dot never gives them away.
+    // The user chooses (#294) what the calendar shows of them while Medications is locked: nothing, only how many, or all.
     val locked = medicationsHidden()
-    val doses = remember(snap, locked) { if (locked) emptyMap() else snap.medicationView.recordsByDate }
+    val lockedMode = if (locked) device.medCalendar else MED_CAL_FULL
+    val doses = remember(snap, lockedMode) { if (lockedMode == MED_CAL_HIDE) emptyMap() else snap.medicationView.recordsByDate }
+    val countOnly = lockedMode == MED_CAL_COUNT
 
     Column(Modifier.fillMaxSize()) {
         FitTopBar(
@@ -187,9 +193,14 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
                 if (doses.isNotEmpty()) { Dot(Brand.Ivory, 6.dp); Text(" " + stringResource(R.string.cal_legend_medication) + "    ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Text(stringResource(R.string.cal_legend_other), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            // Medications is locked and its doses are left off: say why, and where to change it (#294).
+            if (locked && device.medCalendar == MED_CAL_HIDE) TextButton(
+                onClick = { nav.push(Screen.SettingsPage(SettingsSection.Medications)) },
+                modifier = Modifier.padding(horizontal = Spacing.sm)
+            ) { Text(stringResource(R.string.cal_locked_link), style = MaterialTheme.typography.labelMedium) }
         }
         val dayPanel: @Composable () -> Unit = {
-            SelectedDay(snap, selected, doses[selected].orEmpty(), onDoses = { nav.push(Screen.Medications) }, onOverview = { overview = it }) { nav.home(selected) }
+            SelectedDay(snap, selected, doses[selected].orEmpty(), countOnly, onDoses = { nav.push(Screen.Medications) }, onOverview = { overview = it }) { nav.home(selected) }
         }
         if (currentWidthBucket() == WidthBucket.Expanded) {
             Row(Modifier.fillMaxSize()) {
@@ -328,7 +339,7 @@ private fun DayCell(
 
 /** The selected day below the grid: its exercises, body values and photos, and Open day (#87). */
 @Composable
-private fun SelectedDay(snap: Snapshot, date: String, doses: List<MRecord>, onDoses: () -> Unit, onOverview: (Long) -> Unit, onOpen: () -> Unit) {
+private fun SelectedDay(snap: Snapshot, date: String, doses: List<MRecord>, countOnly: Boolean, onDoses: () -> Unit, onOverview: (Long) -> Unit, onOpen: () -> Unit) {
     val sets = snap.setsByDate[date].orEmpty()
     val records = snap.recordsByDate[date].orEmpty()
     val photos = snap.photosByDate[date].orEmpty()
@@ -363,8 +374,20 @@ private fun SelectedDay(snap: Snapshot, date: String, doses: List<MRecord>, onDo
             }
             HorizontalDivider(color = Brand.Hairline)
         }
-        // The doses taken that day (#282): name and amount, and when; a tap opens Medications.
-        if (doses.isNotEmpty()) {
+        // The doses taken that day (#282): name and amount, and when; a tap opens Medications. While Medications is
+        // locked the user may choose only the count (#294): no name, amount or time reaches the screen, and the tap goes
+        // through the lock's own prompt on the way in.
+        if (doses.isNotEmpty() && countOnly) {
+            SectionLabel(stringResource(R.string.cal_doses_taken), Modifier.padding(top = Spacing.sm))
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = Spacing.touch).clickable(onClickLabel = stringResource(R.string.cal_open_medications), onClick = onDoses),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(pluralStringResource(R.plurals.cal_doses_count, doses.size, doses.size), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.cal_unlock_to_see), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            HorizontalDivider(color = Brand.Hairline)
+        } else if (doses.isNotEmpty()) {
             SectionLabel(stringResource(R.string.cal_doses_taken), Modifier.padding(top = Spacing.sm))
             doses.sortedBy { it.time }.forEach { r ->
                 Row(

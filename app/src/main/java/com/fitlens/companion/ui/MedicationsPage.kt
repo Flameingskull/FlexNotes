@@ -18,6 +18,7 @@ import com.fitlens.companion.R
 import com.fitlens.companion.data.MedReminders
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.ui.design.SettingsActionRow
+import com.fitlens.companion.ui.design.SettingsChoiceRow
 import com.fitlens.companion.ui.design.SettingsGroup
 import com.fitlens.companion.ui.design.SettingsNote
 import com.fitlens.companion.ui.design.SettingsNumberRow
@@ -96,6 +97,12 @@ internal fun MedicationsPage() {
             }
         }
     }
+    SettingsChoiceRow(
+        stringResource(R.string.mr_cal_lock),
+        listOf(stringResource(R.string.mr_cal_hide), stringResource(R.string.mr_cal_count), stringResource(R.string.mr_cal_full)),
+        device.medCalendar,
+        summary = stringResource(R.string.mr_cal_lock_summary)
+    ) { i -> Settings.updateDevice { it.copy(medCalendar = i) } }
     SettingsSwitchRow(
         stringResource(R.string.mr_names),
         device.medNamesOnLockScreen && !device.medLock,
