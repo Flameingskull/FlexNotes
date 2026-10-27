@@ -97,10 +97,13 @@ custom metrics.
   calories, scaled by intensity, with gross and net figures ([#244](https://github.com/Flameingskull/FlexNotes/issues/244), [#245](https://github.com/Flameingskull/FlexNotes/issues/245)); 1.0.178 adds the **Rounds** type,
   optional starter sport exercises and the rest timer in the phone's notification and lock screen ([#246](https://github.com/Flameingskull/FlexNotes/issues/246), [#247](https://github.com/Flameingskull/FlexNotes/issues/247), [#250](https://github.com/Flameingskull/FlexNotes/issues/250));
   1.0.180 and 1.0.181 add sport counts such as takedowns or points ([#266](https://github.com/Flameingskull/FlexNotes/issues/266)) and begin a screen-by-screen review so
-  every page reads as real weekday dates and keeps its layout at large font sizes ([#251](https://github.com/Flameingskull/FlexNotes/issues/251)–[#254](https://github.com/Flameingskull/FlexNotes/issues/254)).
-- **Next:** the rest of the screen-by-screen review, so each one suits people first ([#263](https://github.com/Flameingskull/FlexNotes/issues/263): body and photos,
-  medications, settings, calendar, widget and notifications), then a clean-up of code left from earlier versions
-  ([#264](https://github.com/Flameingskull/FlexNotes/issues/264)) and an accessibility pass on a real phone ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)). The plan is `docs/plans/2026-10-24-roadmap.md`; other
+  every page reads as real weekday dates and keeps its layout at large font sizes ([#251](https://github.com/Flameingskull/FlexNotes/issues/251)–[#258](https://github.com/Flameingskull/FlexNotes/issues/258)),
+  finished in 1.0.182 and 1.0.183. 1.0.184 and 1.0.185 clear out code and resources left from earlier versions and make
+  the build fail if any come back ([#264](https://github.com/Flameingskull/FlexNotes/issues/264)). 1.0.186 works through the review's other findings: times
+  are picked on a clock that follows your phone's 12 or 24 hour setting, deletes in the workout editor and the library
+  can be undone, the widget confirms what it logged, the calendar shows medication days, and wording is plainer.
+- **Next:** your check of every screen on a real phone at large font sizes ([#263](https://github.com/Flameingskull/FlexNotes/issues/263)), with an
+  accessibility pass ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)); anything found there becomes a bug and the next build. The plan is `docs/plans/2026-10-24-roadmap.md`; other
   ideas are on the [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
 - **FitNotes stays supported** as an import source. You can import during first-run setup or at any time afterwards.
   Imports always merge and never overwrite FlexNotes data. There's no export back to FitNotes.
@@ -255,8 +258,8 @@ custom metrics.
   A schedule's earlier runs are listed, with their dates fixable and each one deletable. Start a schedule from any date, then pause, resume or end it; several can run at
   once. A running schedule's start date can be changed, or it can **start again from day 1**, keeping the earlier
   run's history; an ended one offers **Start again**. Each has Undo. The **Today** tab lists the doses due, each with
-  a done box like a set's, where each schedule is in its cycle ("On · day 12 of 56", "Off · on again 3 Dec",
-  "On · day 40 · ongoing"), and missed or skipped doses. Ticking a dose logs it as an ordinary medication value, once, with Undo; tapping it offers Taken or Skip,
+  a done box like a set's, where each schedule is in its cycle, in real dates ("On until Fri 7 Nov", "Off · on again Wed 3 Dec",
+  "Ongoing since Mon 6 Oct"), and missed or skipped doses. Ticking a dose logs it as an ordinary medication value, once, with Undo; tapping it offers Taken or Skip,
   or a change of amount for that day or the rest of the run.
 - **Dose reminders:** a notification when a scheduled dose is due, with **Taken**, **Snooze** and **Skip**, and an
   optional second reminder (Settings › Medications). The lock screen hides medication names unless you choose to
@@ -326,7 +329,7 @@ custom metrics.
   has Backup, Restore, Automatic Backup, Spreadsheet Export, Calculate Personal Records, Delete Workout History,
   **Reset Settings to Defaults**, Import From FitNotes and **Health Connect**, and **OTHER** has Help (short guides inside the app),
   Feedback, Change Log (this update's notes, which also appear once after each update), Show Setup Again, Privacy
-  Policy and About (version, privacy, licences, and **Save speed**: how long saving a set takes on your phone).
+  Policy and About (version, privacy and licences).
   On/off settings are checkboxes, and the search field filters the list so a setting can be changed right there.
   Matches on the pages Settings opens (Backups, Rest Timer, Progress Photos & Media and so on) are listed below with
   their current value, and tapping one opens that page at the setting, outlined in gold for a moment. A number
@@ -353,7 +356,7 @@ custom metrics.
 - **Reminders and widget:** **Settings › Reminders** has reminders to weigh in, measure, take progress photos and
   train, each at your own time and days, and quiet when that day's already done; tapping one opens the right screen.
   The **FlexNotes today** home-screen widget lists today's doses with **Taken**, as-needed medications with **Take**,
-  and today's workout with its training block.
+  and today's workout with its training block. Tapping **Taken** or **Take** shows what was logged and when.
 - **Data tools** (in Settings):
   - **CSV export:** workouts (with set and exercise comments) or body data for any date range, in kilograms or
     pounds, saved to a file or shared, for spreadsheets. The columns are listed on the page, with a custom metric's
@@ -386,8 +389,8 @@ custom metrics.
     and **Log body value**.
   - **All days** (from the Calendar's top bar): a timeline of every day, with that day's photos, measurements and
     workout summary.
-  - **Calendar:** as in FitNotes, a month grid (swipe between months) with category dots, photo and measurement
-    dots, today in gold and the selected day in deep gold. The selected day's workout shows below the grid (beside it
+  - **Calendar:** as in FitNotes, a month grid (swipe between months) with category dots, photo, measurement and
+    medication dots, today in gold and the selected day in deep gold. The selected day's workout shows below the grid (beside it
     on wide screens and unfolded foldables); **Open day**
     (or a second tap) opens its log, and tapping one of its exercises opens that exercise's **overview** (history,
     graph, records, stats and goals in one sheet). The search button **filters** the calendar by exercise or
@@ -446,7 +449,7 @@ custom metrics.
     (0.45359237 kg). Records can also cover a date range you choose.
   - **Analysis:** **Overview**, the first tab, shows every graph you've starred, Workouts or exercise graphs, as
     compact cards with the latest value and the change over its range; tap one to open it, or drag or use its menu to
-    reorder or unpin it (Analysis opens there once something is pinned). **Workouts** shows your workouts, volume, sets, reps or duration per week, month or year, for all
+    reorder or unpin it (Analysis opens there once something is pinned, and on Readiness before any sets are logged). **Workouts** shows your workouts, volume, sets, reps or duration per week, month or year, for all
     training, a category or an exercise; duration can be a total or an average per workout, with a graph of every
     workout's length, and its ⋮ menu can overlay a body measurement's average for each period. **Breakdown** splits your training by category or exercise in a donut chart,
     for any week, month or year with training, with arrows to step through the slices and a comparison to the period
@@ -477,7 +480,7 @@ custom metrics.
     photos, a date range or the selection into a folder you choose, named by date and pose (such as
     `2026-10-16_front.jpg`), with the FlexNotes date and time, pose and comment in each file's photo details. Nothing
     in the folder is replaced or deleted.
-- **Slideshow and video:** plays your photos in date order with overlays: the date, a day or week counter, the pose,
+- **Slideshow and video:** plays your photos in date order with overlays: the date (with an optional "12 days in" from the first photo), the pose,
   chosen measurements (with the change since the start) and a moving progress chart. Every option is in one options
   sheet, and FlexNotes remembers them for next time (the dates always start at all photos; **Settings → Progress Photos
   & Media** can switch this off or reset them). It exports an **MP4 video**, rendered on the phone, in Portrait HD,
@@ -499,7 +502,7 @@ custom metrics.
     its free space, each with a tick or a warning sign. Folder rows show the folder's name, or Not set, with Choose
     or Change. If the folder can't be reached (the SD card was removed or access was lost), the row says so and a
     notification explains how to fix it.
-  - **Safety copy with Undo:** before a restore, a FitNotes import, merging exercises or deleting workout history, FlexNotes keeps a copy
+  - **Safety copy with Undo:** before a restore, a FitNotes import, merging exercises, deleting an exercise with history or deleting workout history, FlexNotes keeps a copy
     of your current data on the phone. For 7 days, **Settings → Backups → Safety copy → Undo** puts it back.
   - **Phone-to-phone transfer** (Android 12+) carries FlexNotes data across when you set up a new phone with a cable or
     a direct transfer.
