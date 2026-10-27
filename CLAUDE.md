@@ -106,6 +106,10 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
 - **Any user, any pattern (owner principle, 2026-10-24):** FlexNotes is for any kind of user. No feature may lock
   people into one pattern (for example cycles only). Every function is easy to understand and use: plain wording,
   sensible defaults, and every mistake fixable from the screen that shows it.
+  **User choice (owner, 2026-10-27):** as far as possible every feature gives the user control. Where a behaviour
+  could reasonably go more than one way (what's shown or hidden, counted, defaulted, automated or kept private), the
+  user chooses, on the screen and in Settings, with a sensible default. Never pick one behaviour for everyone when
+  others are reasonable. The build skills and backlog agents apply this at every step.
 - **Human first, value-add only (owner imperatives, 2026-10-25; never make the owner repeat them):** every display,
   function and feature must suit real people, not just technically work: real dates with the weekday ("Mon 27 Oct"),
   never counters like "day 12 of 56"; text that lays out the same way for every entry. FlexNotes is a workout, fitness

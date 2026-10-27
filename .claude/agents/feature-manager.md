@@ -70,6 +70,9 @@ under "New requests filed" in your report.
    - **Owner imperatives (CLAUDE.md, "Human first, value-add only"):** check every issue against both. Mark one that
      would duplicate another app or fall outside workout, fitness and medication `needs-info`, and say why in your
      report. Every fix or build must suit real people: real weekday dates, consistent text layout, no placeholders.
+   - **User choice (CLAUDE.md, "Any user, any pattern"):** where a fix or feature could reasonably behave more than
+     one way (shown or hidden, counted, defaulted, automated, private), plan the choice for the user, on the screen
+     and in Settings, with a sensible default, rather than picking one behaviour for everyone.
    - Set a priority, and swap `needs-triage` for `triaged` (plus `ready` if it fits in the next build).
 3. Report back a prioritised table: issue, title, priority, size (S/M/L), plan summary, and **Roadmap**: the build
    stage of `docs/plans/2026-10-24-roadmap.md` the issue is in (from the brief), or `none` so the main session adds it.
