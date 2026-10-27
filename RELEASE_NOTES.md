@@ -1,23 +1,21 @@
-# FlexNotes 1.0.183
+# FlexNotes 1.0.184
 
 ## Overview
 
-This build finishes the screen-by-screen review in code. It covers Settings, backups, imports and Health Connect, plus the calendar and the home-screen widget. More dates and times now read the way you plan your week, like "Mon 27 Oct, 14:05", and the widget keeps long medication names readable.
+This build changes the slideshow's progress stamp to plain words. It also clears out code left behind by earlier versions. Apart from the slideshow, the app looks and works as before. It's a little leaner underneath.
 
 ## Improved
 
-- **Weekday dates in Settings.** The last and next automatic backup, the safety copy and its undo message, backup results, the last FitNotes import and the last Health Connect read now show the weekday and time. The year only appears when it isn't this year.
-- **Restoring a backup.** The restore dialog shows when the backup was made and the dates it covers with the weekday. The PDF report's From and To dates show it too.
-- **Calendar.** "Share" for the chosen day names it by its weekday date. Body values under the chosen day keep the number and its unit together on one line, so a long measurement name wraps in its own space.
-- **Home-screen widget.** A long medication name and its dose now wrap to a second line instead of being cut short. The Taken and Take buttons grow with large font sizes instead of clipping their text.
+- **Slideshow: time since your first photo.** The video's old "Day 12 · Week 2" counter is gone. Instead you can show how far you've come in plain words: "First photo", "12 days in", "5 weeks in", "4 months in". It's off unless you turn it on: in the slideshow options, under Overlay, choose "Time since the first photo". The date stamp is still there as before.
+- **A cleaner app underneath.** Code, text and chart options left over from removed features and older screens have been taken out. Nothing you use has changed.
 
 ## Your data
 
 - No database change. Your workouts, measurements, photos, medications and settings are kept, and older backups still restore.
+- The tables and records older versions relied on are kept on purpose, so updating from any earlier version and restoring an old backup still work.
 
 ## Known limitations
 
-- The settings review and the calendar, widget and notifications review (issues #257 and #258) stay open until they've been checked on a phone at a large font size, as do the earlier reviews (#251 to #256).
-- The slideshow's optional "Day 12 · Week 2" stamp is unchanged until you choose how it should read (issue #267).
-- A profile's date of birth stays as "12 Mar 1990". People don't think of a birthday by its weekday.
-- Next up: the code clean-up (issues #259 to #262).
+- The slideshow's time stamp now starts off for everyone, including anyone who had the old counter turned on. Turn it on again in the slideshow options if you want it.
+- The screen-by-screen reviews (issues #251 to #258) stay open until they've been checked on a phone at a large font size.
+- Two clean-up checks are still to come: a build check that stops unused code from piling up again (#260), and listing what the new unused-resource check finds (#261).
