@@ -111,31 +111,40 @@ internal fun sessionRpeWord(res: Resources, rpe: Double): String = res.getString
  * The line under a session's duration in set lists: its rating, intensity, type, hard minutes and zone, in that
  * order, each only when recorded.
  */
-internal fun sessionMarks(res: Resources, s: SetRow, rounds: Boolean = false): SetMarks {
-    if (rounds) return roundsMarks(res, s)
+internal fun sessionMarks(res: Resources, s: SetRow, rounds: Boolean = false, countNames: List<String> = emptyList()): SetMarks {
+    if (rounds) return roundsMarks(res, s, countNames)
     val parts = listOfNotNull(
         // A session with no rating can't count in training load, so the row says so quietly (#243).
         s.rpe?.let { res.getString(R.string.session_rpe_line, fmtNum(it, 1), sessionRpeWord(res, it)) },
         SessionIntensity.valid(s.intensity)?.let { sessionIntensityName(res, it) },
         SessionTypes.valid(s.sessionType)?.let { sessionTypeText(res, it) },
         s.liveSec?.let { res.getString(R.string.session_hard_line, minutesText(it)) },
-        CardioZones.valid(s.zone)?.let { zoneText(res, it) },
+        CardioZones.valid(s.zone)?.let { zoneText(res, it) }
+    ) + countParts(countNames, s.countA, s.countB) + listOfNotNull(
         res.getString(R.string.session_no_rpe_hint).takeIf { s.rpe == null }
     )
     val line = parts.joinToString(" · ").ifBlank { null }
     return SetMarks(null, null, line, line)
 }
 
+/** A set's counts as they read on its line (#266): "3 Takedowns". A count that is unset or 0 is left out. */
+internal fun countParts(names: List<String>, a: Int?, b: Int?): List<String> =
+    listOf(a, b).mapIndexedNotNull { i, v ->
+        val name = names.getOrNull(i)
+        if (name == null || v == null || v <= 0) null else "$v $name"
+    }
+
 /**
  * The line under a Rounds set's time (#246), always in this order and each part only when recorded: "6 × 3 min · 1 min
  * rest · 2 hard · RPE 8 (Hard) · Zone 3".
  */
-internal fun roundsMarks(res: Resources, s: SetRow): SetMarks {
+internal fun roundsMarks(res: Resources, s: SetRow, countNames: List<String> = emptyList()): SetMarks {
     val roundSec = Rounds.roundSec(s)
     val hard = Rounds.hardRounds(s)
     val parts = Rounds.lineParts(res, s.reps, roundSec, s.restSeconds, hard) + listOfNotNull(
         s.rpe?.let { res.getString(R.string.session_rpe_line, fmtNum(it, 1), sessionRpeWord(res, it)) },
-        CardioZones.valid(s.zone)?.let { zoneText(res, it) },
+        CardioZones.valid(s.zone)?.let { zoneText(res, it) }
+    ) + countParts(countNames, s.countA, s.countB) + listOfNotNull(
         res.getString(R.string.session_no_rpe_hint).takeIf { s.rpe == null }
     )
     val line = parts.joinToString(" · ").ifBlank { null }

@@ -46,6 +46,32 @@ object SessionKinds {
 }
 
 /**
+ * The counts a Session or Rounds exercise names for itself (#266): up to [MAX], plain words the user types ("Takedowns",
+ * "Points"). Stored in one text column joined by `|`. [suggest] offers a few by kind of sport; nothing is ever added for
+ * the user.
+ */
+object SportCounts {
+    const val MAX = 2
+    private const val SEP = "|"
+
+    fun parse(stored: String?): List<String> =
+        stored.orEmpty().split(SEP).map { it.trim() }.filter { it.isNotEmpty() }.take(MAX)
+
+    /** The text to store for [names]: blanks and `|` removed, at most [MAX]; null for none. */
+    fun join(names: List<String>): String? =
+        names.map { it.replace(SEP, " ").trim() }.filter { it.isNotEmpty() }.take(MAX).joinToString(SEP).ifEmpty { null }
+
+    /** Counts people usually keep for a kind of sport, for the editor's suggestions. */
+    fun suggest(kind: String?): List<String> = when (kind) {
+        SessionKinds.COMBAT -> listOf("Takedowns", "Submissions", "Rounds won")
+        SessionKinds.RACKET -> listOf("Points won", "Games won", "Sets won")
+        SessionKinds.TEAM -> listOf("Goals", "Assists", "Points")
+        SessionKinds.CARDIO -> listOf("Laps", "Intervals")
+        else -> emptyList()
+    }
+}
+
+/**
  * One built-in Session exercise (#249). [activity] is its [Energy.Activity] key (#244), so its calories use the
  * sport's METs; null when no activity fits (a Gym Session's sets already count their own calories).
  */

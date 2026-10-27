@@ -72,7 +72,8 @@ class SaveSpeedTest {
                         w.addSet(
                             ex, date, 60.0 + (n % 40), 5 + s, 0.0, 0, isPr = 0, comment = null, source = Sources.FLEXNOTES,
                             setType = SetTypes.WORKING, rpe = null, metric = null, position = 0L, superset = 0, done = 0,
-                            restSeconds = null, liveSeconds = null, intensity = null, sessionType = null, zone = null
+                            restSeconds = null, liveSeconds = null, intensity = null, sessionType = null, zone = null,
+                            countA = null, countB = null
                         )
                     }
                 }

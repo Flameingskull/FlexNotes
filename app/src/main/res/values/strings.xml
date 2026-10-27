@@ -3808,6 +3808,11 @@
     <string name="sport_suggest_like">Suggested to match %1$s. Change anything below.</string>
     <string name="sport_suggest_usual">The usual fields for this kind of sport. Change anything below.</string>
     <string name="sport_records">What to record</string>
+    <string name="count_setup_title">Counts</string>
+    <string name="count_setup_help">Name up to two things to count in each set, like Takedowns or Points. Leave them empty to count nothing.</string>
+    <string name="count_name_first">First count</string>
+    <string name="count_name_second">Second count</string>
+    <string name="count_field_fallback">Count</string>
     <string name="sport_records_always">Length and how hard it felt are always recorded, so your training load can be worked out.</string>
     <string name="sport_metric_live">Hard or live minutes</string>
     <string name="sport_metric_intensity">Intensity</string>

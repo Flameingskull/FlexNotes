@@ -241,7 +241,7 @@ object Workouts {
                 exId, d, s.weightKg, s.reps, s.distance, s.durationSec, isPr = 0, comment = null, source = Sources.FLEXNOTES,
                 setType = s.setType, rpe = null, metric = s.metric, position = 0L, superset = if (g > 0) g + offset else 0,
                 done = 0, restSeconds = s.restSeconds, liveSeconds = s.liveSec, intensity = s.intensity,
-                sessionType = s.sessionType, zone = s.zone
+                sessionType = s.sessionType, zone = s.zone, countA = s.countA, countB = s.countB
             )
         }
         rests.filterValues { !it.isEmpty }.forEach { (exId, r) -> putRest(w, d, exId, r) }
@@ -394,6 +394,11 @@ object Workouts {
     /** A Session exercise's kind of sport and the optional fields it records (#249); null fields records all. */
     suspend fun setExerciseSession(id: Long, kind: String?, fields: Int?): Unit = write(LIBRARY) { w ->
         w.setExerciseSession(id, SessionKinds.of(kind), fields?.and(SessionMetrics.ALL))
+    }
+
+    /** A Session or Rounds exercise's own count names (#266): at most [SportCounts.MAX], blanks dropped. */
+    suspend fun setExerciseCounts(id: Long, names: List<String>): Unit = write(LIBRARY) { w ->
+        w.setExerciseCounts(id, SportCounts.join(names))
     }
 
     // ---------- Exercise types (#14) ----------
@@ -626,7 +631,10 @@ object Workouts {
         sessionType: Int? = null,
         zone: Int? = null,
         /** A Rounds set's rest between rounds (#246); null for any other set. */
-        restSeconds: Int? = null
+        restSeconds: Int? = null,
+        /** A Session or Rounds set's counts (#266), or null for none. */
+        countA: Int? = null,
+        countB: Int? = null
     ): Long = writeSets { w, scope ->
         val d = checkDate(date)
         if (!w.exerciseExists(exerciseId)) throw WorkoutDataException(R.string.wde_exercise_gone)
@@ -640,7 +648,8 @@ object Workouts {
         w.addSet(
             exerciseId, d, weightKg, reps, distance, durationSec, flag(pr), comment?.takeIf { it.isNotBlank() },
             Sources.FLEXNOTES, setType, rpe, metric, position = 0L, superset = 0, done = 0, restSeconds = restSeconds,
-            liveSeconds = liveSec, intensity = intensity, sessionType = sessionType, zone = zone
+            liveSeconds = liveSec, intensity = intensity, sessionType = sessionType, zone = zone,
+            countA = countA, countB = countB
         )
     }
 
@@ -658,7 +667,7 @@ object Workouts {
         w.updateSet(
             set.id, set.exerciseId, d, set.weightKg, set.reps, set.distance, set.durationSec, flag(set.isPr),
             set.comment?.takeIf { it.isNotBlank() }, Sources.FLEXNOTES, set.setType, set.rpe, set.metric,
-            set.liveSec, set.intensity, set.sessionType, set.zone
+            set.liveSec, set.intensity, set.sessionType, set.zone, set.countA, set.countB
         )
         if (writeRest) w.setRestSeconds(set.id, set.restSeconds)
         // A new weight, rep count or date can make or end a record, for this set and those logged after it.
@@ -768,7 +777,7 @@ object Workouts {
             w.addSet(
                 s.exerciseId, s.date.take(10), s.weightKg, s.reps, s.distance, s.durationSec, flag(s.isPr),
                 s.comment?.takeIf { it.isNotBlank() }, Sources.FLEXNOTES, s.setType, s.rpe, s.metric, s.position,
-                s.superset, flag(s.done), s.restSeconds, s.liveSec, s.intensity, s.sessionType, s.zone
+                s.superset, flag(s.done), s.restSeconds, s.liveSec, s.intensity, s.sessionType, s.zone, s.countA, s.countB
             )
             // Deleting an imported set left one skip rule; the set is back, so drop one matching rule too (#76).
             if (s.imported) {
@@ -907,7 +916,8 @@ object Workouts {
                     s.exercise_id, t, s.weight, s.reps, s.distance, s.duration.toInt(), isPr = 0, comment = s.comment,
                     source = Sources.FLEXNOTES, setType = s.set_type, rpe = s.rpe, metric = s.metric, position = 0L,
                     superset = if (s.superset > 0) s.superset + offset else 0, done = 0, restSeconds = s.rest_seconds,
-                    liveSeconds = s.live_seconds, intensity = s.intensity, sessionType = s.session_type, zone = s.zone
+                    liveSeconds = s.live_seconds, intensity = s.intensity, sessionType = s.session_type, zone = s.zone,
+                    countA = s.count_a, countB = s.count_b
                 )
             }
             // Exercise comments and prescribed rests (#107, #138) come along for the exercises copied, unless the

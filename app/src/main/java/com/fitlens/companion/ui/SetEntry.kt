@@ -304,6 +304,9 @@ fun SetEntryScreen(
     var intensity by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
     var sessionType by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
     var zone by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
+    // A Session or Rounds set's two counts as typed (#266).
+    var countAText by remember(date, exerciseId) { mutableStateOf("") }
+    var countBText by remember(date, exerciseId) { mutableStateOf("") }
     // A Rounds set's rounds, round length, rest between rounds and hard rounds as typed (#246).
     var roundsDraft by remember(date, exerciseId) { mutableStateOf(RoundsDraft()) }
     // Set type (#43): new sets start as working sets; editing a set shows its own type.
@@ -362,6 +365,11 @@ fun SetEntryScreen(
                 intensity = source?.intensity
                 sessionType = source?.sessionType
                 zone = source?.zone
+            }
+            if (isTimed) {
+                // Counts fill only when editing a set: last time's takedowns aren't this time's.
+                countAText = countText(chosen?.countA)
+                countBText = countText(chosen?.countB)
             }
             if (isRounds) {
                 // Last time's rounds and rests fill a new set; its hard rounds are only shown when editing that set.
@@ -425,7 +433,8 @@ fun SetEntryScreen(
                     val id = Workouts.addSet(exerciseId, date, kg, r, dist, dur, null, setType = setType, rpe = rpe, metric = met,
                         liveSec = live, intensity = if (isSession) intensity else null,
                         sessionType = if (isSession) sessionType else null, zone = if (isTimed) zone else null,
-                        restSeconds = roundsRest)
+                        restSeconds = roundsRest,
+                        countA = if (isTimed) countValue(countAText) else null, countB = if (isTimed) countValue(countBText) else null)
                     // In a superset, saving a set moves on to the next exercise of the group, round-robin, as FitNotes
                     // does (#18). The rest timer then starts only after the round's last exercise (#20).
                     val members = supersetMembers(snap, date, supersetOf(snap, date, exerciseId))
@@ -460,7 +469,9 @@ fun SetEntryScreen(
                             liveSec = if (isTimed) live else chosen.liveSec,
                             intensity = if (isSession) intensity else chosen.intensity,
                             sessionType = if (isSession) sessionType else chosen.sessionType,
-                            zone = if (isTimed) zone else chosen.zone
+                            zone = if (isTimed) zone else chosen.zone,
+                            countA = if (isTimed) countValue(countAText) else chosen.countA,
+                            countB = if (isTimed) countValue(countBText) else chosen.countB
                         )
                     )
                     Haptics.confirm(view)
@@ -485,6 +496,7 @@ fun SetEntryScreen(
         selected = null
         weight = ""; reps = ""; distance = ""; duration = ""; metric = ""
         sessionMin = ""; liveMin = ""; intensity = null; sessionType = null; zone = null; roundsDraft = RoundsDraft()
+        countAText = ""; countBText = ""
         loadedWeightText = ""; loadedWeightKg = null
         setType = SetTypes.WORKING; rpe = null
     }
@@ -661,6 +673,11 @@ fun SetEntryScreen(
                             rpe = rpe, onRpe = { rpe = it }
                         )
                     }
+                    if (isTimed) CountFields(
+                        names = ex?.countNames.orEmpty(),
+                        aText = countAText, onA = { countAText = it },
+                        bText = countBText, onB = { countBText = it }
+                    )
                     if (!isTimed) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         val types = SetTypes.all
                         DropdownPill(
@@ -754,7 +771,7 @@ fun SetEntryScreen(
             sets.forEachIndexed { i, s ->
                 item(key = "s${s.id}") {
                     val isSelected = selected == s.id
-                    val marks = setMarks(res, s, prefs, session = isTimed, rounds = isRounds)
+                    val marks = setMarks(res, s, prefs, session = isTimed, rounds = isRounds, countNames = ex?.countNames.orEmpty())
                     SetRowView(
                         layoutGroup = setLayout,
                         index = i + 1,

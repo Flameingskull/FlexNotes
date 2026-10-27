@@ -31,10 +31,13 @@ data class PlannedSet(
     val liveSec: Int? = null,
     val intensity: Int? = null,
     val sessionType: Int? = null,
-    val zone: Int? = null
+    val zone: Int? = null,
+    /** A Session or Rounds set's predefined counts (#266); null when unset. */
+    val countA: Int? = null,
+    val countB: Int? = null
 ) {
     val isEmpty: Boolean get() = weightKg == 0.0 && reps == 0 && distance == 0.0 && durationSec == 0 && metric == null &&
-        liveSec == null && intensity == null && sessionType == null && zone == null
+        liveSec == null && intensity == null && sessionType == null && zone == null && countA == null && countB == null
 }
 
 /**
@@ -225,7 +228,7 @@ object Routines {
                 r.addPlannedSet(
                     RoutineDaySetRow(
                         0L, itemId, j, s.weightKg, s.reps, s.distance, s.durationSec.toLong(), s.setType, s.restSeconds, s.metric,
-                        s.liveSec, s.intensity, s.sessionType, s.zone
+                        s.liveSec, s.intensity, s.sessionType, s.zone, s.countA, s.countB
                     )
                 )
             }
@@ -301,7 +304,7 @@ object Routines {
                 PlannedExercise(exId, fill, sets.map { it.toPlanned() }, sets.maxOf { it.superset }, rest?.restSeconds, rest?.restAfterSeconds)
             }
 
-    private fun SetRow.toPlanned() = PlannedSet(weightKg, reps, distance, durationSec, setType, restSeconds, metric, liveSec, intensity, sessionType, zone)
+    private fun SetRow.toPlanned() = PlannedSet(weightKg, reps, distance, durationSec, setType, restSeconds, metric, liveSec, intensity, sessionType, zone, countA, countB)
 
     /** How the sets read in lists, for example "3 sets · 100 kg · 5 reps", in the words of `strings.xml` (#94). */
     fun describe(res: Resources, snap: Snapshot, sets: List<PlannedSet>, exerciseId: Long? = null): String {

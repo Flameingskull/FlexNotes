@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import com.fitlens.companion.data.SportLibrary
 import com.fitlens.companion.data.SessionMetrics
 import com.fitlens.companion.data.SessionKinds
+import com.fitlens.companion.data.SportCounts
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.combinedClickable
@@ -814,6 +815,9 @@ fun ExerciseEditorSheet(
     // A Session's kind of sport and the optional fields it records (#249); null fields records all of them.
     var sessionKind by remember { mutableStateOf(existing?.sessionKind) }
     var sessionFields by remember { mutableStateOf(existing?.sessionFields) }
+    // The names of a Session or Rounds exercise's own counts (#266), as typed.
+    var countNameA by remember { mutableStateOf(existing?.countNames.orEmpty().getOrElse(0) { "" }) }
+    var countNameB by remember { mutableStateOf(existing?.countNames.orEmpty().getOrElse(1) { "" }) }
     val res = LocalContext.current.resources
 
     fun save(keepOpen: Boolean) {
@@ -833,6 +837,7 @@ fun ExerciseEditorSheet(
         val act = activity
         val kind = sessionKind
         val fields = sessionFields
+        val countNames = SportCounts.parse(SportCounts.join(listOf(countNameA, countNameB)))
         if (!keepOpen) onDismiss()
         AppScope.scope.launch {
             try {
@@ -845,6 +850,9 @@ fun ExerciseEditorSheet(
                 if (act != existing?.activity) Workouts.setExerciseActivity(id, act)
                 if (ExerciseTypes.isSession(t) && (kind != existing?.sessionKind || fields != existing?.sessionFields)) {
                     Workouts.setExerciseSession(id, kind, fields)
+                }
+                if (ExerciseTypes.isTimedSession(t) && countNames != existing?.countNames.orEmpty()) {
+                    Workouts.setExerciseCounts(id, countNames)
                 }
                 if (step != existing?.weightStepKg || graph != (existing?.defaultGraph ?: -1) || rest != existing?.restSeconds ||
                     dUnit != existing?.distanceUnit || wUnit != existing?.weightUnit
@@ -974,6 +982,13 @@ fun ExerciseEditorSheet(
                                 sessionFields = suggested
                             },
                             onFields = { sessionFields = it }
+                        )
+                    }
+                    if (ExerciseTypes.isTimedSession(type)) {
+                        CountsSetup(
+                            kind = sessionKind,
+                            a = countNameA, onA = { countNameA = it },
+                            b = countNameB, onB = { countNameB = it }
                         )
                     }
                     if (existing != null && type != existing.type && (snap.workoutsByExercise[existing.id] ?: 0) > 0) {
@@ -1361,6 +1376,43 @@ fun LibraryAction(nav: Nav) {
  * of that kind in the library record (or the kind's usual fields when there are none), and says which ones it
  * compared, so a new sport starts from its nearest neighbours. Every field can then be ticked on or off.
  */
+/**
+ * The counts a Session or Rounds exercise keeps for itself (#266): up to two names, free text, with a few suggestions for
+ * the kind of sport. Nothing is added unless tapped or typed.
+ */
+@Composable
+private fun CountsSetup(kind: String?, a: String, onA: (String) -> Unit, b: String, onB: (String) -> Unit) {
+    SectionLabel(stringResource(R.string.count_setup_title))
+    Text(
+        stringResource(R.string.count_setup_help),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    OutlinedTextField(
+        value = a, onValueChange = { onA(it.take(24)) },
+        label = { Text(stringResource(R.string.count_name_first)) },
+        singleLine = true, modifier = Modifier.fillMaxWidth()
+    )
+    OutlinedTextField(
+        value = b, onValueChange = { onB(it.take(24)) },
+        label = { Text(stringResource(R.string.count_name_second)) },
+        singleLine = true, modifier = Modifier.fillMaxWidth()
+    )
+    val taken = listOf(a, b).map { it.trim().lowercase() }
+    val suggestions = SportCounts.suggest(kind).filter { it.lowercase() !in taken }
+    if (suggestions.isNotEmpty() && (a.isBlank() || b.isBlank())) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            suggestions.forEach { s ->
+                FilterChip(
+                    selected = false,
+                    onClick = { if (a.isBlank()) onA(s) else onB(s) },
+                    label = { Text(s) }
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun SessionSetup(
     snap: Snapshot,

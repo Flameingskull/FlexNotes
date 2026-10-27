@@ -24,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.R
 import com.fitlens.companion.data.CardioZones
@@ -42,6 +43,36 @@ private fun minutes(s: String): Double = s.trim().replace(',', '.').toDoubleOrNu
 
 private fun stepMinutes(text: String, dir: Int): String =
     fmtNum(kotlin.math.max(0.0, minutes(text) + dir * MINUTE_STEP), 1).let { if (it == "0") "" else it }
+
+/** A count as typed: digits only, so "" means none. */
+internal fun countText(v: Int?): String = v?.toString() ?: ""
+
+internal fun countValue(text: String): Int? = text.filter { it.isDigit() }.take(6).toIntOrNull()
+
+/**
+ * One stepper per count the exercise names (#266), for a Session or Rounds set: "Takedowns", "Points". Nothing shows for
+ * an exercise with no counts. A count with a value is shown even if its name was later removed, so it can be fixed.
+ */
+@Composable
+internal fun CountFields(
+    names: List<String>,
+    aText: String,
+    onA: (String) -> Unit,
+    bText: String,
+    onB: (String) -> Unit
+) {
+    val fallback = stringResource(R.string.count_field_fallback)
+    listOf(Triple(aText, onA, 0), Triple(bText, onB, 1)).forEach { (text, set, i) ->
+        val name = names.getOrNull(i)
+        if (name != null || text.isNotBlank()) StepperField(
+            label = name ?: fallback,
+            value = text,
+            onValue = { set(it.filter { c -> c.isDigit() }.take(6)) },
+            onStep = { dir -> set(((countValue(text) ?: 0) + dir).coerceAtLeast(0).takeIf { it > 0 }?.toString() ?: "") },
+            keyboard = KeyboardType.Number
+        )
+    }
+}
 
 /**
  * The fields of a Session set (#240, #241), shared by the Track tab and the workout editor's predefined sets: its

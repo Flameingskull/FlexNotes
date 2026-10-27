@@ -417,4 +417,39 @@ class DbMigrationTest {
             assertEquals(1, db.count("SELECT COUNT(*) FROM exercise WHERE session_kind='combat' AND session_fields=9"))
         }
     }
+
+    @Test
+    fun v31ExercisesAndSetsGainSportCountsAndKeepTheirRows() {
+        // Exercises and sets as v31 left them, before a Session's own counts (#266).
+        oldDatabase(
+            31,
+            v12Schema + listOf(
+                "CREATE TABLE routine_day_exercise(id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL, " +
+                    "exercise_id INTEGER NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, fill INTEGER NOT NULL DEFAULT 0, " +
+                    "superset INTEGER NOT NULL DEFAULT 0, rest_seconds INTEGER, rest_after_seconds INTEGER)",
+                "CREATE TABLE routine_day_set(id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER NOT NULL, " +
+                    "sort_order INTEGER NOT NULL DEFAULT 0, weight REAL NOT NULL DEFAULT 0, reps INTEGER NOT NULL DEFAULT 0, " +
+                    "distance REAL NOT NULL DEFAULT 0, duration INTEGER NOT NULL DEFAULT 0, set_type INTEGER NOT NULL DEFAULT 0, " +
+                    "rest_seconds INTEGER, metric REAL)"
+            )
+        ) { db ->
+            db.row("exercise", "id" to 1L, "name" to "BJJ")
+            db.row("workout_set", "id" to 1L, "exercise_id" to 1L, "date" to "2026-10-20", "duration" to 3600)
+            val r = db.row("routine", "name" to "Mat", "sort_order" to 0)
+            val d = db.row("routine_day", "routine_id" to r, "name" to "Monday", "sort_order" to 0)
+            val item = db.row("routine_day_exercise", "day_id" to d, "exercise_id" to 1L, "sort_order" to 0, "fill" to 1)
+            db.row("routine_day_set", "item_id" to item, "sort_order" to 0, "duration" to 3600)
+        }
+        Db(app).writableDatabase.use { db ->
+            assertEquals(Db.VERSION, db.version)
+            assertEquals(1, db.count("SELECT COUNT(*) FROM exercise WHERE id=1 AND name='BJJ' AND count_names IS NULL"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM workout_set WHERE duration=3600 AND count_a IS NULL AND count_b IS NULL"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM routine_day_set WHERE duration=3600 AND count_a IS NULL AND count_b IS NULL"))
+            // The new columns take values.
+            db.execSQL("UPDATE exercise SET count_names='Takedowns|Submissions' WHERE id=1")
+            db.execSQL("UPDATE workout_set SET count_a=3, count_b=0 WHERE id=1")
+            assertEquals(1, db.count("SELECT COUNT(*) FROM workout_set WHERE count_a=3 AND count_b=0"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM exercise WHERE count_names='Takedowns|Submissions'"))
+        }
+    }
 }

@@ -176,7 +176,9 @@ data class Exercise(
     /** A Session exercise's kind of sport, a [SessionKinds] key (#249), or null when not set. */
     val sessionKind: String? = null,
     /** The optional session fields it records, [SessionMetrics] bits (#249); null records all of them. */
-    val sessionFields: Int? = null
+    val sessionFields: Int? = null,
+    /** The names of the counts a Session or Rounds set records (#266), at most [SportCounts.MAX]; empty for none. */
+    val countNames: List<String> = emptyList()
 ) {
     val imported: Boolean get() = source == Sources.FITNOTES
 }
@@ -213,7 +215,10 @@ data class SetRow(
     /** A Session's [SessionTypes] id (#240), or null when unset. */
     val sessionType: Int? = null,
     /** The cardio zone 1–5 the user trained in (#241), or null when not recorded. */
-    val zone: Int? = null
+    val zone: Int? = null,
+    /** A Session or Rounds set's counts (#266), in the order of its exercise's [Exercise.countNames]; null when not recorded. */
+    val countA: Int? = null,
+    val countB: Int? = null
 ) {
     val imported: Boolean get() = source == Sources.FITNOTES
     val isWarmup: Boolean get() = setType == SetTypes.WARMUP

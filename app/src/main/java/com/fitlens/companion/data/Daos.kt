@@ -406,6 +406,10 @@ interface WorkoutDao {
     @Query("UPDATE exercise SET session_kind = :kind, session_fields = :fields WHERE id = :id")
     fun setExerciseSession(id: Long, kind: String?, fields: Int?)
 
+    /** A Session or Rounds exercise's own count names (#266), `|` joined, or null for none. */
+    @Query("UPDATE exercise SET count_names = :names WHERE id = :id")
+    fun setExerciseCounts(id: Long, names: String?)
+
     @Query("UPDATE exercise SET notes = :notes, favourite = :favourite, source = :source WHERE id = :id")
     fun setMergedExercise(id: Long, notes: String?, favourite: Int, source: String)
 
@@ -471,26 +475,27 @@ interface WorkoutDao {
     /** A new set. A [position] or [superset] of 0 lets the database's triggers place it (#70, #18). */
     @Query(
         "INSERT INTO workout_set(exercise_id, date, weight, reps, distance, duration, is_pr, comment, source, set_type, " +
-            "rpe, metric, position, superset, done, rest_seconds, live_seconds, intensity, session_type, zone) " +
+            "rpe, metric, position, superset, done, rest_seconds, live_seconds, intensity, session_type, zone, count_a, count_b) " +
             "VALUES(:exerciseId, :date, :weight, :reps, :distance, :duration, :isPr, :comment, :source, :setType, :rpe, " +
-            ":metric, :position, :superset, :done, :restSeconds, :liveSeconds, :intensity, :sessionType, :zone)"
+            ":metric, :position, :superset, :done, :restSeconds, :liveSeconds, :intensity, :sessionType, :zone, :countA, :countB)"
     )
     fun addSet(
         exerciseId: Long, date: String, weight: Double, reps: Int, distance: Double, duration: Int, isPr: Int,
         comment: String?, source: String, setType: Int, rpe: Double?, metric: Double?, position: Long, superset: Int,
-        done: Int, restSeconds: Int?, liveSeconds: Int?, intensity: Int?, sessionType: Int?, zone: Int?
+        done: Int, restSeconds: Int?, liveSeconds: Int?, intensity: Int?, sessionType: Int?, zone: Int?,
+        countA: Int?, countB: Int?
     ): Long
 
     @Query(
         "UPDATE workout_set SET exercise_id = :exerciseId, date = :date, weight = :weight, reps = :reps, " +
             "distance = :distance, duration = :duration, is_pr = :isPr, comment = :comment, source = :source, " +
             "set_type = :setType, rpe = :rpe, metric = :metric, live_seconds = :liveSeconds, intensity = :intensity, " +
-            "session_type = :sessionType, zone = :zone WHERE id = :id"
+            "session_type = :sessionType, zone = :zone, count_a = :countA, count_b = :countB WHERE id = :id"
     )
     fun updateSet(
         id: Long, exerciseId: Long, date: String, weight: Double, reps: Int, distance: Double, duration: Int, isPr: Int,
         comment: String?, source: String, setType: Int, rpe: Double?, metric: Double?, liveSeconds: Int?, intensity: Int?,
-        sessionType: Int?, zone: Int?
+        sessionType: Int?, zone: Int?, countA: Int?, countB: Int?
     )
 
     /** A set from Health Connect (#190), kept with its record id. The database's triggers place it (#70, #18). */
@@ -947,7 +952,7 @@ internal fun CategoryRow.toModel() = Category(id, name, colour.toInt(), sort_ord
 internal fun ExerciseRow.toModel() = Exercise(
     id, name, category_id, type, notes, source, favourite != 0, weight_step, default_graph, rest_seconds,
     DistanceUnits.of(distance_unit), WeightUnits.of(weight_unit), Energy.Activity.of(activity)?.key,
-    SessionKinds.of(session_kind), session_fields
+    SessionKinds.of(session_kind), session_fields, SportCounts.parse(count_names)
 )
 
 internal fun ExerciseTypeRow.toModel() = CustomType(
@@ -959,11 +964,11 @@ internal fun ExerciseGoalRow.toModel() = ExerciseGoal(id, exercise_id, kind, tar
 
 internal fun WorkoutSetRow.toModel() = SetRow(
     id, exercise_id, date, weight, reps, distance, duration.toInt(), is_pr != 0, comment, source, set_type, rpe,
-    position, superset, done != 0, rest_seconds, metric, live_seconds, intensity, session_type, zone
+    position, superset, done != 0, rest_seconds, metric, live_seconds, intensity, session_type, zone, count_a, count_b
 )
 
 internal fun RoutineDaySetRow.toModel() =
-    PlannedSet(weight, reps, distance, duration.toInt(), set_type, rest_seconds, metric, live_seconds, intensity, session_type, zone)
+    PlannedSet(weight, reps, distance, duration.toInt(), set_type, rest_seconds, metric, live_seconds, intensity, session_type, zone, count_a, count_b)
 
 /** Medication schedules (#201, #202, #204): the snapshot's loads and every `MedSchedules` write. */
 @Dao

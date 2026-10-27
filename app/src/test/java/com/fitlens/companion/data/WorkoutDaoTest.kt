@@ -48,7 +48,8 @@ class WorkoutDaoTest {
         addSet(
             exerciseId, date, weight, reps, 0.0, 0, isPr = 0, comment = null, source = Sources.FLEXNOTES, setType = setType,
             rpe = null, metric = null, position = 0L, superset = superset, done = 0, restSeconds = null,
-            liveSeconds = null, intensity = null, sessionType = null, zone = null
+            liveSeconds = null, intensity = null, sessionType = null, zone = null,
+            countA = null, countB = null
         )
 
     @Test

@@ -76,7 +76,9 @@ data class ExerciseRow(
     /** A Session exercise's kind of sport, a `SessionKinds` key (#249), or null. */
     val session_kind: String? = null,
     /** Which optional session fields it records, `SessionMetrics` bits (#249), or null for all of them. */
-    val session_fields: Int? = null
+    val session_fields: Int? = null,
+    /** A Session or Rounds exercise's own counts (#266): up to two names joined by `|`, or null. */
+    val count_names: String? = null
 )
 
 @Entity(
@@ -108,7 +110,10 @@ data class WorkoutSetRow(
     val session_type: Int? = null,
     val zone: Int? = null,
     /** The Health Connect record a set came from (#190), so a re-sync never adds it twice; null for every other set. */
-    val external_id: String? = null
+    val external_id: String? = null,
+    /** A Session or Rounds set's two counts (#266, takedowns, points...); null when not recorded. */
+    val count_a: Int? = null,
+    val count_b: Int? = null
 )
 
 @Entity(tableName = "workout_comment")
@@ -273,7 +278,9 @@ data class RoutineDaySetRow(
     val live_seconds: Int? = null,
     val intensity: Int? = null,
     val session_type: Int? = null,
-    val zone: Int? = null
+    val zone: Int? = null,
+    val count_a: Int? = null,
+    val count_b: Int? = null
 )
 
 // ---- Body ---------------------------------------------------------------------------------------------------------

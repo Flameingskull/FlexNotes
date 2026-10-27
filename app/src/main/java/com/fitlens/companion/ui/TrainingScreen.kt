@@ -914,7 +914,7 @@ fun ExerciseHistoryPane(snap: Snapshot, nav: Nav, exId: Long) {
                         if (snap.photosByDate.containsKey(d)) Dot(LocalChartColors.current.accent)
                     }
                     l.forEachIndexed { i, s ->
-                        val marks = setMarks(res, s, session = snap.isSessionExercise(s.exerciseId), rounds = snap.isRoundsExercise(s.exerciseId))
+                        val marks = setMarks(res, s, session = snap.isSessionExercise(s.exerciseId), rounds = snap.isRoundsExercise(s.exerciseId), countNames = snap.exercises[s.exerciseId]?.countNames.orEmpty())
                         SetRowView(
                             layoutGroup = setLayout,
                             index = i + 1,
