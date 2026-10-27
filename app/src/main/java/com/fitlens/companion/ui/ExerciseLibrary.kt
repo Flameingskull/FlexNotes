@@ -432,7 +432,7 @@ private fun RoutineDayList(snap: Snapshot, routine: Routine, onOpen: (Long) -> U
                                 .clickable(onClickLabel = openLabel) { onOpen(p.exerciseId) }
                                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                         ) {
-                            Text(snap.exercises[p.exerciseId]?.name ?: stringResource(R.string.ex_fallback), style = MaterialTheme.typography.bodyLarge)
+                            Text(snap.exercises[p.exerciseId]?.name ?: stringResource(R.string.ex_fallback), style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Text(
                                 planSummary(LocalContext.current.resources, snap, p),
                                 style = MaterialTheme.typography.bodySmall,
@@ -442,7 +442,7 @@ private fun RoutineDayList(snap: Snapshot, routine: Routine, onOpen: (Long) -> U
                             )
                             // Its prescribed rest (#138), "Rest 90 s · then 2 min".
                             restSummary(LocalContext.current.resources, p, !ExerciseTypes.isRounds(snap.exercises[p.exerciseId]?.type ?: -1))?.let { rest ->
-                                Text(rest, style = MaterialTheme.typography.bodySmall, color = Brand.Gold, maxLines = 1)
+                                Text(rest, style = MaterialTheme.typography.bodySmall, color = Brand.Gold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                     }
@@ -711,7 +711,7 @@ fun ExerciseNotes(notes: String, modifier: Modifier = Modifier) {
                         }
                     }) {
                         Text(
-                            url.removePrefix("https://").removePrefix("http://").take(30),
+                            (Uri.parse(url).host ?: url).removePrefix("www."),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )

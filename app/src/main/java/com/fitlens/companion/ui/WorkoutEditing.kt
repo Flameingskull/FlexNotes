@@ -203,7 +203,7 @@ fun WorkoutCommentSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
         }
     ) {
         Text(
-            Dates.long(date).uppercase(),
+            Dates.day(date).uppercase(),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -255,7 +255,7 @@ fun DeleteWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
             pluralStringResource(R.plurals.lib_exercises, exercises, exercises)
         ) + (if (comment.isNullOrBlank()) "" else stringResource(R.string.wk_delete_comment)) +
             (if (times.isEmpty()) "" else stringResource(R.string.wk_delete_times)) +
-            stringResource(R.string.wk_delete_end, Dates.medium(date)),
+            stringResource(R.string.wk_delete_end, Dates.day(date)),
         confirmLabel = stringResource(R.string.wk_delete_confirm),
         onDismiss = onDismiss,
         onConfirm = { deleteWithUndo(res, date, sets, comment, times, snap.exerciseComments[date].orEmpty()) }
@@ -312,7 +312,7 @@ fun CopyOrMoveWorkoutSheet(snap: Snapshot, date: String, move: Boolean, onDismis
         }
     ) {
         Text(
-            stringResource(R.string.wk_from, Dates.long(date)).uppercase(),
+            stringResource(R.string.wk_from, Dates.day(date)).uppercase(),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -325,13 +325,13 @@ fun CopyOrMoveWorkoutSheet(snap: Snapshot, date: String, move: Boolean, onDismis
             }
         }
         GlassOutlinedButton(onClick = { picking = true }, modifier = Modifier.heightIn(min = Spacing.touch)) {
-            Text(if (chosen == null || chosen in quick) stringResource(R.string.wk_choose_date) else Dates.long(chosen))
+            Text(if (chosen == null || chosen in quick) stringResource(R.string.wk_choose_date) else Dates.day(chosen))
         }
         if (chosen != null) {
             val already = snap.setsByDate[chosen].orEmpty().size
             if (already > 0) {
                 Text(
-                    pluralStringResource(R.plurals.wk_already_has, already, Dates.medium(chosen), already),
+                    pluralStringResource(R.plurals.wk_already_has, already, Dates.day(chosen), already),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -380,7 +380,7 @@ fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit
     ) {
         if (from == null) {
             Text(
-                stringResource(R.string.wk_into, Dates.long(date)).uppercase(),
+                stringResource(R.string.wk_into, Dates.day(date)).uppercase(),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -397,7 +397,7 @@ fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit
                         .clickable(onClickLabel = stringResource(R.string.wk_choose_this)) { source = d }
                         .padding(vertical = Spacing.sm)
                 ) {
-                    Text(Dates.long(d), style = MaterialTheme.typography.bodyLarge)
+                    Text(Dates.day(d), style = MaterialTheme.typography.bodyLarge)
                     Text(
                         pluralStringResource(R.plurals.lib_exercises, names.size, names.size) + " · " + names.joinToString(", "),
                         style = MaterialTheme.typography.bodySmall,
@@ -413,7 +413,7 @@ fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit
                 Text(stringResource(R.string.wk_another))
             }
             Text(
-                stringResource(R.string.wk_from_into, Dates.long(from), Dates.medium(date)).uppercase(),
+                stringResource(R.string.wk_from_into, Dates.day(from), Dates.day(date)).uppercase(),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -479,7 +479,7 @@ private fun copyWithUndo(res: Resources, from: String, to: String, ids: List<Lon
     AppScope.scope.launch {
         try {
             val copies = Workouts.copyWorkout(from, to, ids)
-            UiEvents.show(res.getQuantityString(R.plurals.wk_copied_to, copies.size, copies.size, Dates.medium(to)), res.getString(R.string.undo)) {
+            UiEvents.show(res.getQuantityString(R.plurals.wk_copied_to, copies.size, copies.size, Dates.day(to)), res.getString(R.string.undo)) {
                 AppScope.scope.launch { Workouts.deleteSets(copies) }
             }
         } catch (e: WorkoutDataException) {
@@ -503,7 +503,7 @@ private fun moveWithUndo(res: Resources, snap: Snapshot, from: String, to: Strin
     AppScope.scope.launch {
         try {
             val moved = Workouts.moveWorkout(from, to)
-            UiEvents.show(res.getQuantityString(R.plurals.wk_moved_to, moved, moved, Dates.medium(to)), res.getString(R.string.undo)) {
+            UiEvents.show(res.getQuantityString(R.plurals.wk_moved_to, moved, moved, Dates.day(to)), res.getString(R.string.undo)) {
                 AppScope.scope.launch {
                     try {
                         Workouts.moveSets(setIds, from)

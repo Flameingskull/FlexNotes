@@ -105,7 +105,7 @@ fun ExerciseStatsTab(snap: Snapshot, nav: Nav, exId: Long, sets: List<SetRow>, t
         val byDay = shown.groupBy { it.date }
         val sessions = byDay.size
         val tiles = ArrayList<StatItem>()
-        fun dated(label: Int, value: String, date: String) = StatItem(res.getString(label), value, Dates.medium(date), date)
+        fun dated(label: Int, value: String, date: String) = StatItem(res.getString(label), value, Dates.day(date), date)
         fun item(label: Int, value: String, line: String? = null) = StatItem(res.getString(label), value, line)
         val perWorkout = res.getString(R.string.st_per_workout, fmtNum(shown.size.toDouble() / max(1, sessions), 1))
         if (timeBased) {
@@ -159,13 +159,13 @@ fun ExerciseStatsTab(snap: Snapshot, nav: Nav, exId: Long, sets: List<SetRow>, t
         }
         val first = shown.minOf { it.date }
         val last = shown.maxOf { it.date }
-        tiles += StatItem(res.getString(R.string.st_first_logged), Dates.medium(first), date = first)
-        tiles += StatItem(res.getString(R.string.st_last_logged), Dates.medium(last), date = last)
+        tiles += StatItem(res.getString(R.string.st_first_logged), Dates.day(first), date = first)
+        tiles += StatItem(res.getString(R.string.st_last_logged), Dates.day(last), date = last)
         tiles.chunked(2).forEach { pair ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 pair.forEach { t ->
                     val open = t.date?.let { d ->
-                        Modifier.clickable(onClickLabel = res.getString(R.string.st_open_day, Dates.long(d))) { nav.push(Screen.SetEntry(d, exId)) }
+                        Modifier.clickable(onClickLabel = res.getString(R.string.st_open_day, Dates.day(d))) { nav.push(Screen.SetEntry(d, exId)) }
                     } ?: Modifier
                     StatTile(label = t.label, value = t.value, modifier = Modifier.weight(1f).then(open), dateLine = t.line)
                 }

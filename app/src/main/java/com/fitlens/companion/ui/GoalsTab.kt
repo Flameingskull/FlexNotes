@@ -170,11 +170,11 @@ internal fun goalText(res: Resources, snap: Snapshot, g: ExerciseGoal, p: GoalPr
     val target = "${fmtNum(goalShown(snap, g.kind, g.target, g.exerciseId), 1)} $unit".trim()
     val best = "${fmtNum(goalShown(snap, g.kind, p.best, g.exerciseId), 1)} $unit".trim()
     val status = when {
-        p.achievedDate != null -> res.getString(R.string.goals_reached, Dates.medium(p.achievedDate))
+        p.achievedDate != null -> res.getString(R.string.goals_reached, Dates.day(p.achievedDate))
         p.bestDate != null -> {
             val left = goalShown(snap, g.kind, g.target, g.exerciseId) - goalShown(snap, g.kind, p.best, g.exerciseId)
-            if (left > 0) res.getString(R.string.goals_best_to_go, best, Dates.medium(p.bestDate), "${fmtNum(left, 1)} $unit".trim())
-            else res.getString(R.string.goals_best, best, Dates.medium(p.bestDate))
+            if (left > 0) res.getString(R.string.goals_best_to_go, best, Dates.day(p.bestDate), "${fmtNum(left, 1)} $unit".trim())
+            else res.getString(R.string.goals_best, best, Dates.day(p.bestDate))
         }
         else -> res.getString(R.string.goals_nothing_yet)
     }

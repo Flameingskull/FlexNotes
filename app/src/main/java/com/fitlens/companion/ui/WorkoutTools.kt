@@ -149,7 +149,7 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
         onConfirm = { save(s, e) }
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(Dates.long(date), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+            Text(Dates.day(date), Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             OptionsMenu(
                 options = emptyList(),
                 description = stringResource(R.string.wk_time_options),
@@ -290,7 +290,7 @@ fun ShareWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
             res.getQuantityString(R.plurals.sets_count, n, n)
         ).joinToString("  ·  ")
         return ShareImages.WorkoutCard(
-            title = if (withDate) Dates.long(date) else res.getString(R.string.wk_workout),
+            title = if (withDate) Dates.day(date) else res.getString(R.string.wk_workout),
             subtitle = subtitle,
             exercises = chosen.map { exId ->
                 ShareImages.CardExercise(

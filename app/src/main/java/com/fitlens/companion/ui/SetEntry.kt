@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.horizontalScroll
@@ -188,7 +189,7 @@ internal fun earlierExerciseComments(snap: Snapshot, exerciseId: Long, date: Str
         .filter { (d, m) -> d < date.take(10) && !m[exerciseId].isNullOrBlank() }
         .sortedByDescending { it.key }
         .take(limit)
-        .map { (d, m) -> Dates.medium(d) to m.getValue(exerciseId) }
+        .map { (d, m) -> Dates.day(d) to m.getValue(exerciseId) }
 
 /** How long the screen waits after an exercise's last set is ticked before moving on (#136, owner: about 1.5 s). */
 private const val ADVANCE_DELAY_MS = 1_500L
@@ -553,6 +554,7 @@ fun SetEntryScreen(
                 style = MaterialTheme.typography.labelSmall,
                 color = Brand.Gold,
                 maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )
         }
@@ -570,7 +572,7 @@ fun SetEntryScreen(
                 item {
                     if (date != Dates.today()) {
                         Text(
-                            Dates.long(date).uppercase(),
+                            Dates.day(date).uppercase(),
                             Modifier.padding(start = 16.dp, top = 4.dp),
                             style = MaterialTheme.typography.labelMedium,
                             color = Brand.Gold
@@ -682,17 +684,17 @@ fun SetEntryScreen(
                     // As in FitNotes: Save and Clear for a new set, Update and Delete for the selected one.
                     if (selected == null) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            GoldButton(onClick = { save() }, modifier = Modifier.weight(1f).height(48.dp)) {
+                            GoldButton(onClick = { save() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                                 Text(stringResource(R.string.set_save), style = MaterialTheme.typography.labelLarge)
                             }
-                            GlassOutlinedButton(onClick = { clear() }, modifier = Modifier.weight(1f).height(48.dp)) { Text(stringResource(R.string.cal_clear)) }
+                            GlassOutlinedButton(onClick = { clear() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.cal_clear)) }
                         }
                     } else {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            GoldButton(onClick = { save() }, modifier = Modifier.weight(1f).height(48.dp)) { Text(stringResource(R.string.set_update)) }
+                            GoldButton(onClick = { save() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.set_update)) }
                             GlassOutlinedButton(
                                 onClick = { deleting = sets.firstOrNull { it.id == selected } },
-                                modifier = Modifier.weight(1f).height(48.dp)
+                                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                             ) { Text(stringResource(R.string.day_delete)) }
                         }
                         // Move the selected set within this exercise (#70).
@@ -718,12 +720,12 @@ fun SetEntryScreen(
                     if (next != null && next.id !in displayOrder(snap, date)) {
                         GlassOutlinedButton(
                             onClick = { nav.replace(Screen.SetEntry(date, next.id, queue.drop(1))) },
-                            modifier = Modifier.fillMaxWidth().height(52.dp)
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
                         ) {
                             Text(
                                 if (queue.size > 1) pluralStringResource(R.plurals.set_next_exercise_more, queue.size - 1, next.name, queue.size - 1)
                                 else stringResource(R.string.set_next_exercise, next.name),
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }

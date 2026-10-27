@@ -237,6 +237,8 @@ fun WorkoutDrawer(
                             else pluralStringResource(R.plurals.day_sets, count, count)) +
                                 (letters[group]?.let { "  ·  " + stringResource(R.string.drawer_superset_suffix, it) } ?: ""),
                             style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

@@ -81,7 +81,7 @@ fun exercisePickerItems(snap: Snapshot): List<PickerItem> = snap.exercisesSorted
     PickerItem(
         id = ex.id,
         title = ex.name,
-        subtitle = snap.lastUsedByExercise[ex.id]?.let { stringResource(R.string.wk_last_done, Dates.medium(it)) }
+        subtitle = snap.lastUsedByExercise[ex.id]?.let { stringResource(R.string.wk_last_done, Dates.day(it)) }
             ?: stringResource(R.string.wk_not_logged),
         section = cat?.name ?: stringResource(R.string.lib_uncategorised),
         color = categoryColour(cat?.colour ?: 0)
@@ -99,7 +99,7 @@ fun exerciseLine(res: Resources, snap: Snapshot, exercises: List<PlannedExercise
 }
 
 private fun weekdayOf(date: String): String =
-    Dates.parse(date)?.dayOfWeek?.getDisplayName(TextStyle.FULL, Locale.getDefault()) ?: "Day 1"
+    (Dates.parse(date) ?: java.time.LocalDate.now()).dayOfWeek.getDisplayName(TextStyle.FULL, Locale.getDefault())
 
 /**
  * Logs [exercises] on [date] in one go, like FitNotes's **Log all** (#106), and offers Undo. [workoutId] and [dayId]
@@ -204,7 +204,7 @@ fun AddWorkoutSheet(snap: Snapshot, nav: Nav, date: String, replace: Boolean, on
     val res = LocalContext.current.resources
     FitSheet(title = stringResource(if (replace) R.string.wk_replace_title else R.string.wk_add_title), onDismiss = onDismiss) {
         Text(
-            if (replace) stringResource(R.string.wk_replace_intro, Dates.medium(date))
+            if (replace) stringResource(R.string.wk_replace_intro, Dates.day(date))
             else stringResource(R.string.wk_add_intro),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -300,7 +300,7 @@ private fun ReviewWorkoutSheet(
     ) {
         TextButton(onClick = onBack, modifier = Modifier.heightIn(min = Spacing.touch)) { Text(stringResource(R.string.wk_choose_another)) }
         Text(
-            stringResource(if (replace) R.string.wk_replaces_on else R.string.wk_adds_to, Dates.long(date)).uppercase(),
+            stringResource(if (replace) R.string.wk_replaces_on else R.string.wk_adds_to, Dates.day(date)).uppercase(),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

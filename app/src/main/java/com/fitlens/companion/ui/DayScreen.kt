@@ -110,6 +110,7 @@ import com.fitlens.companion.ui.design.SetRow
 import com.fitlens.companion.ui.design.TopBarAction
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import kotlin.math.abs
 import kotlinx.coroutines.launch
 
@@ -614,7 +615,7 @@ private fun BodyValuesCard(
                     Text(
                         r.name,
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f).padding(end = Spacing.md)
                     )
@@ -867,7 +868,7 @@ private fun ExerciseOnDay(
     }
     if (commenting) {
         SetCommentSheet(
-            describe = "$name · ${Dates.medium(date)}",
+            describe = "$name · ${Dates.day(date)}",
             initial = exerciseComment,
             onSave = { text -> AppScope.scope.launch { Workouts.setExerciseComment(date, exId, text) } },
             onDismiss = { commenting = false },
@@ -879,7 +880,7 @@ private fun ExerciseOnDay(
     if (confirmDelete) {
         ConfirmDialog(
             stringResource(R.string.day_remove_title, name),
-            pluralStringResource(R.plurals.day_remove_body, exSets.size, exSets.size, Dates.medium(date)),
+            pluralStringResource(R.plurals.day_remove_body, exSets.size, exSets.size, Dates.day(date)),
             confirm = stringResource(R.string.day_remove),
             onDismiss = { confirmDelete = false }
         ) {
@@ -927,7 +928,7 @@ fun describeSet(
 }
 
 fun formatTime(iso: String): String? =
-    Dates.dateTime(iso)?.toLocalTime()?.format(DateTimeFormatter.ofPattern("HH:mm"))
+    Dates.dateTime(iso)?.toLocalTime()?.format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
 
 private fun workoutSeconds(start: String, end: String): Long = Dates.secondsBetween(start, end)
 

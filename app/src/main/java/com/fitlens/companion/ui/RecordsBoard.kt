@@ -138,7 +138,7 @@ fun RecordsBoard(snap: Snapshot, nav: Nav) {
                         Text(
                             stringResource(
                                 R.string.rb_selected, col.exercise.name, r, cellText(snap, c),
-                                "${snap.fmtWeight(c.set.weightKg)} ${snap.weightUnit}", c.set.reps, Dates.medium(c.set.date)
+                                "${snap.fmtWeight(c.set.weightKg)} ${snap.weightUnit}", c.set.reps, Dates.day(c.set.date)
                             ),
                             Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium
@@ -254,7 +254,7 @@ private fun GridRow(
             val description = when {
                 cell == null -> res.getString(R.string.rb_cd_none, c.exercise.name, r)
                 estimated -> res.getString(R.string.rb_cd_estimated, c.exercise.name, r, spokenWeight(res, snap, cell.kg))
-                cell.direct -> res.getString(R.string.rb_cd_direct, c.exercise.name, r, spokenWeight(res, snap, cell.kg), Dates.medium(cell.set.date))
+                cell.direct -> res.getString(R.string.rb_cd_direct, c.exercise.name, r, spokenWeight(res, snap, cell.kg), Dates.day(cell.set.date))
                 else -> res.getString(R.string.rb_cd_carried, c.exercise.name, r, spokenWeight(res, snap, cell.kg), cell.set.reps)
             }
             Box(

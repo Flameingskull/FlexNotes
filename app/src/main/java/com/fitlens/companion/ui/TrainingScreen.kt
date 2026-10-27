@@ -550,7 +550,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                 val o = overlay ?: return null
                 val x = Dates.epochDay(date)
                 val q = o.points.minByOrNull { kotlin.math.abs(it.x - x) } ?: return null
-                return "${o.label} ${fmtNum(q.y, 1)} $overlayUnit".trim() + if (q.x != x) " (${Dates.medium(q.date)})" else ""
+                return "${o.label} ${fmtNum(q.y, 1)} $overlayUnit".trim() + if (q.x != x) " (${Dates.day(q.date)})" else ""
             }
             val photoDays = remember(snap.photosKey) { snap.photosByDate.keys.map { Dates.epochDay(it) }.toSet() }
             val unit = if (isRelative) "%" else graphUnit(snap, exId, g.label)
@@ -571,7 +571,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                 if (series.size == 1) show(p.y)
                 else series.mapNotNull { s ->
                     s.points.minByOrNull { kotlin.math.abs(it.x - p.x) }?.let { q ->
-                        "${s.label} ${show(q.y)}" + if (q.x != p.x) " (${Dates.medium(q.date)})" else ""
+                        "${s.label} ${show(q.y)}" + if (q.x != p.x) " (${Dates.day(q.date)})" else ""
                     }
                 }.joinToString("\n")
             fun valuesAt(p: ChartPoint): String = valuesOnly(p) + (overlayAt(p.date)?.let { "\n$it" } ?: "")
@@ -658,7 +658,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                     footer = {
                         p?.let { pt ->
                             Text(
-                                "${Dates.long(pt.date)}: ${valuesAt(pt)}",
+                                "${Dates.day(pt.date)}: ${valuesAt(pt)}",
                                 Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                 style = MaterialTheme.typography.titleMedium
                             )
@@ -689,7 +689,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
             }
             if (p != null) {
                 Text(
-                    stringResource(R.string.ex_point_open_day, Dates.long(p.date), valuesAt(p)),
+                    stringResource(R.string.ex_point_open_day, Dates.day(p.date), valuesAt(p)),
                     Modifier.fillMaxWidth().clickable { nav.push(Screen.Day(p.date)) }.padding(16.dp),
                     style = MaterialTheme.typography.titleMedium
                 )
@@ -704,7 +704,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
             photoFrom?.let { from ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        stringResource(R.string.ex_tap_second, Dates.medium(from)),
+                        stringResource(R.string.ex_tap_second, Dates.day(from)),
                         Modifier.weight(1f),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
@@ -780,7 +780,7 @@ private fun comparePhotosOn(res: Resources, snap: Snapshot, nav: Nav, a: String,
     when {
         pa == null || pb == null -> {
             val missing = if (pa == null) first else second
-            UiEvents.show(res.getString(R.string.ex_no_photo_near, GRAPH_PHOTO_DAYS, Dates.medium(missing)))
+            UiEvents.show(res.getString(R.string.ex_no_photo_near, GRAPH_PHOTO_DAYS, Dates.day(missing)))
         }
         pa.id == pb.id -> UiEvents.show(res.getString(R.string.ex_same_photo))
         else -> nav.push(Screen.Compare(pa.id, pb.id))
@@ -1014,17 +1014,17 @@ private fun recordLines(res: Resources, snap: Snapshot, sets: List<SetRow>, time
     val metric = exId?.let { metricFor(snap, it) }
     val metricLine = metric?.let { m ->
         sets.filter { it.metric != null }.maxByOrNull { it.metric!! }?.let { best ->
-            RecordLine(res.getString(R.string.ex_record_best, m.metricName?.lowercase().orEmpty()), fmtNum(best.metric!!, 2), m.metricUnit.orEmpty(), Dates.medium(best.date), superseded = false)
+            RecordLine(res.getString(R.string.ex_record_best, m.metricName?.lowercase().orEmpty()), fmtNum(best.metric!!, 2), m.metricUnit.orEmpty(), Dates.day(best.date), superseded = false)
         }
     }
     if (timeBased) {
         // Timed exercises have no rep maxes: the longest set is their record, with the farthest for distance types.
         val longest = sets.maxByOrNull { it.durationSec }?.takeIf { it.durationSec > 0 }?.let { l ->
-            RecordLine(res.getString(R.string.ex_record_longest), fmtDuration(l.durationSec), "", Dates.medium(l.date), superseded = false)
+            RecordLine(res.getString(R.string.ex_record_longest), fmtDuration(l.durationSec), "", Dates.day(l.date), superseded = false)
         }
         val farthest = if (exId != null && ExerciseTypes.isCustom(snap.exercises[exId]?.type ?: 0)) {
             sets.maxByOrNull { it.distance }?.takeIf { it.distance > 0 }?.let { f ->
-                RecordLine(res.getString(R.string.ex_record_farthest), fmtNum(f.distance, 2), snap.distanceUnit(f.exerciseId), Dates.medium(f.date), superseded = false)
+                RecordLine(res.getString(R.string.ex_record_farthest), fmtNum(f.distance, 2), snap.distanceUnit(f.exerciseId), Dates.day(f.date), superseded = false)
             }
         } else null
         return listOfNotNull(longest, farthest, metricLine)
@@ -1037,7 +1037,7 @@ private fun recordLines(res: Resources, snap: Snapshot, sets: List<SetRow>, time
         return (1..Records.MAX_REPS).mapNotNull { r ->
             val est = Records.weightFor(best, r)
             if (est <= 0) null
-            else RecordLine(res.getString(R.string.ex_record_rm, r), (if (Records.approximate(r)) "≈ " else "") + fmtNum(snap.weight(est, exId), 1), unit, Dates.medium(bestSet.date), superseded = false)
+            else RecordLine(res.getString(R.string.ex_record_rm, r), (if (Records.approximate(r)) "≈ " else "") + fmtNum(snap.weight(est, exId), 1), unit, Dates.day(bestSet.date), superseded = false)
         }
     }
     // As FitNotes lists them: each rep count with its record and date. A record held by a heavier or equal set of more
@@ -1048,7 +1048,7 @@ private fun recordLines(res: Resources, snap: Snapshot, sets: List<SetRow>, time
                 res.getString(R.string.ex_record_rm, r),
                 snap.fmtWeight(actual.weightKg, exId) + if (actual.reps > r) " × ${actual.reps}" else "",
                 unit,
-                Dates.medium(actual.date),
+                Dates.day(actual.date),
                 superseded = actual.reps > r
             )
         }
@@ -1132,13 +1132,13 @@ private fun RecordRow(label: String, value: String, unit: String, date: String, 
             .padding(horizontal = 24.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface)
+        Text(label, Modifier.weight(1f).padding(end = 8.dp), style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.onSurface, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         Column(Modifier.weight(1.2f), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(value, style = MaterialTheme.typography.headlineSmall, color = tint, maxLines = 1)
-                if (unit.isNotEmpty()) Text(" $unit", style = MaterialTheme.typography.bodyMedium, color = tint)
+                Text(value, style = MaterialTheme.typography.headlineSmall, color = tint, maxLines = 1, softWrap = false)
+                if (unit.isNotEmpty()) Text(" $unit", style = MaterialTheme.typography.bodyMedium, color = tint, maxLines = 1, softWrap = false)
             }
-            Text(date, style = MaterialTheme.typography.bodyMedium, color = tint)
+            Text(date, style = MaterialTheme.typography.bodyMedium, color = tint, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
     }
 }
