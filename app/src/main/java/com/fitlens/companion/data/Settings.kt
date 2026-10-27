@@ -85,7 +85,9 @@ data class DeviceSettings(
     /** The camera's last photo behind the body outline (#230): its opacity in percent, 0 to 60. */
     val cameraPhotoOpacity: Int = 30,
     /** The camera's body outline (#230): `BodyOutline.THIN`, `MEDIUM` or `BOLD`. */
-    val cameraOutlineLine: Int = BodyOutline.BOLD
+    val cameraOutlineLine: Int = BodyOutline.BOLD,
+    /** The first rest timer has already offered to turn notifications on (#250); it never asks again unprompted. */
+    val restNotifyAsked: Boolean = false
 )
 
 /**
@@ -516,6 +518,7 @@ object Settings {
     private const val D_LOG_REMINDERS = "log_reminders"
     private const val D_CAM_OPACITY = "camera_photo_opacity"
     private const val D_CAM_LINE = "camera_outline_line"
+    private const val D_REST_NOTIFY_ASKED = "rest_notify_asked"
 
     /** Every phone-only key, as it was named in `meta` before 1.0.21. */
     internal val DEVICE_KEYS = listOf(
@@ -637,7 +640,8 @@ object Settings {
         medSnoozes = get(D_MED_SNOOZES),
         logReminders = get(D_LOG_REMINDERS),
         cameraPhotoOpacity = get(D_CAM_OPACITY)?.toIntOrNull()?.coerceIn(0, 60) ?: 30,
-        cameraOutlineLine = get(D_CAM_LINE)?.toIntOrNull()?.takeIf { it in BodyOutline.THIN..BodyOutline.BOLD } ?: BodyOutline.BOLD
+        cameraOutlineLine = get(D_CAM_LINE)?.toIntOrNull()?.takeIf { it in BodyOutline.THIN..BodyOutline.BOLD } ?: BodyOutline.BOLD,
+        restNotifyAsked = bool(get(D_REST_NOTIFY_ASKED))
     )
 
     private fun DeviceSettings.toMap(): Map<String, String?> = mapOf(
@@ -673,7 +677,8 @@ object Settings {
         D_MED_SNOOZES to medSnoozes,
         D_LOG_REMINDERS to logReminders,
         D_CAM_OPACITY to cameraPhotoOpacity.takeIf { it != 30 }?.toString(),
-        D_CAM_LINE to cameraOutlineLine.takeIf { it != BodyOutline.BOLD }?.toString()
+        D_CAM_LINE to cameraOutlineLine.takeIf { it != BodyOutline.BOLD }?.toString(),
+        D_REST_NOTIFY_ASKED to if (restNotifyAsked) "1" else null
     )
 
     private fun portableFrom(get: (String) -> String?) = PortableSettings(

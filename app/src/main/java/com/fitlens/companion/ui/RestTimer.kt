@@ -238,15 +238,26 @@ const val REST_MAX = 3600
 private const val REST_STEP = 5
 
 /**
- * Asks once for the notification permission (Android 13+), which the timers' notification needs. Returns a function
- * to call when a timer is started by hand.
+ * Offers to turn notifications on, once, the first time a timer starts (#250): the rest countdown and the workout timer
+ * show on the lock screen and in the status bar only with them. Returns a function to call just before a timer starts,
+ * by hand or automatically after a set. It explains why first, then asks (or opens the phone's notification settings
+ * when the question was refused before), and never asks again unprompted: Settings › Rest timer shows a note while
+ * they are off.
  */
 @Composable
 fun rememberNotificationAsk(): () -> Unit {
     val ctx = LocalContext.current
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val access = rememberNotificationAccess()
+    val why = stringResource(R.string.notify_ask_rest)
+    // Remembered once the offer is answered (Continue or Not now), not when it is raised: a superset's auto-advance can
+    // leave the screen before the sheet is seen, and then the next rest timer offers it again.
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(access.reason) {
+        if (access.reason != null) shown = true
+        else if (shown) Settings.updateDevice { it.copy(restNotifyAsked = true) }
+    }
     return {
-        if (!TimerService.canNotify(ctx) && Build.VERSION.SDK_INT >= 33) ask.launch(Manifest.permission.POST_NOTIFICATIONS)
+        if (!notificationsAllowed(ctx) && !Settings.device.value.restNotifyAsked) access.ask(why)
     }
 }
 

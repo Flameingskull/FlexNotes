@@ -162,7 +162,9 @@ internal fun startRestAfterSet(
     exerciseId: Long,
     fromSave: Boolean = false,
     setId: Long? = null,
-    last: Boolean = false
+    last: Boolean = false,
+    /** Called just before the timer starts, so the first one can offer to turn notifications on (#250). */
+    onStarting: () -> Unit = {}
 ) {
     val p = Settings.currentPortable()
     if (!p.restAutoStart) return
@@ -173,6 +175,7 @@ internal fun startRestAfterSet(
         val startedAt = st.endAt - st.total * 1000L
         if (st.active && !st.paused && System.currentTimeMillis() - startedAt < 20_000L) return
     }
+    onStarting()
     RestTimer.start(context, restFor(snap, date, exerciseId, setId, last))
 }
 
@@ -373,6 +376,8 @@ fun SetEntryScreen(
     val appContext = LocalContext.current.applicationContext
     val res = LocalContext.current.resources
     var restSheet by remember { mutableStateOf(false) }
+    // The first rest timer offers to turn notifications on, once (#250).
+    val askNotify = rememberNotificationAsk()
 
     // A session that looks unusual is asked about once (#243); [unusualMinutes] is the length being asked about.
     var unusualMinutes by remember { mutableStateOf<String?>(null) }
@@ -425,7 +430,7 @@ fun SetEntryScreen(
                     val members = supersetMembers(snap, date, supersetOf(snap, date, exerciseId))
                     val at = members.indexOf(exerciseId)
                     val endOfRound = members.size < 2 || at == members.lastIndex
-                    if (endOfRound) startRestAfterSet(appContext, snap, date, exerciseId, fromSave = true)
+                    if (endOfRound) startRestAfterSet(appContext, snap, date, exerciseId, fromSave = true, onStarting = askNotify)
                     if (members.size > 1 && at >= 0) {
                         val next = members[(at + 1) % members.size]
                         if (nav.top is Screen.SetEntry) nav.replace(Screen.SetEntry(date, next, queue))
@@ -773,7 +778,7 @@ fun SetEntryScreen(
                             if (on) Haptics.confirm(view)
                             if (on) startRestAfterSet(
                                 appContext, snap, date, exerciseId,
-                                setId = s.id, last = sets.all { it.id == s.id || it.done }
+                                setId = s.id, last = sets.all { it.id == s.id || it.done }, onStarting = askNotify
                             )
                             AppScope.scope.launch {
                                 Workouts.setDone(s.id, on)

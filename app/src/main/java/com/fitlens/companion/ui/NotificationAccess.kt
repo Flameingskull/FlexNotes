@@ -1,8 +1,10 @@
 package com.fitlens.companion.ui
 
 import android.Manifest
+import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.os.Build
 import android.provider.Settings as AndroidSettings
@@ -16,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.fitlens.companion.R
@@ -53,6 +56,14 @@ fun rememberNotificationAccess(): NotificationAccess {
     }
     val request = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
         access.granted = notificationsAllowed(ctx)
+        // Refused for good (Android no longer shows its own question): the phone's notification settings are the way
+        // back, so open them (#250).
+        val activity = ctx.findActivity()
+        if (!access.granted && Build.VERSION.SDK_INT >= 33 && activity != null &&
+            !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.POST_NOTIFICATIONS)
+        ) {
+            openNotificationSettings(ctx)
+        }
     }
     access.reason?.let { why ->
         ConfirmSheet(
@@ -69,6 +80,12 @@ fun rememberNotificationAccess(): NotificationAccess {
         )
     }
     return access
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }
 
 /** Under a setting that's on while notifications are off: says so, and opens the phone's notification settings. */

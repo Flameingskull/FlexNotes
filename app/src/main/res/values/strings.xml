@@ -3766,6 +3766,7 @@
         <item quantity="one">%1$d round</item>
         <item quantity="other">%1$d rounds</item>
     </plurals>
+    <string name="notify_ask_rest">See the rest countdown on your lock screen and in the status bar while FlexNotes is minimised, and get told when the rest is over. You can turn this off any time in your phone\'s settings.</string>
     <string name="rounds_field_rounds">Rounds</string>
     <string name="rounds_field_length">Round length (minutes, for example 3 or 2:30)</string>
     <string name="rounds_field_rest">Rest between rounds (seconds)</string>

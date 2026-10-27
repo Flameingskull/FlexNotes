@@ -80,7 +80,11 @@ class TimerService : Service() {
     }
 
     companion object {
-        private const val CHANNEL_ONGOING = "timers"
+        // The ongoing channel is "default" importance since 1.0.178 (#250): at low importance Android drops the status-bar
+        // icon, folds the notification into "Silent" and many phones hide it on the lock screen. An existing channel's
+        // importance can't be raised, hence a new id and the old one deleted. It stays silent: no sound, no vibration.
+        private const val CHANNEL_ONGOING = "timers_v2"
+        private const val OLD_CHANNEL_ONGOING = "timers"
         // The alert channel is silent since 1.0.44: FlexNotes plays the chosen sound itself, at its own volume (#20).
         // A channel's sound can't be changed once created, hence a new id and the old one deleted.
         private const val CHANNEL_ALERT = "timer_alerts_v2"
@@ -157,10 +161,15 @@ class TimerService : Service() {
         private fun channels(context: Context) {
             val nm = context.getSystemService(NotificationManager::class.java) ?: return
             nm.deleteNotificationChannel(OLD_CHANNEL_ALERT)
+            nm.deleteNotificationChannel(OLD_CHANNEL_ONGOING)
             nm.createNotificationChannel(
-                NotificationChannel(CHANNEL_ONGOING, context.getString(R.string.tn_ch_timers), NotificationManager.IMPORTANCE_LOW).apply {
+                NotificationChannel(CHANNEL_ONGOING, context.getString(R.string.tn_ch_timers), NotificationManager.IMPORTANCE_DEFAULT).apply {
                     description = context.getString(R.string.tn_ch_timers_desc)
                     setShowBadge(false)
+                    setSound(null, null)
+                    enableVibration(false)
+                    // Only "Rest" and a countdown (and when the workout started), so it is safe to show on the lock screen.
+                    lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 }
             )
             nm.createNotificationChannel(
@@ -198,6 +207,7 @@ class TimerService : Service() {
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
                 .setSilent(true)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setCategory(NotificationCompat.CATEGORY_STOPWATCH)
                 .setContentIntent(openApp(context))
             val workoutLine = workout?.let { context.getString(R.string.tn_workout_since, it.drop(11).take(5)) }
@@ -224,6 +234,13 @@ class TimerService : Service() {
                         .setContentText(context.getString(R.string.tn_workout_running))
                 }
                 else -> b.setContentTitle(context.getString(R.string.tn_stopped))
+            }
+            // Android 16 can promote an ongoing notification to a Live Update: a countdown chip in the status bar. The
+            // androidx version in use has no API for it, so the request is its extra's literal key
+            // (Notification.EXTRA_REQUEST_PROMOTED_ONGOING). It needs an ongoing notification with a title, not colorized
+            // and in the standard style, which this is; the chronometer supplies the chip's countdown.
+            if (rest.active && Build.VERSION.SDK_INT >= 36) {
+                b.addExtras(android.os.Bundle().apply { putBoolean("android.requestPromotedOngoing", true) })
             }
             if (rest.active) {
                 b.addAction(0, context.getString(if (rest.paused) R.string.tn_resume else R.string.tn_pause), action(context, ACTION_PAUSE, 1))
