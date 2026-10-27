@@ -434,7 +434,7 @@ class DbMigrationTest {
             )
         ) { db ->
             db.row("exercise", "id" to 1L, "name" to "BJJ")
-            db.row("workout_set", "id" to 1L, "exercise_id" to 1L, "date" to "2026-10-20", "duration" to 3600)
+            db.row("workout_set", "id" to 1L, "exercise_id" to 1L, "date" to "2026-10-20", "weight" to 100.0, "reps" to 5)
             val r = db.row("routine", "name" to "Mat", "sort_order" to 0)
             val d = db.row("routine_day", "routine_id" to r, "name" to "Monday", "sort_order" to 0)
             val item = db.row("routine_day_exercise", "day_id" to d, "exercise_id" to 1L, "sort_order" to 0, "fill" to 1)
@@ -443,7 +443,7 @@ class DbMigrationTest {
         Db(app).writableDatabase.use { db ->
             assertEquals(Db.VERSION, db.version)
             assertEquals(1, db.count("SELECT COUNT(*) FROM exercise WHERE id=1 AND name='BJJ' AND count_names IS NULL"))
-            assertEquals(1, db.count("SELECT COUNT(*) FROM workout_set WHERE duration=3600 AND count_a IS NULL AND count_b IS NULL"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM workout_set WHERE weight=100.0 AND reps=5 AND count_a IS NULL AND count_b IS NULL"))
             assertEquals(1, db.count("SELECT COUNT(*) FROM routine_day_set WHERE duration=3600 AND count_a IS NULL AND count_b IS NULL"))
             // The new columns take values.
             db.execSQL("UPDATE exercise SET count_names='Takedowns|Submissions' WHERE id=1")
