@@ -58,7 +58,7 @@ fun changeColour(def: MeasurementDef?, from: Double, to: Double): Color {
 fun changeText(res: Resources, prev: MRecord, now: MRecord): String {
     val d = now.value - prev.value
     val unit = now.unit.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
-    val since = Dates.short(prev.date)
+    val since = Dates.day(prev.date)
     if (d == 0.0) return res.getString(R.string.mg_no_change, since)
     val arrow = if (d > 0) "▲" else "▼"
     return res.getString(R.string.mg_change, arrow, "${fmtNum(kotlin.math.abs(d))}$unit", since, "${fmtNum(prev.value)}$unit")

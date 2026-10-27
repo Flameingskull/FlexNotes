@@ -189,7 +189,7 @@ fun MeasurementEntrySheet(
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             GlassOutlinedButton(onClick = { pickDate = true }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {
-                Text(Dates.medium(theDate))
+                Text(Dates.day(theDate))
             }
             OutlinedTextField(
                 value = timeText, onValueChange = { timeText = it },

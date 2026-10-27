@@ -99,8 +99,8 @@ private class PhotoSection(val key: String, val title: String, val photos: List<
 
 /** The heading of a date section starting on [start], grouped by [group] (#46). */
 private fun sectionTitle(res: Resources, start: LocalDate, group: String): String = when (group) {
-    MediaPrefs.GROUP_DAY -> Dates.long(start.toString())
-    MediaPrefs.GROUP_WEEK -> res.getString(R.string.ph_week_of, Dates.medium(start.toString()))
+    MediaPrefs.GROUP_DAY -> Dates.day(start.toString())
+    MediaPrefs.GROUP_WEEK -> res.getString(R.string.ph_week_of, Dates.day(start.toString()))
     MediaPrefs.GROUP_YEAR -> start.year.toString()
     else -> Dates.monthYear(start)
 }
@@ -489,7 +489,7 @@ fun ReviewScreen(snap: Snapshot, nav: Nav) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         PhotoThumb(snap, p, Modifier.padding(end = 12.dp).size(width = 84.dp, height = 112.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(p.date?.let { Dates.long(it) } ?: stringResource(R.string.ph_no_date), style = MaterialTheme.typography.titleMedium)
+                            Text(p.date?.let { Dates.day(it) } ?: stringResource(R.string.ph_no_date), style = MaterialTheme.typography.titleMedium)
                             Text(p.originalName ?: "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(dateSourceText(LocalContext.current.resources, p.dateSource), style = MaterialTheme.typography.bodySmall)
                             Row {
@@ -557,10 +557,10 @@ private fun ExportPhotosSheet(photos: List<Photo>, onDismiss: () -> Unit, onExpo
         if (range) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 GlassOutlinedButton(onClick = { picking = 0 }, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.ph_export_from, Dates.medium(from)))
+                    Text(stringResource(R.string.ph_export_from, Dates.day(from)))
                 }
                 GlassOutlinedButton(onClick = { picking = 1 }, modifier = Modifier.weight(1f)) {
-                    Text(stringResource(R.string.ph_export_to, Dates.medium(to)))
+                    Text(stringResource(R.string.ph_export_to, Dates.day(to)))
                 }
             }
         }

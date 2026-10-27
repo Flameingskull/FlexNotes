@@ -126,7 +126,7 @@ fun PhotoViewerScreen(snap: Snapshot, nav: Nav, ids: List<Long>, index: Int) {
             val p = photos[page]
             coil.compose.AsyncImage(
                 model = snap.photoFile(p),
-                contentDescription = res.getString(R.string.pv_photo_cd, p.date?.let { Dates.long(it) } ?: "", if (p.pose.isBlank()) "" else poseText(res, p.pose)).trim(),
+                contentDescription = res.getString(R.string.pv_photo_cd, p.date?.let { Dates.day(it) } ?: "", if (p.pose.isBlank()) "" else poseText(res, p.pose)).trim(),
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxSize()
@@ -145,7 +145,7 @@ fun PhotoViewerScreen(snap: Snapshot, nav: Nav, ids: List<Long>, index: Int) {
         ) {
             Box(Modifier.fillMaxWidth().background(Brand.Black.copy(alpha = 0.6f))) {
                 FitTopBar(
-                    title = current.date?.let { Dates.long(it) } ?: stringResource(R.string.ph_no_date),
+                    title = current.date?.let { Dates.day(it) } ?: stringResource(R.string.ph_no_date),
                     subtitle = stringResource(R.string.pv_n_of, pager.currentPage + 1, photos.size),
                     onBack = { nav.pop() },
                     actions = listOf(
@@ -267,7 +267,7 @@ fun CompareScreen(snap: Snapshot, nav: Nav, a: Long, b: Long) {
                                     .clickable(onClickLabel = if (side == 1) stringResource(R.string.pv_change_left) else stringResource(R.string.pv_change_right)) { picking = side },
                                 sizePx = 1000, contentScale = ContentScale.Fit
                             )
-                            Text(p.date?.let { Dates.medium(it) } ?: stringResource(R.string.ph_no_date), style = MaterialTheme.typography.titleMedium)
+                            Text(p.date?.let { Dates.day(it) } ?: stringResource(R.string.ph_no_date), style = MaterialTheme.typography.titleMedium)
                             Text(
                                 stringResource(R.string.pv_tap_change) + if (p.pose.isNotBlank()) " · ${poseText(LocalContext.current.resources, p.pose)}" else "",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -358,7 +358,7 @@ fun PhotoPickerDialog(snap: Snapshot, onDismiss: () -> Unit, onPick: (Long) -> U
                         Box(Modifier.aspectRatio(0.75f).clip(FitShapes.row).clickable(onClickLabel = stringResource(R.string.pv_choose)) { onPick(p.id) }) {
                             PhotoThumb(snap, p, Modifier.fillMaxSize(), sizePx = 240)
                             Text(
-                                Dates.short(p.date ?: ""), color = Brand.Ivory, style = MaterialTheme.typography.labelSmall,
+                                Dates.short(p.date ?: ""), color = Brand.Ivory, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.align(Alignment.BottomStart).background(Brand.Black.copy(alpha = 0.6f)).padding(2.dp)
                             )
                         }
@@ -451,7 +451,7 @@ fun NearestPhotoThumb(snap: Snapshot, nav: Nav, date: String, modifier: Modifier
         Column(Modifier.padding(start = 12.dp).weight(1f)) {
             Text(stringResource(R.string.pv_progress_photo), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
             Text(
-                "${Dates.medium(taken)} · $gap" + if (photo.pose.isNotBlank()) " · ${poseText(LocalContext.current.resources, photo.pose)}" else "",
+                "${Dates.day(taken)} · $gap" + if (photo.pose.isNotBlank()) " · ${poseText(LocalContext.current.resources, photo.pose)}" else "",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

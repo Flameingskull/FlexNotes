@@ -2665,9 +2665,8 @@
     <string name="pdf_exercise_n">Exercise #%1$d</string>
     <string name="pdf_daily">Daily log</string>
     <string name="pdf_nothing">Nothing logged in this period.</string>
-    <string name="pdf_creating_day">Creating PDF… day %1$d of %2$d</string>
+    <string name="pdf_creating_day">Creating PDF… %1$s</string>
     <string name="pdf_continued">"  (continued)"</string>
-    <string name="pdf_day_n">DAY %1$d</string>
     <string name="pdf_more">+%1$d more</string>
     <string name="pdf_body_caps">BODY</string>
     <string name="pdf_since">%1$s since %2$s</string>

@@ -131,7 +131,7 @@ fun BodyFatCalculatorSheet(snap: Snapshot, date: String, onDismiss: () -> Unit, 
             when {
                 missing.isNotEmpty() -> Text(
                     pluralStringResource(
-                        R.plurals.bf_missing, missing.size, missing.joinToString(", ") { inputText(res, it.input).lowercase() }, Dates.medium(date)
+                        R.plurals.bf_missing, missing.size, missing.joinToString(", ") { inputText(res, it.input).lowercase() }, Dates.day(date)
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.primary
@@ -170,7 +170,7 @@ private fun InputRow(
             latest == null && profile != null -> stringResource(R.string.bf_from_profile, profile)
             latest == null -> stringResource(R.string.bf_not_logged)
             ageDays == 0L -> stringResource(R.string.bf_today, value.orEmpty())
-            else -> pluralStringResource(R.plurals.bf_days_ago, (ageDays ?: 0L).toInt(), value.orEmpty(), Dates.medium(latest.date), (ageDays ?: 0L).toInt())
+            else -> pluralStringResource(R.plurals.bf_days_ago, (ageDays ?: 0L).toInt(), value.orEmpty(), Dates.day(latest.date), (ageDays ?: 0L).toInt())
         }
         Text(stringResource(R.string.an_label_value, inputText(res, input), status), style = MaterialTheme.typography.bodyLarge)
         Text(
@@ -228,13 +228,13 @@ internal fun BodyFatPrefillNote(estimate: BodyFat.Estimate?, date: String) {
     val result = e.result
     val text = when {
         e.missing.isNotEmpty() -> res.getString(
-            R.string.bm_prefill_missing, e.missing.joinToString(", ") { inputText(res, it).lowercase() }, Dates.medium(date)
+            R.string.bm_prefill_missing, e.missing.joinToString(", ") { inputText(res, it).lowercase() }, Dates.day(date)
         )
         result is BodyFat.Result.Invalid -> invalidText(res, result)
         else -> {
             val from = e.used.joinToString(", ") { u ->
                 val what = "${inputText(res, u.input).lowercase()} ${usedValue(u, prefs.lengthUnit)}"
-                u.record?.let { res.getString(R.string.bm_prefill_dated, what, Dates.medium(it.date)) }
+                u.record?.let { res.getString(R.string.bm_prefill_dated, what, Dates.day(it.date)) }
                     ?: res.getString(R.string.bm_prefill_profile, what)
             }
             val stale = e.used.filter { it.stale }

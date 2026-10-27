@@ -71,6 +71,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MRecord
@@ -281,7 +282,7 @@ internal fun bodyTabs(): List<String> =
 /** How long ago a value was logged, as FitNotes says it: "4 hours ago", "5 days ago", "1 month ago", "2 years ago". */
 internal fun agoText(res: Resources, date: String, time: String): String {
     val at = runCatching { java.time.LocalDateTime.parse(date.take(10) + "T" + time.take(5).ifBlank { "12:00" }) }.getOrNull()
-        ?: return Dates.medium(date)
+        ?: return Dates.day(date)
     val now = java.time.LocalDateTime.now()
     val mins = java.time.Duration.between(at, now).toMinutes().coerceAtLeast(0)
     fun n(id: Int, v: Long) = res.getQuantityString(id, v.toInt(), v.toInt())
@@ -316,7 +317,7 @@ private fun MeasurementListRow(
     val unit = m.unit.ifBlank { last?.unit.orEmpty() }
     val change = if (last != null && prev != null) changeText(res, prev, last) else null
     val flag = last?.let { flagText(res, m, it.value) }
-    val spoken = m.name + ", " + (last?.let { res.getString(R.string.body_value_on, "${fmtNum(it.value)} $unit".trim(), Dates.medium(it.date)) }
+    val spoken = m.name + ", " + (last?.let { res.getString(R.string.body_value_on, "${fmtNum(it.value)} $unit".trim(), Dates.day(it.date)) }
         ?: res.getString(R.string.body_nothing_logged)) + (flag?.let { ", $it" } ?: "") + (change?.let { ", $it" } ?: "")
     // TalkBack moves a measurement whether or not the handles show (#170); each move is saved at once.
     val moves = listOfNotNull(
@@ -336,10 +337,10 @@ private fun MeasurementListRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(m.name, style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
+            Text(m.name, style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
                 last?.let { agoText(res, it.date, it.time) } ?: stringResource(R.string.body_tap_to_record),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -347,10 +348,10 @@ private fun MeasurementListRow(
             Column(horizontalAlignment = Alignment.End, modifier = Modifier.padding(start = Spacing.md)) {
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(fmtNum(last.value), style = MaterialTheme.typography.titleLarge, maxLines = 1, softWrap = false)
-                    if (unit.isNotBlank()) Text(" $unit", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (unit.isNotBlank()) Text(" $unit", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
                 }
                 if (change != null && prev != null) {
-                    Text(change, style = MaterialTheme.typography.bodySmall, color = changeColour(m, prev.value, last.value), maxLines = 1)
+                    Text(change, style = MaterialTheme.typography.bodySmall, color = changeColour(m, prev.value, last.value), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 // Outside its reference range (#211).
                 RangeFlag(m, last.value)
@@ -550,7 +551,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                     footer = {
                         selectedPoint?.let { points.getOrNull(it) }?.let { p ->
                             Text(
-                                stringResource(R.string.an_label_value, Dates.long(p.date), "${fmtNum(p.y, 1)} $unit".trim()),
+                                stringResource(R.string.an_label_value, Dates.day(p.date), "${fmtNum(p.y, 1)} $unit".trim()),
                                 Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                                 style = MaterialTheme.typography.titleMedium
                             )
@@ -603,11 +604,11 @@ private fun SelectedPointCard(snap: Snapshot, nav: Nav, r: MRecord) {
                 Spacer(Modifier.width(12.dp))
             }
             Column(Modifier.weight(1f)) {
-                Text(Dates.long(r.date), style = MaterialTheme.typography.titleMedium)
+                Text(Dates.day(r.date), style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.an_label_value, r.name, "${fmtNum(r.value)} ${r.unit}".trim()), style = MaterialTheme.typography.headlineSmall)
                 if (!r.comment.isNullOrBlank()) Text("“${r.comment}”", style = MaterialTheme.typography.bodySmall)
                 if (photo == null && near != null) {
-                    Text(stringResource(R.string.body_photo_from, Dates.medium(near.date ?: "")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.body_photo_from, Dates.day(near.date ?: "")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else if (photo == null) {
                     Text(stringResource(R.string.body_no_photo_week), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -626,13 +627,13 @@ private fun StatsBlock(list: List<MRecord>, unit: String) {
     val max = list.maxBy { it.value }
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth()) {
-            LabelValue(stringResource(R.string.body_stat_start, Dates.short(first.date)), "${fmtNum(first.value)} $unit", Modifier.weight(1f))
-            LabelValue(stringResource(R.string.body_stat_latest, Dates.short(last.date)), "${fmtNum(last.value)} $unit", Modifier.weight(1f))
+            LabelValue(stringResource(R.string.body_stat_start, Dates.day(first.date)), "${fmtNum(first.value)} $unit", Modifier.weight(1f))
+            LabelValue(stringResource(R.string.body_stat_latest, Dates.day(last.date)), "${fmtNum(last.value)} $unit", Modifier.weight(1f))
             LabelValue(stringResource(R.string.body_stat_change), "${fmtSigned(last.value - first.value)} $unit", Modifier.weight(1f), deltaColour(last.value - first.value, Color.Unspecified))
         }
         Row(Modifier.fillMaxWidth()) {
-            LabelValue(stringResource(R.string.body_stat_lowest, Dates.short(min.date)), "${fmtNum(min.value)} $unit", Modifier.weight(1f))
-            LabelValue(stringResource(R.string.body_stat_highest, Dates.short(max.date)), "${fmtNum(max.value)} $unit", Modifier.weight(1f))
+            LabelValue(stringResource(R.string.body_stat_lowest, Dates.day(min.date)), "${fmtNum(min.value)} $unit", Modifier.weight(1f))
+            LabelValue(stringResource(R.string.body_stat_highest, Dates.day(max.date)), "${fmtNum(max.value)} $unit", Modifier.weight(1f))
             LabelValue(stringResource(R.string.body_stat_entries), "${list.size}", Modifier.weight(1f))
         }
         val days = Dates.epochDay(last.date) - Dates.epochDay(first.date)

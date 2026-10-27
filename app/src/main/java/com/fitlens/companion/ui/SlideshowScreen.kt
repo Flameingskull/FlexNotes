@@ -281,7 +281,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
             SectionTitle(stringResource(R.string.ss_options))
             // What the video will use, in one line each; the options sheet changes them.
             val overlayText = if (overlays.isEmpty()) stringResource(R.string.ss_no_data) else overlays.joinToString { it.name }
-            OptionSummary(stringResource(R.string.ss_photos), stringResource(R.string.ss_photos_summary, poseLabel(res, pose), Dates.medium(from), Dates.medium(to)) + if (onePerDay) stringResource(R.string.ss_one_per_day_suffix) else "")
+            OptionSummary(stringResource(R.string.ss_photos), stringResource(R.string.ss_photos_summary, poseLabel(res, pose), Dates.day(from), Dates.day(to)) + if (onePerDay) stringResource(R.string.ss_one_per_day_suffix) else "")
             OptionSummary(stringResource(R.string.ss_timing), stringResource(R.string.ss_per_photo, fmtNum(seconds.toDouble(), 1)) + if (fade) stringResource(R.string.ss_crossfade_suffix) else "")
             OptionSummary(stringResource(R.string.ss_on_video), overlayText)
             OptionSummary(stringResource(R.string.ss_video), stringResource(fmt.label) + if (title.isNotBlank()) stringResource(R.string.ss_title_suffix, title) else "")
@@ -337,9 +337,9 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(stringResource(R.string.ss_dates), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-            PickerPill(stringResource(R.string.ss_from), Dates.medium(from)) { pickFrom = true }
+            PickerPill(stringResource(R.string.ss_from), Dates.day(from)) { pickFrom = true }
             Text(stringResource(R.string.ss_to_word), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            PickerPill(stringResource(R.string.ss_to), Dates.medium(to)) { pickTo = true }
+            PickerPill(stringResource(R.string.ss_to), Dates.day(to)) { pickTo = true }
         }
         ToggleRow(stringResource(R.string.ss_one_per_day), onePerDay, inset = 0.dp) { onePerDay = it }
 

@@ -161,7 +161,7 @@ object PdfReport {
         withContext(Dispatchers.Default) {
             val doc = PdfDocument()
             try {
-                val w = PageWriter(res, doc, if (o.dark) DARK else LIGHT, res.getString(R.string.pdf_footer, Dates.medium(o.from), Dates.medium(o.to)))
+                val w = PageWriter(res, doc, if (o.dark) DARK else LIGHT, res.getString(R.string.pdf_footer, Dates.day(o.from), Dates.day(o.to)))
                 val days = daysIn(snap, o)
                 progress(res.getString(R.string.pdf_creating_cover))
                 cover(w, snap, o, days)
@@ -207,7 +207,7 @@ object PdfReport {
         w.centered("FLEXNOTES", paint(p.gold, 13f, bold = true, tracking = 0.5f), 96f)
         c.drawRect(PW / 2f - 40f, 108f, PW / 2f + 40f, 108.8f, fill(p.gold))
         w.centered(res.getString(R.string.pdf_title), paint(p.text, 34f, serif = true), 156f)
-        w.centered(res.getString(R.string.pdf_range, Dates.medium(o.from), Dates.medium(o.to)), paint(p.muted, 12f, tracking = 0.05f), 182f)
+        w.centered(res.getString(R.string.pdf_range, Dates.day(o.from), Dates.day(o.to)), paint(p.muted, 12f, tracking = 0.05f), 182f)
 
         val photos = snap.datedPhotos.filter { it.date!! >= o.from && it.date <= o.to }
         val first = photos.firstOrNull()
@@ -221,14 +221,14 @@ object PdfReport {
             val left = (PW - (2 * boxW + gap)) / 2f
             drawPhoto(w, snap, first, RectF(left, top, left + boxW, top + boxH), o.highQuality)
             drawPhoto(w, snap, last, RectF(left + boxW + gap, top, left + 2 * boxW + gap, top + boxH), o.highQuality)
-            val a = res.getString(R.string.pdf_before, Dates.medium(first.date!!).uppercase())
-            val b = res.getString(R.string.pdf_latest, Dates.medium(last.date!!).uppercase())
+            val a = res.getString(R.string.pdf_before, Dates.day(first.date!!).uppercase())
+            val b = res.getString(R.string.pdf_latest, Dates.day(last.date!!).uppercase())
             c.drawText(a, left + (boxW - label.measureText(a)) / 2f, top + boxH + 18f, label)
             c.drawText(b, left + boxW + gap + (boxW - label.measureText(b)) / 2f, top + boxH + 18f, label)
         } else if (first != null) {
             val left = (PW - boxW) / 2f
             drawPhoto(w, snap, first, RectF(left, top, left + boxW, top + boxH), o.highQuality)
-            w.centered(Dates.medium(first.date!!).uppercase(), label, top + boxH + 18f)
+            w.centered(Dates.day(first.date!!).uppercase(), label, top + boxH + 18f)
         }
 
         val stats = listOf(
@@ -248,7 +248,7 @@ object PdfReport {
             c.drawText(ls, cx - labelP.measureText(ls) / 2f, 670f, labelP)
         }
         c.drawRect(M, 700f, M + CW, 700.6f, fill(p.hairline))
-        w.centered(res.getString(R.string.pdf_generated, Dates.medium(Dates.today())), paint(p.muted, 8f), 724f)
+        w.centered(res.getString(R.string.pdf_generated, Dates.day(Dates.today())), paint(p.muted, 8f), 724f)
     }
 
     // ---------- Measurements ----------
@@ -280,11 +280,11 @@ object PdfReport {
             val low = pts.minBy { it.value }
             val high = pts.maxBy { it.value }
             val rows = listOf(
-                res.getString(R.string.pdf_start) to res.getString(R.string.pdf_value_date, fmtNum(first.value), Dates.short(first.date)),
-                res.getString(R.string.pdf_latest_word) to res.getString(R.string.pdf_value_date, fmtNum(last.value), Dates.short(last.date)),
+                res.getString(R.string.pdf_start) to res.getString(R.string.pdf_value_date, fmtNum(first.value), Dates.day(first.date)),
+                res.getString(R.string.pdf_latest_word) to res.getString(R.string.pdf_value_date, fmtNum(last.value), Dates.day(last.date)),
                 res.getString(R.string.pdf_change) to fmtSigned(last.value - first.value),
-                res.getString(R.string.pdf_low) to res.getString(R.string.pdf_value_date, fmtNum(low.value), Dates.short(low.date)),
-                res.getString(R.string.pdf_high) to res.getString(R.string.pdf_value_date, fmtNum(high.value), Dates.short(high.date))
+                res.getString(R.string.pdf_low) to res.getString(R.string.pdf_value_date, fmtNum(low.value), Dates.day(low.date)),
+                res.getString(R.string.pdf_high) to res.getString(R.string.pdf_value_date, fmtNum(high.value), Dates.day(high.date))
             )
             val lp = paint(p.muted, 7f, bold = true, tracking = 0.15f)
             val vp = paint(p.text, 9f, bold = true)
@@ -408,7 +408,6 @@ object PdfReport {
             if (days.isEmpty()) res.getString(R.string.pdf_nothing) else res.getQuantityString(R.plurals.pdf_days_n, days.size, days.size)
         )
         val p = w.p
-        val startDay = days.firstOrNull()?.let { Dates.epochDay(it) } ?: 0L
         val small = paint(p.gold, 7f, bold = true, tracking = 0.2f)
         val text = paint(p.text, 9.5f)
         val bold = paint(p.text, 9.5f, bold = true)
@@ -416,7 +415,7 @@ object PdfReport {
         val italic = paint(p.muted, 8.5f, italic = true)
 
         days.forEachIndexed { index, d ->
-            if (index % 5 == 0) progress(res.getString(R.string.pdf_creating_day, index + 1, days.size))
+            if (index % 5 == 0) progress(res.getString(R.string.pdf_creating_day, Dates.day(d)))
             val photos = snap.photosByDate[d].orEmpty().take(o.photosPerDay.coerceIn(0, 4))
             val recs = snap.recordsByDate[d].orEmpty().sortedWith(compareBy({ defOrder(snap, it.name) }, { it.time }))
             val sets = snap.setsByDate[d].orEmpty()
@@ -429,9 +428,8 @@ object PdfReport {
             w.ensure(34f + (if (n > 0) boxH + 24f else 0f) + 16f)
 
             fun header(continued: Boolean) {
-                val title = Dates.long(d) + if (continued) res.getString(R.string.pdf_continued) else ""
+                val title = Dates.day(d) + if (continued) res.getString(R.string.pdf_continued) else ""
                 w.c.drawText(title, M, w.y + 16f, paint(p.text, if (continued) 11f else 15f, serif = true))
-                w.rightText(res.getString(R.string.pdf_day_n, Dates.epochDay(d) - startDay + 1), small, M + CW, w.y + 14f)
                 w.y += if (continued) 24f else 30f
             }
             fun line(h: Float) { if (w.ensure(h)) header(true) }
@@ -456,7 +454,7 @@ object PdfReport {
                     line(14f)
                     val prev = snap.recordsByName[r.name]?.lastOrNull { it.date < r.date }
                     w.c.drawText(r.name, M, w.y + 9f, text)
-                    prev?.let { w.c.drawText(res.getString(R.string.pdf_since, fmtSigned(r.value - it.value), Dates.short(it.date)), M + CW * 0.45f, w.y + 9f, muted) }
+                    prev?.let { w.c.drawText(res.getString(R.string.pdf_since, fmtSigned(r.value - it.value), Dates.day(it.date)), M + CW * 0.45f, w.y + 9f, muted) }
                     w.rightText("${fmtNum(r.value)} ${r.unit}".trim(), bold, M + CW, w.y + 9f)
                     w.y += 14f
                 }
