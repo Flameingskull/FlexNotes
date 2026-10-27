@@ -63,10 +63,7 @@ import com.fitlens.companion.data.Store
 import com.fitlens.companion.report.PdfReport
 import com.fitlens.companion.report.ReportOptions
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 /**
  * Settings → Backup: backup files, automatic backups and PDF reports. Everything stays on the device. The page's text
@@ -97,8 +94,7 @@ fun BackupsPage(snap: Snapshot) {
     val notify = rememberNotificationAccess()
     val notifyReason = stringResource(R.string.notify_reason_backup)
     fun ensureNotifyPermission() = notify.ask(notifyReason)
-    fun fmtTime(ms: Long): String =
-        Instant.ofEpochMilli(ms).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm"))
+    fun fmtTime(ms: Long): String = Dates.dayTime(ms)
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
     var restoreInfo by remember { mutableStateOf<Backups.Info?>(null) }
     var showReport by remember { mutableStateOf(false) }
@@ -306,7 +302,7 @@ private fun RestoreDialog(info: Backups.Info, onDismiss: () -> Unit, onConfirm: 
         title = { Text(stringResource(R.string.restore_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                val made = info.createdAt?.let { Dates.medium(it) + (if (it.length >= 16) ", " + it.substring(11, 16) else "") }
+                val made = info.createdAt?.let { Dates.day(it) + (if (it.length >= 16) ", " + it.substring(11, 16) else "") }
                 val version = info.appVersion
                 if (made != null) Text(
                     if (version == null) stringResource(R.string.restore_made, made)
@@ -323,7 +319,7 @@ private fun RestoreDialog(info: Backups.Info, onDismiss: () -> Unit, onConfirm: 
                     ).joinToString(" · ")
                 )
                 if (info.firstDate != null && info.lastDate != null) {
-                    Text(stringResource(R.string.restore_covers, Dates.medium(info.firstDate), Dates.medium(info.lastDate)))
+                    Text(stringResource(R.string.restore_covers, Dates.day(info.firstDate), Dates.day(info.lastDate)))
                 }
                 Text(
                     pluralStringResource(R.plurals.restore_warning, Backups.UNDO_DAYS, Backups.UNDO_DAYS),
@@ -389,11 +385,11 @@ private fun ReportDialog(snap: Snapshot, onDismiss: () -> Unit, onCreate: (Repor
         FlowRow(verticalArrangement = Arrangement.Center) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(fromLabel, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                PickerPill(fromLabel, Dates.medium(from)) { pickFrom = true }
+                PickerPill(fromLabel, Dates.day(from)) { pickFrom = true }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(stringResource(R.string.report_to), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                PickerPill(toLabel, Dates.medium(to)) { pickTo = true }
+                PickerPill(toLabel, Dates.day(to)) { pickTo = true }
             }
         }
 

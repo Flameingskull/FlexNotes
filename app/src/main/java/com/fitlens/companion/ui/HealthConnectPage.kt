@@ -18,6 +18,7 @@ import androidx.health.connect.client.PermissionController
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.fitlens.companion.R
 import com.fitlens.companion.data.ActiveCalories
+import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.HealthConnect
 import com.fitlens.companion.data.HealthWrite
 import com.fitlens.companion.data.Settings
@@ -28,10 +29,6 @@ import com.fitlens.companion.ui.design.SettingsGroup
 import com.fitlens.companion.ui.design.SettingsNote
 import com.fitlens.companion.ui.design.SettingsSwitchRow
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
 
 /**
  * Health Connect on a screen (#184): whether it can be used, the permissions FlexNotes has (read again each time the
@@ -179,10 +176,8 @@ internal fun HealthConnectNotAllowedRows(@StringRes what: Int) {
     }
 }
 
-/** When Health Connect was last read: "16 Oct 2026, 14:05", or Never. */
-private fun syncedText(res: Resources, at: Long?): String = at?.let {
-    Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT))
-} ?: res.getString(R.string.hc_never)
+/** When Health Connect was last read: "Fri 16 Oct, 14:05", or Never. */
+private fun syncedText(res: Resources, at: Long?): String = at?.let { Dates.dayTime(it) } ?: res.getString(R.string.hc_never)
 
 private fun outcomeText(res: Resources, o: HealthConnect.Outcome): String = res.getString(
     when (o) {

@@ -1,23 +1,23 @@
-# FlexNotes 1.0.182
+# FlexNotes 1.0.183
 
 ## Overview
 
-This build continues the screen-by-screen review, this time for body tracking, photos, the slideshow, the PDF reports and medications. More dates read the way you plan your week, like "Mon 27 Oct", and long names keep a tidy layout at large font sizes.
+This build finishes the screen-by-screen review in code. It covers Settings, backups, imports and Health Connect, plus the calendar and the home-screen widget. More dates and times now read the way you plan your week, like "Mon 27 Oct, 14:05", and the widget keeps long medication names readable.
 
 ## Improved
 
-- **Weekday dates across body tracking and photos.** The body tracker's history, graph points and Start, Latest, Lowest and Highest figures, the body fat sheet, measurement goals, the photos grid's day and week headers, the photo viewer, Compare, export and the slideshow's date range now show the weekday. The year only appears when it isn't this year.
-- **The progress PDF reads by date.** Each day in the report is headed by its weekday date, and the "DAY 12" counter beside it is gone. While the report is being made, the progress line names the day it's on.
-- **Medication dates with the weekday.** The emergency card's last as-needed dose and the medication report's date range and "generated" date now show the weekday.
-- **Tidy rows at large font sizes.** Long measurement, medication and symptom names now wrap to two lines and end with "…" if longer, so they no longer push into the values beside them. The same goes for a dose's amount and its Skipped or Missed note, and for the labels above the body tracker's figures. The figures themselves are never cut off.
+- **Weekday dates in Settings.** The last and next automatic backup, the safety copy and its undo message, backup results, the last FitNotes import and the last Health Connect read now show the weekday and time. The year only appears when it isn't this year.
+- **Restoring a backup.** The restore dialog shows when the backup was made and the dates it covers with the weekday. The PDF report's From and To dates show it too.
+- **Calendar.** "Share" for the chosen day names it by its weekday date. Body values under the chosen day keep the number and its unit together on one line, so a long measurement name wraps in its own space.
+- **Home-screen widget.** A long medication name and its dose now wrap to a second line instead of being cut short. The Taken and Take buttons grow with large font sizes instead of clipping their text.
 
 ## Your data
 
-- No database change. Your measurements, photos, medications and settings are kept, and older backups still restore.
+- No database change. Your workouts, measurements, photos, medications and settings are kept, and older backups still restore.
 
 ## Known limitations
 
-- The body and photos review and the medications review (issues #255 and #256) stay open until they've been checked on a phone at a large font size, as do the earlier reviews (#251 to #254).
-- Small date labels on photo thumbnails, chart axes and the medication report's daily table stay short ("27 Oct") to fit their space.
-- The slideshow's optional "Day 12 · Week 2" stamp is unchanged for now; how it should read is a decision for a later build (issue #267).
-- Next up: the review of settings, profile, backup and import, then the calendar, widget and notifications (issues #257 and #258).
+- The settings review and the calendar, widget and notifications review (issues #257 and #258) stay open until they've been checked on a phone at a large font size, as do the earlier reviews (#251 to #256).
+- The slideshow's optional "Day 12 · Week 2" stamp is unchanged until you choose how it should read (issue #267).
+- A profile's date of birth stays as "12 Mar 1990". People don't think of a birthday by its weekday.
+- Next up: the code clean-up (issues #259 to #262).

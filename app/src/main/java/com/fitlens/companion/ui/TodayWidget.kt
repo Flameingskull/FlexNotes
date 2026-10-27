@@ -126,7 +126,7 @@ object TodayWidgets {
         val gold = Brand.Gold.toArgb()
         val ivory = Brand.Ivory.toArgb()
         val muted = Brand.Muted.toArgb()
-        val date = LocalDate.now().format(DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()))
+        val date = Dates.day(Dates.today())
         views.setTextViewText(R.id.widget_title, res.getString(R.string.tw_title, date).uppercase(Locale.getDefault()))
         views.setTextColor(R.id.widget_title, gold)
         views.setOnClickPendingIntent(R.id.widget_title, openApp(context, 9000) { })

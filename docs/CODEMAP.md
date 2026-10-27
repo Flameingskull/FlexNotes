@@ -5,7 +5,7 @@ Source root: `app/src/main/java/com/fitlens/companion/` (paths below are relativ
 **Keep it current:** any build that adds, moves or renames a file, or changes a pattern below, updates this map in the
 same commit.
 
-Last updated: 1.0.179.
+Last updated: 1.0.183.
 
 ## How data flows
 
@@ -53,7 +53,9 @@ Last updated: 1.0.179.
   viewed, edited and deleted from the screen showing it, as a sheet over it (`MeasurementEntrySheet` for body values;
   long-press deletes with Undo, `deleteBodyValue`). Don't add a screen or menu item for what that screen can do.
 - **Dates** are ISO `yyyy-MM-dd` strings. Use `Dates` in `data/Models.kt` (`today()`, `parse`, `epochDay`, `long`,
-  `medium`, `short`). ISO strings compare correctly as text.
+  `medium`, `short`). ISO strings compare correctly as text. Where people read a date, use `Dates.day` ("Mon 27 Oct",
+  the year only when it isn't this year), and `Dates.dayTime(epochMs)` for a moment ("Mon 27 Oct, 14:05": backups,
+  imports, Health Connect reads).
 
 ## Files
 

@@ -14,6 +14,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.data.BackupSync
+import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.FileKind
 import com.fitlens.companion.data.FitNotesImporter
 import com.fitlens.companion.data.Settings
@@ -23,9 +24,6 @@ import com.fitlens.companion.ui.design.SettingsFolderRow
 import com.fitlens.companion.ui.design.SettingsGroup
 import com.fitlens.companion.ui.design.SettingsNote
 import com.fitlens.companion.ui.design.SettingsSwitchRow
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 /**
  * Settings → Import From FitNotes: a backup file, or the FitNotes backup folder with optional auto-sync. It replaced the
@@ -60,7 +58,7 @@ fun FitNotesImportPage(snap: Snapshot) {
     SettingsGroup(stringResource(R.string.import_group_data))
     SettingsNote(
         if (lastName == null) stringResource(R.string.import_nothing_yet) else {
-            val at = lastAt?.let { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm")) } ?: ""
+            val at = lastAt?.let { Dates.dayTime(it) } ?: ""
             val workouts = snap.setsByDate.size
             val sets = snap.sets.size
             val records = snap.storedRecordCount

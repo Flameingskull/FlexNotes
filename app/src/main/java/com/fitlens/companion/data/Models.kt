@@ -496,6 +496,11 @@ object Dates {
         val d = parse(s) ?: return s
         return if (d.year == LocalDate.now().year) d.format(weekday) else d.format(long)
     }
+    /** A moment as people read it, "Mon 27 Oct, 14:05" (the year only when it isn't this year). */
+    fun dayTime(epochMs: Long): String {
+        val t = java.time.Instant.ofEpochMilli(epochMs).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
+        return day(t.toLocalDate().format(ISO)) + ", " + t.format(DateTimeFormatter.ofPattern("HH:mm"))
+    }
     fun monthYear(d: LocalDate): String = d.format(monthYear)
     fun monthYearShort(d: LocalDate): String = d.format(monthYearShort)
     fun epochDay(s: String): Long = parse(s)?.toEpochDay() ?: 0L

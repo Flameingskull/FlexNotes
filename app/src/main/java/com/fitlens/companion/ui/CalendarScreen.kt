@@ -110,7 +110,7 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
             ),
             // Share the selected day's workout (#87), offered only when that day has sets to share.
             overflow = if (snap.setsByDate[selected].isNullOrEmpty()) emptyList()
-                else listOf(MenuAction(stringResource(R.string.cal_share_day, Dates.medium(selected))) { sharing = true })
+                else listOf(MenuAction(stringResource(R.string.cal_share_day, Dates.day(selected))) { sharing = true })
         )
         if (filter.active) FilterBar(snap, filter, month, matches, onEdit = { filtering = true }) {
             Settings.updateDevice { it.copy(calendarFilter = null) }
@@ -348,9 +348,11 @@ private fun SelectedDay(snap: Snapshot, date: String, onOverview: (Long) -> Unit
         // name in capitals over a rule, with its sets in columns. Tapping an exercise opens its overview (#26).
         records.forEach { r ->
             Row(Modifier.fillMaxWidth().heightIn(min = Spacing.touch), verticalAlignment = Alignment.CenterVertically) {
+                // The value and unit share a baseline and stay together, so a long name wraps in its own space (#258).
                 Text(r.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                Text(fmtNum(r.value), style = MaterialTheme.typography.titleMedium)
-                if (r.unit.isNotBlank()) Text(" ${r.unit}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.width(Spacing.sm))
+                Text(fmtNum(r.value), Modifier.alignByBaseline(), style = MaterialTheme.typography.titleMedium, maxLines = 1, softWrap = false)
+                if (r.unit.isNotBlank()) Text(" ${r.unit}", Modifier.alignByBaseline(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
             }
             HorizontalDivider(color = Brand.Hairline)
         }
