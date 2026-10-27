@@ -74,7 +74,7 @@ fun ExerciseOverviewSheet(snap: Snapshot, nav: Nav, exId: Long, date: String, on
                 when (tab) {
                     0 -> ExerciseHistoryPane(snap, nav, exId)
                     1 -> ExerciseGraphPane(snap, nav, exId)
-                    2 -> RecordsTab(snap, statSets, timeBased)
+                    2 -> RecordsTab(snap, statSets, timeBased, onOpenDay = { d -> nav.push(Screen.SetEntry(d, exId)) })
                     3 -> ExerciseStatsTab(snap, nav, exId, statSets, timeBased)
                     else -> GoalsTab(snap, exId, timeBased)
                 }

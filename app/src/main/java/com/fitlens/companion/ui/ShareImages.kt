@@ -18,6 +18,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import android.content.res.Resources
 import com.fitlens.companion.R
+import com.fitlens.companion.data.PlainErrors
 
 /**
  * Branded images for the share sheet: a graph (#22) and a workout card (#11). Both are drawn on an Android [Canvas] in
@@ -56,7 +57,7 @@ object ShareImages {
                 }
                 shareFile(app, file, "image/jpeg")
             } catch (e: Exception) {
-                UiEvents.show(app.getString(R.string.si_image_failed, e.message ?: ""))
+                UiEvents.show(app.getString(R.string.si_image_failed, PlainErrors.reason(app.resources, e)))
             } finally {
                 UiEvents.busy.value = null
             }

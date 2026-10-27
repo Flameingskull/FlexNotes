@@ -168,6 +168,9 @@ internal fun LazyListScope.medicationSchedulesTab(snap: Snapshot, nav: Nav) {
 @Composable
 private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> Unit) {
     val res = LocalContext.current.resources
+    // The time in the phone's clock style (#280); the column is wider for "10:05 PM" so every row lines up.
+    val clockText = Dates.time(LocalContext.current, due.time)
+    val twelveHour = !android.text.format.DateFormat.is24HourFormat(LocalContext.current)
     val view = LocalView.current
     val taken = MedSchedules.takenRecord(snap.medicationView.records, due)
     val skipped = taken == null && snap.medPlan.isSkipped(due.dose.id, due.due)
@@ -180,7 +183,7 @@ private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> U
     }
     val spoken = listOfNotNull(
         "${res.getString(R.string.md_dose)} $index",
-        res.getString(R.string.body_at_time, due.time),
+        res.getString(R.string.body_at_time, clockText),
         due.dose.medication,
         amount,
         hint,
@@ -211,8 +214,8 @@ private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> U
             verticalAlignment = Alignment.Top
         ) {
             Text(
-                due.time,
-                Modifier.widthIn(min = 56.dp),
+                clockText,
+                Modifier.widthIn(min = if (twelveHour) 88.dp else 56.dp),
                 style = MaterialTheme.typography.titleMedium.copy(fontFeatureSettings = "tnum"),
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -375,11 +378,11 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
         }
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-            Text(res.getString(R.string.md_due_at, Dates.day(due.date), due.time), style = MaterialTheme.typography.bodyLarge)
+            Text(res.getString(R.string.md_due_at, Dates.day(due.date), Dates.time(LocalContext.current, due.time)), style = MaterialTheme.typography.bodyLarge)
             Text(due.schedule.name, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (taken != null) {
                 Text(
-                    res.getString(R.string.md_taken_at, taken.time.take(5)),
+                    res.getString(R.string.md_taken_at, Dates.time(LocalContext.current, taken.time)),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -495,7 +498,7 @@ internal fun DoseChangeRow(snap: Snapshot, c: MedDoseChange) {
     ListRowWithMenu(
         title = if (c.toDate == c.fromDate) res.getString(R.string.md_change_row_day, Dates.day(c.fromDate), dose.medication, amount)
             else res.getString(R.string.md_change_row_rest, Dates.day(c.fromDate), dose.medication, amount),
-        subtitle = res.getString(R.string.md_change_row_was, was, schedule.name, dose.time),
+        subtitle = res.getString(R.string.md_change_row_was, was, schedule.name, Dates.time(LocalContext.current, dose.time)),
         menu = listOf(
             MenuAction(stringResource(R.string.md_change_remove)) {
                 AppScope.scope.launch {

@@ -111,9 +111,9 @@ private data class SettingEntry(
 )
 
 /** What a search result reads its value from (#158): the same settings and wording as the page row. */
-private class SettingValues(val res: Resources, val prefs: PortableSettings, val device: DeviceSettings) {
+private class SettingValues(val ctx: android.content.Context, val res: Resources, val prefs: PortableSettings, val device: DeviceSettings) {
     fun onOff(on: Boolean): String = res.getString(if (on) R.string.settings_value_on else R.string.settings_value_off)
-    fun logReminder(kind: LogKind): String = reminderValue(res, LogReminderSet.decode(device.logReminders), kind, prefs.weekStart)
+    fun logReminder(kind: LogKind): String = reminderValue(ctx, res, LogReminderSet.decode(device.logReminders), kind, prefs.weekStart)
 }
 
 /** Every setting on a page, for search. A row added to a page belongs here too; main-list rows search themselves. */
@@ -266,7 +266,7 @@ fun SettingsScreen(snap: Snapshot, nav: Nav) {
     }
     val prefs by Settings.portable.collectAsState()
     val device by Settings.device.collectAsState()
-    val values = SettingValues(LocalContext.current.resources, prefs, device)
+    val values = SettingValues(LocalContext.current, LocalContext.current.resources, prefs, device)
     Column(Modifier.fillMaxSize()) {
         BackTopBar(stringResource(R.string.settings_title), onBack = { nav.pop() })
         OutlinedTextField(

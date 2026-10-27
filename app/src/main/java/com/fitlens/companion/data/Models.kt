@@ -1,6 +1,9 @@
 package com.fitlens.companion.data
 
+import android.content.Context
+import android.text.format.DateFormat
 import java.time.Duration
+import java.time.LocalTime
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -496,10 +499,23 @@ object Dates {
         val d = parse(s) ?: return s
         return if (d.year == LocalDate.now().year) d.format(weekday) else d.format(long)
     }
-    /** A moment as people read it, "Mon 27 Oct, 14:05" (the year only when it isn't this year). */
-    fun dayTime(epochMs: Long): String {
+    /** A moment as people read it, "Mon 27 Oct, 14:05" or "Mon 27 Oct, 2:05 PM" in the phone's clock style (the year only when it isn't this year). */
+    fun dayTime(context: Context, epochMs: Long): String {
         val t = java.time.Instant.ofEpochMilli(epochMs).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
-        return day(t.toLocalDate().format(ISO)) + ", " + t.format(DateTimeFormatter.ofPattern("HH:mm"))
+        return day(t.toLocalDate().format(ISO)) + ", " + time(context, t.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT)))
+    }
+
+    /** A stored `HH:mm` or `HH:mm:ss` as a time, or null when it can't be read. */
+    fun clock(text: String): LocalTime? =
+        runCatching { LocalTime.parse(text.trim().take(5).let { if (it.length == 4) "0$it" else it }) }.getOrNull()
+
+    /** A stored time as the phone's clock shows it (#280): "14:05" on a 24-hour phone, "2:05 PM" on a 12-hour one. */
+    fun time(context: Context, hhmm: String): String = time(hhmm, DateFormat.is24HourFormat(context))
+
+    /** [time] with the clock style given, so it can be tested without a phone. An unreadable time is returned as it was. */
+    fun time(hhmm: String, is24Hour: Boolean): String {
+        val t = clock(hhmm) ?: return hhmm
+        return t.format(if (is24Hour) DateTimeFormatter.ofPattern("HH:mm", Locale.ROOT) else DateTimeFormatter.ofPattern("h:mm a", Locale.getDefault()))
     }
     fun monthYear(d: LocalDate): String = d.format(monthYear)
     fun monthYearShort(d: LocalDate): String = d.format(monthYearShort)

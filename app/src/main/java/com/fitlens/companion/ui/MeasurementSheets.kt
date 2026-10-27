@@ -133,7 +133,7 @@ fun MeasurementEntrySheet(
             return
         }
         // The time chosen on the clock (#270); it is always readable, and "now" only if the sheet never set one.
-        val time = (parseTime(timeText) ?: LocalTime.now()).format(HHMMSS)
+        val time = (Dates.clock(timeText) ?: LocalTime.now()).format(HHMMSS)
         val c = comment.trim().ifBlank { null }
         val d = theDate
         // A new injected value without a tapped site takes the suggested one; an edited one keeps its own.

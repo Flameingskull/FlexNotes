@@ -159,7 +159,7 @@ object FitNotesImporter {
             )
         } catch (e: Exception) {
             deleteStage(tmp)
-            Prepared(null, context.getString(R.string.imp_cant_read, e.message ?: e.javaClass.simpleName))
+            Prepared(null, context.getString(R.string.imp_cant_read, PlainErrors.reason(context.resources, e)))
         }
     }
 
@@ -181,7 +181,7 @@ object FitNotesImporter {
             Store.reload()
             ImportSummary(ctx.getString(R.string.imp_done, staged.name, plan.describe(ctx.resources)), true)
         } catch (e: Exception) {
-            ImportSummary(ctx.getString(R.string.imp_failed, e.message ?: e.javaClass.simpleName), false)
+            ImportSummary(ctx.getString(R.string.imp_failed, PlainErrors.reason(ctx.resources, e)), false)
         } finally {
             deleteStage(staged.file)
         }
@@ -586,7 +586,7 @@ object FitNotesImporter {
                 true
             )
         } catch (e: Exception) {
-            ImportSummary(context.getString(R.string.imp_csv_failed, e.message ?: e.javaClass.simpleName), false)
+            ImportSummary(context.getString(R.string.imp_csv_failed, PlainErrors.reason(context.resources, e)), false)
 
         }
     }

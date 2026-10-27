@@ -3817,4 +3817,12 @@
     <string name="sport_metric_intensity">Intensity</string>
     <string name="sport_metric_type">Session type</string>
     <string name="sport_metric_zone">Cardio zone</string>
+    <string name="ch_rotate">Rotate screen</string>
+    <string name="lib_choose_tip">Touch and hold an exercise to choose several.</string>
+    <string name="wk_nothing_on_day">Nothing was logged on %1$s.</string>
+    <string name="pe_no_space">There isn\'t enough free space on the phone. Free some space and try again</string>
+    <string name="pe_permission">FlexNotes no longer has permission to use that folder or file. Choose it again</string>
+    <string name="pe_missing">That file or folder can\'t be found any more. Choose it again</string>
+    <string name="pe_unreadable">That file can\'t be read. It may be damaged, or not a FlexNotes or FitNotes backup. Try another copy</string>
+    <string name="pe_unknown">Something unexpected went wrong. Try again, and if it keeps happening restart FlexNotes</string>
 </resources>

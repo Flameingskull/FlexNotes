@@ -103,7 +103,7 @@ object TodayWidgets {
                 val take = Intent(context, TodayWidgetActions::class.java).setAction(ACTION_TAKE)
                     .putExtra(EXTRA_AT, d.due).putExtra(EXTRA_DOSE, d.dose.id)
                 lines += Line(
-                    res.getString(R.string.tw_dose_line, d.time, what),
+                    res.getString(R.string.tw_dose_line, Dates.time(context, d.time), what),
                     res.getString(R.string.md_take),
                     PendingIntent.getBroadcast(context, 9100 + i, take, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                 )
@@ -122,7 +122,7 @@ object TodayWidgets {
                         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                     )
                 // When it was last taken today, so a second tap is an informed one.
-                val lastToday = state.last?.takeIf { it.date == today }?.time?.take(5)
+                val lastToday = state.last?.takeIf { it.date == today }?.time?.let { Dates.time(context, it) }
                 val text = if (lastToday != null) res.getString(R.string.tw_prn_line_last, info.medication, count, lastToday)
                     else res.getString(R.string.tw_prn_line, info.medication, count)
                 lines += Line(text, res.getString(R.string.tw_take), action)
@@ -191,8 +191,9 @@ object TodayWidgets {
 
     /** Says what the widget just logged and when ("Logged Metformin 500 mg at 08:05"); no name when medication names are locked. */
     private fun confirm(context: Context, what: String, time: String) {
-        val text = if (Settings.current().medLock) context.getString(R.string.tw_logged_hidden, time)
-            else context.getString(R.string.tw_logged, what, time)
+        val shownTime = Dates.time(context, time)
+        val text = if (Settings.current().medLock) context.getString(R.string.tw_logged_hidden, shownTime)
+            else context.getString(R.string.tw_logged, what, shownTime)
         Handler(Looper.getMainLooper()).post { Toast.makeText(context, text, Toast.LENGTH_LONG).show() }
     }
 

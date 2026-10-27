@@ -424,7 +424,7 @@ private fun BodyHistoryAll(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(r.name, style = MaterialTheme.typography.titleMedium.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold))
-                        if (r.time.isNotBlank()) Text(r.time.take(5), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        if (r.time.isNotBlank()) Text(Dates.time(LocalContext.current, r.time), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Row(verticalAlignment = Alignment.Bottom) {
@@ -681,7 +681,7 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
                         SetRowView(
                             index = i + 1,
                             summary = "${fmtNum(r.value)} ${r.unit}",
-                            cells = valueCells(res, r, def),
+                            cells = valueCells(res, r, def, android.text.format.DateFormat.is24HourFormat(LocalContext.current)),
                             effort = valueSite(res, r),
                             effortSpoken = valueSite(res, r),
                             comment = r.comment,
@@ -713,8 +713,9 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
  * A value and the time it was logged, in the set-row columns the exercise screen uses, flagged High or Low when it's
  * outside [def]'s reference range (#211).
  */
-internal fun valueCells(res: Resources, r: MRecord, def: MeasurementDef? = null): List<SetCell> {
-    val time = r.time.take(5)
+internal fun valueCells(res: Resources, r: MRecord, def: MeasurementDef? = null, is24Hour: Boolean = true): List<SetCell> {
+    // In the phone's 12 or 24 hour style (#280).
+    val time = if (r.time.isBlank()) "" else Dates.time(r.time, is24Hour)
     return listOfNotNull(
         SetCell(fmtNum(r.value), r.unit, "${fmtNum(r.value)} ${r.unit}"),
         flagText(res, def, r.value)?.let { SetCell(it, spoken = it, unitSlot = false) },

@@ -59,6 +59,7 @@ import kotlinx.coroutines.launch
 import com.fitlens.companion.data.WorkoutDataException
 import com.fitlens.companion.data.Workouts
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.fmtDuration
 import com.fitlens.companion.data.DistanceUnits
@@ -247,7 +248,7 @@ fun ExerciseDetailScreen(snap: Snapshot, nav: Nav, exId: Long, initialTab: Int =
             onSelect = { tab = it }
         )
         when (tab) {
-            0 -> RecordsTab(snap, statSets, timeBased)
+            0 -> RecordsTab(snap, statSets, timeBased, onOpenDay = { d -> nav.push(Screen.SetEntry(d, exId)) })
             1 -> ExerciseStatsTab(snap, nav, exId, statSets, timeBased)
             else -> GoalsTab(snap, exId, timeBased, addRequested = addGoal, onAddHandled = { addGoal = false }, showAddButton = false)
         }
@@ -926,7 +927,7 @@ fun ExerciseHistoryPane(snap: Snapshot, nav: Nav, exId: Long) {
                     // FitNotes's day heading (#122, #142): "MONDAY, SEPTEMBER 28" over a rule, then the sets.
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         SectionLabel(historyDay(d), Modifier.weight(1f))
-                        if (snap.photosByDate.containsKey(d)) Dot(LocalChartColors.current.accent)
+                        if (snap.photosByDate.containsKey(d)) Icon(FitIcons.Camera, contentDescription = stringResource(R.string.cal_legend_photo), tint = LocalChartColors.current.accent, modifier = Modifier.size(16.dp))
                     }
                     l.forEachIndexed { i, s ->
                         val marks = setMarks(res, s, session = snap.isSessionExercise(s.exerciseId), rounds = snap.isRoundsExercise(s.exerciseId), countNames = snap.exercises[s.exerciseId]?.countNames.orEmpty())
@@ -1017,7 +1018,7 @@ private fun copyToToday(res: Resources, date: String, ids: List<Long>) {
 }
 
 /** One row of an exercise's Records tab, worked out off the main thread (#60). */
-private data class RecordLine(val label: String, val value: String, val unit: String, val date: String, val superseded: Boolean)
+private data class RecordLine(val label: String, val value: String, val unit: String, val date: String, val superseded: Boolean, val iso: String)
 
 /**
  * The Records tab's rows for one exercise's [sets] (#142): the longest set for a timed exercise, otherwise each rep
@@ -1029,17 +1030,17 @@ private fun recordLines(res: Resources, snap: Snapshot, sets: List<SetRow>, time
     val metric = exId?.let { metricFor(snap, it) }
     val metricLine = metric?.let { m ->
         sets.filter { it.metric != null }.maxByOrNull { it.metric!! }?.let { best ->
-            RecordLine(res.getString(R.string.ex_record_best, m.metricName?.lowercase().orEmpty()), fmtNum(best.metric!!, 2), m.metricUnit.orEmpty(), Dates.day(best.date), superseded = false)
+            RecordLine(res.getString(R.string.ex_record_best, m.metricName?.lowercase().orEmpty()), fmtNum(best.metric!!, 2), m.metricUnit.orEmpty(), Dates.day(best.date), superseded = false, iso = best.date)
         }
     }
     if (timeBased) {
         // Timed exercises have no rep maxes: the longest set is their record, with the farthest for distance types.
         val longest = sets.maxByOrNull { it.durationSec }?.takeIf { it.durationSec > 0 }?.let { l ->
-            RecordLine(res.getString(R.string.ex_record_longest), fmtDuration(l.durationSec), "", Dates.day(l.date), superseded = false)
+            RecordLine(res.getString(R.string.ex_record_longest), fmtDuration(l.durationSec), "", Dates.day(l.date), superseded = false, iso = l.date)
         }
         val farthest = if (exId != null && ExerciseTypes.isCustom(snap.exercises[exId]?.type ?: 0)) {
             sets.maxByOrNull { it.distance }?.takeIf { it.distance > 0 }?.let { f ->
-                RecordLine(res.getString(R.string.ex_record_farthest), fmtNum(f.distance, 2), snap.distanceUnit(f.exerciseId), Dates.day(f.date), superseded = false)
+                RecordLine(res.getString(R.string.ex_record_farthest), fmtNum(f.distance, 2), snap.distanceUnit(f.exerciseId), Dates.day(f.date), superseded = false, iso = f.date)
             }
         } else null
         return listOfNotNull(longest, farthest, metricLine)
@@ -1052,7 +1053,7 @@ private fun recordLines(res: Resources, snap: Snapshot, sets: List<SetRow>, time
         return (1..Records.MAX_REPS).mapNotNull { r ->
             val est = Records.weightFor(best, r)
             if (est <= 0) null
-            else RecordLine(res.getString(R.string.ex_record_rm, r), (if (Records.approximate(r)) "≈ " else "") + fmtNum(snap.weight(est, exId), 1), unit, Dates.day(bestSet.date), superseded = false)
+            else RecordLine(res.getString(R.string.ex_record_rm, r), (if (Records.approximate(r)) "≈ " else "") + fmtNum(snap.weight(est, exId), 1), unit, Dates.day(bestSet.date), superseded = false, iso = bestSet.date)
         }
     }
     // As FitNotes lists them: each rep count with its record and date. A record held by a heavier or equal set of more
@@ -1064,14 +1065,15 @@ private fun recordLines(res: Resources, snap: Snapshot, sets: List<SetRow>, time
                 snap.fmtWeight(actual.weightKg, exId) + if (actual.reps > r) " × ${actual.reps}" else "",
                 unit,
                 Dates.day(actual.date),
-                superseded = actual.reps > r
+                superseded = actual.reps > r,
+                iso = actual.date
             )
         }
     }
 }
 
 @Composable
-internal fun RecordsTab(snap: Snapshot, allSets: List<SetRow>, timeBased: Boolean) {
+internal fun RecordsTab(snap: Snapshot, allSets: List<SetRow>, timeBased: Boolean, onOpenDay: ((String) -> Unit)? = null) {
     val exId = allSets.firstOrNull()?.exerciseId
     val res = LocalContext.current.resources
     // FitNotes's TYPE (#142): actual records, or estimated ones from the best estimated 1RM.
@@ -1127,7 +1129,7 @@ internal fun RecordsTab(snap: Snapshot, allSets: List<SetRow>, timeBased: Boolea
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            else -> items(lines) { l -> RecordRow(l.label, l.value, l.unit, l.date, l.superseded) }
+            else -> items(lines) { l -> RecordRow(l.label, l.value, l.unit, l.date, l.superseded, onOpen = onOpenDay?.let { open -> { open(l.iso) } }) }
         }
     }
 }
@@ -1137,12 +1139,13 @@ internal fun RecordsTab(snap: Snapshot, allSets: List<SetRow>, timeBased: Boolea
  * it. A [superseded] record (held by a set of more reps) is greyed.
  */
 @Composable
-private fun RecordRow(label: String, value: String, unit: String, date: String, superseded: Boolean) {
+private fun RecordRow(label: String, value: String, unit: String, date: String, superseded: Boolean, onOpen: (() -> Unit)? = null) {
     val tint = if (superseded) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface
     Row(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 72.dp)
+            .then(if (onOpen != null) Modifier.clickable(onClickLabel = stringResource(R.string.st_open_day, date), onClick = onOpen) else Modifier)
             .semantics(mergeDescendants = true) {}
             .padding(horizontal = 24.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically

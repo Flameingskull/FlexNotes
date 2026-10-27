@@ -3,6 +3,7 @@
 package com.fitlens.companion.ui
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.content.res.Resources
 import android.net.Uri
@@ -30,6 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.fitlens.companion.R
+import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.LogKind
 import com.fitlens.companion.data.LogReminder
 import com.fitlens.companion.data.LogReminderSet
@@ -78,7 +80,7 @@ internal fun RemindersPage() {
         }
         SettingsActionRow(
             stringResource(R.string.lr_time),
-            value = r.time,
+            value = Dates.time(ctx, r.time),
             enabled = r.on,
             disabledReason = stringResource(R.string.lr_needs_on),
             sheetOpen = timeFor == r.kind
@@ -115,7 +117,7 @@ internal fun RemindersPage() {
 
     timeFor?.let { kind ->
         val r = set.of(kind)
-        val state = rememberTimePickerState(r.localTime.hour, r.localTime.minute, is24Hour = true)
+        val state = rememberTimePickerState(r.localTime.hour, r.localTime.minute, is24Hour = android.text.format.DateFormat.is24HourFormat(ctx))
         AlertDialog(
             onDismissRequest = { timeFor = null },
             title = { Text(stringResource(switchTitle(kind))) },
@@ -191,7 +193,7 @@ internal fun daysText(res: Resources, days: Set<Int>, weekStart: Int): String = 
 }
 
 /** The search entries' value for [kind]: "07:30 · Every day", or Off. */
-internal fun reminderValue(res: Resources, set: LogReminderSet, kind: LogKind, weekStart: Int): String {
+internal fun reminderValue(ctx: Context, res: Resources, set: LogReminderSet, kind: LogKind, weekStart: Int): String {
     val r = set.of(kind)
-    return if (!r.on) res.getString(R.string.settings_value_off) else "${r.time} · ${daysText(res, r.days, weekStart)}"
+    return if (!r.on) res.getString(R.string.settings_value_off) else "${Dates.time(ctx, r.time)} · ${daysText(res, r.days, weekStart)}"
 }

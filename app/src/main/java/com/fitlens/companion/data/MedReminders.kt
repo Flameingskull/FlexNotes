@@ -238,7 +238,7 @@ object MedReminders {
                 lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             }
         )
-        val time = key.drop(11)
+        val time = Dates.time(context, key.drop(11))
         val device = Settings.current()
         // Lock Medications (#214): the notification itself names nothing, not only its lock-screen version.
         val locked = device.medLock

@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.toArgb
 import com.fitlens.companion.R
+import com.fitlens.companion.data.PlainErrors
 import com.fitlens.companion.data.ExerciseTypes
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.SportLibrary
@@ -54,7 +55,7 @@ internal fun SportPickerSheet(snap: Snapshot, onDismiss: () -> Unit) {
                     val added = Workouts.addSportExtras(names, Brand.GoldLight.toArgb())
                     UiEvents.show(res.getQuantityString(R.plurals.sports_added, added, added))
                 } catch (e: Exception) {
-                    UiEvents.show(res.getString(R.string.sports_failed, e.message.orEmpty()))
+                    UiEvents.show(res.getString(R.string.sports_failed, PlainErrors.reason(res, e)))
                 }
             }
         }

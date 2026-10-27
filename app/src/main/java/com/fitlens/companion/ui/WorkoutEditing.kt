@@ -359,7 +359,12 @@ fun CopyOrMoveWorkoutSheet(snap: Snapshot, date: String, move: Boolean, onDismis
 @Composable
 fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
     var source by remember { mutableStateOf<String?>(null) }
-    val days = remember(snap.setsKey, date) { snap.setsByDate.keys.filter { it != date }.sortedDescending().take(60) }
+    // Earlier workouts first, newest of them at the top, then any later ones; older days are reached by date (#281).
+    val days = remember(snap.setsKey, date) {
+        val others = snap.setsByDate.keys.filter { it != date }
+        (others.filter { it < date }.sortedDescending() + others.filter { it > date }.sorted()).take(60)
+    }
+    var pickingDate by remember { mutableStateOf(false) }
     val sourceExercises = remember(source, snap.setsKey) {
         source?.let { d -> snap.setsByDate[d].orEmpty().map { it.exerciseId }.distinct() }.orEmpty()
     }
@@ -386,6 +391,10 @@ fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit
             )
             if (days.isEmpty()) {
                 Text(stringResource(R.string.wk_nothing_to_copy), style = MaterialTheme.typography.bodyMedium)
+            } else {
+                GlassOutlinedButton(onClick = { pickingDate = true }, modifier = Modifier.heightIn(min = Spacing.touch)) {
+                    Text(stringResource(R.string.wk_choose_date))
+                }
             }
             days.forEach { d ->
                 val dSets = snap.setsByDate[d].orEmpty()
@@ -425,6 +434,16 @@ fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+    if (pickingDate) {
+        PickDateDialog(source ?: date, onDismiss = { pickingDate = false }) { picked ->
+            pickingDate = false
+            if (picked != date && snap.setsByDate[picked].orEmpty().isNotEmpty()) {
+                source = picked
+            } else {
+                UiEvents.show(res.getString(R.string.wk_nothing_on_day, Dates.day(picked)))
+            }
         }
     }
 }

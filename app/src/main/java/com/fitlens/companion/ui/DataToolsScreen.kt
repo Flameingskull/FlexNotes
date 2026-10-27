@@ -11,6 +11,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.data.PlainErrors
 import com.fitlens.companion.data.Backups
 import com.fitlens.companion.data.CsvExport
 import com.fitlens.companion.data.Dates
@@ -175,7 +176,7 @@ private fun CsvExportSection(snap: Snapshot) {
                     File(dir, CsvExport.fileName(kind, from, to)).apply { writeText(text, Charsets.UTF_8) }
                 }
             } catch (e: Exception) {
-                UiEvents.show(ctx.getString(R.string.data_csv_create_failed, e.message.orEmpty()), ResultLevel.Failure)
+                UiEvents.show(ctx.getString(R.string.data_csv_create_failed, PlainErrors.reason(ctx.resources, e)), ResultLevel.Failure)
                 null
             } finally {
                 UiEvents.busy.value = null

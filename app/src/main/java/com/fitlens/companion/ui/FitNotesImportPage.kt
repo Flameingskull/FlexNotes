@@ -58,7 +58,7 @@ fun FitNotesImportPage(snap: Snapshot) {
     SettingsGroup(stringResource(R.string.import_group_data))
     SettingsNote(
         if (lastName == null) stringResource(R.string.import_nothing_yet) else {
-            val at = lastAt?.let { Dates.dayTime(it) } ?: ""
+            val at = lastAt?.let { Dates.dayTime(ctx, it) } ?: ""
             val workouts = snap.setsByDate.size
             val sets = snap.sets.size
             val records = snap.storedRecordCount

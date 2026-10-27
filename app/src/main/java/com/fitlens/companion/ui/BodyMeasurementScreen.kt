@@ -133,7 +133,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
             return
         }
         // The time typed in, or now when it can't be read.
-        val time = (parseTime(timeText) ?: LocalTime.now()).format(HHMMSS)
+        val time = (Dates.clock(timeText) ?: LocalTime.now()).format(HHMMSS)
         val c = comment.trim().ifBlank { null }
         val d = date
         val editing = chosen
@@ -280,7 +280,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                             SetRowView(
                                 index = i + 1,
                                 summary = "${fmtNum(r.value)} ${r.unit}",
-                                cells = valueCells(res, r, def),
+                                cells = valueCells(res, r, def, android.text.format.DateFormat.is24HourFormat(LocalContext.current)),
                                 effort = valueSite(res, r),
                                 effortSpoken = valueSite(res, r),
                                 comment = r.comment,

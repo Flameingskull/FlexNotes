@@ -120,7 +120,7 @@ private fun redatePhotos(res: Resources) {
                 res.getString(R.string.undo)
             ) { AppScope.scope.launch { Store.restorePhotoDates(before) } }
         } catch (e: Exception) {
-            UiEvents.show(AppScope.failure(e.message.orEmpty()), ResultLevel.Failure)
+            UiEvents.show(AppScope.failure(e), ResultLevel.Failure)
         } finally {
             UiEvents.busy.value = null
         }

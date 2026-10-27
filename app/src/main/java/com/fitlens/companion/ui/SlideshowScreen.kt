@@ -86,6 +86,7 @@ import android.content.res.Resources
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.data.PlainErrors
 import com.fitlens.companion.video.SlideWords
 
 private data class Format(@StringRes val label: Int, val w: Int, val h: Int) {
@@ -307,7 +308,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
                             lastVideo = out
                             UiEvents.show(res.getString(R.string.ss_saved))
                         } catch (e: Exception) {
-                            UiEvents.show(res.getString(R.string.ss_failed, e.message ?: ""))
+                            UiEvents.show(res.getString(R.string.ss_failed, PlainErrors.reason(res, e)))
                         } finally {
                             UiEvents.busy.value = null
                         }

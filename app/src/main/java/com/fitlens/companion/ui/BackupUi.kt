@@ -94,7 +94,7 @@ fun BackupsPage(snap: Snapshot) {
     val notify = rememberNotificationAccess()
     val notifyReason = stringResource(R.string.notify_reason_backup)
     fun ensureNotifyPermission() = notify.ask(notifyReason)
-    fun fmtTime(ms: Long): String = Dates.dayTime(ms)
+    fun fmtTime(ms: Long): String = Dates.dayTime(ctx, ms)
     var restoreUri by remember { mutableStateOf<Uri?>(null) }
     var restoreInfo by remember { mutableStateOf<Backups.Info?>(null) }
     var showReport by remember { mutableStateOf(false) }

@@ -179,7 +179,7 @@ internal fun LazyListScope.medicationExtras(snap: Snapshot, name: String, unit: 
         val res = LocalContext.current.resources
         ListRowWithMenu(
             title = InjectionSite.of(r.site)?.let { siteName(res, it) }.orEmpty(),
-            subtitle = "${Dates.day(r.date.take(10))} · ${r.time.take(5)} · ${fmtNum(r.value)} ${r.unit}".trim(),
+            subtitle = "${Dates.day(r.date.take(10))} · ${Dates.time(LocalContext.current, r.time)} · ${fmtNum(r.value)} ${r.unit}".trim(),
             onClick = { onOpen(r) },
             handle = false
         )

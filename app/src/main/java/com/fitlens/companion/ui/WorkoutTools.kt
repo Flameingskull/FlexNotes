@@ -192,7 +192,7 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
 
     picking?.let { isStart ->
         val current = (if (isStart) s else e)?.let { Dates.dateTime(it)?.toLocalTime() } ?: LocalTime.now()
-        val state = rememberTimePickerState(current.hour, current.minute, is24Hour = true)
+        val state = rememberTimePickerState(current.hour, current.minute, is24Hour = android.text.format.DateFormat.is24HourFormat(androidx.compose.ui.platform.LocalContext.current))
         AlertDialog(
             onDismissRequest = { picking = null },
             title = { Text(stringResource(if (isStart) R.string.wk_start_time_title else R.string.wk_end_time_title)) },
@@ -212,7 +212,8 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
 /** One of Workout Time's fields: its label in bold, then the time over an underline, as FitNotes's text field. */
 @Composable
 private fun TimeField(label: String, stamp: String?, enabled: Boolean = true, onClick: () -> Unit) {
-    val time = stamp?.drop(11)?.take(5)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val time = stamp?.drop(11)?.take(5)?.let { Dates.time(ctx, it) }
     val setLabel = stringResource(R.string.wk_set_field, label)
     val notSet = stringResource(R.string.wk_not_set)
     Column(

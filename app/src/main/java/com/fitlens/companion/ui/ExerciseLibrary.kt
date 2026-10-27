@@ -577,6 +577,16 @@ private fun ExerciseList(
             item(key = "empty") {
                 Text(emptyText, Modifier.padding(Spacing.lg), color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        } else if (picked.isEmpty()) {
+            // The long press that starts choosing several is easy to miss, so say so (#285).
+            item(key = "choose-tip") {
+                Text(
+                    stringResource(R.string.lib_choose_tip),
+                    Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
         val groups = if (grouped) {
             exercises.groupBy { it.categoryId }.entries.sortedWith(
@@ -1352,7 +1362,7 @@ fun StarterLibraryDialog(onDismiss: () -> Unit) {
                         UiEvents.show(Workouts.seedStarterLibrary(CategoryPaletteArgb).text(res))
 
                     } catch (e: Exception) {
-                        UiEvents.show(res.getString(R.string.lib_starter_failed, e.message.orEmpty()))
+                        UiEvents.show(res.getString(R.string.lib_starter_failed, com.fitlens.companion.data.PlainErrors.reason(res, e)))
                     } finally {
                         UiEvents.busy.value = null
                     }

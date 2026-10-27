@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import android.app.Application
 import android.content.res.Resources
 import com.fitlens.companion.R
+import com.fitlens.companion.data.PlainErrors
 
 /** Scope that outlives individual screens so long imports/exports aren't cancelled by navigation. */
 object AppScope {
@@ -41,6 +42,8 @@ object AppScope {
 
     /** "Something went wrong: …" for a failed job, in the app's language. */
     fun failure(detail: String): String = res?.getString(R.string.err_generic, detail) ?: detail
+    /** The same for a caught exception: its cause in plain words (#274), never the exception text. */
+    fun failure(e: Throwable): String = failure(res?.let { PlainErrors.reason(it, e) }.orEmpty())
     /**
      * Reports a failed background job instead of letting it reach the default handler, which kills the process.
      * `SupervisorJob` stops one failed child cancelling its siblings, but it does not swallow the exception, so
@@ -50,7 +53,7 @@ object AppScope {
     private val reportErrors = CoroutineExceptionHandler { _, e ->
         Log.e("FlexNotes", "Background job failed", e)
         UiEvents.busy.value = null
-        UiEvents.show(failure(e.message ?: e::class.java.simpleName), ResultLevel.Failure)
+        UiEvents.show(failure(e), ResultLevel.Failure)
     }
 
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main + reportErrors)
@@ -78,7 +81,7 @@ fun runBusy(label: String, block: suspend () -> ImportSummary?) {
         try {
             block()?.let { UiEvents.show(it.message, it.level()) }
         } catch (e: Exception) {
-            UiEvents.show(AppScope.failure(e.message.orEmpty()), ResultLevel.Failure)
+            UiEvents.show(AppScope.failure(e), ResultLevel.Failure)
         } finally {
             UiEvents.busy.value = null
         }
@@ -121,7 +124,7 @@ fun PhotoImportHost() {
                 try {
                     p.onDone(runPhotoImport(ctx, p.uris, p.forcedDate, defaultPose))
                 } catch (e: Exception) {
-                    UiEvents.show(AppScope.failure(e.message.orEmpty()))
+                    UiEvents.show(AppScope.failure(e))
                 }
             }
         }
@@ -139,7 +142,7 @@ fun PhotoImportHost() {
                 try {
                     p.onDone(runPhotoImport(ctx, p.uris, p.forcedDate, pose))
                 } catch (e: Exception) {
-                    UiEvents.show(AppScope.failure(e.message.orEmpty()))
+                    UiEvents.show(AppScope.failure(e))
                 }
             }
         }

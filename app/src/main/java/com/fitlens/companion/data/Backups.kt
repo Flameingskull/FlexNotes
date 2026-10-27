@@ -137,7 +137,7 @@ object Backups {
                     ?: return@withContext ImportSummary(context.getString(R.string.bk_write_failed), false)
                 ImportSummary(context.resources.getQuantityString(R.plurals.bk_saved, n, n), true)
             } catch (e: Exception) {
-                ImportSummary(context.getString(R.string.bk_failed, why(e)), false)
+                ImportSummary(context.getString(R.string.bk_failed, PlainErrors.reason(context.resources, e)), false)
             }
         }
     }
@@ -155,7 +155,7 @@ object Backups {
                 val n = file.outputStream().use { write(context, it) }
                 file to ImportSummary(context.resources.getQuantityString(R.plurals.bk_share_ready, n, n), true)
             } catch (e: Exception) {
-                null to ImportSummary(context.getString(R.string.bk_share_failed, why(e)), false)
+                null to ImportSummary(context.getString(R.string.bk_share_failed, PlainErrors.reason(context.resources, e)), false)
             }
         }
     }
@@ -280,9 +280,9 @@ object Backups {
                         if (runCatching { undoAvailable(context) }.getOrDefault(false)) R.string.bk_way_back_undo
                         else R.string.bk_way_back_check
                     )
-                    ImportSummary(context.getString(R.string.bk_restore_partial, why(e), wayBack), false)
+                    ImportSummary(context.getString(R.string.bk_restore_partial, PlainErrors.reason(context.resources, e), wayBack), false)
                 } else {
-                    ImportSummary(context.getString(R.string.bk_restore_failed, why(e)), false)
+                    ImportSummary(context.getString(R.string.bk_restore_failed, PlainErrors.reason(context.resources, e)), false)
                 }
             } finally {
                 stage.deleteRecursively()
@@ -443,7 +443,7 @@ object Backups {
             }
         } catch (e: Exception) {
             part.delete()
-            context.getString(R.string.bk_safety_failed, why(e))
+            context.getString(R.string.bk_safety_failed, PlainErrors.reason(context.resources, e))
         }
     }
 
@@ -568,7 +568,7 @@ object Backups {
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            return@withContext ImportSummary(saved.message + " " + res.getString(R.string.bk_photos_copy_failed, why(e)), true)
+            return@withContext ImportSummary(saved.message + " " + res.getString(R.string.bk_photos_copy_failed, PlainErrors.reason(res, e)), true)
         }
         val more = buildList {
             if (copied.exported > 0) add(res.getQuantityString(R.plurals.bk_photos_copied, copied.exported, copied.exported))
@@ -600,12 +600,9 @@ object Backups {
             } catch (e: IllegalArgumentException) {
                 failed(context.getString(R.string.bk_folder_missing), true)
             } catch (e: Exception) {
-                failed(context.getString(R.string.bk_auto_failed, why(e)), false)
+                failed(context.getString(R.string.bk_auto_failed, PlainErrors.reason(context.resources, e)), false)
             }
         }
-
-    /** An exception's message for a result, or its type when it has none. */
-    private fun why(e: Exception): String = e.message ?: e.javaClass.simpleName
 
 
     private fun prune(context: Context, tree: Uri) {

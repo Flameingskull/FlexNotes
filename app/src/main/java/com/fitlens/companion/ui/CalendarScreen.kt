@@ -374,7 +374,7 @@ private fun SelectedDay(snap: Snapshot, date: String, doses: List<MRecord>, onDo
                     Text(r.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.width(Spacing.sm))
                     Text("${fmtNum(r.value)} ${r.unit}".trim(), style = MaterialTheme.typography.bodyMedium, maxLines = 1, softWrap = false)
-                    Text("  " + r.time.take(5), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
+                    Text("  " + Dates.time(LocalContext.current, r.time), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
                 }
                 HorizontalDivider(color = Brand.Hairline)
             }

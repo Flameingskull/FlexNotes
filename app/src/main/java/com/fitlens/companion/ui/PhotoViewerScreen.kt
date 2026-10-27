@@ -91,6 +91,7 @@ import com.fitlens.companion.ui.design.DropdownPill
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.data.PlainErrors
 
 /**
  * One photo at a time, edge to edge on black (#92). Swipe for the next; tap the photo to hide or show the controls,
@@ -401,7 +402,7 @@ private fun shareCompare(ctx: Context, snap: Snapshot, pa: Photo, pb: Photo, sav
             if (file == null) UiEvents.show(res.getString(R.string.pv_saved_pictures))
             else shareFile(ctx, file, "image/jpeg")
         } catch (e: Exception) {
-            UiEvents.show(res.getString(R.string.pv_image_failed, e.message ?: ""))
+            UiEvents.show(res.getString(R.string.pv_image_failed, PlainErrors.reason(res, e)))
         } finally {
             UiEvents.busy.value = null
         }

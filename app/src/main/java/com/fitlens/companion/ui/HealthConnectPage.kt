@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import android.content.Context
 import android.content.res.Resources
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.annotation.StringRes
@@ -177,7 +178,7 @@ internal fun HealthConnectNotAllowedRows(@StringRes what: Int) {
 }
 
 /** When Health Connect was last read: "Fri 16 Oct, 14:05", or Never. */
-private fun syncedText(res: Resources, at: Long?): String = at?.let { Dates.dayTime(it) } ?: res.getString(R.string.hc_never)
+private fun syncedText(ctx: Context, res: Resources, at: Long?): String = at?.let { Dates.dayTime(ctx, it) } ?: res.getString(R.string.hc_never)
 
 private fun outcomeText(res: Resources, o: HealthConnect.Outcome): String = res.getString(
     when (o) {
@@ -391,7 +392,7 @@ internal fun HealthConnectPage() {
         SettingsActionRow(
             stringResource(R.string.hc_sync_now),
             stringResource(R.string.hc_sync_now_summary, HealthConnect.DAYS),
-            value = if (syncing) stringResource(R.string.hc_syncing) else syncedText(res, device.hcSyncedAt),
+            value = if (syncing) stringResource(R.string.hc_syncing) else syncedText(LocalContext.current, res, device.hcSyncedAt),
             enabled = chosen && !syncing,
             disabledReason = if (!chosen) stringResource(R.string.hc_nothing_chosen) else null
         ) {

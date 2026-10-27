@@ -40,7 +40,21 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.fitlens.companion.ui.design.FitIcons
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
@@ -275,6 +289,41 @@ fun ChartHint(modifier: Modifier = Modifier) {
     }
 }
 
+private tailrec fun Context.activityOrNull(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.activityOrNull()
+    else -> null
+}
+
+/**
+ * While a full-screen graph is open (#269) the screen follows the phone, even with auto-rotate off, and goes back to
+ * the app's own setting when it closes. [requested] is `FULL_SENSOR`, or a fixed orientation after Rotate was tapped.
+ */
+@Composable
+private fun FullScreenOrientation(requested: Int) {
+    val context = LocalContext.current
+    DisposableEffect(requested) {
+        val activity = context.activityOrNull()
+        activity?.requestedOrientation = requested
+        onDispose { activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED }
+    }
+}
+
+/** Hides the status and navigation bars of the full-screen dialog while [hide] is true (swipe from the edge to show them). */
+@Composable
+private fun FullScreenBars(hide: Boolean) {
+    val view = LocalView.current
+    DisposableEffect(hide) {
+        val window = (view.parent as? DialogWindowProvider)?.window
+        val controller = window?.let { WindowCompat.getInsetsController(it, view) }
+        if (hide && controller != null) {
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+        }
+        onDispose { if (hide) controller?.show(WindowInsetsCompat.Type.systemBars()) }
+    }
+}
+
 /**
  * The full-screen viewer every chart can open (#50, #96): the whole screen, landscape allowed, pinch to zoom, drag to
  * pan, a reset control (or double tap), and the chart's own tap-for-details. A pinch is split by direction: across
@@ -301,12 +350,22 @@ fun FullScreenChart(
     val set: (ChartViewport) -> Unit = { v -> from = v.from; to = v.to; yFrom = v.yFrom; yTo = v.yTo }
     val reset: () -> Unit = { set(ChartViewport()) }
     val res = LocalContext.current.resources
+    // Follows the phone until Rotate is tapped, which fixes landscape or portrait; kept through the turn (#269).
+    var orientation by rememberSaveable { mutableIntStateOf(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR) }
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    FullScreenOrientation(orientation)
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        FullScreenBars(landscape)
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize()) {
                 BackTopBar(title, onBack = onDismiss, backLabel = stringResource(R.string.ch_close_full)) {
                     IconButton(onClick = reset, enabled = !viewport.isFull) {
                         Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.ch_reset_zoom))
+                    }
+                    IconButton(onClick = {
+                        orientation = if (landscape) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    }) {
+                        Icon(FitIcons.Rotate, contentDescription = stringResource(R.string.ch_rotate))
                     }
                 }
                 controls()
@@ -342,7 +401,8 @@ fun FullScreenChart(
                     chart(viewport, (maxHeight - 56.dp).coerceAtLeast(160.dp), reset)
                 }
                 footer()
-                Text(
+                // The pinch hint gives way to the graph in landscape (#269).
+                if (!landscape) Text(
                     stringResource(if (valueZoom) R.string.ch_pinch_values else R.string.ch_pinch),
                     Modifier.fillMaxWidth().padding(12.dp),
                     style = MaterialTheme.typography.bodySmall,
@@ -367,10 +427,20 @@ fun FullScreenDonut(
     onDismiss: () -> Unit,
     valueFormat: (Double) -> String = { fmtNum(it, 0) }
 ) {
+    var orientation by rememberSaveable { mutableIntStateOf(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR) }
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    FullScreenOrientation(orientation)
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        FullScreenBars(landscape)
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize()) {
-                BackTopBar(title, onBack = onDismiss, backLabel = stringResource(R.string.ch_close_full))
+                BackTopBar(title, onBack = onDismiss, backLabel = stringResource(R.string.ch_close_full)) {
+                    IconButton(onClick = {
+                        orientation = if (landscape) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    }) {
+                        Icon(FitIcons.Rotate, contentDescription = stringResource(R.string.ch_rotate))
+                    }
+                }
                 BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
                     // The Previous and Next buttons either side of the donut take about 150dp of the width.
                     if (maxWidth > maxHeight) {
