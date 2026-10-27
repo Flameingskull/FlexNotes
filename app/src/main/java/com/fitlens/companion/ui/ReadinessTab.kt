@@ -56,7 +56,7 @@ private fun ReadinessGraph(
     val res = LocalContext.current.resources
     val (kind, setKind) = rememberChartKind(graphId)
     var sel by remember(points) { mutableStateOf<Int?>(null) }
-    var fullScreen by remember { mutableStateOf(false) }
+    var fullScreen by rememberSaveable { mutableStateOf(false) }
     val series = listOf(LineSeries(title, points))
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         DropdownPill(stringResource(R.string.an_chart_type), ChartKind.entries.map { it.text(res) }, kind.ordinal) { i -> setKind(ChartKind.entries[i]) }
@@ -262,7 +262,9 @@ internal fun ReadinessTab(snap: Snapshot) {
             }
 
             Figure(stringResource(R.string.load_monotony), now.monotony?.let { fmtNum(it, 2) } ?: stringResource(R.string.load_not_yet))
-            now.strain?.let { Figure(stringResource(R.string.load_strain), fmtNum(shownLoad(it), 0)) }
+            now.strain?.let { Figure(stringResource(R.string.load_strain), "${fmtNum(shownLoad(it), 0)} $unit") }
+            // What the two mean in plain words, always shown rather than only when monotony is high (#290).
+            AnalysisNote(stringResource(R.string.load_monotony_strain_note))
             if ((now.monotony ?: 0.0) > TrainingLoad.HIGH_MONOTONY) {
                 AnalysisNote(stringResource(R.string.load_monotony_high, fmtNum(TrainingLoad.HIGH_MONOTONY, 1)), MaterialTheme.colorScheme.error)
             }

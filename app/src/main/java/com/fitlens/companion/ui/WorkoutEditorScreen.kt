@@ -127,6 +127,8 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     // The day whose "Set rest for every exercise" sheet is open (#138).
     var restingDay by remember { mutableStateOf<Long?>(null) }
     var confirmLeave by remember { mutableStateOf(false) }
+    // Set once Save is tapped with no name, so the Name field shows what's missing (#287).
+    var nameMissing by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     // Reorder in place (#170): drag handles on the days and their exercises while the toggle is on.
     var reordering by rememberSaveable(id) { mutableStateOf(false) }
@@ -149,6 +151,7 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     fun save() {
         val r = draft
         if (r.name.isBlank()) {
+            nameMissing = true
             UiEvents.show(context.getString(R.string.workout_name_needed))
             return
         }
@@ -170,7 +173,7 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
         FitTopBar(
             title = stringResource(if (id == 0L) R.string.workout_new_title else R.string.workout_edit_title),
             onBack = { if (dirty) confirmLeave = true else nav.pop() },
-            actions = listOf(TopBarAction(Icons.Filled.Check, stringResource(R.string.workout_save), enabled = name.isNotBlank()) { save() }),
+            actions = listOf(TopBarAction(Icons.Filled.Check, stringResource(R.string.workout_save)) { save() }),
             trailing = {
                 if (days.size > 1 || days.any { it.slots.size > 1 } || (plan?.blocks?.size ?: 0) > 1) ReorderToggle(reordering) { reordering = it }
             },
@@ -188,7 +191,10 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             item(key = "fields") {
                 Column(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm), verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     OutlinedTextField(
-                        value = name, onValueChange = { name = it }, label = { Text(stringResource(R.string.workout_name_label)) },
+                        value = name, onValueChange = { name = it; if (it.isNotBlank()) nameMissing = false },
+                        label = { Text(stringResource(R.string.workout_name_label)) },
+                        isError = nameMissing && name.isBlank(),
+                        supportingText = if (nameMissing && name.isBlank()) ({ Text(stringResource(R.string.workout_name_needed)) }) else null,
                         singleLine = true, modifier = Modifier.fillMaxWidth()
                     )
                     OutlinedTextField(
@@ -214,7 +220,16 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                         onMoveDown = if (di < days.lastIndex) ({ days.add(di + 1, days.removeAt(di)) }) else null,
                         onCopy = { copying = day.key },
                         onRest = { restingDay = day.key },
-                        onDelete = { days.removeAt(di) },
+                        onDelete = {
+                            // Brought back with Undo, at the same place (#288).
+                            val removed = day
+                            val at = di
+                            days.removeAt(di)
+                            UiEvents.show(
+                                context.getString(R.string.workout_day_deleted, removed.name.ifBlank { dayN(at + 1) }),
+                                context.getString(R.string.workout_undo)
+                            ) { days.add(at.coerceAtMost(days.size), removed) }
+                        },
                         onSets = { editingSets = day.key to it },
                         onSwap = { swapping = day.key to it },
                         onChange = { slots -> updateDay(day.key) { it.copy(slots = slots) } }
@@ -242,7 +257,6 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
         GoldHairline()
         GoldButton(
             onClick = { save() },
-            enabled = name.isNotBlank(),
             modifier = Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md).heightIn(min = Spacing.row)
         ) { Text(stringResource(R.string.workout_save)) }
     }
@@ -494,7 +508,15 @@ private fun DayCard(
                         onChange(out)
                     },
                     MenuAction(stringResource(R.string.workout_swap_exercise)) { onSwap(slot.key) },
-                    MenuAction(stringResource(R.string.workout_remove)) { onChange(slots.filter { it.key != slot.key }) }
+                    MenuAction(stringResource(R.string.workout_remove)) {
+                        // Brought back with Undo (#288).
+                        val before = slots
+                        val removedName = snap.exercises[slot.planned.exerciseId]?.name ?: res.getString(R.string.workout_exercise_title)
+                        onChange(slots.filter { it.key != slot.key })
+                        UiEvents.show(res.getString(R.string.workout_exercise_removed, removedName), res.getString(R.string.workout_undo)) {
+                            onChange(before)
+                        }
+                    }
                 ),
                 // Supersets move together (#170), as on the day log.
                 onMoveUp = if (i > 0) ({ onChange(moveSlot(slots, i, -1)) }) else null,

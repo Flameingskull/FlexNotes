@@ -132,8 +132,8 @@ fun MeasurementEntrySheet(
             UiEvents.show(res.getString(R.string.md_refused, n))
             return
         }
-        // The time typed in, or now when it can't be read.
-        val time = runCatching { LocalTime.parse(timeText.trim()) }.getOrNull()?.format(HHMMSS) ?: LocalTime.now().format(HHMMSS)
+        // The time chosen on the clock (#270); it is always readable, and "now" only if the sheet never set one.
+        val time = (parseTime(timeText) ?: LocalTime.now()).format(HHMMSS)
         val c = comment.trim().ifBlank { null }
         val d = theDate
         // A new injected value without a tapped site takes the suggested one; an edited one keeps its own.
@@ -191,12 +191,7 @@ fun MeasurementEntrySheet(
             GlassOutlinedButton(onClick = { pickDate = true }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {
                 Text(Dates.day(theDate))
             }
-            OutlinedTextField(
-                value = timeText, onValueChange = { timeText = it },
-                label = { Text(stringResource(R.string.bm_time)) }, singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.weight(1f)
-            )
+            TimeField(time = timeText, onTime = { timeText = it }, label = stringResource(R.string.bm_time), modifier = Modifier.weight(1f))
         }
         OutlinedTextField(
             value = comment, onValueChange = { comment = it },

@@ -215,7 +215,6 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.tdee_title, SettingsSection.Profile, R.string.search_tdee_kw, R.string.prof_group_uses),
     SettingEntry(R.string.search_guides, SettingsSection.Help, R.string.search_guides_kw, R.string.help_group_guides),
     SettingEntry(R.string.search_version, SettingsSection.About, R.string.search_version_kw, R.string.about_group_app),
-    SettingEntry(R.string.speed_title, SettingsSection.About, R.string.search_speed_kw),
     SettingEntry(R.string.search_licences, SettingsSection.About, R.string.search_licences_kw, R.string.licences_title)
 )
 

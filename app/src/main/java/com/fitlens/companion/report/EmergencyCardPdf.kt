@@ -100,7 +100,7 @@ object EmergencyCardPdf {
         meds.forEach { m ->
             text(m.medication, 12f, bold = true)
             val detail = if (m.scheduled) m.doses.joinToString(", ") { it.text }
-                else m.last?.let { r -> res.getString(R.string.ec_as_needed, "${fmtNum(r.value)} ${r.unit}".trim(), Dates.medium(r.date)) }.orEmpty()
+                else m.last?.let { r -> res.getString(R.string.ec_as_needed, "${fmtNum(r.value)} ${r.unit}".trim(), Dates.day(r.date)) }.orEmpty()
             if (detail.isNotEmpty()) text(detail, 10f, p.muted, indent = 10f)
             y += 4f
         }
@@ -111,7 +111,7 @@ object EmergencyCardPdf {
         y += 14f
         c.drawRect(M, y, M + CW, y + 0.6f, fill(p.hairline))
         y += 8f
-        text(res.getString(R.string.ec_footer, Dates.medium(today)), 8f, p.muted)
+        text(res.getString(R.string.ec_footer, Dates.day(today)), 8f, p.muted)
         return y + M / 2
     }
 }

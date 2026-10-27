@@ -180,9 +180,9 @@ fun WorkoutDrawer(
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = Spacing.lg)
         )
+        // The day's figures on their own line, the instruction on another, so neither runs into the other (#279).
         Text(
             listOfNotNull(
-                stringResource(R.string.drawer_reorder_hint),
                 relativeLabel(date),
                 pluralStringResource(R.plurals.day_sets, sets.size, sets.size),
                 if (secs > 0) fmtDuration(secs.toInt()) else null
@@ -190,6 +190,12 @@ fun WorkoutDrawer(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs)
+        )
+        Text(
+            stringResource(R.string.drawer_reorder_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Spacing.lg)
         )
         GoldHairline(Modifier.padding(vertical = Spacing.sm))
         LazyColumn(Modifier.weight(1f)) {

@@ -1130,7 +1130,8 @@ private fun FieldLabel(text: String) {
 private fun DeleteExerciseSheet(snap: Snapshot, ex: Exercise, onDismiss: () -> Unit) {
     val sets = snap.setsByExercise[ex.id]?.size ?: 0
     val days = snap.workoutsByExercise[ex.id] ?: 0
-    val res = LocalContext.current.resources
+    val ctx = LocalContext.current
+    val res = ctx.resources
     ConfirmSheet(
         title = stringResource(R.string.lib_delete_title, ex.name),
         message = if (sets == 0) {
@@ -1139,15 +1140,26 @@ private fun DeleteExerciseSheet(snap: Snapshot, ex: Exercise, onDismiss: () -> U
             stringResource(
                 R.string.lib_delete_body,
                 pluralStringResource(R.plurals.sets_count, sets, sets),
-                pluralStringResource(R.plurals.lib_workouts, days, days)
+                pluralStringResource(R.plurals.lib_workouts, days, days),
+                Backups.UNDO_DAYS
             )
         },
         confirmLabel = stringResource(R.string.lib_delete_exercise),
         onDismiss = onDismiss,
         onConfirm = {
-            AppScope.scope.launch {
-                Workouts.deleteExercise(ex.id)
-                UiEvents.show(res.getString(R.string.lib_deleted, ex.name))
+            if (sets == 0) {
+                AppScope.scope.launch {
+                    Workouts.deleteExercise(ex.id)
+                    UiEvents.show(res.getString(R.string.lib_deleted, ex.name))
+                }
+            } else {
+                // With history, a safety copy first, as merging does (#283). If it can't be made, nothing is deleted.
+                runBusy(res.getString(R.string.lib_deleting)) {
+                    val safety = Backups.safetyCopy(ctx, res.getString(R.string.lib_delete_safety, ex.name))
+                    if (!safety.ok) return@runBusy safety
+                    Workouts.deleteExercise(ex.id)
+                    ImportSummary(res.getString(R.string.lib_deleted_undo, ex.name), ok = true)
+                }
             }
         }
     )

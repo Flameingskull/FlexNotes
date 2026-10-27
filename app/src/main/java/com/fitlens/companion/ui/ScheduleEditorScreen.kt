@@ -833,7 +833,7 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
     fun unitOf(n: String) = snap.medications.firstOrNull { it.name == n }?.unit.orEmpty()
     var amount by remember { mutableStateOf(existing?.amount?.let { fmtNum(it) } ?: "") }
     var unit by remember { mutableStateOf(existing?.unit ?: unitOf(medication)) }
-    var time by remember { mutableStateOf(existing?.time ?: "08:00") }
+    var time by remember { mutableStateOf(parseTime(existing?.time.orEmpty())?.let { String.format(java.util.Locale.ROOT, "%02d:%02d", it.hour, it.minute) } ?: "08:00") }
     // 0 every day, 1 chosen weekdays, 2 every N days.
     val startDays = existing?.days ?: defaultDays
     var mode by remember { mutableStateOf(if (startDays.weekdays.isNotEmpty()) 1 else if (startDays.every > 1) 2 else 0) }
@@ -908,10 +908,7 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
                 modifier = Modifier.weight(1f)
             )
         }
-        OutlinedTextField(
-            value = time, onValueChange = { time = it }, label = { Text(stringResource(R.string.bm_time)) }, singleLine = true,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), modifier = Modifier.fillMaxWidth()
-        )
+        TimeField(time = time, onTime = { time = it }, label = stringResource(R.string.bm_time), modifier = Modifier.fillMaxWidth())
         Column(Modifier.selectableGroup()) {
             listOf(R.string.md_every_day, R.string.md_on_weekdays, R.string.md_every_few_days).forEachIndexed { i, label ->
                 Row(

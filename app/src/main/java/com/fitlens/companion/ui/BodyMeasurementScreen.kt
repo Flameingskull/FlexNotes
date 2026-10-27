@@ -86,7 +86,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
     var date by rememberSaveable(name) { mutableStateOf(Dates.today()) }
     var selected by rememberSaveable(name) { mutableStateOf<Long?>(null) }
     var value by remember(name) { mutableStateOf("") }
-    var timeText by remember(name) { mutableStateOf("") }
+    var timeText by remember(name) { mutableStateOf(LocalTime.now().format(HHMM)) }
     var comment by remember(name) { mutableStateOf("") }
     var editingGoal by remember { mutableStateOf(false) }
     var editingMetric by remember { mutableStateOf(false) }
@@ -133,7 +133,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
             return
         }
         // The time typed in, or now when it can't be read.
-        val time = runCatching { LocalTime.parse(timeText.trim()) }.getOrNull()?.format(HHMMSS) ?: LocalTime.now().format(HHMMSS)
+        val time = (parseTime(timeText) ?: LocalTime.now()).format(HHMMSS)
         val c = comment.trim().ifBlank { null }
         val d = date
         val editing = chosen
@@ -235,12 +235,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                                 }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedTextField(
-                                    value = timeText, onValueChange = { timeText = it },
-                                    label = { Text(stringResource(R.string.bm_time)) }, singleLine = true,
-                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                    modifier = Modifier.weight(1f)
-                                )
+                                TimeField(time = timeText, onTime = { timeText = it }, label = stringResource(R.string.bm_time), modifier = Modifier.weight(1f))
                                 OutlinedTextField(
                                     value = comment, onValueChange = { comment = it },
                                     label = { Text(stringResource(R.string.bm_comment)) }, singleLine = true,

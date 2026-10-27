@@ -63,7 +63,14 @@ import com.fitlens.companion.R
 fun AnalysisScreen(snap: Snapshot, nav: Nav) {
     // Opens on the Overview when graphs are pinned there (#55), otherwise on Workouts, as FitNotes does.
     var tab by rememberSaveable {
-        mutableIntStateOf(if (PinnedGraph.decode(Settings.portable.value.pinnedGraphs).isNotEmpty()) TAB_OVERVIEW else TAB_WORKOUTS)
+        // With no sets logged yet it opens on Readiness, which doesn't need any (#289).
+        mutableIntStateOf(
+            when {
+                PinnedGraph.decode(Settings.portable.value.pinnedGraphs).isNotEmpty() -> TAB_OVERVIEW
+                snap.sets.isEmpty() -> TAB_READINESS
+                else -> TAB_WORKOUTS
+            }
+        )
     }
     var addingGoal by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
@@ -75,11 +82,8 @@ fun AnalysisScreen(snap: Snapshot, nav: Nav) {
                 listOf(TopBarAction(Icons.Filled.Add, stringResource(R.string.ex_add_goal)) { addingGoal = true })
             } else emptyList()
         )
-        if (snap.sets.isEmpty()) {
-            EmptyState(stringResource(R.string.an_empty_title), stringResource(R.string.an_empty_body))
-        } else {
-            AnalysisHub(snap, nav, tab, { tab = it }, addingGoal) { addingGoal = false }
-        }
+        // Always the hub: each tab says for itself when it has nothing to show, and Readiness works without sets (#289).
+        AnalysisHub(snap, nav, tab, { tab = it }, addingGoal) { addingGoal = false }
     }
 }
 
@@ -294,7 +298,7 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, onFil
     var metricIdx by rememberSaveable { mutableIntStateOf(opened?.second?.first?.ordinal ?: 0) }
     var rangeIdx by rememberSaveable { mutableIntStateOf(opened?.first?.range ?: 1) }
     var showTrend by rememberSaveable { mutableStateOf(false) }
-    var fullScreen by remember { mutableStateOf(false) }
+    var fullScreen by rememberSaveable { mutableStateOf(false) }
     var showDays by remember { mutableStateOf(false) }
     // Duration as the period's total, or as the average length of its timed workouts (#12).
     var durationAvg by rememberSaveable { mutableStateOf(opened?.first?.average ?: false) }
@@ -526,7 +530,7 @@ private fun DurationPerWorkout(snap: Snapshot, nav: Nav, filter: Analysis.Filter
     val min = stringResource(R.string.an_unit_min)
     var showTrend by rememberSaveable { mutableStateOf(false) }
     var fromZero by rememberSaveable { mutableStateOf(false) }
-    var fullScreen by remember { mutableStateOf(false) }
+    var fullScreen by rememberSaveable { mutableStateOf(false) }
     var sel by remember(filter, from) { mutableStateOf<Int?>(null) }
     val points = rememberDerived("durationPerWorkout", snap.trainingKey, filter, from) {
         snap.setsByDate.entries

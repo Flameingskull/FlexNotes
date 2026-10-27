@@ -93,14 +93,14 @@ private class RangeState {
     val to: String? get() = if (preset == null) custom?.second else null
 }
 
-/** The range as it reads in a sentence: "all dates", "last 30 days" or "1 Jan 2026 to 31 Mar 2026". */
+/** The range as it reads in a sentence: "all dates", "last 30 days" or "Thu 1 Jan to Tue 31 Mar". */
 @Composable
 private fun RangeState.label(): String {
     val p = preset
     val c = custom
     return when {
         p != null && p != RangePreset.All -> stringResource(p.label).lowercase()
-        p == null && c != null -> stringResource(R.string.data_range_to, Dates.medium(c.first), Dates.medium(c.second))
+        p == null && c != null -> stringResource(R.string.data_range_to, Dates.day(c.first), Dates.day(c.second))
         else -> stringResource(R.string.data_all_dates)
     }
 }
@@ -112,7 +112,7 @@ private fun RangeRow(state: RangeState) {
     val presets = RangePreset.entries
     val custom = state.custom
     val customLabel = if (state.preset == null && custom != null) {
-        stringResource(R.string.data_range_between, Dates.medium(custom.first), Dates.medium(custom.second))
+        stringResource(R.string.data_range_between, Dates.day(custom.first), Dates.day(custom.second))
     } else stringResource(R.string.data_range_custom)
     SettingsChoiceRow(
         stringResource(R.string.data_range),

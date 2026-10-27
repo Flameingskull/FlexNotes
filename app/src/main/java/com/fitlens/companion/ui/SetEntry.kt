@@ -689,14 +689,24 @@ fun SetEntryScreen(
                         if (prefs.effortMode != Effort.OFF) {
                             val rir = prefs.effortMode == Effort.RIR
                             val choices: List<Pair<String, Double?>> = listOf(stringResource(if (rir) R.string.set_rir_none else R.string.set_rpe_none) to null) +
-                                if (rir) Effort.rirSteps.map { r -> "RIR ${if (r >= 5) "5+" else "$r"}" to Effort.rpeFromRir(r) }
-                                else Effort.rpeSteps.map { v -> "RPE ${fmtNum(v, 1)}" to v }
+                                if (rir) Effort.rirSteps.map { r ->
+                                    (if (r >= 5) res.getString(R.string.eff_rir_max) else res.getString(R.string.eff_rir, r)) to Effort.rpeFromRir(r)
+                                }
+                                else Effort.rpeSteps.map { v -> res.getString(R.string.eff_rpe, fmtNum(v, 1)) to v }
                             DropdownPill(
                                 stringResource(if (rir) R.string.set_reps_in_reserve else R.string.set_effort),
                                 choices.map { it.first },
                                 choices.indexOfFirst { it.second == rpe }.coerceAtLeast(0)
                             ) { i -> rpe = choices[i].second }
                         }
+                    }
+                    // What the effort numbers mean, in plain words (#277).
+                    if (!isTimed && prefs.effortMode != Effort.OFF) {
+                        Text(
+                            stringResource(if (prefs.effortMode == Effort.RIR) R.string.settings_effort_rir_detail else R.string.settings_effort_rpe_detail),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                     // As in FitNotes: Save and Clear for a new set, Update and Delete for the selected one.
                     if (selected == null) {

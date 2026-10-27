@@ -7,6 +7,9 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import android.widget.RemoteViews
 import androidx.compose.ui.graphics.toArgb
 import com.fitlens.companion.R
@@ -118,7 +121,11 @@ object TodayWidgets {
                         Intent(context, TodayWidgetActions::class.java).setAction(ACTION_PRN).putExtra(EXTRA_MEDICATION, info.medication),
                         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
                     )
-                lines += Line(res.getString(R.string.tw_prn_line, info.medication, count), res.getString(R.string.tw_take), action)
+                // When it was last taken today, so a second tap is an informed one.
+                val lastToday = state.last?.takeIf { it.date == today }?.time?.take(5)
+                val text = if (lastToday != null) res.getString(R.string.tw_prn_line_last, info.medication, count, lastToday)
+                    else res.getString(R.string.tw_prn_line, info.medication, count)
+                lines += Line(text, res.getString(R.string.tw_take), action)
             }
         }
 
@@ -182,6 +189,13 @@ object TodayWidgets {
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 
+    /** Says what the widget just logged and when ("Logged Metformin 500 mg at 08:05"); no name when medication names are locked. */
+    private fun confirm(context: Context, what: String, time: String) {
+        val text = if (Settings.current().medLock) context.getString(R.string.tw_logged_hidden, time)
+            else context.getString(R.string.tw_logged, what, time)
+        Handler(Looper.getMainLooper()).post { Toast.makeText(context, text, Toast.LENGTH_LONG).show() }
+    }
+
     /** Taken on a scheduled dose, or Take on an as-needed medication, with no screen open. */
     internal suspend fun handle(context: Context, intent: Intent) {
         val snap = MedReminders.ensureLoaded() ?: return
@@ -197,6 +211,7 @@ object TodayWidgets {
                     // An injected dose goes to the suggested next site (#224), as from the reminder.
                     val site = MedReminders.sitesFor(snap.medPlan, records, listOf(d)).first()
                     MedSchedules.take(d, if (d.date == today) now else d.time + ":00", site = site)
+                    confirm(context, "${d.dose.medication} ${fmtNum(d.amount)} ${d.dose.unit}".trim(), if (d.date == today) now.take(5) else d.time)
                 }
             }
             ACTION_PRN -> {
@@ -207,6 +222,7 @@ object TodayWidgets {
                 if (last != null && !state.atLimit) {
                     val site = if (info.injected) InjectionSites.suggest(records, name).key else null
                     MedExtras.takeAsNeeded(name, last.unit, today, now, last.value, site)
+                    confirm(context, "$name ${fmtNum(last.value)} ${last.unit}".trim(), now.take(5))
                 }
             }
         }

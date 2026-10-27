@@ -62,6 +62,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
+import com.fitlens.companion.data.MRecord
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.fmtDuration
@@ -95,6 +96,9 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
     var filtering by remember { mutableStateOf(false) }
     var overview by remember { mutableStateOf<Long?>(null) }
     var sharing by remember { mutableStateOf(false) }
+    // The doses taken (#282): left out while the medication lock hides them, so a dot never gives them away.
+    val locked = medicationsHidden()
+    val doses = remember(snap, locked) { if (locked) emptyMap() else snap.medicationView.recordsByDate }
 
     Column(Modifier.fillMaxSize()) {
         FitTopBar(
@@ -167,7 +171,7 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
                                 if (dayNum in 1..days) {
                                     val date = month.atDay(dayNum).format(Dates.ISO)
                                     val dim = filter.active && date !in matches
-                                    DayCell(snap, date, dayNum, date == selected, colors.accent, colors.series, dim) {
+                                    DayCell(snap, date, dayNum, date == selected, colors.accent, colors.series, doses.containsKey(date), dim) {
                                         // A second tap on the selected day opens it, like "Go!" in FitNotes (#9).
                                         if (selected == date) nav.home(date) else selected = date
                                     }
@@ -180,11 +184,12 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
             Row(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                 Dot(colors.accent, 6.dp); Text(" " + stringResource(R.string.cal_legend_photo) + "    ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 Dot(colors.series, 6.dp); Text(" " + stringResource(R.string.cal_legend_measurement) + "    ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (doses.isNotEmpty()) { Dot(Brand.Ivory, 6.dp); Text(" " + stringResource(R.string.cal_legend_medication) + "    ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 Text(stringResource(R.string.cal_legend_other), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         val dayPanel: @Composable () -> Unit = {
-            SelectedDay(snap, selected, onOverview = { overview = it }) { nav.home(selected) }
+            SelectedDay(snap, selected, doses[selected].orEmpty(), onDoses = { nav.push(Screen.Medications) }, onOverview = { overview = it }) { nav.home(selected) }
         }
         if (currentWidthBucket() == WidthBucket.Expanded) {
             Row(Modifier.fillMaxSize()) {
@@ -261,7 +266,7 @@ private fun MonthCount(snap: Snapshot, month: YearMonth, modifier: Modifier) {
 @Composable
 private fun DayCell(
     snap: Snapshot, date: String, dayNum: Int, isSelected: Boolean, photoColor: Color, measureColor: Color,
-    dimmed: Boolean, onClick: () -> Unit
+    hasDoses: Boolean, dimmed: Boolean, onClick: () -> Unit
 ) {
     val photos = snap.photosByDate[date]
     val hasRecords = snap.recordsByDate.containsKey(date)
@@ -277,6 +282,7 @@ private fun DayCell(
         sets?.map { it.exerciseId }?.distinct()?.size?.let { n -> res.getQuantityString(R.plurals.cal_spoken_workout, n, n) },
         if (!photos.isNullOrEmpty()) res.getString(R.string.cal_spoken_photo) else null,
         if (hasRecords) res.getString(R.string.cal_spoken_measurements) else null,
+        if (hasDoses) res.getString(R.string.cal_spoken_doses) else null,
         if (isToday) res.getString(R.string.cal_spoken_today) else null,
         if (dimmed) res.getString(R.string.cal_spoken_dimmed) else null
     ).joinToString(", ")
@@ -314,6 +320,7 @@ private fun DayCell(
         ) {
             if (!photos.isNullOrEmpty()) Dot(photoColor, 6.dp)
             if (hasRecords) Dot(measureColor, 6.dp)
+            if (hasDoses) Dot(Brand.Ivory, 6.dp)
             cats.forEach { Dot(categoryColour(it.colour), 6.dp) }
         }
     }
@@ -321,7 +328,7 @@ private fun DayCell(
 
 /** The selected day below the grid: its exercises, body values and photos, and Open day (#87). */
 @Composable
-private fun SelectedDay(snap: Snapshot, date: String, onOverview: (Long) -> Unit, onOpen: () -> Unit) {
+private fun SelectedDay(snap: Snapshot, date: String, doses: List<MRecord>, onDoses: () -> Unit, onOverview: (Long) -> Unit, onOpen: () -> Unit) {
     val sets = snap.setsByDate[date].orEmpty()
     val records = snap.recordsByDate[date].orEmpty()
     val photos = snap.photosByDate[date].orEmpty()
@@ -330,7 +337,7 @@ private fun SelectedDay(snap: Snapshot, date: String, onOverview: (Long) -> Unit
     Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md), verticalArrangement = Arrangement.spacedBy(Spacing.xs)) {
         // The selected day under a FitNotes heading (#144).
         SectionLabel(historyDay(date))
-        if (sets.isEmpty() && records.isEmpty() && photos.isEmpty()) {
+        if (sets.isEmpty() && records.isEmpty() && photos.isEmpty() && doses.isEmpty()) {
             Text(stringResource(R.string.cal_nothing_logged), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (sets.isNotEmpty()) {
@@ -355,6 +362,22 @@ private fun SelectedDay(snap: Snapshot, date: String, onOverview: (Long) -> Unit
                 if (r.unit.isNotBlank()) Text(" ${r.unit}", Modifier.alignByBaseline(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
             }
             HorizontalDivider(color = Brand.Hairline)
+        }
+        // The doses taken that day (#282): name and amount, and when; a tap opens Medications.
+        if (doses.isNotEmpty()) {
+            SectionLabel(stringResource(R.string.cal_doses_taken), Modifier.padding(top = Spacing.sm))
+            doses.sortedBy { it.time }.forEach { r ->
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = Spacing.touch).clickable(onClickLabel = stringResource(R.string.cal_open_medications), onClick = onDoses),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(r.name, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+                    Spacer(Modifier.width(Spacing.sm))
+                    Text("${fmtNum(r.value)} ${r.unit}".trim(), style = MaterialTheme.typography.bodyMedium, maxLines = 1, softWrap = false)
+                    Text("  " + r.time.take(5), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
+                }
+                HorizontalDivider(color = Brand.Hairline)
+            }
         }
         val overviewLabel = stringResource(R.string.cal_show_overview)
         byExercise.forEach { (exId, exSets) ->

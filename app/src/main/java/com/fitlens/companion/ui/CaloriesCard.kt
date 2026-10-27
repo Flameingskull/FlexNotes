@@ -300,7 +300,7 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
                 val how = when (b.method) {
                     Energy.Method.ACSM_WALK -> stringResource(R.string.cal_method_walk)
                     Energy.Method.ACSM_RUN -> stringResource(R.string.cal_method_run)
-                    Energy.Method.CYCLING, Energy.Method.MET -> stringResource(R.string.cal_method_met, fmtNum(b.met ?: 0.0, 1))
+                    Energy.Method.CYCLING, Energy.Method.MET -> stringResource(R.string.cal_method_met)
                 }
                 // All the calories it burned, and the part above resting that the day's total adds (#245).
                 Figure(

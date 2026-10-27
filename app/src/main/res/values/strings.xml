@@ -76,6 +76,8 @@
     <string name="workout_copy_to_another">Copy to another workout</string>
     <string name="workout_rest_every_exercise">Set rest for every exercise</string>
     <string name="workout_delete_day">Delete day</string>
+    <string name="workout_day_deleted">%1$s deleted</string>
+    <string name="workout_exercise_removed">%1$s removed</string>
     <string name="workout_day_empty">You haven\'t added any exercises yet</string>
     <string name="workout_superset">Superset %1$s</string>
     <string name="workout_sets">Sets</string>
@@ -118,23 +120,6 @@
     <string name="workout_day_rest_body">Replaces the rest set on each exercise and set of this day. Default uses each exercise\'s usual rest.</string>
     <string name="workout_day_rest_copy_body">Each exercise copies the rest from its most recent workout</string>
     <string name="workout_day_rest_set_body">One rest for every exercise of this day</string>
-
-    <!-- Settings › About: how long saving takes on this phone (#60). -->
-    <string name="speed_title">Save speed</string>
-    <string name="speed_none">Save a set, then come back here to see how long saving takes on this phone.</string>
-    <string name="speed_last">Last set saved in %1$d ms: %2$d ms writing it, %3$d ms updating the screens.</string>
-    <plurals name="speed_median">
-        <item quantity="one">Typical: %1$d ms, from %2$d set save so far.</item>
-        <item quantity="other">Typical: %1$d ms, the median of the last %2$d set saves.</item>
-    </plurals>
-    <plurals name="speed_history_sets">
-        <item quantity="one">Measured with %1$d set in your history</item>
-        <item quantity="other">Measured with %1$d sets in your history</item>
-    </plurals>
-    <plurals name="speed_history_photos">
-        <item quantity="one">%1$d photo</item>
-        <item quantity="other">%1$d photos</item>
-    </plurals>
 
     <!-- The settings rows (#41, #86). -->
     <string name="settings_not_set">Not set</string>
@@ -404,7 +389,6 @@
     <string name="search_guides_kw">how to help instructions logging photos backups import</string>
     <string name="search_version">Version</string>
     <string name="search_version_kw">build number copy bug report</string>
-    <string name="search_speed_kw">performance slow fast timing set save</string>
     <string name="search_licences">Open-source licences</string>
     <string name="search_licences_kw">licence license font libraries</string>
     <plurals name="settings_prs_updated">
@@ -863,6 +847,10 @@
     <string name="cal_next_month">Next month</string>
     <string name="cal_legend_photo">Photo</string>
     <string name="cal_legend_measurement">Measurement</string>
+    <string name="cal_legend_medication">Medication</string>
+    <string name="cal_doses_taken">Medication taken</string>
+    <string name="cal_open_medications">Open Medications</string>
+    <string name="cal_spoken_doses">medication taken</string>
     <string name="cal_legend_other">Other dots: categories</string>
     <plurals name="cal_days_month">
         <item quantity="one">%d day this month</item>
@@ -1115,7 +1103,10 @@
     <string name="lib_from_fitnotes">This exercise came from FitNotes. Editing it makes it FlexNotes\'s own; its history is kept and a later import follows the change.</string>
     <string name="lib_delete_title">Delete %1$s?</string>
     <string name="lib_delete_unused">Nothing has been logged for it, so nothing else is lost.</string>
-    <string name="lib_delete_body">%1$s across %2$s will be deleted with it. This can\'t be undone, and a later FitNotes import won\'t bring them back.</string>
+    <string name="lib_delete_body">%1$s across %2$s will be deleted with it. A safety copy is made first, so you can undo this from Settings → Backup for %3$d days.</string>
+    <string name="lib_delete_safety">Before deleting %1$s</string>
+    <string name="lib_deleting">Deleting exercise…</string>
+    <string name="lib_deleted_undo">Deleted %1$s. Undo is in Settings → Backup.</string>
     <string name="lib_delete_exercise">Delete exercise</string>
     <string name="lib_deleted">Deleted %1$s</string>
     <string name="lib_merge_title">Merge %1$s into</string>
@@ -1281,8 +1272,6 @@
     </plurals>
     <!-- Analysis (#94) -->
     <string name="an_title">Analysis</string>
-    <string name="an_empty_title">Nothing to analyse yet</string>
-    <string name="an_empty_body">Log a workout, or import a FitNotes backup from Settings, and your training totals, breakdown and records appear here.</string>
     <string name="an_tab_overview">Overview</string>
     <string name="an_tab_workouts">Workouts</string>
     <string name="an_tab_breakdown">Breakdown</string>
@@ -1576,7 +1565,7 @@
     <string name="bm_enter_number">Enter a number to save.</string>
     <string name="bm_updated">Value updated</string>
     <string name="bm_calculate">Calculate from measurements</string>
-    <string name="bm_time">Time (HH:mm)</string>
+    <string name="bm_time">Time</string>
     <string name="bm_comment">Comment</string>
     <string name="bm_update">Update</string>
     <string name="bm_new_instead">New value instead</string>
@@ -2057,6 +2046,9 @@
     <string name="tw_dose_hidden">Medication due</string>
     <string name="tw_prn_line">%1$s · %2$s</string>
     <string name="tw_take">Take</string>
+    <string name="tw_prn_line_last">%1$s · %2$s · last at %3$s</string>
+    <string name="tw_logged">Logged %1$s at %2$s</string>
+    <string name="tw_logged_hidden">Dose logged at %1$s</string>
     <plurals name="tw_more">
         <item quantity="one">%1$d more in Medications</item>
         <item quantity="other">%1$d more in Medications</item>
@@ -3392,9 +3384,9 @@
     <string name="cal_sheet_activity_active_less">Daily activity (%1$s active kcal, less %2$s in logged exercise)</string>
     <string name="cal_sheet_activity_steps_less">Daily activity (%1$s steps, less %2$s in logged walks and runs)</string>
     <string name="cal_sheet_exercise">%1$s, %2$d min (%3$s)</string>
-    <string name="cal_method_walk">walking equation</string>
-    <string name="cal_method_run">running equation</string>
-    <string name="cal_method_met">%1$s METs</string>
+    <string name="cal_method_walk">from distance and time</string>
+    <string name="cal_method_run">from distance and time</string>
+    <string name="cal_method_met">estimated from the activity</string>
     <string name="cal_sheet_rest_day">No exercise logged on this day.</string>
     <string name="cal_sheet_total">Total burned</string>
     <string name="cal_sheet_need">Needed</string>
@@ -3604,7 +3596,8 @@
         <item quantity="other">%1$d days above %2$s× in this range, the latest %3$s (%4$s×).</item>
     </plurals>
     <string name="load_monotony">Monotony</string>
-    <string name="load_strain">Strain (week’s load × monotony)</string>
+    <string name="load_strain">Strain</string>
+    <string name="load_monotony_strain_note">Monotony shows how alike your training days are: the lower it is, the more you vary hard and easy days. Strain is this week\'s load multiplied by monotony, so a heavy, samey week scores highest.</string>
     <string name="load_monotony_high">Monotony is above %1$s: the days are very alike. Varying hard and easy days lowers the strain.</string>
     <string name="load_empty">Log some training to see its load.</string>
     <string name="load_note">Acute load is the average day over the last %1$d days, chronic over the last %2$d, rest days counted as nothing. Volume counts weight × reps; Sets counts every set, cardio included. Warm-ups count when Count Warm-up Sets is on.</string>
