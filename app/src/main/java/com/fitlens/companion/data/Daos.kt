@@ -178,9 +178,6 @@ interface BodyDao {
     @Query("SELECT unit FROM mrecord WHERE name = :name AND unit <> '' LIMIT 1")
     fun recordUnit(name: String): String?
 
-    @Query("SELECT unit FROM mrecord WHERE id = :id")
-    fun unitOfRecord(id: Long): String?
-
     @Query("SELECT m.display_unit FROM measurement m JOIN mrecord r ON r.name = m.name WHERE r.id = :id")
     fun displayUnitOfRecord(id: Long): String?
 
@@ -247,9 +244,6 @@ interface PhotoDao {
 
     @Query("UPDATE photo SET pose = :pose WHERE id IN (:ids)")
     fun setPose(ids: List<Long>, pose: String)
-
-    @Query("UPDATE photo SET note = :note WHERE id = :id")
-    fun setNote(id: Long, note: String)
 
     @Query("SELECT file FROM photo WHERE id IN (:ids)")
     fun files(ids: List<Long>): List<String>
@@ -834,9 +828,6 @@ interface ImportDao {
             "enabled = :enabled WHERE name = :name"
     )
     fun refreshMeasurement(name: String, unit: String, sortOrder: Int, goalType: Int, goalValue: Double, enabled: Int)
-
-    @Query("UPDATE measurement SET unit = :unit WHERE name = :name")
-    fun setMeasurementUnit(name: String, unit: String)
 
     /** Puts right an imported value an older import left without a unit: the value converted, and its unit. */
     @Query("UPDATE mrecord SET value = :value, unit = :unit WHERE id = :id")

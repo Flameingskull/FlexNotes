@@ -313,9 +313,6 @@ fun animationsEnabled(): Boolean {
     }
 }
 
-/** The category colour bar when a category has no colour of its own. Matches [categoryColour]'s fallback. */
-val CategoryFallbackColour: Color get() = Brand.Outline
-
 /**
  * FlexNotes always uses its black and gold theme, whatever the system setting.
  *

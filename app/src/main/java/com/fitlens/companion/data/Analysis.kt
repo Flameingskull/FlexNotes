@@ -74,16 +74,7 @@ object Analysis {
         Period.Year -> start.plusYears(1)
     }
 
-    private val weekLabel = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
-    private val monthLabel = DateTimeFormatter.ofPattern("MMM yy", Locale.getDefault())
     private val rangeDay = DateTimeFormatter.ofPattern("d MMM yyyy", Locale.getDefault())
-
-    /** A bar's short axis label. */
-    fun shortLabel(t: PeriodTotal, p: Period): String = when (p) {
-        Period.Week -> t.start.format(weekLabel)
-        Period.Month -> t.start.format(monthLabel)
-        Period.Year -> t.start.year.toString()
-    }
 
     /** A period in words, for the selection line: "Week of 3 Mar 2026", "March 2026", "2026". */
     fun longLabel(t: PeriodTotal, p: Period): String = when (p) {

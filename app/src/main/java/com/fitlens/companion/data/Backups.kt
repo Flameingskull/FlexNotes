@@ -390,13 +390,6 @@ object Backups {
     /** The record and the file have to agree: a record without a file would offer an Undo that can't happen. */
     fun undoAvailable(context: Context): Boolean = undoAt() != null && safetyFile(context).exists()
 
-    fun undoExpiresAt(): Long? = undoAt()?.let { it + UNDO_DAYS * 24L * 3600_000L }
-
-    /** Roughly how much room a safety copy needs. Photos are stored without recompressing, so they count in full. */
-    suspend fun safetyCopySize(context: Context, includePhotos: Boolean = true): Long = withContext(Dispatchers.IO) {
-        estimateSafetySize(context, includePhotos)
-    }
-
     private fun estimateSafetySize(context: Context, includePhotos: Boolean): Long {
         val db = context.getDatabasePath(Db.NAME).let { it.length() + File(it.path + "-wal").length() }
         val photos = if (!includePhotos) 0L

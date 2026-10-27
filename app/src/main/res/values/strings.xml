@@ -1078,8 +1078,6 @@
     <string name="lib_log_exercise">Log %1$s</string>
     <string name="lib_choose_several">Choose several exercises</string>
     <string name="lib_favourite_mark">Favourite</string>
-    <string name="lib_unfavourite_named">Remove %1$s from favourites</string>
-    <string name="lib_favourite_named">Make %1$s a favourite</string>
     <string name="lib_no_link_app">Nothing on this phone can open that link.</string>
     <string name="lib_info_no_notes">You haven\'t saved any notes for this exercise</string>
     <string name="lib_info_increment">Weight Increment</string>
@@ -1104,7 +1102,6 @@
     <string name="lib_weight_unit">Weight unit</string>
     <string name="lib_activity">Activity</string>
     <string name="lib_activity_auto">Automatic</string>
-    <string name="lib_activity_item">%1$s (%2$s METs)</string>
     <string name="lib_activity_note">Used for this exercise\'s calories. Automatic uses the effort you log (RPE) and, for walking, running and cycling, the distance and time. For a sport, the intensity (or cardio zone) and hard minutes you log adjust it.</string>
     <string name="lib_as_settings_unit">As in Settings (%1$s)</string>
     <string name="lib_kilograms">Kilograms (kg)</string>
@@ -2752,7 +2749,6 @@
     <string name="rp_6months">Last 6 months</string>
     <string name="rp_year">Last year</string>
     <string name="rp_all">All dates</string>
-    <string name="rp_label">Date range</string>
     <string name="sv_decrease">Decrease %1$s</string>
     <string name="sv_increase">Increase %1$s</string>
     <string name="sv_set">Set</string>

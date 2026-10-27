@@ -45,13 +45,6 @@ import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/** An exercise activity's name (#174), as the exercise editor lists it with its MET. */
-internal fun activityText(res: android.content.res.Resources, a: Energy.Activity): String = res.getString(
-    R.string.lib_activity_item,
-    activityName(res, a),
-    fmtNum(a.met, 1)
-)
-
 /** A group of activities (#244), as the exercise editor's picker files them. */
 internal fun activityCategoryText(res: android.content.res.Resources, c: Energy.ActivityCategory): String = res.getString(
     when (c) {

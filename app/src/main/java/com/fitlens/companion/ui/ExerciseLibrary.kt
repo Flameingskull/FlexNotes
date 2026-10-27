@@ -680,18 +680,6 @@ private fun ordinal(n: Int): String = n.toString() + when {
     else -> "th"
 }
 
-/** Gold star toggle. Favourites come first in the library. */
-@Composable
-fun FavouriteButton(ex: Exercise) {
-    IconButton(onClick = { AppScope.scope.launch { Workouts.setFavourite(ex.id, !ex.favourite) } }) {
-        Icon(
-            Icons.Filled.Star,
-            contentDescription = stringResource(if (ex.favourite) R.string.lib_unfavourite_named else R.string.lib_favourite_named, ex.name),
-            tint = if (ex.favourite) Brand.Gold else MaterialTheme.colorScheme.outline
-        )
-    }
-}
-
 /** Exercise notes, with a button for each link they contain. */
 @Composable
 fun ExerciseNotes(notes: String, modifier: Modifier = Modifier) {

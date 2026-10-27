@@ -12,20 +12,6 @@ import com.fitlens.companion.ui.Brand
 import com.fitlens.companion.ui.FitShapes
 
 /**
- * Shows [message] with an Undo action for a reversible change, and runs [onUndo] if it is tapped (#80).
- * Suspends until the snackbar goes. Results worth re-reading belong in the kept result history (#62), not here.
- */
-suspend fun SnackbarHostState.showUndo(message: String, onUndo: () -> Unit, undoLabel: String) {
-    val result = showSnackbar(
-        message = message,
-        actionLabel = undoLabel,
-        withDismissAction = true,
-        duration = SnackbarDuration.Long
-    )
-    if (result == SnackbarResult.ActionPerformed) onUndo()
-}
-
-/**
  * A snackbar host styled for FlexNotes: raised surface, ivory text, gold action (#80). It keeps clear of the navigation
  * bar itself (#140): the app draws edge to edge, so without this a message and its action sat under the system's
  * Back / Home buttons.

@@ -554,8 +554,6 @@ class Db(context: Context) : Closeable {
             return room.openHelper.writableDatabase
         }
 
-    internal val readableDatabase: SupportSQLiteDatabase get() = writableDatabase
-
     /**
      * Installing an older FlexNotes over a newer one used to be fatal: opening the newer file threw during
      * `Application.onCreate`, so the app crash-looped and the only way out was uninstalling, taking every workout,

@@ -746,11 +746,6 @@ object Store {
         refresh(Area.PHOTOS)
     }
 
-    suspend fun setPhotoNote(id: Long, note: String) = withContext(Dispatchers.IO) {
-        db.photoDao.setNote(id, note)
-        refresh(Area.PHOTOS)
-    }
-
     suspend fun deletePhotos(ids: Collection<Long>) = withContext(Dispatchers.IO) {
         val photos = db.photoDao
         ids.chunked(Db.MAX_IDS).forEach { chunk ->

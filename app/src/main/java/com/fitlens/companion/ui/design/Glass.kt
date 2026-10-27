@@ -29,7 +29,6 @@ import kotlin.math.max
  *
  * - [ambientBackdrop]: soft graphite and gold glows on black behind every screen, for the glass to catch.
  * - [raisedGlass]: cards, tiles and bars that sit above the page.
- * - [recessedGlass]: set rows and wells pressed into a card.
  * - [GoldButton] and [GlassOutlinedButton]: the primary and secondary buttons.
  *
  * Brushes are built once here, not on every frame.
@@ -61,7 +60,6 @@ object Glass {
         0.48f to Brand.Gold,
         1f to Brand.GoldDeep
     )
-    val goldHighlight = Brand.Ivory.copy(alpha = 0.55f)
     /** The primary button's fill (#104): polished black, a little lighter at the top, under gold text. */
     val royal = Brush.verticalGradient(0f to Brand.Graphite, 1f to Brand.Black)
     /** The primary button's polished gold rim: light at the top, deep at the bottom. */
@@ -71,7 +69,6 @@ object Glass {
     val clearRim = Brand.Gold.copy(alpha = 0.45f)
     /** The top bar: graphite fading to the page. */
     val bar = Brush.verticalGradient(listOf(Brand.Graphite.copy(alpha = 0.70f), Brand.Black.copy(alpha = 0.25f)))
-    val barRule = Brand.Gold.copy(alpha = 0.35f)
 }
 
 /** A one-pixel highlight just inside the top edge, stopping short of the rounded corners. */
@@ -92,18 +89,6 @@ fun Modifier.raisedGlass(shape: Shape, elevation: Dp = 6.dp, inset: Dp = 12.dp):
     .background(Glass.raisedFill)
     .border(1.dp, Glass.rim, shape)
     .topSheen(Glass.sheen, inset)
-
-/** A recessed glass well (#102): darker than the card around it, shaded at the top and lit along the bottom lip. */
-fun Modifier.recessedGlass(shape: Shape): Modifier = this
-    .clip(shape)
-    .background(Glass.recessedFill)
-    .drawWithContent {
-        drawRect(Glass.recessedShade, size = size.copy(height = 4.dp.toPx()))
-        val y = size.height - 1.dp.toPx() / 2
-        drawLine(Glass.recessedLip, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
-        drawContent()
-    }
-    .border(1.dp, Glass.recessedRim, shape)
 
 /** The page behind everything (#102): black, with soft graphite glows top-left and right and a faint gold glow low down. */
 fun Modifier.ambientBackdrop(): Modifier = drawWithCache {

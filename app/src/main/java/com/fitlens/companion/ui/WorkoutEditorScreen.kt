@@ -641,7 +641,6 @@ private fun PlannedSetsSheet(
             }
         }
     }
-    val modes = listOf(Routines.FILL_LAST, Routines.FILL_PLANNED, Routines.FILL_NONE)
     // Prescribed rest (#138). Per-set rests only exist for predefined sets.
     // "Copy previous rest" (#151) takes every rest from the exercise's most recent workout, as "Copy previous sets"
     // does for its sets.
@@ -911,16 +910,4 @@ private fun FillChoice(title: String, description: String, selected: Boolean, on
             Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-}
-
-@Composable
-private fun SmallField(value: String, label: String, keyboard: KeyboardType, modifier: Modifier, onValue: (String) -> Unit) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValue,
-        label = { Text(label, maxLines = 1) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboard),
-        modifier = modifier
-    )
 }

@@ -108,30 +108,6 @@ fun FitTabRow(
 private const val LARGE_FONT = 1.3f
 
 /**
- * A [FitTabRow] with a swipeable pager underneath (#80). Tapping a tab animates to its page; swiping a page moves
- * the tab. [onPageChange] reports the settled page, for screens that remember it.
- */
-@Composable
-fun FitTabPager(
-    titles: List<String>,
-    modifier: Modifier = Modifier,
-    initialPage: Int = 0,
-    onPageChange: (Int) -> Unit = {},
-    page: @Composable (Int) -> Unit
-) {
-    val state = rememberPagerState(initialPage = initialPage) { titles.size }
-    val scope = rememberCoroutineScope()
-    val report by rememberUpdatedState(onPageChange)
-    LaunchedEffect(state) {
-        snapshotFlow { state.settledPage }.collect { report(it) }
-    }
-    Column(modifier) {
-        FitTabRow(titles, selected = state.currentPage, onSelect = { i -> scope.launch { state.animateScrollToPage(i) } })
-        HorizontalPager(state = state, modifier = Modifier.fillMaxSize()) { i -> page(i) }
-    }
-}
-
-/**
  * Material 3 segmented buttons for switching between two to four views of the same thing, for example
  * Exercises / Analysis (#80).
  */
@@ -159,7 +135,7 @@ fun SegmentedSwitch(options: List<String>, selected: Int, onSelect: (Int) -> Uni
     }
 }
 
-/** The preset windows offered by [RangeDropdown]. [months] is null for all time. */
+/** The preset windows for a date range (#115). [months] is null for all time. */
 enum class RangePreset(@StringRes val label: Int, val months: Long?) {
     OneMonth(R.string.rp_month, 1),
     ThreeMonths(R.string.rp_3months, 3),
@@ -169,29 +145,6 @@ enum class RangePreset(@StringRes val label: Int, val months: Long?) {
 
     /** The first ISO date inside this window, or null for all time. */
     fun startDate(today: LocalDate = LocalDate.now()): String? = months?.let { today.minusMonths(it).format(Dates.ISO) }
-}
-
-/**
- * A date range as one compact dropdown (#115): the presets, then "Custom…", which opens a date-range picker (#80).
- * [selected] is the preset in use, or null for the [custom] ISO dates (from, to).
- */
-@Composable
-fun RangeDropdown(
-    selected: RangePreset?,
-    onPreset: (RangePreset) -> Unit,
-    custom: Pair<String, String>?,
-    onCustom: (from: String, to: String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    PeriodDropdown(
-        label = stringResource(R.string.rp_label),
-        options = RangePreset.entries.map { stringResource(it.label) },
-        selected = selected?.ordinal ?: -1,
-        custom = custom,
-        onSelect = { onPreset(RangePreset.entries[it]) },
-        onCustom = onCustom,
-        modifier = modifier
-    )
 }
 
 private fun isoToMillis(iso: String?): Long? =

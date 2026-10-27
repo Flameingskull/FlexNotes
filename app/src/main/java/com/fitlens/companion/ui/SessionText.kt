@@ -22,9 +22,6 @@ internal fun Snapshot.isSessionExercise(exerciseId: Long): Boolean = ExerciseTyp
 /** Is [exerciseId] a Rounds exercise (#246)? */
 internal fun Snapshot.isRoundsExercise(exerciseId: Long): Boolean = ExerciseTypes.isRounds(exercises[exerciseId]?.type ?: -1)
 
-/** A length of time as read in a Rounds line: "3 min", "2:30 min" or "45 s". */
-internal fun roundsTimeText(res: Resources, sec: Int): String = Rounds.timeText(res, sec)
-
 /** A round length or rest as typed: minutes ("3", "2.5", "2,5") or "m:ss" ("2:30"); blank or unreadable is 0. */
 internal fun roundsTextToSeconds(text: String): Int {
     val t = text.trim()
