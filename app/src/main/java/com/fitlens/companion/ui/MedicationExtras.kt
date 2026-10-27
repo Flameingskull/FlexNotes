@@ -45,6 +45,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
@@ -515,7 +516,7 @@ internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> 
                     }
                 } else {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(s.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                        Text(s.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(
                             rating?.let { res.getString(R.string.sym_of_ten, it.rating) } ?: res.getString(R.string.sym_not_rated),
                             style = MaterialTheme.typography.bodyMedium,

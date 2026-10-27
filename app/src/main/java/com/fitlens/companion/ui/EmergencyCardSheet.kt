@@ -126,7 +126,7 @@ internal fun EmergencyCardSheet(snap: Snapshot, onDismiss: () -> Unit) {
         }
         meds.forEach { m ->
             val detail = if (m.scheduled) m.doses.joinToString(", ") { it.text }
-                else m.last?.let { r -> stringResource(R.string.ec_as_needed, "${com.fitlens.companion.data.fmtNum(r.value)} ${r.unit}".trim(), Dates.medium(r.date)) }.orEmpty()
+                else m.last?.let { r -> stringResource(R.string.ec_as_needed, "${com.fitlens.companion.data.fmtNum(r.value)} ${r.unit}".trim(), Dates.day(r.date)) }.orEmpty()
             Text(m.medication, style = MaterialTheme.typography.titleSmall)
             if (detail.isNotEmpty()) Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }

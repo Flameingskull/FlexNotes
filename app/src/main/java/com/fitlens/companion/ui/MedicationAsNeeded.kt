@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import com.fitlens.companion.R
 import com.fitlens.companion.data.AsNeeded
 import com.fitlens.companion.data.AsNeededState
@@ -80,7 +81,7 @@ private fun AsNeededRow(snap: Snapshot, nav: Nav, state: AsNeededState) {
         horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
     ) {
         Column(Modifier.weight(1f)) {
-            Text(state.medication, style = MaterialTheme.typography.bodyLarge)
+            Text(state.medication, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(
                 listOf(sinceText(res, last), countText(res, state)).joinToString(" · "),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -53,7 +53,7 @@ object MedicationReport {
         withContext(Dispatchers.Default) {
             val doc = PdfDocument()
             try {
-                val w = PageWriter(res, doc, if (o.dark) DARK else LIGHT, res.getString(R.string.mdr_footer, Dates.long(o.from), Dates.long(o.to)))
+                val w = PageWriter(res, doc, if (o.dark) DARK else LIGHT, res.getString(R.string.mdr_footer, Dates.day(o.from), Dates.day(o.to)))
                 val meds = snap.medicationView
                 val names = o.names.ifEmpty { snap.medications.map { it.name }.toSet() }
                 val log = MedSchedules.doseLog(snap.medPlan, meds.records, o.from, o.to, today, names)
@@ -99,8 +99,8 @@ object MedicationReport {
         w.c.drawText(res.getString(if (o.summary) R.string.mdr_title_summary else R.string.mdr_title), M, w.y + 24f, paint(w.p.text, 24f, bold = true))
         w.y += 38f
         if (o.patient.isNotBlank()) para(w, res.getString(R.string.mdr_patient, o.patient.trim()), 11f)
-        para(w, res.getString(R.string.mdr_range, Dates.long(o.from), Dates.long(o.to)), 10f, muted = true)
-        para(w, res.getString(R.string.mdr_generated, Dates.long(Dates.today())), 9f, muted = true)
+        para(w, res.getString(R.string.mdr_range, Dates.day(o.from), Dates.day(o.to)), 10f, muted = true)
+        para(w, res.getString(R.string.mdr_generated, Dates.day(Dates.today())), 9f, muted = true)
         para(w, res.getString(R.string.mdr_medications, names.sorted().joinToString(", ").ifEmpty { "–" }), 9.5f)
         para(w, res.getString(R.string.mdr_disclaimer), 8f, muted = true)
         w.y += 8f

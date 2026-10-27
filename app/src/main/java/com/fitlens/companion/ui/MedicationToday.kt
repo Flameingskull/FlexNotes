@@ -219,8 +219,8 @@ private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> U
                 softWrap = false
             )
             Column(Modifier.weight(1f).padding(start = Spacing.sm)) {
-                Text(due.dose.medication, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
-                Text(amount, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(due.dose.medication, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(amount, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 if (!due.dose.comment.isNullOrBlank()) {
                     Text(
                         "“${due.dose.comment}”",
@@ -234,8 +234,10 @@ private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> U
             if (hint != null) {
                 Text(
                     hint,
-                    Modifier.padding(start = Spacing.sm),
+                    Modifier.padding(start = Spacing.sm).widthIn(max = 96.dp),
                     style = MaterialTheme.typography.labelSmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
