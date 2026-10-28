@@ -245,6 +245,10 @@ interface PhotoDao {
     @Query("UPDATE photo SET pose = :pose WHERE id IN (:ids)")
     fun setPose(ids: List<Long>, pose: String)
 
+    /** A photo's comment (#271); null removes it. */
+    @Query("UPDATE photo SET note = :note WHERE id = :id")
+    fun setNote(id: Long, note: String?)
+
     @Query("SELECT file FROM photo WHERE id IN (:ids)")
     fun files(ids: List<Long>): List<String>
 

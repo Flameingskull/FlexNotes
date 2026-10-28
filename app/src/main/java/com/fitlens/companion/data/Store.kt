@@ -741,6 +741,12 @@ object Store {
         refresh(Area.PHOTOS)
     }
 
+    /** Sets or clears (blank becomes null) one photo's comment (#271). */
+    suspend fun setPhotoNote(id: Long, note: String?) = withContext(Dispatchers.IO) {
+        db.transaction { db.photoDao.setNote(id, note?.trim()?.takeIf { it.isNotEmpty() }) }
+        refresh(Area.PHOTOS)
+    }
+
     suspend fun setPhotoPose(ids: Collection<Long>, pose: String) = withContext(Dispatchers.IO) {
         db.transaction { ids.chunked(Db.MAX_IDS).forEach { db.photoDao.setPose(it, pose) } }
         refresh(Area.PHOTOS)

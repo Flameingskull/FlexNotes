@@ -38,6 +38,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import com.fitlens.companion.ui.design.FitSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -110,6 +112,7 @@ fun PhotoViewerScreen(snap: Snapshot, nav: Nav, ids: List<Long>, index: Int) {
     val state = viewModel<PhotoViewerState>()
     var pickDate by state.saved("pickDate", false)
     var confirmDelete by state.saved("confirmDelete", false)
+    var editNote by state.saved("editNote", false)
     var chrome by state.saved("chrome", true)
     val res = LocalContext.current.resources
 
@@ -193,6 +196,16 @@ fun PhotoViewerScreen(snap: Snapshot, nav: Nav, ids: List<Long>, index: Int) {
                         style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2, overflow = TextOverflow.Ellipsis
                     )
+                    // The photo's comment (#271): shown in full, tap to write or change it.
+                    val comment = current.note?.trim().orEmpty()
+                    Text(
+                        comment.ifEmpty { stringResource(R.string.pv_add_comment) },
+                        Modifier.fillMaxWidth().heightIn(min = Spacing.touch)
+                            .clickable(onClickLabel = stringResource(if (comment.isEmpty()) R.string.pv_add_comment else R.string.pv_edit_comment)) { editNote = true }
+                            .padding(vertical = 8.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = if (comment.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                    )
                     val d = current.date
                     if (d != null) {
                         val near = snap.usedMeasurements.take(8).mapNotNull { m -> snap.valueNear(m.name, d, 7)?.let { m to it } }
@@ -215,6 +228,33 @@ fun PhotoViewerScreen(snap: Snapshot, nav: Nav, ids: List<Long>, index: Int) {
     }
     if (pickDate) PickDateDialog(current.date, onDismiss = { pickDate = false }) { nd ->
         AppScope.scope.launch { Store.setPhotoDate(listOf(current.id), nd) }
+    }
+    if (editNote) {
+        val saved = current.note?.trim().orEmpty()
+        var text by remember(current.id) { mutableStateOf(saved) }
+        FitSheet(
+            title = stringResource(R.string.pv_comment_title),
+            onDismiss = { editNote = false },
+            confirmLabel = stringResource(R.string.pv_comment_save),
+            confirmEnabled = text.trim() != saved,
+            onConfirm = {
+                val id = current.id
+                val value = text
+                editNote = false
+                AppScope.scope.launch { Store.setPhotoNote(id, value) }
+            }
+        ) {
+            Text(
+                (current.date?.let { Dates.day(it) } ?: stringResource(R.string.ph_no_date)).uppercase(),
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text(stringResource(R.string.pv_comment_hint)) },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp)
+            )
+        }
     }
     if (confirmDelete) ConfirmSheet(
         title = stringResource(R.string.pv_delete_title),
@@ -273,6 +313,9 @@ fun CompareScreen(snap: Snapshot, nav: Nav, a: Long, b: Long) {
                                 stringResource(R.string.pv_tap_change) + if (p.pose.isNotBlank()) " · ${poseText(LocalContext.current.resources, p.pose)}" else "",
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                            p.note?.trim()?.takeIf { it.isNotEmpty() }?.let {
+                                Text(it, Modifier.padding(top = 2.dp), style = MaterialTheme.typography.bodySmall, maxLines = 4, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                 }
