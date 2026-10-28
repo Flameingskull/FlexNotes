@@ -8,7 +8,7 @@ plugins {
 
 android {
     namespace = "com.fitlens.companion"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.fitlens.companion"
