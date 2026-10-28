@@ -564,6 +564,13 @@ interface WorkoutDao {
     )
     fun bestBefore(exerciseId: Long, reps: Int, day: String, countWarmups: Boolean, warmup: Int): Double?
 
+    /**
+     * Whether [exerciseId] has a set logged on a day after [day] (`yyyy-MM-dd`), whose PR mark a new record may take
+     * (#299). `'~'` sorts after any time on [day], so the date index answers it without reading the history.
+     */
+    @Query("SELECT EXISTS(SELECT 1 FROM workout_set WHERE date > :day || '~' AND exercise_id = :exerciseId)")
+    fun hasSetsAfter(exerciseId: Long, day: String): Boolean
+
     /** Every weight-and-reps set, per exercise in date and log order, for the PR replay (#23). */
     @Query(
         "SELECT id, exercise_id, weight, reps, is_pr, set_type FROM workout_set WHERE weight > 0 AND reps > 0 " +

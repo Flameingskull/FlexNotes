@@ -21,4 +21,3 @@ that stop being true. The repository is public: no personal data, secrets or `FI
   don't reuse that name. #96 still needs Y-axis zoom and the buttons on the redesign's future graph screens.
 
 - Trend lines (#152): every trend, on screen and in shared images, comes from `ui/Trend.kt` (`trendOf`, `trendText`), fitted to the points in view. Never fit against point indices or draw a trend without its figures.
-- 2026-10-28: Open bug list is empty (GitHub open `bug` = [], unlabelled open = [], Nimbalyst open bugs = 0); every open issue carries at least one label.

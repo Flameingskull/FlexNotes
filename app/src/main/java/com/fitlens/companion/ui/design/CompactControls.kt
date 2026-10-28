@@ -52,6 +52,7 @@ fun DropdownPill(
         TextButton(
             onClick = { open = true },
             contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.xs),
+            colors = fitTextButtonColors(),
             modifier = Modifier.heightIn(min = Spacing.touch).semantics { contentDescription = changeLabel }
         ) {
             Text(current, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -82,6 +83,7 @@ fun PickerPill(label: String, current: String, modifier: Modifier = Modifier, on
     TextButton(
         onClick = onClick,
         contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.xs),
+        colors = fitTextButtonColors(),
         modifier = modifier.heightIn(min = Spacing.touch).semantics { contentDescription = changeLabel }
     ) {
         Text(current, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)

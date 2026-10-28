@@ -53,70 +53,75 @@ object VideoExporter {
             setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1)
         }
         val codec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC)
-        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-        codec.start()
-        out.parentFile?.mkdirs()
-        val muxer = MediaMuxer(out.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4)
-        var track = -1
+        // Everything made after the encoder is let go in `finally`, so a failure at any step (an encoder that refuses
+        // the size, no room for a frame) never leaves the phone's hardware encoder held (#302).
+        var muxer: MediaMuxer? = null
         var muxerStarted = false
-        val info = MediaCodec.BufferInfo()
+        val bitmaps = ArrayList<Bitmap>(3)
+        var finished = false
+        try {
+            codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+            codec.start()
+            out.parentFile?.mkdirs()
+            val mux = MediaMuxer(out.path, MediaMuxer.OutputFormat.MUXER_OUTPUT_MPEG_4).also { muxer = it }
+            var track = -1
+            val info = MediaCodec.BufferInfo()
 
-        fun drain(endOfStream: Boolean) {
-            var idle = 0
-            while (true) {
-                val idx = codec.dequeueOutputBuffer(info, TIMEOUT_US)
-                when {
-                    idx == MediaCodec.INFO_TRY_AGAIN_LATER -> {
-                        if (!endOfStream || ++idle > 500) return
-                    }
-                    idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
-                        track = muxer.addTrack(codec.outputFormat)
-                        muxer.start()
-                        muxerStarted = true
-                    }
-                    idx >= 0 -> {
-                        val buf = codec.getOutputBuffer(idx)
-                        if ((info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) info.size = 0
-                        if (buf != null && info.size > 0 && muxerStarted) {
-                            buf.position(info.offset)
-                            buf.limit(info.offset + info.size)
-                            muxer.writeSampleData(track, buf, info)
+            fun drain(endOfStream: Boolean) {
+                var idle = 0
+                while (true) {
+                    val idx = codec.dequeueOutputBuffer(info, TIMEOUT_US)
+                    when {
+                        idx == MediaCodec.INFO_TRY_AGAIN_LATER -> {
+                            if (!endOfStream || ++idle > 500) return
                         }
-                        codec.releaseOutputBuffer(idx, false)
-                        if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) return
+                        idx == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                            track = mux.addTrack(codec.outputFormat)
+                            mux.start()
+                            muxerStarted = true
+                        }
+                        idx >= 0 -> {
+                            val buf = codec.getOutputBuffer(idx)
+                            if ((info.flags and MediaCodec.BUFFER_FLAG_CODEC_CONFIG) != 0) info.size = 0
+                            if (buf != null && info.size > 0 && muxerStarted) {
+                                buf.position(info.offset)
+                                buf.limit(info.offset + info.size)
+                                mux.writeSampleData(track, buf, info)
+                            }
+                            codec.releaseOutputBuffer(idx, false)
+                            if ((info.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) return
+                        }
                     }
                 }
             }
-        }
 
-        fun queueFrame(yuv: Yuv, frameIndex: Int) {
-            val pts = frameIndex * 1_000_000L / FPS
-            while (true) {
-                val inIdx = codec.dequeueInputBuffer(TIMEOUT_US)
-                if (inIdx >= 0) {
-                    val image = codec.getInputImage(inIdx) ?: throw IllegalStateException("Encoder has no input image")
-                    fillImage(image, yuv, w, h)
-                    codec.queueInputBuffer(inIdx, 0, w * h * 3 / 2, pts, 0)
-                    break
+            fun queueFrame(yuv: Yuv, frameIndex: Int) {
+                val pts = frameIndex * 1_000_000L / FPS
+                while (true) {
+                    val inIdx = codec.dequeueInputBuffer(TIMEOUT_US)
+                    if (inIdx >= 0) {
+                        val image = codec.getInputImage(inIdx) ?: throw IllegalStateException("Encoder has no input image")
+                        fillImage(image, yuv, w, h)
+                        codec.queueInputBuffer(inIdx, 0, w * h * 3 / 2, pts, 0)
+                        break
+                    }
+                    drain(false)
                 }
                 drain(false)
             }
-            drain(false)
-        }
 
-        val frameBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val nextBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val blendBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val pixels = IntArray(w * h)
-        val alphaPaint = Paint(Paint.FILTER_BITMAP_FLAG)
+            val frameBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { bitmaps += it }
+            val nextBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { bitmaps += it }
+            val blendBmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { bitmaps += it }
+            val pixels = IntArray(w * h)
+            val alphaPaint = Paint(Paint.FILTER_BITMAP_FLAG)
 
-        fun render(target: Bitmap, i: Int) {
-            val photo = FrameRenderer.loadBitmap(snap.photoFile(slides[i].photo), w, h)
-            FrameRenderer.drawSlide(Canvas(target), photo, slides[i], opts, charts)
-            photo?.recycle()
-        }
+            fun render(target: Bitmap, i: Int) {
+                val photo = FrameRenderer.loadBitmap(snap.photoFile(slides[i].photo), w, h)
+                FrameRenderer.drawSlide(Canvas(target), photo, slides[i], opts, charts)
+                photo?.recycle()
+            }
 
-        try {
             var frame = 0
             render(frameBmp, 0)
             for (i in slides.indices) {
@@ -149,12 +154,15 @@ object VideoExporter {
                 drain(false)
             }
             drain(true)
+            finished = true
         } finally {
             try { codec.stop() } catch (e: Exception) {}
             codec.release()
-            try { if (muxerStarted) muxer.stop() } catch (e: Exception) {}
-            muxer.release()
-            frameBmp.recycle(); nextBmp.recycle(); blendBmp.recycle()
+            try { if (muxerStarted) muxer?.stop() } catch (e: Exception) {}
+            try { muxer?.release() } catch (e: Exception) {}
+            bitmaps.forEach { it.recycle() }
+            // A video that failed or was stopped is never left half-written in the cache (#302).
+            if (!finished) out.delete()
         }
         onProgress(1f)
         out
@@ -229,8 +237,11 @@ object VideoExporter {
         }
     }
 
-    /** Copies a finished video into the phone's Movies/FlexNotes folder so it shows in the gallery. */
-    fun saveToGallery(context: Context, file: File): Uri? {
+    /**
+     * Copies a finished video into the phone's Movies/FlexNotes folder so it shows in the gallery. Throws when the
+     * gallery refuses it, and removes its half-made entry, so the screen never says "saved" for nothing (#302).
+     */
+    fun saveToGallery(context: Context, file: File): Uri {
         val values = ContentValues().apply {
             put(MediaStore.Video.Media.DISPLAY_NAME, file.name)
             put(MediaStore.Video.Media.MIME_TYPE, "video/mp4")
@@ -238,22 +249,39 @@ object VideoExporter {
             put(MediaStore.Video.Media.IS_PENDING, 1)
         }
         val resolver = context.contentResolver
-        val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values) ?: return null
-        resolver.openOutputStream(uri)?.use { os -> file.inputStream().use { it.copyTo(os) } }
-        values.clear()
-        values.put(MediaStore.Video.Media.IS_PENDING, 0)
-        resolver.update(uri, values, null, null)
+        val uri = resolver.insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values)
+            ?: throw IllegalStateException("The gallery refused the video")
+        try {
+            val os = resolver.openOutputStream(uri) ?: throw IllegalStateException("The gallery gave no place to write")
+            os.use { o -> file.inputStream().use { it.copyTo(o) } }
+            values.clear()
+            values.put(MediaStore.Video.Media.IS_PENDING, 0)
+            resolver.update(uri, values, null, null)
+        } catch (e: Exception) {
+            runCatching { resolver.delete(uri, null, null) }
+            throw e
+        }
         return uri
     }
 
-    fun saveImageToGallery(context: Context, bmp: Bitmap, name: String): Uri? {
+    /** Saves [bmp] as a JPEG in the phone's Pictures/FlexNotes folder; throws when it can't, like [saveToGallery] (#302). */
+    fun saveImageToGallery(context: Context, bmp: Bitmap, name: String): Uri {
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, name)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             put(MediaStore.Images.Media.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/FlexNotes")
         }
-        val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values) ?: return null
-        context.contentResolver.openOutputStream(uri)?.use { bmp.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+            ?: throw IllegalStateException("The gallery refused the image")
+        try {
+            val os = resolver.openOutputStream(uri) ?: throw IllegalStateException("The gallery gave no place to write")
+            val written = os.use { bmp.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+            if (!written) throw IllegalStateException("The image couldn't be written")
+        } catch (e: Exception) {
+            runCatching { resolver.delete(uri, null, null) }
+            throw e
+        }
         return uri
     }
 }

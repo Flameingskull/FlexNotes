@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -574,9 +575,9 @@ fun AppRoot(nav: Nav, onRetry: () -> Unit) {
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
                     contentAlignment = Alignment.Center
                 ) {
-                    Card {
+                    Card(colors = CardDefaults.cardColors(containerColor = Brand.SurfaceHighest, contentColor = Brand.Ivory)) {
                         Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            CircularProgressIndicator()
+                            CircularProgressIndicator(color = Brand.Gold)
                             Text(busy ?: "", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 16.dp))
                         }
                     }
@@ -600,7 +601,6 @@ private fun slideIn(dir: Int): EnterTransition =
 private fun slideOut(dir: Int): ExitTransition =
     slideOutHorizontally(tween(Motion.STANDARD)) { w -> -dir * w / 5 } + fadeOut(tween(Motion.FAST))
 
-/** The composable for each [Screen]. A new destination adds a [Screen] and a line here. */
 /**
  * The snapshot one screen is given (#60): a view of [live] that records which areas the screen reads, replaced only
  * when one of those areas (or a unit) changes. A write elsewhere, such as a photo import or a body value saved while
@@ -624,6 +624,7 @@ private class HeldView(val reads: AreaReads) {
     var view: Snapshot? = null
 }
 
+/** The composable for each [Screen]. A new destination adds a [Screen] and a line here. */
 @Composable
 private fun ScreenContent(s: Snapshot, nav: Nav, screen: Screen) {
     when (screen) {

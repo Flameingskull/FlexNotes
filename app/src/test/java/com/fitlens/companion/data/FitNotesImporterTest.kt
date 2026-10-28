@@ -338,6 +338,24 @@ class FitNotesImporterTest {
         assertEquals(2, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Bodyweight'"))
     }
 
+    @Test
+    fun aPoundsCsvIsKeptInTheKilogramsItsMeasurementUses() {
+        // #300: a Body Tracker export in pounds over values kept in kilograms is converted before it's compared and
+        // recorded, so a value already there isn't added again and no pounds value lands under a kilogram measurement.
+        db.row("measurement", "name" to "Bodyweight", "unit" to "kg")
+        db.row("mrecord", "name" to "Bodyweight", "unit" to "kg", "date" to "2026-01-10", "time" to "07:00:00", "value" to 82.0, "source" to "fitnotes")
+        val lines = listOf(
+            "Date,Time,Measurement,Value,Unit,Comment",
+            "2026-01-10,07:00:00,Bodyweight,${82.0 / WeightUnits.KG_PER_LB},lbs,",
+            "2026-01-11,07:00:00,Bodyweight,180.0,lbs,"
+        )
+        assertEquals(1 to 1, runBlocking(Dispatchers.IO) { FitNotesImporter.mergeBodyCsv(lines, flexnotes) })
+        assertEquals(0, db.count("SELECT COUNT(*) FROM mrecord WHERE unit='lbs'"))
+        assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE date='2026-01-11' AND unit='kg' AND abs(value - 180.0 * 0.45359237) < 0.001"))
+        // The same export again adds nothing.
+        assertEquals(0 to 2, runBlocking(Dispatchers.IO) { FitNotesImporter.mergeBodyCsv(lines, flexnotes) })
+    }
+
     /** The id of the imported Bodyweight value logged on [date]. */
     private fun importedBodyweight(date: String): Long =
         db.query("SELECT id FROM mrecord WHERE name='Bodyweight' AND date='$date' AND source='fitnotes'").use {

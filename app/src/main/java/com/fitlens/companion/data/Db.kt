@@ -24,7 +24,7 @@ class Db(context: Context) : Closeable {
 
     companion object {
         const val NAME = "fitlens.db"
-        /** 21: Room takes over the file (#36). 22: an exercise's own activity for its calories (#174). */
+        /** The schema version: 21 is when Room took over the file (#36); each later step is listed in [upgrade]. */
         const val VERSION = 32
 
         /** The most ids one query binds, inside the 999-variable limit of older phones' SQLite. */
@@ -77,13 +77,6 @@ class Db(context: Context) : Closeable {
         private const val CREATE_TIME =
             "CREATE TABLE workout_time(id INTEGER PRIMARY KEY, date TEXT NOT NULL, start TEXT, finish TEXT, source TEXT NOT NULL DEFAULT 'fitlens')"
 
-        /**
-         * Remembers what the user did in FlexNotes to data that came from FitNotes, so a later import respects it.
-         * kind 'category' / 'exercise': key = lower-case FitNotes name, target_id = the FlexNotes row it now maps to
-         *   (after a rename), or NULL when the user deleted it (the import then skips it).
-         * kind 'set' / 'comment' / 'time': key = the imported values the user deleted or edited; one matching row in a
-         *   backup is skipped per rule.
-         */
         /** Exercise goals (#25): one row per goal, ordered per exercise by sort_order. */
         private const val CREATE_GOAL =
             "CREATE TABLE exercise_goal(id INTEGER PRIMARY KEY AUTOINCREMENT, exercise_id INTEGER NOT NULL, kind INTEGER NOT NULL, " +
@@ -108,6 +101,13 @@ class Db(context: Context) : Closeable {
                 "WHERE exercise_id = NEW.exercise_id AND substr(date, 1, 10) = substr(NEW.date, 1, 10) AND id <> NEW.id), 0) " +
                 "WHERE id = NEW.id; END"
 
+        /**
+         * Remembers what the user did in FlexNotes to data that came from FitNotes, so a later import respects it.
+         * kind 'category' / 'exercise': key = lower-case FitNotes name, target_id = the FlexNotes row it now maps to
+         *   (after a rename), or NULL when the user deleted it (the import then skips it).
+         * kind 'set' / 'comment' / 'time': key = the imported values the user deleted or edited; one matching row in a
+         *   backup is skipped per rule.
+         */
         private const val CREATE_IMPORT_RULE =
             "CREATE TABLE import_rule(id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL, key TEXT NOT NULL, target_id INTEGER)"
 

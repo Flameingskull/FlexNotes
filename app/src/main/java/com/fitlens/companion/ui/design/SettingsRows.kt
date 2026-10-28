@@ -62,7 +62,6 @@ import com.fitlens.companion.R
 import com.fitlens.companion.ui.Brand
 import com.fitlens.companion.ui.FitShapes
 import com.fitlens.companion.ui.Motion
-import com.fitlens.companion.ui.GoldHairline
 import com.fitlens.companion.ui.Spacing
 import kotlinx.coroutines.delay
 

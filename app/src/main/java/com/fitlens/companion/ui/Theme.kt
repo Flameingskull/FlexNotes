@@ -61,6 +61,8 @@ object Brand {
     val Rise = Color(0xFF4CC38A)
     /** A value that went down, progress away from a goal, and the line of every graph. 4.6:1 on [SurfaceHighest] (#157). */
     val Fall = Color(0xFFF05E62)
+    /** Warnings and error text (the theme's `error`), checked for contrast with the other text colours. */
+    val Error = Color(0xFFFF7A7E)
     /** The camera's body outline only (#230): white, the one sanctioned colour outside the brand, for lining up. */
     val AlignWhite = Color(0xFFFFFFFF)
     /** The soft dark stroke under [AlignWhite], so the outline shows on light backgrounds. */
@@ -166,7 +168,7 @@ private val Scheme = darkColorScheme(
     inversePrimary = Brand.Gold,
     outline = Brand.Outline,
     outlineVariant = Color(0xFF2A2720),
-    error = Color(0xFFFF7A7E),
+    error = Brand.Error,
     onError = Brand.Black,
     errorContainer = Brand.Wine,
     onErrorContainer = Brand.GoldLight,

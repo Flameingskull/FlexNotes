@@ -55,6 +55,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -132,19 +133,20 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
         if (ids != null) saved.copy(pose = SlideshowPrefs.ALL) else saved
     }
 
-    var pose by remember { mutableStateOf(start.pose) }
-    var from by remember { mutableStateOf(firstDate) }
-    var to by remember { mutableStateOf(lastDate) }
-    var pickFrom by remember { mutableStateOf(false) }
-    var pickTo by remember { mutableStateOf(false) }
-    var onePerDay by remember { mutableStateOf(start.onePerDay) }
-    var seconds by remember { mutableFloatStateOf(start.seconds) }
-    var fade by remember { mutableStateOf(start.fade) }
-    var showDate by remember { mutableStateOf(start.showDate) }
-    var showSince by remember { mutableStateOf(start.showSince) }
-    var showPose by remember { mutableStateOf(start.showPose) }
-    var title by remember { mutableStateOf(start.title) }
-    var formatIdx by remember { mutableIntStateOf(FORMATS.indexOfFirst { it.key == start.format }.coerceAtLeast(0)) }
+    // These options survive rotation. The data overlays below are rebuilt from the saved options or the defaults.
+    var pose by rememberSaveable { mutableStateOf(start.pose) }
+    var from by rememberSaveable { mutableStateOf(firstDate) }
+    var to by rememberSaveable { mutableStateOf(lastDate) }
+    var pickFrom by rememberSaveable { mutableStateOf(false) }
+    var pickTo by rememberSaveable { mutableStateOf(false) }
+    var onePerDay by rememberSaveable { mutableStateOf(start.onePerDay) }
+    var seconds by rememberSaveable { mutableFloatStateOf(start.seconds) }
+    var fade by rememberSaveable { mutableStateOf(start.fade) }
+    var showDate by rememberSaveable { mutableStateOf(start.showDate) }
+    var showSince by rememberSaveable { mutableStateOf(start.showSince) }
+    var showPose by rememberSaveable { mutableStateOf(start.showPose) }
+    var title by rememberSaveable { mutableStateOf(start.title) }
+    var formatIdx by rememberSaveable { mutableIntStateOf(FORMATS.indexOfFirst { it.key == start.format }.coerceAtLeast(0)) }
     // Overlays in display order. Remembered ones are kept while their measurement still exists; otherwise bodyweight
     // as a chart, then body fat and waist as values, when they exist.
     val overlays = remember {
@@ -161,11 +163,11 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
             }
         }
     }
-    var playing by remember { mutableStateOf(true) }
-    var index by remember { mutableIntStateOf(0) }
+    var playing by rememberSaveable { mutableStateOf(true) }
+    var index by rememberSaveable { mutableIntStateOf(0) }
     var preview by remember { mutableStateOf<ImageBitmap?>(null) }
     var lastVideo by remember { mutableStateOf<File?>(null) }
-    var showOptions by remember { mutableStateOf(false) }
+    var showOptions by rememberSaveable { mutableStateOf(false) }
 
     val fmt = FORMATS[formatIdx]
     val photos = source.filter { p ->
@@ -189,8 +191,9 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
         showDate = showDate, showSince = showSince, showPose = showPose,
         overlays = overlays.toList(), onePerDay = onePerDay, title = title
     )
-    val slides = remember(snap, photos, opts) { FrameRenderer.buildSlides(snap, photos, opts) }
-    val charts = remember(snap, slides, opts) { FrameRenderer.chartsFor(snap, slides, opts) }
+    // Keyed on the body and photo areas they read, not the whole snapshot (CODEMAP, #60).
+    val slides = remember(snap.bodyKey, snap.photosKey, photos, opts) { FrameRenderer.buildSlides(snap, photos, opts) }
+    val charts = remember(snap.bodyKey, slides, opts) { FrameRenderer.chartsFor(snap, slides, opts) }
 
     // Remember the options a moment after the last change, and on leaving (#46). Nothing is saved until something
     // changed, so opening the screen doesn't turn the defaults into saved options.

@@ -13,7 +13,8 @@ import android.content.res.Resources
 import com.fitlens.companion.R
 
 // Trend lines (#152). Every trend in FlexNotes comes from here, so the line drawn, the figures written under it and a
-// shared image always agree. Plain Kotlin with no Android parts, so it's unit tested on the JVM (TrendTest).
+// shared image always agree. The maths is plain Kotlin, unit tested on the JVM (TrendTest); only [trendText] needs
+// Android's Resources, for its words.
 
 /**
  * The trend through a series of points, with x in epoch days.

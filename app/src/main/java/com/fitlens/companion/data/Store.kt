@@ -754,10 +754,12 @@ object Store {
 
     suspend fun deletePhotos(ids: Collection<Long>) = withContext(Dispatchers.IO) {
         val photos = db.photoDao
-        ids.chunked(Db.MAX_IDS).forEach { chunk ->
-            photos.files(chunk).forEach { File(photoDir, it).delete() }
-            photos.delete(chunk)
+        // The rows go first, in one transaction, and only then their files: a delete that fails part-way leaves every
+        // photo either fully there or fully gone, never a listed photo whose file has been removed.
+        val files = db.transaction {
+            ids.chunked(Db.MAX_IDS).flatMap { chunk -> photos.files(chunk).also { photos.delete(chunk) } }
         }
+        files.forEach { File(photoDir, it).delete() }
         refresh(Area.PHOTOS)
     }
 

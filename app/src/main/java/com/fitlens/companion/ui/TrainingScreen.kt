@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.fitlens.companion.data.Analysis
 import com.fitlens.companion.data.CustomType
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MeasureUnits
@@ -994,7 +995,7 @@ private fun dayTotals(res: Resources, snap: Snapshot, exId: Long, sets: List<Set
     // A Rounds day reads "6 rounds", not "6 reps" (#246).
     val rounds = ExerciseTypes.isRounds(snap.exercises[exId]?.type ?: -1)
     val reps = sets.sumOf { it.reps }
-    val volume = sets.sumOf { it.weightKg * it.reps }
+    val volume = sets.sumOf { Analysis.volumeKg(it) }
     val distance = sets.sumOf { it.distance }
     val time = sets.sumOf { it.durationSec }
     if (reps > 0) parts += res.getQuantityString(if (rounds) R.plurals.rounds_count else R.plurals.reps_count, reps, reps)

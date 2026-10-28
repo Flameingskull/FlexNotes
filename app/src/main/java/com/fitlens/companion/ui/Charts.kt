@@ -57,7 +57,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.fmtNum
@@ -86,11 +85,11 @@ data class ChartPoint(val x: Long, val y: Double, val date: String)
  * markers, [BAR] gold columns with red tops, [STEP] a red step line over the fill. The user picks one per graph and
  * it's remembered ([rememberChartKind]).
  */
-enum class ChartKind(val key: String, val label: String) {
-    LINE("line", "Line"),
-    BAR("bar", "Bar"),
-    AREA("area", "Area"),
-    STEP("step", "Step");
+enum class ChartKind(val key: String) {
+    LINE("line"),
+    BAR("bar"),
+    AREA("area"),
+    STEP("step");
 
     companion object {
         fun of(key: String?): ChartKind? = entries.firstOrNull { it.key == key }

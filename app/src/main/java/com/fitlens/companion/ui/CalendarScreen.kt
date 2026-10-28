@@ -103,7 +103,7 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
     // The user chooses (#294) what the calendar shows of them while Medications is locked: nothing, only how many, or all.
     val locked = medicationsHidden()
     val lockedMode = if (locked) device.medCalendar else MED_CAL_FULL
-    val doses = remember(snap, lockedMode) { if (lockedMode == MED_CAL_HIDE) emptyMap() else snap.medicationView.recordsByDate }
+    val doses = remember(snap.bodyKey, lockedMode) { if (lockedMode == MED_CAL_HIDE) emptyMap() else snap.medicationView.recordsByDate }
     val countOnly = lockedMode == MED_CAL_COUNT
 
     Column(Modifier.fillMaxSize()) {

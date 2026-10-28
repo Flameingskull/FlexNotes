@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.data.Analysis
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Effort
 import com.fitlens.companion.data.EnergyEstimates
@@ -98,16 +99,6 @@ import com.fitlens.companion.ui.design.SetRow as SetRowView
 import kotlin.math.max
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-/**
- * The exercise screen (#16, laid out after FitNotes in #82): TRACK, HISTORY and GRAPH tabs for one exercise on one
- * day. Track has fields that follow the exercise type, +/- steppers, auto-fill from last time, a comment button on
- * each set (#108), and Save / Clear, or Update / Delete for a selected set, with an undo. Exercises chosen together in the library (#83)
- * arrive as a [queue] and are opened one after another.
- *
- * Deferred on purpose: drag to reorder needs a stored position that `workout_set` doesn't have yet, and the gold
- * PR trophy waits for #23 — nothing here writes `is_pr`, so an imported FitNotes flag is still the only one shown.
- */
 
 /** Global fallback increments. Per-exercise increments are #15, the global weight setting is #7. */
 internal const val DEFAULT_WEIGHT_STEP = 2.5
@@ -247,6 +238,13 @@ private fun autoAdvance(
     }
 }
 
+/**
+ * The exercise screen (#16, laid out after FitNotes in #82): TRACK, HISTORY and GRAPH tabs for one exercise on one
+ * day. Track has fields that follow the exercise type, +/- steppers, auto-fill from last time, a comment button on
+ * each set (#108), Move up / Move down for a selected set (#70), and Save / Clear, or Update / Delete for a selected
+ * set, with an undo. A saved set's PR mark is decided as it is saved (#23). Exercises chosen together in the library
+ * (#83) arrive as a [queue] and are opened one after another.
+ */
 @Composable
 fun SetEntryScreen(
     snap: Snapshot,
@@ -343,7 +341,9 @@ fun SetEntryScreen(
         onDispose { view.keepScreenOn = false }
     }
 
-    LaunchedEffect(selected, sets, template) {
+    // Refills only when the selection, the day's set list or the auto-fill source changes, not when a set is ticked
+    // done or commented, so values typed but not yet saved stay put (#301).
+    LaunchedEffect(selected, sets.map { it.id }, template?.id) {
         val chosen = selected?.let { id -> sets.firstOrNull { it.id == id } }
         if (selected != null && chosen == null) {
             selected = null
@@ -830,7 +830,7 @@ fun SetEntryScreen(
             }
             if (sets.isNotEmpty()) {
                 item {
-                    val volume = sets.sumOf { it.weightKg * it.reps }
+                    val volume = sets.sumOf { Analysis.volumeKg(it) }
                     Text(
                         pluralStringResource(R.plurals.day_sets, sets.size, sets.size) +
                             if (volume > 0) " · " + stringResource(R.string.set_volume, fmtNum(snap.weight(volume, exerciseId), 0), snap.weightUnitOf(exerciseId)) else "",

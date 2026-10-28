@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -102,7 +103,8 @@ private const val TAB_READINESS = 6
  */
 @Composable
 fun AnalysisHub(snap: Snapshot, nav: Nav, tab: Int, onTab: (Int) -> Unit, addingGoal: Boolean, onAddingGoalDone: () -> Unit) {
-    var filter by remember { mutableStateOf(Analysis.Filter()) }
+    // Kept through a visit to a workout day and back, and through rotation.
+    var filter by rememberSaveable(stateSaver = FilterSaver) { mutableStateOf(Analysis.Filter()) }
     Column(Modifier.fillMaxSize()) {
         FitTabRow(
             titles = listOf(
@@ -139,6 +141,12 @@ fun AnalysisHub(snap: Snapshot, nav: Nav, tab: Int, onTab: (Int) -> Unit, adding
         }
     }
 }
+
+/** Saves an [Analysis.Filter] as its two ids, -1 for none, so the hub's filter outlives leaving the screen. */
+private val FilterSaver = listSaver<Analysis.Filter, Long>(
+    save = { listOf(it.categoryId ?: -1L, it.exerciseId ?: -1L) },
+    restore = { Analysis.Filter(categoryId = it[0].takeIf { v -> v >= 0 }, exerciseId = it[1].takeIf { v -> v >= 0 }) }
+)
 
 /** The name of what a filter covers, for chips and summaries. */
 internal fun filterLabel(res: Resources, snap: Snapshot, f: Analysis.Filter): String = when {
@@ -285,9 +293,11 @@ internal fun rangeFrom(rangeIdx: Int): String? {
 internal fun totalsPoints(
     snap: Snapshot, metric: Analysis.Metric, period: Analysis.Period, filter: Analysis.Filter, from: String?, avgDuration: Boolean
 ): List<ChartPoint> =
-    Analysis.totals(snap, metric, period, filter, from).map {
-        ChartPoint(it.start.toEpochDay(), totalsShown(snap, metric, avgDuration, totalsValue(it, avgDuration)), it.start.format(Dates.ISO))
-    }
+    totalsChartPoints(snap, metric, avgDuration, Analysis.totals(snap, metric, period, filter, from))
+
+/** [totals] as chart points, one per period at its first day, in the shown unit. */
+private fun totalsChartPoints(snap: Snapshot, metric: Analysis.Metric, avgDuration: Boolean, totals: List<Analysis.PeriodTotal>): List<ChartPoint> =
+    totals.map { ChartPoint(it.start.toEpochDay(), totalsShown(snap, metric, avgDuration, totalsValue(it, avgDuration)), it.start.format(Dates.ISO)) }
 
 @Composable
 private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, onFilter: (Analysis.Filter) -> Unit) {
@@ -331,9 +341,7 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, onFil
     val fmt: (Double) -> String = if (metric == Analysis.Metric.Duration && !avgDuration) { v -> fmtNum(v, 1) } else { v -> fmtNum(v, 0) }
     fun withUnit(v: Double) = res.getString(R.string.an_value_unit, fmt(v), unit.ifEmpty { metric.word(res) })
     // One point per period at its first day (#116): a line shows progression over time better than bars.
-    val points = remember(totals, metric, snap.weightUnit, avgDuration) {
-        totals.orEmpty().map { ChartPoint(it.start.toEpochDay(), shown(valueOf(it)), it.start.format(Dates.ISO)) }
-    }
+    val points = remember(totals, metric, snap.weightUnit, avgDuration) { totalsChartPoints(snap, metric, avgDuration, totals.orEmpty()) }
     val series = remember(points, metric) { listOf(LineSeries(metric.text(res), points)) }
     // A body measurement's or, unless Medications are locked, a medication's (#208, #214) period average.
     val hideMeds = medicationsHidden()

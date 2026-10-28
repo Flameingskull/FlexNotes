@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -180,6 +181,29 @@ class SaveSpeedTest {
         assertEquals(full.statSetsByExercise, patched.statSetsByExercise)
         assertEquals(full.lastUsedByExercise, patched.lastUsedByExercise)
         assertEquals(full.workoutsByExercise, patched.workoutsByExercise)
+    }
+
+    @Test
+    fun aRecordLoggedOnAnEarlierDayTakesTheMarkFromALaterSet() {
+        // #299: a heavier set logged on an earlier date replays the sets after it, so a later set loses a mark it no
+        // longer earns, and the snapshot shows it straight away.
+        val bench = library().first()
+        io { Store.reload() }
+        val later = io { Workouts.addSet(bench, TODAY, 100.0, 5) }
+        fun pr(id: Long) = Store.snapshot.value!!.sets.first { it.id == id }.isPr
+        assertTrue(pr(later))
+        val earlier = io { Workouts.addSet(bench, "2026-10-01", 110.0, 5) }
+        assertTrue(pr(earlier))
+        assertFalse(pr(later))
+        // A lighter set on an earlier day isn't a record, so nothing after it changes.
+        val lighter = io { Workouts.addSet(bench, "2026-10-02", 90.0, 5) }
+        assertFalse(pr(lighter))
+        assertTrue(pr(earlier))
+        assertFalse(pr(later))
+        // The patched snapshot agrees with the database.
+        val patched = Store.snapshot.value!!.sets
+        io { Store.reload() }
+        assertEquals(Store.snapshot.value!!.sets, patched)
     }
 
     private companion object {

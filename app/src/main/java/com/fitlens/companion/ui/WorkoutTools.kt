@@ -160,8 +160,8 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
             )
         }
         GoldHairline()
-        TimeField(stringResource(R.string.wk_start_time), s) { picking = true }
-        TimeField(stringResource(R.string.wk_end_time), e, enabled = s != null) { picking = false }
+        WorkoutTimeRow(stringResource(R.string.wk_start_time), s) { picking = true }
+        WorkoutTimeRow(stringResource(R.string.wk_end_time), e, enabled = s != null) { picking = false }
         if (secs > 0) {
             Text(
                 stringResource(R.string.wk_duration, fmtDuration(secs.toInt())),
@@ -211,7 +211,7 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
 
 /** One of Workout Time's fields: its label in bold, then the time over an underline, as FitNotes's text field. */
 @Composable
-private fun TimeField(label: String, stamp: String?, enabled: Boolean = true, onClick: () -> Unit) {
+private fun WorkoutTimeRow(label: String, stamp: String?, enabled: Boolean = true, onClick: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val time = stamp?.drop(11)?.take(5)?.let { Dates.time(ctx, it) }
     val setLabel = stringResource(R.string.wk_set_field, label)

@@ -616,11 +616,6 @@ object Workouts {
         distance: Double = 0.0,
         durationSec: Int = 0,
         comment: String? = null,
-        /**
-         * Null works it out: the set is a PR when it's heavier than every set of at least as many reps logged on or
-         * before its date, the same rule [recalculatePrs] replays (#23).
-         */
-        isPr: Boolean? = null,
         setType: Int = SetTypes.WORKING,
         rpe: Double? = null,
         /** The exercise type's own metric (#14), or null when it has none. */
@@ -638,19 +633,28 @@ object Workouts {
     ): Long = writeSets { w, scope ->
         val d = checkDate(date)
         if (!w.exerciseExists(exerciseId)) throw WorkoutDataException(R.string.wde_exercise_gone)
-        // Its PR mark is decided here against earlier sets, so no other set changes and only its day is re-read.
+        // Its PR mark is decided here against earlier sets (#23), the same rule [recalculatePrs] replays, so a set
+        // logged today re-reads only its own day.
         scope.exerciseDays += DayExercise(d, exerciseId)
         val countWarmups = Settings.currentPortable().warmupsCount
         // A warm-up is never a record unless warm-ups count, and uncounted warm-ups never set the bar (#43).
-        val pr = if (setType == SetTypes.WARMUP && !countWarmups) false else isPr ?: Records.isNewRecord(
+        val pr = !(setType == SetTypes.WARMUP && !countWarmups) && Records.isNewRecord(
             weightKg, reps, w.bestBefore(exerciseId, reps, d, countWarmups, SetTypes.WARMUP)
         )
-        w.addSet(
+        val id = w.addSet(
             exerciseId, d, weightKg, reps, distance, durationSec, flag(pr), comment?.takeIf { it.isNotBlank() },
             Sources.FLEXNOTES, setType, rpe, metric, position = 0L, superset = 0, done = 0, restSeconds = restSeconds,
             liveSeconds = liveSec, intensity = intensity, sessionType = sessionType, zone = zone,
             countA = countA, countB = countB
         )
+        // A record logged on an earlier date can take the mark from a later set (#299): those sets are replayed. A set
+        // that isn't a record can't change a later one, and one logged on the latest day has nothing after it.
+        if (pr && w.hasSetsAfter(exerciseId, d)) {
+            val changed = ArrayList<Long>()
+            replayPrs(w, setOf(exerciseId), countWarmups, changed)
+            scope.addDaysOfSets(w, changed)
+        }
+        id
     }
 
     /**

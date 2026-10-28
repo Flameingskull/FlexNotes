@@ -76,8 +76,8 @@ jobs:
         id: unused
         run: |
           set -o pipefail
-          python3 -I .github/scripts/unused_private.py app/src 2>&1 | tee unused.log
-          cp unused.log build.log
+          # Straight into build.log: the step stops at a failing check, so a later copy would never run.
+          python3 -I .github/scripts/unused_private.py app/src 2>&1 | tee build.log
 
       - name: Build release APK
         if: steps.guard.outputs.skip != 'true'
@@ -93,9 +93,22 @@ jobs:
           ./gradlew testDebugUnitTest assembleRelease --stacktrace 2>&1 | tee -a build.log
           rm -f "$FITLENS_KEYSTORE"
           # Local only: the release must never hold the internet permission, whatever a library merges in (#230).
-          AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1)
-          if [ -n "$AAPT2" ] && "$AAPT2" dump permissions app/build/outputs/apk/release/app-release.apk | grep -q 'android.permission.INTERNET'; then
-            echo "error: the release APK has the android.permission.INTERNET permission" | tee -a build.log
+          # Checked in the APK with aapt2, else in the merged release manifest; never skipped when neither is found.
+          AAPT2=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 2>/dev/null | sort -V | tail -1 || true)
+          MERGED=$(find app/build/intermediates -path '*merged_manifest*' -path '*release*' -name AndroidManifest.xml 2>/dev/null || true)
+          if [ -n "$AAPT2" ]; then
+            if "$AAPT2" dump permissions app/build/outputs/apk/release/app-release.apk | grep -q 'android.permission.INTERNET'; then
+              echo "error: the release APK has the android.permission.INTERNET permission" | tee -a build.log
+              exit 1
+            fi
+          elif [ -n "$MERGED" ]; then
+            echo "aapt2 not found; checking the merged release manifests instead" | tee -a build.log
+            if echo "$MERGED" | xargs grep -l 'android:name="android.permission.INTERNET"' 2>/dev/null; then
+              echo "error: the merged release manifest has the android.permission.INTERNET permission" | tee -a build.log
+              exit 1
+            fi
+          else
+            echo "error: couldn't check the internet permission: no aapt2 and no merged release manifest" | tee -a build.log
             exit 1
           fi
 

@@ -78,6 +78,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.data.Analysis
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.TrainingBlocks
 import com.fitlens.companion.data.ExerciseTypes
@@ -262,7 +263,8 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
                     onCalories = { caloriesSheet = true },
                     showReadiness = prefs.homeShowReadiness,
                     onReadiness = { readinessSheet = true },
-                    reordering = reordering && shown == date
+                    reordering = reordering && shown == date,
+                    markComplete = prefs.markComplete
                 )
             }
         }
@@ -319,7 +321,9 @@ private fun DayContent(
     onCalories: () -> Unit,
     showReadiness: Boolean,
     onReadiness: () -> Unit,
-    reordering: Boolean
+    reordering: Boolean,
+    /** Settings' "Mark sets complete" (#19), read once by the day log so every part follows a change. */
+    markComplete: Boolean
 ) {
     val res = LocalContext.current.resources
     val photos = snap.photosByDate[date] ?: emptyList()
@@ -331,7 +335,6 @@ private fun DayContent(
     }
     val sets = snap.setsByDate[date] ?: emptyList()
     val comments = snap.workoutComments[date].orEmpty()
-    // Exercises in the order they were first logged that day.
     // Exercises as shown: workout order, with each superset's exercises together (#18).
     val byExercise = remember(sets) {
         val grouped = sets.groupBy { it.exerciseId }
@@ -437,7 +440,7 @@ private fun DayContent(
                         modifier = Modifier.padding(start = Spacing.lg, top = Spacing.sm)
                     )
                 }
-                ExerciseOnDay(snap, nav, date, exId, exSets, showCategories, setsShown)
+                ExerciseOnDay(snap, nav, date, exId, exSets, showCategories, setsShown, shownOrder, markComplete)
             }
         }
         // The workout's time, totals and comment, under the exercises so the day reads as FitNotes's does.
@@ -449,9 +452,9 @@ private fun DayContent(
                 val live = WorkoutClock.running(snap, date)?.let { start -> rememberElapsed(start) }
                 val info = listOfNotNull(
                     live?.let { "● ${fmtDuration(it.toInt())}" } ?: if (total > 0) fmtDuration(total.toInt()) else null,
-                    if (Settings.currentPortable().markComplete) stringResource(R.string.day_sets_done, sets.count { it.done }, sets.size)
+                    if (markComplete) stringResource(R.string.day_sets_done, sets.count { it.done }, sets.size)
                     else pluralStringResource(R.plurals.day_sets, sets.size, sets.size),
-                    stringResource(R.string.day_volume, fmtNum(snap.weight(sets.sumOf { it.weightKg * it.reps }), 0), snap.weightUnit)
+                    stringResource(R.string.day_volume, fmtNum(snap.weight(sets.sumOf { Analysis.volumeKg(it) }), 0), snap.weightUnit)
                 ).joinToString("  ·  ")
                 Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
                     // The workout's time is changed where it's shown (#171); a running timer is stopped from ⋮.
@@ -735,7 +738,10 @@ private fun ExerciseOnDay(
     exId: Long,
     exSets: List<LoggedSet>,
     showCategories: Boolean,
-    setsShown: Int
+    setsShown: Int,
+    /** The day's exercises as shown ([displayOrder]), worked out once by the day rather than by every card. */
+    order: List<Long>,
+    markComplete: Boolean
 ) {
     val res = LocalContext.current.resources
     val name = snap.exercises[exId]?.name ?: stringResource(R.string.day_exercise_fallback, exId)
@@ -746,7 +752,6 @@ private fun ExerciseOnDay(
     var overview by remember { mutableStateOf(false) }
     var commenting by remember { mutableStateOf(false) }
     val exerciseComment = snap.exerciseComments[date.take(10)]?.get(exId)
-    val markComplete = Settings.portable.collectAsState().value.markComplete
     val group = exSets.maxOfOrNull { it.superset } ?: 0
     val limit = if (setsShown == 0 || expanded) exSets.size else minOf(setsShown, exSets.size)
     // Each value in its own labelled column (#101), chosen by the exercise type.
@@ -769,8 +774,7 @@ private fun ExerciseOnDay(
         setsDone = exSets.count { it.done },
         setsTotal = if (markComplete) exSets.size else null,
         // Moving is done in place with ⋮ Reorder exercises (#170); TalkBack moves the card from here.
-        actions = displayOrder(snap, date).let { order ->
-            val at = order.indexOf(exId)
+        actions = order.indexOf(exId).let { at ->
             listOfNotNull(
                 if (at > 0) CustomAccessibilityAction(res.getString(R.string.day_move_up)) { moveExercise(snap, date, exId, -1); true } else null,
                 if (at in 0 until order.lastIndex) CustomAccessibilityAction(res.getString(R.string.day_move_down)) { moveExercise(snap, date, exId, 1); true } else null
@@ -782,7 +786,7 @@ private fun ExerciseOnDay(
             MenuAction(stringResource(R.string.day_ex_history)) { nav.push(Screen.SetEntry(date, exId, page = 1)) },
             MenuAction(stringResource(R.string.day_ex_overview)) { overview = true },
             MenuAction(stringResource(R.string.day_ex_records)) { nav.push(Screen.ExerciseDetail(exId)) },
-            MenuAction(stringResource(R.string.day_ex_superset), enabled = dayExercises(snap, date).size > 1) { grouping = true },
+            MenuAction(stringResource(R.string.day_ex_superset), enabled = order.size > 1) { grouping = true },
             MenuAction(stringResource(R.string.day_remove_superset), enabled = group > 0) {
                 AppScope.scope.launch { Workouts.ungroupExercise(date, exId) }
             },
@@ -830,7 +834,7 @@ private fun ExerciseOnDay(
     if (grouping) {
         SearchablePicker(
             title = stringResource(R.string.day_superset_title, name),
-            items = exercisePickerItems(snap).filter { it.id != exId && it.id in dayExercises(snap, date) },
+            items = exercisePickerItems(snap).filter { it.id != exId && it.id in order },
             multiSelect = true,
             onDismiss = { grouping = false },
             onPick = { ids ->

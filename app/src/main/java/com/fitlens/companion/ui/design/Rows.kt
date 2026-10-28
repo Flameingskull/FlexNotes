@@ -43,7 +43,7 @@ import com.fitlens.companion.R
 enum class Trend { Up, Down, Flat }
 
 /**
- * A single statistic (#80): a letter-spaced label, a big serif value, an optional change with an up or down arrow,
+ * A single statistic (#80): a letter-spaced label, a big value, an optional change with an up or down arrow,
  * and an optional date line. TalkBack reads it as one item.
  */
 @Composable

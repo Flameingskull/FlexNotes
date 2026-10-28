@@ -88,9 +88,11 @@ import com.fitlens.companion.ui.design.FitTopBar
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.GoldButton
 import java.io.File
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Where a shot waits for Retake or Use photo. The import copies it into the photo folder, then it's deleted. */
 private const val CAMERA_DIR = "camera"
@@ -125,7 +127,9 @@ fun CameraScreen(snap: Snapshot, nav: Nav, date: String?) {
     LaunchedEffect(Unit) {
         // Shots left behind by an import that failed or a closed app; recent ones may still be importing.
         val stale = System.currentTimeMillis() - 10 * 60 * 1000L
-        File(ctx.cacheDir, CAMERA_DIR).listFiles()?.forEach { if (it.lastModified() < stale) it.delete() }
+        withContext(Dispatchers.IO) {
+            File(ctx.cacheDir, CAMERA_DIR).listFiles()?.forEach { if (it.lastModified() < stale) it.delete() }
+        }
         if (!granted && !asked) {
             asked = true
             ask.launch(Manifest.permission.CAMERA)

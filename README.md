@@ -102,6 +102,11 @@ custom metrics.
   the build fail if any come back ([#264](https://github.com/Flameingskull/FlexNotes/issues/264)). 1.0.186 works through the review's other findings: times
   are picked on a clock that follows your phone's 12 or 24 hour setting, deletes in the workout editor and the library
   can be undone, the widget confirms what it logged, the calendar shows medication days, and wording is plainer.
+  1.0.187 lets you choose how the calendar shows doses while Medications is locked ([#294](https://github.com/Flameingskull/FlexNotes/issues/294)), adds an
+  optional **You** step and its own **Body measurements** step to setup ([#278](https://github.com/Flameingskull/FlexNotes/issues/278)), lets you read and write a
+  comment on any photo ([#271](https://github.com/Flameingskull/FlexNotes/issues/271)) and opens a screen's main graph full screen when you turn the phone
+  ([#269](https://github.com/Flameingskull/FlexNotes/issues/269)). 1.0.191 moves FlexNotes onto the current Android toolchain and libraries ([#293](https://github.com/Flameingskull/FlexNotes/issues/293)) and
+  tidies code found in a full quality audit.
 - **Next:** your check of every screen on a real phone at large font sizes ([#263](https://github.com/Flameingskull/FlexNotes/issues/263)), with an
   accessibility pass ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)); anything found there becomes a bug and the next build. The plan is `docs/plans/2026-10-24-roadmap.md`; other
   ideas are on the [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
@@ -317,8 +322,8 @@ custom metrics.
   calories on 14 of the last 28 days and weighed in three times at least two weeks apart, the TDEE calculator also
   shows your TDEE **measured** from what you ate and your bodyweight trend, and your goal can follow either figure.
 - **Guided setup:** a fresh install opens a short, skippable setup: restore a FlexNotes backup, or choose your units,
-  an automatic backup folder, a FitNotes import, your progress photos, the starter exercise library and the standard
-  body measurements.
+  an automatic backup folder, a FitNotes import, your progress photos, the starter exercise library, an optional
+  **You** step (sex, date of birth, height and max heart rate, kept in your Profile) and the standard body measurements.
   **Settings → Show Setup Again** opens it any time.
 - **Settings:** open it from the **⋮** menu on the day log. As in FitNotes, it's one list. **SETTINGS** has Theme,
   Unit System, Calendar Week Start, Default Weight Increment, Home Screen Settings, Track Personal Records, Mark Sets
@@ -390,7 +395,8 @@ custom metrics.
   - **All days** (from the Calendar's top bar): a timeline of every day, with that day's photos, measurements and
     workout summary.
   - **Calendar:** as in FitNotes, a month grid (swipe between months) with category dots, photo, measurement and
-    medication dots, today in gold and the selected day in deep gold. The selected day's workout shows below the grid (beside it
+    medication dots, today in gold and the selected day in deep gold. While Medications is locked, you choose what
+    the calendar shows of your doses: nothing (the default), a count with no names, or everything. The selected day's workout shows below the grid (beside it
     on wide screens and unfolded foldables); **Open day**
     (or a second tap) opens its log, and tapping one of its exercises opens that exercise's **overview** (history,
     graph, records, stats and goals in one sheet). The search button **filters** the calendar by exercise or
@@ -466,7 +472,7 @@ custom metrics.
     graph shows the **progress photo nearest that date** (within 14 days), which opens in the viewer, or compares it
     with a second point's photo. An exercise graph's ⋮ can **overlay a body measurement** (bodyweight, body fat or any
     measurement) on its own scale at the right; a shared graph includes body values only if you choose. Every graph opens **full screen** (the expand button or a double
-    tap), where pinching across zooms the timeline and pinching up and down zooms the values, dragging moves around, and the range and options can change. TalkBack reads each graph's range and
+    tap, or turn the phone sideways on a graph screen; a Settings switch turns that off), where pinching across zooms the timeline and pinching up and down zooms the values, dragging moves around, and the range and options can change. TalkBack reads each graph's range and
     values and offers zoom and move actions for both. A graph's ⋮ menu can **share it as an image** in the FlexNotes
     look. An exercise graph's ⋮ can **compare** up to five exercises on one graph, each with its own colour and
     marker (tap a name in the legend to hide it, tap a date for every value on it), as values or as a percentage of
@@ -474,7 +480,8 @@ custom metrics.
   - **Photos:** a gallery grouped by day, week, month, year or pose (remembered), with pose filters and counts.
     Long-press to select photos: the top bar then shows the count, with compare, slideshow and delete, and the ⋮ menu
     sets the pose or date of all of them. The viewer shows each photo edge to edge on black; tap it to fade the
-    controls away, swipe for the next, and open the details for the pose, the date and that day's body values. The
+    controls away, swipe for the next, and open the details for the pose, the date, that day's body values and the
+    photo's comment, which you can write or change there and read again in Compare. The
     **before/after compare** sits side by side on black, with the change in each body value, and can be shared or
     saved as an image. **⋮ → Export as image files** (or Export in the selection menu) saves copies of all your
     photos, a date range or the selection into a folder you choose, named by date and pose (such as
@@ -635,7 +642,8 @@ GitHub builds a test APK for every pull request.
 
 The app is native Android: **Kotlin** and **Jetpack Compose** (Material 3), with a local SQLite database managed by **Room**. Every query is checked against the
 schema when the app is built, and the schema itself is recorded in `app/schemas/`. It targets
-Android 16 (API 36) and runs on Android 10 (API 29) or newer.
+Android 16 (API 36), compiles against API 37 and runs on Android 10 (API 29) or newer. It builds with Gradle 9 and
+the Android Gradle Plugin 9, which compiles the Kotlin itself (there's no separate Kotlin Android plugin).
 
 Open the project in **Android Studio** and click **Run**, or run `./gradlew assembleDebug`. Your own builds are signed
 with your debug key, so Android won't install them over the official release. Test on an emulator or a spare phone.
@@ -656,7 +664,9 @@ failing test stops the release. Pull requests run the tests and get a debug buil
 
 Dependencies and Actions are kept current automatically by **Dependabot** (`.github/dependabot.yml`): Gradle
 dependencies weekly, GitHub Actions monthly. Kotlin, the Compose compiler plugin and KSP arrive as one grouped pull
-request, because their versions are locked to one another and updating them separately breaks the build. Dependabot
+request, because their versions are locked to one another and updating them separately breaks the build. When a
+group can't pass on its own (a new AGP needing a newer Kotlin, say), the update is done by hand as one coordinated
+change, as in 1.0.191. Dependabot
 pull requests run the `check` job only — a debug build with no secrets — so nothing is published until a merge.
 
 **Every year, before 31 August**, raise `compileSdk` and `targetSdk` to the API level Google Play then requires,

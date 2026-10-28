@@ -1,6 +1,8 @@
 package com.fitlens.companion.report
 
 import android.content.res.Resources
+import androidx.compose.ui.graphics.toArgb
+import com.fitlens.companion.ui.Brand
 import com.fitlens.companion.ui.BrandFonts
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -19,6 +21,7 @@ import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.data.fmtSigned
 import com.fitlens.companion.ui.defOrder
 import com.fitlens.companion.ui.describeSet
+import com.fitlens.companion.ui.poseText
 import com.fitlens.companion.video.FrameRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -47,10 +50,11 @@ internal class Palette(
     val gold: Int, val accent: Int, val line: Int, val fill: Int, val hairline: Int, val grid: Int
 )
 
+// Dark pages use the app's own colours, read from Brand so they never drift from it.
 internal val DARK = Palette(
-    bg = 0xFF050505.toInt(), card = 0xFF141414.toInt(), text = 0xFFF7F3EA.toInt(), muted = 0xFFBDB6A8.toInt(),
-    gold = 0xFFF2BE22.toInt(), accent = 0xFFFFDB6E.toInt(), line = 0xFFF05E62.toInt(), fill = 0x33F2BE22,
-    hairline = 0xFF38342B.toInt(), grid = 0x33FFFFFF
+    bg = Brand.Black.toArgb(), card = Brand.Surface.toArgb(), text = Brand.Ivory.toArgb(), muted = Brand.Muted.toArgb(),
+    gold = Brand.Gold.toArgb(), accent = Brand.GoldLight.toArgb(), line = Brand.Fall.toArgb(),
+    fill = Brand.Gold.copy(alpha = 0.2f).toArgb(), hairline = Brand.Hairline.toArgb(), grid = Brand.Ivory.copy(alpha = 0.2f).toArgb()
 )
 
 // Deeper gold and red on white keep text readable when printed.
@@ -66,12 +70,12 @@ internal const val M = 40f
 internal const val CW = PW - 2 * M
 internal const val BOTTOM = PH - 56f
 
-internal fun paint(color: Int, size: Float, bold: Boolean = false, serif: Boolean = false, tracking: Float = 0f, italic: Boolean = false) =
+internal fun paint(color: Int, size: Float, bold: Boolean = false, tracking: Float = 0f, italic: Boolean = false) =
     Paint(Paint.ANTI_ALIAS_FLAG).apply {
         this.color = color
         textSize = size
-        // Manrope, as in the app (#135); the old serif headings are its bold.
-        typeface = BrandFonts.typeface(bold = bold || serif, italic = italic)
+        // Manrope, as in the app (#135).
+        typeface = BrandFonts.typeface(bold = bold, italic = italic)
         letterSpacing = tracking
     }
 
@@ -187,6 +191,8 @@ object PdfReport {
         FrameRenderer.loadBitmap(snap.photoFile(photo), longest, longest)?.let { src ->
             // Standard quality uses half the memory per photo; the PDF keeps every photo until it's saved.
             val bmp = if (hq) src else src.copy(Bitmap.Config.RGB_565, false) ?: src
+            // The full-colour decode isn't needed once copied: let it go now rather than at the next collection.
+            if (bmp !== src) src.recycle()
             val s = max(r.width() / bmp.width, r.height() / bmp.height)
             val sw = r.width() / s
             val sh = r.height() / s
@@ -206,7 +212,7 @@ object PdfReport {
         val c = w.c
         w.centered("FLEXNOTES", paint(p.gold, 13f, bold = true, tracking = 0.5f), 96f)
         c.drawRect(PW / 2f - 40f, 108f, PW / 2f + 40f, 108.8f, fill(p.gold))
-        w.centered(res.getString(R.string.pdf_title), paint(p.text, 34f, serif = true), 156f)
+        w.centered(res.getString(R.string.pdf_title), paint(p.text, 34f, bold = true), 156f)
         w.centered(res.getString(R.string.pdf_range, Dates.day(o.from), Dates.day(o.to)), paint(p.muted, 12f, tracking = 0.05f), 182f)
 
         val photos = snap.datedPhotos.filter { it.date!! >= o.from && it.date <= o.to }
@@ -238,7 +244,7 @@ object PdfReport {
             res.getString(R.string.pdf_measurements) to days.sumOf { snap.recordsByDate[it]?.size ?: 0 }
         )
         val colW = CW / stats.size
-        val valueP = paint(p.gold, 24f, serif = true)
+        val valueP = paint(p.gold, 24f, bold = true)
         val labelP = paint(p.muted, 7.5f, bold = true, tracking = 0.2f)
         stats.forEachIndexed { i, (name, v) ->
             val cx = M + colW * i + colW / 2f
@@ -272,7 +278,7 @@ object PdfReport {
             val c = w.c
             val top = w.y
             c.drawRoundRect(RectF(M, top, M + CW, top + cardH), 6f, 6f, fill(p.card))
-            c.drawText(name, M + 14f, top + 24f, paint(p.text, 14f, serif = true))
+            c.drawText(name, M + 14f, top + 24f, paint(p.text, 14f, bold = true))
             if (unit.isNotBlank()) c.drawText(unit, M + 14f, top + 37f, paint(p.muted, 8f))
 
             val first = pts.first()
@@ -383,7 +389,8 @@ object PdfReport {
             val c = w.c
             if (i % 2 == 0) c.drawRect(M, w.y - 2f, M + CW, w.y + 13f, fill(p.card))
             val cat = snap.categoryOf(exId)
-            if (cat != null) c.drawCircle(M + 3f, w.y + 5.5f, 2f, fill(cat.colour or 0xFF000000.toInt()))
+            // A category with no chosen colour (0) gets no dot, as in the app (#73).
+            if (cat != null && cat.colour != 0) c.drawCircle(M + 3f, w.y + 5.5f, 2f, fill(cat.colour or 0xFF000000.toInt()))
             val name = snap.exercises[exId]?.name ?: res.getString(R.string.pdf_exercise_n, exId)
             var shown = name
             while (rowP.measureText(shown) > cols[1] - cols[0] - 8f && shown.length > 4) shown = shown.dropLast(2) + "…"
@@ -429,7 +436,7 @@ object PdfReport {
 
             fun header(continued: Boolean) {
                 val title = Dates.day(d) + if (continued) res.getString(R.string.pdf_continued) else ""
-                w.c.drawText(title, M, w.y + 16f, paint(p.text, if (continued) 11f else 15f, serif = true))
+                w.c.drawText(title, M, w.y + 16f, paint(p.text, if (continued) 11f else 15f, bold = true))
                 w.y += if (continued) 24f else 30f
             }
             fun line(h: Float) { if (w.ensure(h)) header(true) }
@@ -439,7 +446,7 @@ object PdfReport {
                 photos.forEachIndexed { i, ph ->
                     val left = M + i * (boxW + 10f)
                     drawPhoto(w, snap, ph, RectF(left, w.y, left + boxW, w.y + boxH), o.highQuality)
-                    if (ph.pose.isNotBlank()) w.c.drawText(ph.pose.uppercase(), left, w.y + boxH + 11f, small)
+                    if (ph.pose.isNotBlank()) w.c.drawText(poseText(res, ph.pose).uppercase(), left, w.y + boxH + 11f, small)
                 }
                 val more = (snap.photosByDate[d]?.size ?: 0) - n
                 if (more > 0) w.rightText(res.getString(R.string.pdf_more, more), muted, M + CW, w.y + boxH + 11f)
@@ -478,7 +485,7 @@ object PdfReport {
                 sets.groupBy { it.exerciseId }.entries.sortedBy { e -> e.value.minOf { it.position } }.forEach { (exId, exSets) ->
                     line(28f)
                     val cat = snap.categoryOf(exId)
-                    if (cat != null) w.c.drawCircle(M + 3f, w.y + 6f, 2.4f, fill(cat.colour or 0xFF000000.toInt()))
+                    if (cat != null && cat.colour != 0) w.c.drawCircle(M + 3f, w.y + 6f, 2.4f, fill(cat.colour or 0xFF000000.toInt()))
                     w.c.drawText(snap.exercises[exId]?.name ?: res.getString(R.string.pdf_exercise_n, exId), M + 10f, w.y + 9.5f, bold)
                     w.y += 14f
                     val setText = exSets.mapIndexed { i, s ->

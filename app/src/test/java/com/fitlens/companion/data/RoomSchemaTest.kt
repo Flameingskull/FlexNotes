@@ -225,6 +225,65 @@ class RoomSchemaTest {
         }
     }
 
+    /** The columns v22 to v24 added (#174, #190, #199), on top of the full v20 tables. */
+    private val v22to24 = listOf(
+        "ALTER TABLE exercise ADD COLUMN activity TEXT",
+        "ALTER TABLE workout_set ADD COLUMN external_id TEXT",
+        "ALTER TABLE measurement ADD COLUMN medication INTEGER NOT NULL DEFAULT 0"
+    )
+
+    @Test
+    fun aV24DatabaseGainsDoseLinksRangesAndBlocksAndKeepsItsRows() {
+        // 1.0.154 to 1.0.166 (#201, #210, #211, #218): nullable columns and flags that are off, so every value,
+        // measurement and workout keeps its row and gains none of them.
+        OldSchemas.create(file, 24, OldSchemas.V20 + v22to24) { db ->
+            db.row("measurement", "name" to "Metformin", "unit" to "mg", "medication" to 1)
+            db.row("mrecord", "name" to "Metformin", "unit" to "mg", "date" to "2026-10-01", "time" to "08:00", "value" to 500.0, "source" to "manual")
+            db.row("routine", "id" to 1L, "name" to "Push Pull Legs")
+        }
+        Db(app).use { h ->
+            val db = h.writableDatabase
+            assertEquals(Db.VERSION, db.version)
+            assertEquals(1, db.count("SELECT COUNT(*) FROM measurement WHERE name='Metformin' AND medication=1 AND ref_low IS NULL AND ref_high IS NULL AND lab=0"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE name='Metformin' AND value=500.0 AND dose_id IS NULL AND due IS NULL AND site IS NULL"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM routine WHERE id=1 AND name='Push Pull Legs' AND blocks IS NULL AND block_start IS NULL AND block_repeat=0"))
+            assertTrue(db.hasTable("med_dose"))
+        }
+    }
+
+    @Test
+    fun aV27DatabaseGainsTapersAndAsNeededAndKeepsEveryDose() {
+        // 1.0.165 (#233, #234): every dose gains a step of 0 with no limit, so it keeps its amount, and every
+        // medication's details gain "as needed" switched off. The med tables are as v25's rebuild made them.
+        val v25to27 = listOf(
+            "ALTER TABLE mrecord ADD COLUMN dose_id INTEGER",
+            "ALTER TABLE mrecord ADD COLUMN due TEXT",
+            "ALTER TABLE mrecord ADD COLUMN site TEXT",
+            "ALTER TABLE measurement ADD COLUMN ref_low REAL",
+            "ALTER TABLE measurement ADD COLUMN ref_high REAL",
+            "ALTER TABLE measurement ADD COLUMN lab INTEGER NOT NULL DEFAULT 0",
+            "CREATE TABLE med_dose(id INTEGER PRIMARY KEY AUTOINCREMENT, phase_id INTEGER NOT NULL, position INTEGER NOT NULL DEFAULT 0, " +
+                "medication TEXT NOT NULL, amount REAL NOT NULL DEFAULT 0, unit TEXT NOT NULL DEFAULT '', time TEXT NOT NULL DEFAULT '08:00', " +
+                "days TEXT NOT NULL DEFAULT '', comment TEXT)",
+            "CREATE TABLE med_info(medication TEXT NOT NULL PRIMARY KEY, supply REAL, supply_from TEXT, warn_days INTEGER NOT NULL DEFAULT 7, " +
+                "expires TEXT, injected INTEGER NOT NULL DEFAULT 0)"
+        )
+        OldSchemas.create(file, 27, OldSchemas.V20 + v22to24 + v25to27) { db ->
+            db.row("measurement", "name" to "Prednisolone", "unit" to "mg", "medication" to 1, "ref_low" to 5.0)
+            db.row("mrecord", "name" to "Prednisolone", "unit" to "mg", "date" to "2026-10-01", "value" to 20.0, "source" to "manual", "dose_id" to 1L, "due" to "2026-10-01 08:00")
+            db.row("med_dose", "id" to 1L, "phase_id" to 3L, "medication" to "Prednisolone", "amount" to 20.0, "unit" to "mg", "days" to "1234567")
+            db.row("med_info", "medication" to "Prednisolone", "supply" to 28.0, "warn_days" to 5)
+        }
+        Db(app).use { h ->
+            val db = h.writableDatabase
+            assertEquals(Db.VERSION, db.version)
+            assertEquals(1, db.count("SELECT COUNT(*) FROM med_dose WHERE id=1 AND phase_id=3 AND amount=20.0 AND days='1234567' AND step=0 AND step_days=0 AND step_limit IS NULL"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM med_info WHERE medication='Prednisolone' AND supply=28.0 AND warn_days=5 AND as_needed=0 AND max_per_day IS NULL"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM measurement WHERE name='Prednisolone' AND ref_low=5.0 AND lab=0"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM mrecord WHERE value=20.0 AND dose_id=1 AND due='2026-10-01 08:00'"))
+        }
+    }
+
     @Test
     fun everyUpgradeIsRegistered() {
         // Room needs a path from every version FlexNotes has shipped; a database from any of them opens.

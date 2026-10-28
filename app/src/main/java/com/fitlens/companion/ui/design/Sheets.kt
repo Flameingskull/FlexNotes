@@ -19,16 +19,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
@@ -71,7 +67,7 @@ private object KeepScrollInSheet : NestedScrollConnection {
 }
 
 /**
- * A modal bottom sheet in the FlexNotes style (#80): serif [title], gold hairline, scrolling [content] and a sticky
+ * A modal bottom sheet in the FlexNotes style (#80): [title], gold hairline, scrolling [content] and a sticky
  * button row. The confirm button appears when both [confirmLabel] and [onConfirm] are given; use a specific verb
  * ("Save set", "Delete workout"), never "OK". [destructive] colours the confirm button as an error action.
  * The caller closes the sheet (usually inside [onConfirm]); [onDismiss] runs on Cancel, back or a tap outside.
@@ -118,7 +114,7 @@ fun FitSheet(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onDismiss) { Text(dismissLabel) }
+                TextButton(onClick = onDismiss, colors = fitTextButtonColors()) { Text(dismissLabel) }
                 val secondary = onSecondary
                 if (secondary != null && secondaryLabel != null) {
                     GlassOutlinedButton(onClick = secondary, enabled = confirmEnabled) { Text(secondaryLabel) }
@@ -295,7 +291,7 @@ fun SearchablePicker(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+                    TextButton(onClick = onDismiss, colors = fitTextButtonColors()) { Text(stringResource(R.string.cancel)) }
                     GoldButton(onClick = { onPick(chosen.toList()) }, enabled = chosen.isNotEmpty()) {
                         Text(if (chosen.isEmpty()) stringResource(R.string.cmn_add) else stringResource(R.string.cmn_add_n, chosen.size))
                     }

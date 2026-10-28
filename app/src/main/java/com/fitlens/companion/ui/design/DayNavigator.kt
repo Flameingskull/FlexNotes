@@ -3,8 +3,6 @@ package com.fitlens.companion.ui.design
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -43,7 +41,6 @@ import androidx.compose.ui.unit.dp
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.ui.Brand
 import com.fitlens.companion.ui.FitShapes
-import com.fitlens.companion.ui.GoldHairline
 import com.fitlens.companion.ui.PickDateDialog
 import com.fitlens.companion.ui.Spacing
 import java.time.LocalDate

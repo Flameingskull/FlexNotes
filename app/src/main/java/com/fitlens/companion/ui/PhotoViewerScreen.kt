@@ -339,7 +339,14 @@ fun CompareScreen(snap: Snapshot, nav: Nav, a: Long, b: Long) {
                                 Text(row.label, Modifier.weight(1.3f))
                                 Text(row.left, Modifier.weight(1f))
                                 Text(row.right, Modifier.weight(1f))
-                                Text(row.change, Modifier.weight(0.9f), color = deltaColour(row.delta, MaterialTheme.colorScheme.primary))
+                                // A measurement with a goal is judged by it, as the body tracker does (changeColour, #303): a
+                                // smaller waist is green, not red.
+                                val changeColor = when (row.better) {
+                                    true -> Brand.Rise
+                                    false -> Brand.Fall
+                                    null -> deltaColour(row.delta, MaterialTheme.colorScheme.primary)
+                                }
+                                Text(row.change, Modifier.weight(0.9f), color = changeColor)
                             }
                         }
                         Text(
@@ -363,7 +370,8 @@ fun CompareScreen(snap: Snapshot, nav: Nav, a: Long, b: Long) {
     }
 }
 
-data class CompareRow(val label: String, val left: String, val right: String, val change: String, val delta: Double = 0.0)
+/** [better] is whether the change moved towards the measurement's goal, or null with no goal or no change (#303). */
+data class CompareRow(val label: String, val left: String, val right: String, val change: String, val delta: Double = 0.0, val better: Boolean? = null)
 
 fun compareRows(snap: Snapshot, da: String, db: String): List<CompareRow> =
     snap.usedMeasurements.mapNotNull { m ->
@@ -375,7 +383,10 @@ fun compareRows(snap: Snapshot, da: String, db: String): List<CompareRow> =
         val ch = if (ha != null && hb != null) fmtSigned(hb.first.value - ha.first.value) else ""
         val unit = (hb ?: ha)?.first?.unit ?: ""
         val delta = if (ha != null && hb != null) hb.first.value - ha.first.value else 0.0
-        CompareRow("${m.name}${if (unit.isNotBlank()) " ($unit)" else ""}", l, r, ch, delta)
+        val better = if (ha != null && hb != null) {
+            com.fitlens.companion.data.MeasurementGoals.isImprovement(m.goalType, m.goalValue, ha.first.value, hb.first.value)
+        } else null
+        CompareRow("${m.name}${if (unit.isNotBlank()) " ($unit)" else ""}", l, r, ch, delta, better)
     }
 
 /** Picks one dated photo, newest first, on the FlexNotes glass (#92). */
@@ -430,16 +441,19 @@ private fun shareCompare(ctx: Context, snap: Snapshot, pa: Photo, pb: Photo, sav
                 val days = abs(Dates.epochDay(db) - Dates.epochDay(da))
                 val out = FrameRenderer.renderCompare(ba, bb, da, db, rows, res.getString(R.string.pv_compare_footer, days.toInt()))
                 ba?.recycle(); bb?.recycle()
-                if (save) {
-                    VideoExporter.saveImageToGallery(app, out, "FlexNotes_compare_${da}_$db.jpg")
+                // Saving throws when the gallery refuses the image, so "saved" is only said when it was (#302).
+                try {
+                    if (save) {
+                        VideoExporter.saveImageToGallery(app, out, "FlexNotes_compare_${da}_$db.jpg")
+                        null
+                    } else {
+                        val dir = File(app.cacheDir, "exports").apply { mkdirs() }
+                        val f = File(dir, "FlexNotes_compare_${da}_$db.jpg")
+                        f.outputStream().use { out.compress(Bitmap.CompressFormat.JPEG, 92, it) }
+                        f
+                    }
+                } finally {
                     out.recycle()
-                    null
-                } else {
-                    val dir = File(app.cacheDir, "exports").apply { mkdirs() }
-                    val f = File(dir, "FlexNotes_compare_${da}_$db.jpg")
-                    f.outputStream().use { out.compress(Bitmap.CompressFormat.JPEG, 92, it) }
-                    out.recycle()
-                    f
                 }
             }
             if (file == null) UiEvents.show(res.getString(R.string.pv_saved_pictures))

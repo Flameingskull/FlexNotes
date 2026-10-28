@@ -264,13 +264,10 @@ object FitNotesImporter {
     }
 
     /**
-     * Merges a FitNotes backup into FlexNotes following the conflict rules in [Workouts]: only adds rows, matches
+     * Merges the FitNotes backup [src] into [db] following the conflict rules in [Workouts]: only adds rows, matches
      * categories and exercises by name, and skips sets, comments, times and body records that are already present.
-     * The caller runs it inside one transaction on [db], off the main thread.
-     */
-    /**
-     * Merges the FitNotes backup [src] into [db]. [distanceUnit] is the user's distance unit, for exercises without
-     * their own (#7, #180).
+     * [distanceUnit] is the user's distance unit, for exercises without their own (#7, #180). The caller runs it
+     * inside one transaction on [db], off the main thread.
      */
     internal fun merge(src: SQLiteDatabase, db: Db, distanceUnit: String = DistanceUnits.KM): ImportPlan {
         val plan = ImportPlan()
@@ -613,18 +610,22 @@ object FitNotesImporter {
             val value = f[3].toDoubleOrNull() ?: continue
             val unit = f.getOrElse(4) { "" }
             val comment = f.getOrElse(5) { "" }
-            if (w.hasRecord(name, date, time, value)) { skipped++; continue }
-            val key = Workouts.recordKey(name, date, time, value)
-            val n = skips[key] ?: 0
-            if (n > 0) { skips[key] = n - 1; skipped++; continue }
-            db.bodyDao.ensure(name, unit, 999)
-            w.addRecord(name, unit, date, time, value, comment, "csv")
+            // Kept in the unit the measurement's values are already stored in, when the CSV's converts to it (#300),
+            // so a pounds export over kilograms isn't added again or mixed in under another unit.
+            val stored = db.bodyDao.definition(name)?.unit?.takeIf { MeasureUnits.sameKind(it, unit) } ?: unit
+            val kept = if (stored == unit) value else MeasureUnits.convert(value, unit, stored)
+            if (w.hasRecord(name, date, time, kept)) { skipped++; continue }
+            // A skip rule holds the value as it was stored: converted, or as typed by an import before #300.
+            val key = listOf(Workouts.recordKey(name, date, time, kept), Workouts.recordKey(name, date, time, value))
+                .firstOrNull { (skips[it] ?: 0) > 0 }
+            if (key != null) { skips[key] = skips.getValue(key) - 1; skipped++; continue }
+            db.bodyDao.ensure(name, stored, 999)
+            w.addRecord(name, stored, date, time, kept, comment, "csv")
             added++
         }
         added to skipped
     }
 
-    /** Lower-case FitNotes measurement name → custom metric that takes its values. */
     /**
      * Metres in one of FitNotes's distance units, by the id a set keeps in `training_log.unit` (#180): 0 km, 1 miles,
      * 2 metres, 3 yards. Metres is confirmed from a real backup; the others follow FitNotes's order of units. An
@@ -661,6 +662,7 @@ object FitNotesImporter {
         }
     }
 
+    /** Lower-case FitNotes measurement name → custom metric that takes its values. */
     private fun customAliases(w: ImportDao): Map<String, String> {
         val out = HashMap<String, String>()
         for (m in w.customMetrics()) {

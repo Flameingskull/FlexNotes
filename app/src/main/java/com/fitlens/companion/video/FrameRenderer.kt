@@ -1,9 +1,10 @@
 package com.fitlens.companion.video
 
+import androidx.compose.ui.graphics.toArgb
+import com.fitlens.companion.ui.Brand
 import com.fitlens.companion.ui.BrandFonts
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.ImageDecoder
 import android.graphics.LinearGradient
 import android.graphics.Paint
@@ -22,8 +23,10 @@ import kotlin.math.min
 
 data class OverlayLine(val label: String, val value: String, val delta: String?, val approxNote: String?)
 
-/** One slide overlay entry, keyed by measurement name. [lines] holds only the overlays with a value near that date. */
-/** [daysIn] counts days since the first photo in the slideshow: 0 on that photo's own day. */
+/**
+ * One slide. [lines] holds only the overlays with a value near that date, keyed by measurement name. [daysIn] counts
+ * days since the first photo in the slideshow: 0 on that photo's own day.
+ */
 data class Slide(val photo: Photo, val date: String, val daysIn: Long, val lines: Map<String, OverlayLine>)
 
 /** A measurement shown over the photos, either as a value or as a value with a progress chart. */
@@ -63,12 +66,16 @@ object FrameRenderer {
 
     const val MAX_OVERLAYS = 5
 
-    // The app's palette (1.0.71): vibrant gold on black, red graph lines over translucent gold
-    private const val GOLD = 0xFFF2BE22.toInt()
-    private const val GOLD_SOFT = 0x99F2BE22.toInt()
-    private const val RED = 0xFFF05E62.toInt()
-    private const val MUTED = 0xFFCFC9BE.toInt()
-    private const val IVORY = 0xFFF7F3EA.toInt()
+    // The app's palette (1.0.71), read from Brand so frames never drift from the app: vibrant gold on black, red
+    // graph lines over translucent gold.
+    private val BLACK get() = Brand.Black.toArgb()
+    private val GOLD get() = Brand.Gold.toArgb()
+    private val RED get() = Brand.Fall.toArgb()
+    private val MUTED get() = Brand.Muted.toArgb()
+    private val IVORY get() = Brand.Ivory.toArgb()
+
+    /** [color] with its alpha set to [alpha] (0–255). */
+    private fun withAlpha(color: Int, alpha: Int): Int = (color and 0x00FFFFFF) or (alpha shl 24)
 
     fun buildSlides(snap: Snapshot, photos: List<Photo>, opts: SlideOptions): List<Slide> {
         val dated = photos.filter { it.date != null }.sortedWith(compareBy({ it.date }, { it.takenAt ?: "" }, { it.id }))
@@ -121,12 +128,12 @@ object FrameRenderer {
         null
     }
 
-    private fun paint(color: Int, sizePx: Float, bold: Boolean = false, serif: Boolean = false, tracking: Float = 0f) =
+    private fun paint(color: Int, sizePx: Float, bold: Boolean = false, tracking: Float = 0f) =
         Paint(Paint.ANTI_ALIAS_FLAG).apply {
             this.color = color
             textSize = sizePx
-            // Manrope, as in the app (#135); the old serif headings are its bold.
-            typeface = BrandFonts.typeface(bold = bold || serif)
+            // Manrope, as in the app (#135).
+            typeface = BrandFonts.typeface(bold = bold)
             letterSpacing = tracking
         }
 
@@ -139,7 +146,7 @@ object FrameRenderer {
 
     private fun hairline(c: Canvas, x0: Float, x1: Float, y: Float, u: Float) {
         c.drawRect(x0, y, x1, y + max(1f, 1.5f * u), Paint().apply {
-            shader = LinearGradient(x0, 0f, x1, 0f, intArrayOf(0x00F2BE22, GOLD, 0x00F2BE22), null, Shader.TileMode.CLAMP)
+            shader = LinearGradient(x0, 0f, x1, 0f, intArrayOf(withAlpha(GOLD, 0), GOLD, withAlpha(GOLD, 0)), null, Shader.TileMode.CLAMP)
         })
     }
 
@@ -158,13 +165,13 @@ object FrameRenderer {
         val w = c.width.toFloat()
         val h = c.height.toFloat()
         val u = min(w, h) / 720f // scale unit
-        c.drawColor(Color.BLACK)
+        c.drawColor(BLACK)
         drawPhotoFit(c, bmp, RectF(0f, 0f, w, h))
 
         // Top gradient: title, date, day counter, pose
         val topH = 210 * u
         c.drawRect(0f, 0f, w, topH, Paint().apply {
-            shader = LinearGradient(0f, 0f, 0f, topH, 0xE0050505.toInt(), 0x00050505, Shader.TileMode.CLAMP)
+            shader = LinearGradient(0f, 0f, 0f, topH, withAlpha(BLACK, 0xE0), withAlpha(BLACK, 0), Shader.TileMode.CLAMP)
         })
         val pose = slide.photo.pose
         val poseText = if (opts.showPose && pose.isNotBlank()) (opts.words.poses[pose] ?: pose).uppercase() else null
@@ -179,7 +186,7 @@ object FrameRenderer {
         }
         if (opts.showDate) {
             y += 48 * u
-            c.drawText(Dates.day(slide.date), 32 * u, y, paint(IVORY, 48 * u, bold = true, serif = true))
+            c.drawText(Dates.day(slide.date), 32 * u, y, paint(IVORY, 48 * u, bold = true))
             y += 8 * u
         }
         if (opts.showSince) {
@@ -204,7 +211,7 @@ object FrameRenderer {
         val k = u * min(1f, h * 0.6f / (naturalU * u))
         val top = h - naturalU * k
         c.drawRect(0f, top - 90 * u, w, h, Paint().apply {
-            shader = LinearGradient(0f, top - 90 * u, 0f, top + 30 * k, 0x00050505, 0xE6050505.toInt(), Shader.TileMode.CLAMP)
+            shader = LinearGradient(0f, top - 90 * u, 0f, top + 30 * k, withAlpha(BLACK, 0), withAlpha(BLACK, 0xE6), Shader.TileMode.CLAMP)
         })
         hairline(c, 32 * u, w - 32 * u, top + 8 * k, k)
         val gap = 28 * u
@@ -257,7 +264,7 @@ object FrameRenderer {
         fun px(x: Long) = r.left + (x - x0).toFloat() / (x1 - x0).toFloat() * r.width()
         fun py(y: Double) = r.bottom - ((y - y0) / (y1 - y0)).toFloat() * r.height()
 
-        c.drawRect(r.left, r.bottom, r.right, r.bottom + max(1f, u), Paint().apply { color = 0x33FFFFFF })
+        c.drawRect(r.left, r.bottom, r.right, r.bottom + max(1f, u), Paint().apply { color = withAlpha(IVORY, 0x33) })
         val full = Path()
         val done = Path()
         var doneStarted = false
@@ -271,12 +278,12 @@ object FrameRenderer {
             }
         }
         c.drawPath(full, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            style = Paint.Style.STROKE; strokeWidth = 2.5f * u; color = 0x40FFFFFF
+            style = Paint.Style.STROKE; strokeWidth = 2.5f * u; color = withAlpha(IVORY, 0x40)
         })
         if (doneStarted) {
             val area = Path(done).apply { lineTo(doneLastX, r.bottom); lineTo(doneFirstX, r.bottom); close() }
             c.drawPath(area, Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                shader = LinearGradient(0f, r.top, 0f, r.bottom, 0x55F2BE22, 0x08F2BE22, Shader.TileMode.CLAMP)
+                shader = LinearGradient(0f, r.top, 0f, r.bottom, withAlpha(GOLD, 0x55), withAlpha(GOLD, 0x08), Shader.TileMode.CLAMP)
             })
             c.drawPath(done, Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.STROKE; strokeWidth = 4 * u; color = RED
@@ -295,7 +302,7 @@ object FrameRenderer {
             }
             if (cx > bx) cy = by
         }
-        c.drawCircle(px(cx), py(cy), 10 * u, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = GOLD_SOFT })
+        c.drawCircle(px(cx), py(cy), 10 * u, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = withAlpha(GOLD, 0x99) })
         c.drawCircle(px(cx), py(cy), 7 * u, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = GOLD })
         c.drawCircle(px(cx), py(cy), 4 * u, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = RED })
     }
@@ -312,9 +319,9 @@ object FrameRenderer {
         val h = headerH + photoH + 40 + rows.size * rowH + 90
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
-        c.drawColor(0xFF050505.toInt())
+        c.drawColor(BLACK)
         val half = w / 2f
-        val dp = paint(GOLD, 44f, bold = true, serif = true)
+        val dp = paint(GOLD, 44f, bold = true)
         c.drawText(Dates.day(dateA), 32f, 72f, dp)
         c.drawText(Dates.day(dateB), half + 32f, 72f, dp)
         drawPhotoFit(c, a, RectF(0f, headerH.toFloat(), half - 4f, (headerH + photoH).toFloat()))

@@ -70,10 +70,10 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 
 /**
- * The pages Settings still opens (#38, #86), where FitNotes opens a page or dialog too (#147): backups, the FitNotes
- * import, the data tools, Home Screen Settings and the rest timer. Every other setting sits on the main list. Each reads
- * and writes only through [Settings], so no screen knows whether a value lives on this phone or travels in backups.
- * The text of the main list and these pages is in `res/values/strings.xml` (#94).
+ * The pages Settings opens (#38, #86), one entry each: those FitNotes opens as a page or dialog too (#147), and
+ * FlexNotes's own (media, profile, Health Connect, medications, reminders, help and About). Settings that need no page
+ * sit on the main list. Each reads and writes only through [Settings], so no screen knows whether a value lives on
+ * this phone or travels in backups. The text of the main list and these pages is in `res/values/strings.xml` (#94).
  */
 enum class SettingsSection(@StringRes val title: Int, val group: PreferenceGroup? = null) {
     Backups(R.string.settings_page_backups),

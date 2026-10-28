@@ -6,6 +6,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
@@ -151,6 +152,13 @@ fun GoldButton(
         content = content
     )
 }
+
+/**
+ * Gold text for a `TextButton`, set here rather than left to Material's default, which can move between releases as
+ * the outlined button's did (#293).
+ */
+@Composable
+fun fitTextButtonColors(): ButtonColors = ButtonDefaults.textButtonColors(contentColor = Brand.Gold)
 
 /**
  * A secondary button in clear smoked glass with a fine gold rim and gold text (#102). The text colour is set here,

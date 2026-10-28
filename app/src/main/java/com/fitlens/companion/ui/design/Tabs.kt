@@ -5,19 +5,10 @@
 
 package com.fitlens.companion.ui.design
 
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.DateRangePicker
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SegmentedButton
@@ -29,14 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,7 +31,6 @@ import com.fitlens.companion.ui.Spacing
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
-import kotlinx.coroutines.launch
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
@@ -170,6 +152,7 @@ fun DateRangePickerDialog(
         confirmButton = {
             TextButton(
                 enabled = state.selectedStartDateMillis != null,
+                colors = fitTextButtonColors(),
                 onClick = {
                     val start = state.selectedStartDateMillis
                     if (start != null) {
@@ -180,7 +163,7 @@ fun DateRangePickerDialog(
                 }
             ) { Text(stringResource(R.string.cmn_apply)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+        dismissButton = { TextButton(onClick = onDismiss, colors = fitTextButtonColors()) { Text(stringResource(R.string.cancel)) } }
     ) {
         DateRangePicker(state = state, modifier = Modifier.weight(1f), colors = fitDatePickerColors())
     }

@@ -30,7 +30,8 @@ class ContrastTest {
         "Gold" to Brand.Gold,
         "GoldLight" to Brand.GoldLight,
         "Rise" to Brand.Rise,
-        "Fall" to Brand.Fall
+        "Fall" to Brand.Fall,
+        "Error" to Brand.Error
     )
 
     /** Text on a coloured container: chosen items, destructive buttons and the gold primary button. */
