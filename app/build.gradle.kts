@@ -154,7 +154,7 @@ dependencies {
     // ui-test-manifest only adds the empty test activity to debug builds; the release APK never contains it.
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.76.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.77.0")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
