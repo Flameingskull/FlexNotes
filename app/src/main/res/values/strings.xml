@@ -216,6 +216,9 @@
     <string name="settings_screen_on">Keep Screen On</string>
     <string name="settings_screen_on_kw">sleep awake display</string>
     <string name="settings_screen_on_summary">Prevent the device from sleeping while the training screen is open</string>
+    <string name="settings_turn_graphs">Open graphs when you turn the phone</string>
+    <string name="settings_turn_graphs_summary">Turn the phone sideways on a graph screen to see the graph full screen, and turn it back to close it. Needs auto-rotate on.</string>
+    <string name="settings_turn_graphs_kw">graph chart landscape rotate turn full screen sideways</string>
     <string name="settings_fill">Fill New Sets From</string>
     <string name="settings_fill_kw">autofill last workout empty</string>
     <string name="settings_fill_last">Last workout</string>

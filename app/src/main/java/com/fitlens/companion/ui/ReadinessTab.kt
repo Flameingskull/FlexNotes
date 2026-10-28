@@ -51,12 +51,15 @@ private fun ReadinessGraph(
     better: (Double, Double) -> Boolean? = ::higherIsBetter,
     fromZero: Boolean = true,
     /** A shaded reference range with a line at each end (#242: the good band of the load ratio). */
-    range: Pair<Double?, Double?>? = null
+    range: Pair<Double?, Double?>? = null,
+    /** The screen's main graph: turning the phone opens it full screen (#269). */
+    turnOpens: Boolean = false
 ) {
     val res = LocalContext.current.resources
     val (kind, setKind) = rememberChartKind(graphId)
     var sel by remember(points) { mutableStateOf<Int?>(null) }
     var fullScreen by rememberSaveable { mutableStateOf(false) }
+    if (turnOpens) TurnOpensGraph(fullScreen) { fullScreen = it }
     val series = listOf(LineSeries(title, points))
     Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         DropdownPill(stringResource(R.string.an_chart_type), ChartKind.entries.map { it.text(res) }, kind.ordinal) { i -> setKind(ChartKind.entries[i]) }
@@ -203,7 +206,7 @@ internal fun ReadinessTab(snap: Snapshot) {
         if (scorePoints.isEmpty()) {
             AnalysisNote(stringResource(R.string.rd_empty))
         } else {
-            ReadinessGraph(stringResource(R.string.rd_title), "analysis:readiness", scorePoints, { fmtNum(it, 0) })
+            ReadinessGraph(stringResource(R.string.rd_title), "analysis:readiness", scorePoints, { fmtNum(it, 0) }, turnOpens = true)
             val avg = scorePoints.map { it.y }.average()
             AnalysisNote(res.getQuantityString(R.plurals.rd_range_average, scorePoints.size, avg.roundToInt(), scorePoints.size))
         }

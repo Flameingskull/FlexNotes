@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,6 +48,7 @@ import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
@@ -96,6 +98,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.fitlens.companion.data.Analysis
+import com.fitlens.companion.data.CHART_HINT_TIMES
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.fmtNum
 import kotlin.math.abs
@@ -309,6 +312,32 @@ private fun FullScreenOrientation(requested: Int) {
     }
 }
 
+/**
+ * Turning the phone opens a screen's main graph (#269). Call it on a screen with one main graph, passing whether its
+ * full-screen view is open and how to open or close it. When the phone turns to landscape, with the phone's
+ * auto-rotate and Settings' "Open graphs when you turn the phone" on, [setOpen] opens it; turning back closes it,
+ * unless the graph was opened with its button. Rotate inside the graph is a turn too. Nothing happens on first show.
+ */
+@Composable
+fun TurnOpensGraph(open: Boolean, setOpen: (Boolean) -> Unit) {
+    val context = LocalContext.current
+    val device by Settings.device.collectAsState()
+    val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+    var lastLandscape by rememberSaveable { mutableStateOf(landscape) }
+    var openedByTurn by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(open) { if (!open) openedByTurn = false }
+    LaunchedEffect(landscape) {
+        if (landscape == lastLandscape) return@LaunchedEffect
+        lastLandscape = landscape
+        val autoRotate = try {
+            android.provider.Settings.System.getInt(context.contentResolver, android.provider.Settings.System.ACCELEROMETER_ROTATION, 0) == 1
+        } catch (e: Exception) { false }
+        if (!device.chartTurnOpens || !autoRotate) return@LaunchedEffect
+        if (landscape && !open) { openedByTurn = true; setOpen(true) }
+        else if (!landscape && open && openedByTurn) { openedByTurn = false; setOpen(false) }
+    }
+}
+
 /** Hides the status and navigation bars of the full-screen dialog while [hide] is true (swipe from the edge to show them). */
 @Composable
 private fun FullScreenBars(hide: Boolean) {
@@ -354,11 +383,22 @@ fun FullScreenChart(
     var orientation by rememberSaveable { mutableIntStateOf(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR) }
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     FullScreenOrientation(orientation)
+    // The pinch hint shows for the first few full-screen opens only; this open counts once (#269).
+    val showHint = rememberSaveable { Settings.current().chartHintShown < CHART_HINT_TIMES }
+    var counted by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        if (!counted) {
+            counted = true
+            Settings.updateDevice { if (it.chartHintShown < CHART_HINT_TIMES) it.copy(chartHintShown = it.chartHintShown + 1) else it }
+        }
+    }
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         FullScreenBars(landscape)
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             Column(Modifier.fillMaxSize()) {
                 BackTopBar(title, onBack = onDismiss, backLabel = stringResource(R.string.ch_close_full)) {
+                    // In landscape the range and options share the top bar's row to leave the graph the height (#269).
+                    if (landscape) Box(Modifier.widthIn(max = 480.dp)) { controls() }
                     IconButton(onClick = reset, enabled = !viewport.isFull) {
                         Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.ch_reset_zoom))
                     }
@@ -368,7 +408,7 @@ fun FullScreenChart(
                         Icon(FitIcons.Rotate, contentDescription = stringResource(R.string.ch_rotate))
                     }
                 }
-                controls()
+                if (!landscape) controls()
                 BoxWithConstraints(
                     Modifier
                         .weight(1f)
@@ -402,7 +442,7 @@ fun FullScreenChart(
                 }
                 footer()
                 // The pinch hint gives way to the graph in landscape (#269).
-                if (!landscape) Text(
+                if (!landscape && showHint) Text(
                     stringResource(if (valueZoom) R.string.ch_pinch_values else R.string.ch_pinch),
                     Modifier.fillMaxWidth().padding(12.dp),
                     style = MaterialTheme.typography.bodySmall,

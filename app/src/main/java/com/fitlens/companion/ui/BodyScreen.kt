@@ -452,6 +452,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
     var showTrend by rememberSaveable { mutableStateOf(false) }
     var fromZero by rememberSaveable { mutableStateOf(false) }
     var fullScreen by rememberSaveable { mutableStateOf(false) }
+    TurnOpensGraph(fullScreen) { fullScreen = it }
     val all = remember(snap.bodyKey, selectedName) { snap.dailySeries(selectedName) }
     val shown = remember(all, rangeIdx) { inRange(all, RANGES[rangeIdx].second) { it.date } }
     // A medication's graph can overlay one symptom's ratings on a 0–10 axis at the right (#207); 0 is none.

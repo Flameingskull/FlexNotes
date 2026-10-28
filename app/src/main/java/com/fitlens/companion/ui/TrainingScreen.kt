@@ -421,6 +421,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
     var showTrend by rememberSaveable { mutableStateOf(false) }
     var fromZero by rememberSaveable { mutableStateOf(false) }
     var fullScreen by rememberSaveable { mutableStateOf(false) }
+    TurnOpensGraph(fullScreen) { fullScreen = it }
     // Compare (#53): the other exercises on this graph, remembered per exercise, and whether values are relative.
     val (compare, setCompare) = rememberCompare(exId)
     var relative by rememberSaveable { mutableStateOf(initial?.relative ?: false) }

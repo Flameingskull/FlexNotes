@@ -51,6 +51,10 @@ data class DeviceSettings(
     val lastResult: String? = null,
     /** The graph hint shows until the user has tapped a point and opened a graph full screen once each (#50). */
     val chartTapSeen: Boolean = false,
+    /** Turning the phone to landscape opens a screen's main graph full screen (#269); on unless switched off. */
+    val chartTurnOpens: Boolean = true,
+    /** How many full-screen graphs have shown the pinch hint (#269); it stops after [CHART_HINT_TIMES]. */
+    val chartHintShown: Int = 0,
     val chartExpandSeen: Boolean = false,
     /** The rest-over sound (#20) as a ringtone URI, or null for the phone's default notification sound. Sounds are
      *  files on this phone, so the choice stays here and never travels in backups. */
@@ -93,6 +97,9 @@ data class DeviceSettings(
 )
 
 /** [DeviceSettings.medCalendar] (#294): leave doses off the calendar, show only how many were taken, or show them in full. */
+/** The pinch hint on a full-screen graph shows this many times (#269). */
+const val CHART_HINT_TIMES = 3
+
 const val MED_CAL_HIDE = 0
 const val MED_CAL_COUNT = 1
 const val MED_CAL_FULL = 2
@@ -508,6 +515,8 @@ object Settings {
     private const val D_SAFETY_REASON = "safety_reason"
     private const val D_LAST_RESULT = "last_result"
     private const val D_CHART_TAP = "chart_hint_tap"
+    private const val D_CHART_TURN = "chart_turn_opens"
+    private const val D_CHART_HINT_N = "chart_hint_shown"
     private const val D_CHART_EXPAND = "chart_hint_expand"
     private const val D_REST_SOUND_URI = "rest_sound_uri"
     private const val D_CALENDAR_FILTER = "calendar_filter"
@@ -633,6 +642,8 @@ object Settings {
         safetyReason = get(D_SAFETY_REASON),
         lastResult = get(D_LAST_RESULT),
         chartTapSeen = bool(get(D_CHART_TAP)),
+        chartTurnOpens = get(D_CHART_TURN) != "0",
+        chartHintShown = get(D_CHART_HINT_N)?.toIntOrNull()?.coerceAtLeast(0) ?: 0,
         chartExpandSeen = bool(get(D_CHART_EXPAND)),
         restSoundUri = get(D_REST_SOUND_URI),
         calendarFilter = get(D_CALENDAR_FILTER),
@@ -671,6 +682,8 @@ object Settings {
         D_SAFETY_REASON to safetyReason,
         D_LAST_RESULT to lastResult,
         D_CHART_TAP to if (chartTapSeen) "1" else null,
+        D_CHART_TURN to if (chartTurnOpens) null else "0",
+        D_CHART_HINT_N to chartHintShown.takeIf { it > 0 }?.toString(),
         D_CHART_EXPAND to if (chartExpandSeen) "1" else null,
         D_REST_SOUND_URI to restSoundUri,
         D_CALENDAR_FILTER to calendarFilter,

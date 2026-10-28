@@ -405,6 +405,11 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
                 Settings.updatePortable { it.copy(keepScreenOn = on) }
             }
         },
+        mainRow(s, R.string.settings_turn_graphs, R.string.settings_turn_graphs_kw) { title ->
+            SettingsSwitchRow(title, device.chartTurnOpens, summary = stringResource(R.string.settings_turn_graphs_summary)) { on ->
+                Settings.updateDevice { it.copy(chartTurnOpens = on) }
+            }
+        },
         // FlexNotes's own settings follow FitNotes's.
         mainRow(s, R.string.settings_fill, R.string.settings_fill_kw) { title ->
             SettingsChoiceRow(
