@@ -139,7 +139,7 @@ dependencies {
     // Background automatic backups (#34). Local only: WorkManager needs no internet permission.
     implementation("androidx.work:work-runtime-ktx:2.12.0")
     // Phone-only settings (#38): folders, schedules and state that must never travel in a .flexnotes backup.
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.datastore:datastore-preferences:1.3.0")
     // The database (#36): Room opens fitlens.db, runs every upgrade and checks the schema it finds.
     implementation("androidx.room:room-runtime:2.8.5")
     implementation("androidx.room:room-ktx:2.8.5")
