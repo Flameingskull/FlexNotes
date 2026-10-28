@@ -106,16 +106,16 @@ tasks.configureEach {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.12.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.activity:activity-compose:1.9.3")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     // Screen structure and state (#37): a saved back stack and per-screen ViewModels.
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.navigation:navigation-compose:2.8.5")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
@@ -134,27 +134,27 @@ dependencies {
     implementation("androidx.health.connect:connect-client:1.1.0")
     // connect-client brings Guava at runtime only, which swaps CameraX's ListenableFuture for Guava's empty stand-in
     // on the compile classpath. Guava itself on the compile classpath puts the class back; R8 drops what isn't used.
-    implementation("com.google.guava:guava:33.3.1-android")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("com.google.guava:guava:33.7.2-android")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     // Background automatic backups (#34). Local only: WorkManager needs no internet permission.
-    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.work:work-runtime-ktx:2.12.0")
     // Phone-only settings (#38): folders, schedules and state that must never travel in a .flexnotes backup.
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     // The database (#36): Room opens fitlens.db, runs every upgrade and checks the schema it finds.
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
-    ksp("androidx.room:room-compiler:2.6.1")
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
 
     // Unit tests (#40): database migrations on the JVM, no emulator.
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("org.robolectric:robolectric:4.17")
     testImplementation("androidx.test:core:1.6.1")
-    testImplementation("androidx.room:room-testing:2.6.1")
+    testImplementation("androidx.room:room-testing:2.8.5")
     // Screenshot tests (#95): Compose rendered by Robolectric's native graphics and compared by Roborazzi.
     // ui-test-manifest only adds the empty test activity to debug builds; the release APK never contains it.
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.40.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.76.0")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 

@@ -5,7 +5,7 @@ Source root: `app/src/main/java/com/fitlens/companion/` (paths below are relativ
 **Keep it current:** any build that adds, moves or renames a file, or changes a pattern below, updates this map in the
 same commit.
 
-Last updated: 1.0.187.
+Last updated: 1.0.188.
 
 ## How data flows
 
@@ -263,7 +263,7 @@ Last updated: 1.0.187.
 `planSummary`, `restSummary`, `restLabel`, `Routines.describe`, `describeSet`, `exerciseLine`, `logWorkoutDay`, `WorkoutClock.stop`, `PdfReport.create`, `setCells`, `spokenDuration`, `trendText`, `ShareImages.renderGraph`/`renderWorkout`) take a `Resources` first. A string that starts or ends with a space, or holds two in a row, is wrapped in double quotes in `strings.xml`, or Android trims it. Graph names (`GRAPH_*`) stay English constants: they're stored as keys in pinned graphs and chart-type choices.
   Every screen is now on resources; messages built in `data/` (backup, import and photo-import results) are still English (#156).
 - **Comments** explain why and cite the issue (`// … (#69)`), like the code around them.
-- **Toolchain:** Kotlin 2.0.21, AGP 8.9.1, Compose with Material 3, `compileSdk` and `targetSdk` 36 (#61), `minSdk` 29. There's no local Android SDK,
+- **Toolchain:** Kotlin 2.4.21, AGP 9.4.1, Compose with Material 3, `compileSdk` and `targetSdk` 36 (#61), `minSdk` 29. There's no local Android SDK,
   so CI is the compiler.
 - **CI code checks (#260, #261):** `.github/scripts/unused_private.py` (Python standard library, no plugin) runs before the build and fails it, with
   `error: unused private path:line: kind name` lines that reach `errors.txt`, when a `private` Kotlin declaration's name appears only once in its own
