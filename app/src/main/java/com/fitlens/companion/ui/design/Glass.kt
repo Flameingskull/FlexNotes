@@ -152,7 +152,10 @@ fun GoldButton(
     )
 }
 
-/** A secondary button in clear smoked glass with a fine gold rim (#102). */
+/**
+ * A secondary button in clear smoked glass with a fine gold rim and gold text (#102). The text colour is set here,
+ * not left to Material: newer Material 3 draws outlined button text in the muted grey (#293).
+ */
 @Composable
 fun GlassOutlinedButton(
     onClick: () -> Unit,
@@ -168,6 +171,7 @@ fun GlassOutlinedButton(
         enabled = enabled,
         shape = shape,
         border = BorderStroke(1.dp, if (enabled) Glass.clearRim else Brand.Outline.copy(alpha = 0.38f)),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = Brand.Gold),
         contentPadding = contentPadding,
         content = content
     )

@@ -263,7 +263,9 @@ Last updated: 1.0.188.
 `planSummary`, `restSummary`, `restLabel`, `Routines.describe`, `describeSet`, `exerciseLine`, `logWorkoutDay`, `WorkoutClock.stop`, `PdfReport.create`, `setCells`, `spokenDuration`, `trendText`, `ShareImages.renderGraph`/`renderWorkout`) take a `Resources` first. A string that starts or ends with a space, or holds two in a row, is wrapped in double quotes in `strings.xml`, or Android trims it. Graph names (`GRAPH_*`) stay English constants: they're stored as keys in pinned graphs and chart-type choices.
   Every screen is now on resources; messages built in `data/` (backup, import and photo-import results) are still English (#156).
 - **Comments** explain why and cite the issue (`// … (#69)`), like the code around them.
-- **Toolchain:** Kotlin 2.4.21, AGP 9.4.1, Compose with Material 3, `compileSdk` and `targetSdk` 36 (#61), `minSdk` 29. There's no local Android SDK,
+- **Toolchain (#293):** Gradle 9.8, AGP 9.4.1 compiling Kotlin 2.4.21 itself (built-in Kotlin: no `kotlin-android` plugin; the root
+  build file pins the Kotlin version, and the Compose, serialization and KSP plugins move with it), Compose with Material 3,
+  `compileSdk` 37 (the AndroidX libraries need it), `targetSdk` 36 (#61), `minSdk` 29. There's no local Android SDK,
   so CI is the compiler.
 - **CI code checks (#260, #261):** `.github/scripts/unused_private.py` (Python standard library, no plugin) runs before the build and fails it, with
   `error: unused private path:line: kind name` lines that reach `errors.txt`, when a `private` Kotlin declaration's name appears only once in its own
