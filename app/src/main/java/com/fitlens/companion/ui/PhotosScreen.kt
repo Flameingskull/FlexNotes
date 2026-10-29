@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.poseText
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.foundation.clickable
 import com.fitlens.companion.ui.design.SectionLabel

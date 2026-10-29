@@ -7,7 +7,6 @@ import android.net.Uri
 import android.provider.DocumentsContract
 import androidx.exifinterface.media.ExifInterface
 import com.fitlens.companion.R
-import com.fitlens.companion.ui.poseText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

@@ -144,13 +144,23 @@ private fun parseDuration(s: String): Int {
  * for the exercise, the exercise's own rest (#15), then the global one. After the exercise's [last] set, the workout's
  * rest before the next exercise comes first, when it has one.
  */
-internal fun restFor(snap: Snapshot, date: String, exerciseId: Long, setId: Long? = null, last: Boolean = false): Int {
+internal fun restFor(snap: Snapshot, date: String, exerciseId: Long, setId: Long? = null, last: Boolean = false): Int =
+    SetEntryRules.restSeconds(
+        prescribedRestFor(snap, date, exerciseId, setId, last),
+        snap.exercises[exerciseId]?.restSeconds,
+        Settings.currentPortable().restSeconds
+    )
+
+/**
+ * The rest the logged workout prescribes (#138) for [exerciseId] on [date], or null when it prescribes none (or the day
+ * isn't a logged workout). The first part of [restFor]; the rest timer's sheet shows it for a manual start (#309).
+ */
+internal fun prescribedRestFor(snap: Snapshot, date: String, exerciseId: Long, setId: Long? = null, last: Boolean = false): Int? {
     val planned = snap.workoutRests[date.take(10)]?.get(exerciseId)
-    if (last) planned?.restAfterSeconds?.let { return it }
     // A Rounds set's rest is the rest between its rounds (#246), not the rest after the set.
     val rounds = ExerciseTypes.isRounds(snap.exercises[exerciseId]?.type ?: -1)
     val own = if (rounds) null else setId?.let { id -> snap.setsByExercise[exerciseId]?.firstOrNull { it.id == id }?.restSeconds }
-    return own ?: planned?.restSeconds ?: snap.exercises[exerciseId]?.restSeconds ?: Settings.currentPortable().restSeconds
+    return SetEntryRules.prescribedRest(if (last) planned?.restAfterSeconds else null, own, planned?.restSeconds)
 }
 
 /**
@@ -679,7 +689,9 @@ fun SetEntryScreen(
             }
         }
     }
-    if (restSheet) RestTimerSheet(ex) { restSheet = false }
+    // A manual start follows the same rule as an automatic one: the workout's prescribed rest for the selected set or
+    // the exercise comes first (#309).
+    if (restSheet) RestTimerSheet(ex, prescribed = prescribedRestFor(snap, date, exerciseId, selected)) { restSheet = false }
     if (grouping) {
         SearchablePicker(
             title = stringResource(R.string.day_superset_title, ex?.name ?: stringResource(R.string.set_this_exercise)),

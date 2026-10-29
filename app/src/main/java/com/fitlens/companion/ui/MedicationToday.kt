@@ -311,7 +311,7 @@ internal fun phaseText(res: Resources, s: MedSchedule, a: MedActivation, date: S
                     else res.getString(R.string.md_phase_off_ongoing)
                 st.phase.on -> res.getString(R.string.md_phase_on, Dates.day(last))
                 !more -> res.getString(R.string.md_phase_off_last, Dates.day(last))
-                else -> res.getString(R.string.md_phase_off, Dates.day(Dates.parse(last)!!.plusDays(1).format(Dates.ISO)))
+                else -> res.getString(R.string.md_phase_off, Dates.day(Dates.plusDays(last, 1)))
             }
         }
     }

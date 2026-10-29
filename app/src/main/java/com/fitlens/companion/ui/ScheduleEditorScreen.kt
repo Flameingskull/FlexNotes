@@ -279,7 +279,7 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                     SectionLabel(stringResource(R.string.md_run), Modifier.padding(top = Spacing.lg))
                     if (current == null) {
                         Text(
-                            if (endedRun != null) stringResource(R.string.md_run_again_note, Dates.day(Dates.parse(endedRun.endedOn!!)!!.minusDays(1).format(Dates.ISO)))
+                            if (endedRun != null) stringResource(R.string.md_run_again_note, Dates.day(Dates.plusDays(endedRun.endedOn!!, -1)))
                             else stringResource(R.string.md_run_note),
                             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -430,7 +430,7 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             onConfirm = {
                 val before = current
                 AppScope.scope.launch {
-                    MedSchedules.end(before, Dates.parse(Dates.today())!!.plusDays(1).format(Dates.ISO))
+                    MedSchedules.end(before, Dates.plusDays(Dates.today(), 1))
                     UiEvents.show(res.getString(R.string.md_ended_named, original.name), res.getString(R.string.bm_undo)) {
                         AppScope.scope.launch { MedSchedules.restore(before) }
                     }

@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.poseText
 import com.fitlens.companion.ui.design.GoldButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement

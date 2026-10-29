@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.siteName
 import android.content.res.Resources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -278,22 +279,6 @@ internal fun SupplySheet(snap: Snapshot, name: String, unit: String, onDismiss: 
 }
 
 // ---------- Injection sites (#210) ----------
-
-/** "Abdomen, upper left", a site's full name. */
-internal fun siteName(res: Resources, site: InjectionSite): String = res.getString(
-    when (site) {
-        InjectionSite.ABDOMEN_UPPER_LEFT -> R.string.inj_abd_ul
-        InjectionSite.ABDOMEN_UPPER_RIGHT -> R.string.inj_abd_ur
-        InjectionSite.ABDOMEN_LOWER_RIGHT -> R.string.inj_abd_lr
-        InjectionSite.ABDOMEN_LOWER_LEFT -> R.string.inj_abd_ll
-        InjectionSite.THIGH_LEFT -> R.string.inj_thigh_l
-        InjectionSite.THIGH_RIGHT -> R.string.inj_thigh_r
-        InjectionSite.ARM_LEFT -> R.string.inj_arm_l
-        InjectionSite.ARM_RIGHT -> R.string.inj_arm_r
-        InjectionSite.GLUTE_LEFT -> R.string.inj_glute_l
-        InjectionSite.GLUTE_RIGHT -> R.string.inj_glute_r
-    }
-)
 
 /** The short label inside a site's zone on the map. */
 private fun siteShort(res: Resources, site: InjectionSite): String = res.getString(

@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.poseText
 import com.fitlens.companion.ui.design.DropdownPill
 import com.fitlens.companion.ui.design.FitIcons
 import com.fitlens.companion.ui.design.FitSheet

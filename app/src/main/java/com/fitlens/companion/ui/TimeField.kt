@@ -57,19 +57,40 @@ internal fun TimeField(
         )
     }
     if (open) {
-        val state = rememberTimePickerState(shown.hour, shown.minute, is24Hour = is24Hour)
-        FitAlertDialog(
-            onDismissRequest = { open = false },
-            title = { Text(label) },
-            text = { TimePicker(state = state, colors = fitTimePickerColors()) },
-            confirmButton = {
-                FitTextButton(onClick = {
-                    // ASCII digits whatever the language, so the stored `HH:mm` always reads back.
-                    onTime(String.format(Locale.ROOT, "%02d:%02d", state.hour, state.minute))
-                    open = false
-                }) { Text(stringResource(R.string.wk_set)) }
-            },
-            dismissButton = { FitTextButton(onClick = { open = false }) { Text(stringResource(R.string.cancel)) } }
-        )
+        ClockDialog(
+            title = label, hour = shown.hour, minute = shown.minute, is24Hour = is24Hour,
+            onDismiss = { open = false }
+        ) { picked ->
+            // ASCII digits whatever the language, so the stored `HH:mm` always reads back.
+            onTime(String.format(Locale.ROOT, "%02d:%02d", picked.hour, picked.minute))
+            open = false
+        }
     }
+}
+
+/**
+ * The one clock dialog (#309): a dial for [hour] and [minute] that reads as 12 or 24 hours per [is24Hour] (the
+ * phone's own style by default, #280), titled [title]. Set calls [onPicked] with the chosen time and leaves closing to
+ * the caller; Cancel and a tap outside call [onDismiss]. Used by [TimeField], Workout Time and the reminders.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun ClockDialog(
+    title: String,
+    hour: Int,
+    minute: Int,
+    onDismiss: () -> Unit,
+    is24Hour: Boolean = DateFormat.is24HourFormat(LocalContext.current),
+    onPicked: (LocalTime) -> Unit
+) {
+    val state = rememberTimePickerState(hour, minute, is24Hour = is24Hour)
+    FitAlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = { TimePicker(state = state, colors = fitTimePickerColors()) },
+        confirmButton = {
+            FitTextButton(onClick = { onPicked(LocalTime.of(state.hour, state.minute)) }) { Text(stringResource(R.string.wk_set)) }
+        },
+        dismissButton = { FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+    )
 }

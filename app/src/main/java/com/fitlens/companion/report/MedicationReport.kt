@@ -11,7 +11,7 @@ import com.fitlens.companion.data.MedSchedules
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Symptoms
 import com.fitlens.companion.data.fmtNum
-import com.fitlens.companion.ui.siteName
+import com.fitlens.companion.data.siteName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.OutputStream

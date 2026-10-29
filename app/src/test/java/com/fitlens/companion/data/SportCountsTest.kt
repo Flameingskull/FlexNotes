@@ -1,6 +1,6 @@
 package com.fitlens.companion.data
 
-import com.fitlens.companion.ui.countParts
+import com.fitlens.companion.data.countParts
 import com.fitlens.companion.ui.countValue
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

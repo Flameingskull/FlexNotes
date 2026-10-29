@@ -11,16 +11,6 @@ import com.fitlens.companion.data.PhotoImportResult
  * English keys; their words come from strings.xml here.
  */
 
-/** "Front", "Side", "Back", "Other"; any other stored pose is shown as it is. */
-internal fun poseText(res: Resources, pose: String): String = when (pose) {
-    "Front" -> res.getString(R.string.pose_front)
-    "Side" -> res.getString(R.string.pose_side)
-    "Back" -> res.getString(R.string.pose_back)
-    "Other" -> res.getString(R.string.pose_other)
-    "" -> res.getString(R.string.pose_not_set)
-    else -> pose
-}
-
 /**
  * The time since the first photo in plain words (#267): "First photo", "12 days in" up to two weeks, "5 weeks in" up
  * to about three months, then "4 months in".

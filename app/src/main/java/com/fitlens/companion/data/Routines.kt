@@ -4,7 +4,6 @@ import android.content.ContentValues
 import android.content.res.Resources
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.fitlens.companion.R
-import com.fitlens.companion.ui.countParts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable

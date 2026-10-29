@@ -21,7 +21,7 @@ import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.data.fmtSigned
 import com.fitlens.companion.ui.defOrder
 import com.fitlens.companion.ui.describeSet
-import com.fitlens.companion.ui.poseText
+import com.fitlens.companion.data.poseText
 import com.fitlens.companion.video.FrameRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

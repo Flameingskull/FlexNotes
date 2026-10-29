@@ -20,8 +20,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -59,7 +57,6 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.fitlens.companion.ui.design.FitAlertDialog
 import com.fitlens.companion.ui.design.FitFilterChip
 import com.fitlens.companion.ui.design.FitTextButton
 
@@ -191,20 +188,15 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
 
     picking?.let { isStart ->
         val current = (if (isStart) s else e)?.let { Dates.dateTime(it)?.toLocalTime() } ?: LocalTime.now()
-        val state = rememberTimePickerState(current.hour, current.minute, is24Hour = android.text.format.DateFormat.is24HourFormat(androidx.compose.ui.platform.LocalContext.current))
-        FitAlertDialog(
-            onDismissRequest = { picking = null },
-            title = { Text(stringResource(if (isStart) R.string.wk_start_time_title else R.string.wk_end_time_title)) },
-            text = { TimePicker(state = state, colors = fitTimePickerColors()) },
-            confirmButton = {
-                FitTextButton(onClick = {
-                    val picked = WorkoutClock.stamp(date, LocalTime.of(state.hour, state.minute))
-                    if (isStart) start = picked else end = picked
-                    picking = null
-                }) { Text(stringResource(R.string.wk_set)) }
-            },
-            dismissButton = { FitTextButton(onClick = { picking = null }) { Text(stringResource(R.string.cancel)) } }
-        )
+        ClockDialog(
+            title = stringResource(if (isStart) R.string.wk_start_time_title else R.string.wk_end_time_title),
+            hour = current.hour, minute = current.minute,
+            onDismiss = { picking = null }
+        ) { picked ->
+            val stamp = WorkoutClock.stamp(date, picked)
+            if (isStart) start = stamp else end = stamp
+            picking = null
+        }
     }
 }
 

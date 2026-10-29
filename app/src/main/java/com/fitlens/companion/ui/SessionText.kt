@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.countParts
 import android.content.res.Resources
 import com.fitlens.companion.R
 import com.fitlens.companion.data.CardioZones
@@ -123,13 +124,6 @@ internal fun sessionMarks(res: Resources, s: SetRow, rounds: Boolean = false, co
     val line = parts.joinToString(" · ").ifBlank { null }
     return SetMarks(null, null, line, line)
 }
-
-/** A set's counts as they read on its line (#266): "3 Takedowns". A count that is unset or 0 is left out. */
-internal fun countParts(names: List<String>, a: Int?, b: Int?): List<String> =
-    listOf(a, b).mapIndexedNotNull { i, v ->
-        val name = names.getOrNull(i)
-        if (name == null || v == null || v <= 0) null else "$v $name"
-    }
 
 /**
  * The line under a Rounds set's time (#246), always in this order and each part only when recorded: "6 × 3 min · 1 min

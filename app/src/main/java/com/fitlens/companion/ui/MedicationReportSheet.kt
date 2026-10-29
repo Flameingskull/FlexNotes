@@ -49,9 +49,10 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val res = ctx.resources
     val all = remember(snap.bodyKey) { snap.medications.map { it.name } }
-    var from by rememberSaveable { mutableStateOf(Dates.parse(Dates.today())!!.minusDays(89).format(Dates.ISO)) }
+    var from by rememberSaveable { mutableStateOf(Dates.plusDays(Dates.today(), -89)) }
     var to by rememberSaveable { mutableStateOf(Dates.today()) }
-    var chosen by remember { mutableStateOf(all.toSet()) }
+    // Kept through rotation: the file picker can turn the phone, and the report must still leave out what was unticked.
+    var chosen by rememberSaveable { mutableStateOf(all.toSet()) }
     var patient by rememberSaveable { mutableStateOf("") }
     var schedules by rememberSaveable { mutableStateOf(true) }
     var adherence by rememberSaveable { mutableStateOf(true) }
@@ -65,7 +66,7 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
     val bodyNames = remember(bodySnap) {
         bodySnap?.usedMeasurements.orEmpty().map { it.name }.filter { bodySnap?.recordsByName?.get(it).orEmpty().isNotEmpty() }
     }
-    var body by remember(bodyNames) { mutableStateOf(bodyNames.filter { it in SUMMARY_DEFAULTS }.toSet()) }
+    var body by rememberSaveable(bodyNames) { mutableStateOf(bodyNames.filter { it in SUMMARY_DEFAULTS }.toSet()) }
     var picking by remember { mutableStateOf<Int?>(null) }
 
     fun options() = MedicationReportOptions(
@@ -148,7 +149,7 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             val today = Dates.today()
             RANGE_PRESETS.forEach { (days, label) ->
-                val start = Dates.parse(today)!!.minusDays(days - 1L).format(Dates.ISO)
+                val start = Dates.plusDays(today, -(days - 1L))
                 FitFilterChip(selected = from == start && to == today, onClick = { from = start; to = today }, label = { Text(stringResource(label)) })
             }
         }

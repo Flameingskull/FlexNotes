@@ -132,4 +132,27 @@ class SetEntryRulesTest {
         assertNull(SetEntryRules.nextSelected(listOf(1, 2, 3), 99, true))
         assertNull(SetEntryRules.nextSelected(emptyList(), 1, true))
     }
+
+    // ---- Rest to start (#138, #309) ----
+
+    @Test
+    fun theWorkoutsPrescribedRestComesBeforeTheExercisesAndTheGlobalOne() {
+        assertEquals(45, SetEntryRules.restSeconds(prescribed = 45, exercise = 90, global = 120))
+        assertEquals(90, SetEntryRules.restSeconds(prescribed = null, exercise = 90, global = 120))
+        assertEquals(120, SetEntryRules.restSeconds(prescribed = null, exercise = null, global = 120))
+    }
+
+    @Test
+    fun theRestBeforeTheNextExerciseBeatsTheSetsOwnAndThePlannedRest() {
+        assertEquals(180, SetEntryRules.prescribedRest(lastRest = 180, setOwn = 30, planned = 60))
+        assertEquals(30, SetEntryRules.prescribedRest(lastRest = null, setOwn = 30, planned = 60))
+        assertEquals(60, SetEntryRules.prescribedRest(lastRest = null, setOwn = null, planned = 60))
+    }
+
+    @Test
+    fun aDayThatPrescribesNoRestFallsThrough() {
+        val none = SetEntryRules.prescribedRest(null, null, null)
+        assertNull(none)
+        assertEquals(75, SetEntryRules.restSeconds(none, 75, 120))
+    }
 }

@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,7 +40,6 @@ import com.fitlens.companion.ui.design.SettingsGroup
 import com.fitlens.companion.ui.design.SettingsNote
 import com.fitlens.companion.ui.design.SettingsSwitchRow
 import java.util.Locale
-import com.fitlens.companion.ui.design.FitAlertDialog
 import com.fitlens.companion.ui.design.FitFilterChip
 import com.fitlens.companion.ui.design.FitTextButton
 
@@ -117,20 +114,15 @@ internal fun RemindersPage() {
 
     timeFor?.let { kind ->
         val r = set.of(kind)
-        val state = rememberTimePickerState(r.localTime.hour, r.localTime.minute, is24Hour = android.text.format.DateFormat.is24HourFormat(ctx))
-        FitAlertDialog(
-            onDismissRequest = { timeFor = null },
-            title = { Text(stringResource(switchTitle(kind))) },
-            text = { TimePicker(state = state, colors = fitTimePickerColors()) },
-            confirmButton = {
-                FitTextButton(onClick = {
-                    // ASCII digits whatever the language, so the stored `HH:mm` always reads back.
-                    save(r.copy(time = String.format(Locale.ROOT, "%02d:%02d", state.hour, state.minute)))
-                    timeFor = null
-                }) { Text(stringResource(R.string.wk_set)) }
-            },
-            dismissButton = { FitTextButton(onClick = { timeFor = null }) { Text(stringResource(R.string.cancel)) } }
-        )
+        ClockDialog(
+            title = stringResource(switchTitle(kind)),
+            hour = r.localTime.hour, minute = r.localTime.minute,
+            onDismiss = { timeFor = null }
+        ) { picked ->
+            // ASCII digits whatever the language, so the stored `HH:mm` always reads back.
+            save(r.copy(time = String.format(Locale.ROOT, "%02d:%02d", picked.hour, picked.minute)))
+            timeFor = null
+        }
     }
     daysFor?.let { kind ->
         val r = set.of(kind)

@@ -65,6 +65,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.fitlens.companion.data.Exercise
 import com.fitlens.companion.data.Settings
+import com.fitlens.companion.data.SetEntryRules
 import androidx.compose.ui.draw.alpha
 import com.fitlens.companion.data.fmtDuration
 import com.fitlens.companion.ui.design.FitSheet
@@ -445,15 +446,17 @@ internal fun RestAlertOptions() {
 /**
  * The rest timer sheet (#20): a large gold countdown, −15 s / +15 s, pause or resume, restart and stop, and its
  * settings (length, start after each saved set, sound, vibrate), which apply everywhere. On an exercise with its own
- * rest time (#15), [exercise]'s length is the one started.
+ * rest time (#15), [exercise]'s length is the one started. A logged workout that prescribes a rest (#138) comes first
+ * ([prescribed], #309), as for an automatic start; changing the length then affects this rest only, so it never
+ * overwrites the exercise's or the global setting.
  */
 @Composable
-fun RestTimerSheet(exercise: Exercise? = null, onDismiss: () -> Unit) {
+fun RestTimerSheet(exercise: Exercise? = null, prescribed: Int? = null, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val res = ctx.resources
     val prefs by Settings.portable.collectAsState()
     val own = exercise?.restSeconds
-    val length = own ?: prefs.restSeconds
+    val length = SetEntryRules.restSeconds(prescribed, own, prefs.restSeconds)
     DisposableEffect(Unit) { onDispose { RestSound.stop() } }
     val (st, left) = rememberRest()
     val askNotify = rememberNotificationAsk()
@@ -468,6 +471,7 @@ fun RestTimerSheet(exercise: Exercise? = null, onDismiss: () -> Unit) {
         // A running rest takes the new length from now (#105). Waiting for typing to settle means "120" never passes
         // through a 1 s rest on the way.
         RestTimer.setLength(secs)
+        if (prescribed != null) return
         if (own != null && exercise != null) {
             AppScope.scope.launch { Workouts.setExerciseDefaults(exercise.id, exercise.weightStepKg, exercise.defaultGraph, secs, exercise.distanceUnit, exercise.weightUnit) }
         } else {
@@ -483,7 +487,7 @@ fun RestTimerSheet(exercise: Exercise? = null, onDismiss: () -> Unit) {
     FitSheet(title = stringResource(R.string.rt_title), onDismiss = onDismiss, dismissLabel = stringResource(R.string.rt_close)) {
         RestLengthStepper(
             seconds = chosen,
-            label = if (own != null && exercise != null) stringResource(R.string.rt_own_length, exercise.name) else stringResource(R.string.rt_length),
+            label = if (prescribed == null && own != null && exercise != null) stringResource(R.string.rt_own_length, exercise.name) else stringResource(R.string.rt_length),
             onChange = { secs -> chosen = secs }
         )
         GoldHairline()
@@ -518,7 +522,14 @@ fun RestTimerSheet(exercise: Exercise? = null, onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.row)
             ) { Text(stringResource(R.string.rt_start, fmtDuration(chosen))) }
         }
-        if (own != null && exercise != null) {
+        if (prescribed != null) {
+            // The workout sets this rest (#309): say so, since a change here doesn't save anywhere.
+            Text(
+                stringResource(R.string.rt_workout_note),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        } else if (own != null && exercise != null) {
             Text(
                 stringResource(R.string.rt_own_note, exercise.name, fmtDuration(prefs.restSeconds)),
                 style = MaterialTheme.typography.bodySmall,

@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.poseText
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.GoldButton

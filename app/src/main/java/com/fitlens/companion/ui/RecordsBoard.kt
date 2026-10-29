@@ -49,7 +49,7 @@ import com.fitlens.companion.ui.design.SegmentedSwitch
 import com.fitlens.companion.ui.design.DropdownPill
 import com.fitlens.companion.ui.design.FitTextButton
 
-private const val MAX_REPS = 15
+private const val MAX_REPS = Records.MAX_REPS
 private val LABEL_W = 56.dp
 private val CELL_W = 96.dp
 private val CELL_H = 40.dp
@@ -270,7 +270,8 @@ private fun GridRow(
                 } else {
                     val bright = estimated || cell.direct
                     Text(
-                        cellText(snap, cell) + if (bright) "" else " ↑",
+                        // An estimate from more than 10 reps is marked approximate, as on the exercise's Records tab (#139).
+                        (if (estimated && Records.approximate(r)) "≈ " else "") + cellText(snap, cell) + if (bright) "" else " ↑",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = if (bright) FontWeight.SemiBold else FontWeight.Normal,
                         color = if (bright) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)

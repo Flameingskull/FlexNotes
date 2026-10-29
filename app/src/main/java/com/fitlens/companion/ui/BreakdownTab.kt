@@ -54,9 +54,10 @@ fun BreakdownTab(snap: Snapshot, nav: Nav, onOpen: (Analysis.Filter) -> Unit) {
     var measureIdx by rememberSaveable { mutableIntStateOf(0) }
     var groupIdx by rememberSaveable { mutableIntStateOf(0) }
     var spanIdx by rememberSaveable { mutableIntStateOf(Analysis.Span.Month.ordinal) }
-    var windowIdx by remember { mutableIntStateOf(0) }
-    var custom by remember { mutableStateOf<Pair<String, String>?>(null) }
-    var pickingCustom by remember { mutableStateOf(false) }
+    // The period and a custom range are kept with the span, so turning the phone doesn't lose them.
+    var windowIdx by rememberSaveable { mutableIntStateOf(0) }
+    var custom by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
+    var pickingCustom by rememberSaveable { mutableStateOf(false) }
     var fullScreen by rememberSaveable { mutableStateOf(false) }
     val measure = Analysis.Measure.entries[measureIdx]
     val group = Analysis.GroupBy.entries[groupIdx]

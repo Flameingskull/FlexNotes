@@ -2581,6 +2581,7 @@
     <string name="rt_stop">Stop</string>
     <string name="rt_start">Start %1$s rest</string>
     <string name="rt_own_note">This length is %1$s\'s own. Every other exercise rests %2$s.</string>
+    <string name="rt_workout_note">This workout sets this rest. A change here applies to this rest only: edit the workout to change it for good.</string>
     <string name="rt_use_default">Use the default length for %1$s</string>
     <string name="rt_note">The timer keeps running as you move between exercises, and with the screen off, where a notification shows it.</string>
     <string name="tn_over_title">Rest over</string>

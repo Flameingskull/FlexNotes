@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.poseText
 import com.fitlens.companion.ui.design.SearchFieldIcon
 
 import android.content.res.Resources

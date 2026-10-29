@@ -6,6 +6,19 @@ package com.fitlens.companion.data
  * it has read. The screen keeps the side effects (navigation, messages, timers, writes).
  */
 object SetEntryRules {
+    /**
+     * The rest the workout itself prescribes (#138), first match wins: the rest before the next exercise when this is
+     * the exercise's [lastRest] set, the set's own rest ([setOwn]), then the rest the logged workout prescribes for the
+     * exercise ([planned]). Null when the workout prescribes none.
+     */
+    fun prescribedRest(lastRest: Int?, setOwn: Int?, planned: Int?): Int? = lastRest ?: setOwn ?: planned
+
+    /**
+     * The rest to start, the one rule for automatic and manual starts (#309): what the workout prescribes, then the
+     * exercise's own rest (#15), then the global one.
+     */
+    fun restSeconds(prescribed: Int?, exercise: Int?, global: Int): Int = prescribed ?: exercise ?: global
+
     /** A session shorter or longer than this (15 and 240 minutes) is asked about once before it is saved (#243). */
     const val SESSION_MIN_SEC = 15 * 60
     const val SESSION_MAX_SEC = 240 * 60

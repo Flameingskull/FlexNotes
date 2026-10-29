@@ -823,8 +823,11 @@ fun ExerciseEditorSheet(
     var countNameA by rememberSaveable { mutableStateOf(existing?.countNames.orEmpty().getOrElse(0) { "" }) }
     var countNameB by rememberSaveable { mutableStateOf(existing?.countNames.orEmpty().getOrElse(1) { "" }) }
     val res = LocalContext.current.resources
+    // A second tap while the first save is still being written would only report the name as taken.
+    var saving by remember { mutableStateOf(false) }
 
     fun save(keepOpen: Boolean) {
+        if (saving) return
         val n = name.trim()
         if (n.isEmpty()) {
             UiEvents.show(res.getString(R.string.lib_enter_name))
@@ -842,7 +845,7 @@ fun ExerciseEditorSheet(
         val kind = sessionKind
         val fields = sessionFields
         val countNames = SportCounts.parse(SportCounts.join(listOf(countNameA, countNameB)))
-        if (!keepOpen) onDismiss()
+        saving = true
         AppScope.scope.launch {
             try {
                 val id = if (existing == null) {
@@ -869,11 +872,15 @@ fun ExerciseEditorSheet(
                     name = ""
                     notes = ""
                     UiEvents.show(res.getString(R.string.lib_saved, n))
-                } else if (existing == null) {
-                    onSaved(id)
+                } else {
+                    // Closed only once it is saved, so a name already taken (or any refusal) keeps everything typed.
+                    onDismiss()
+                    if (existing == null) onSaved(id)
                 }
             } catch (e: WorkoutDataException) {
                 UiEvents.show(e.text(res))
+            } finally {
+                saving = false
             }
         }
     }
@@ -1287,7 +1294,6 @@ fun CategoryEditorSheet(
         onConfirm = {
             val n = name.trim()
             val c = colour
-            onDismiss()
             AppScope.scope.launch {
                 try {
                     val id = if (existing == null) {
@@ -1296,6 +1302,8 @@ fun CategoryEditorSheet(
                         Workouts.updateCategory(existing.id, n, c)
                         existing.id
                     }
+                    // Closed only once it is saved, so a name already taken keeps the sheet and what was typed.
+                    onDismiss()
                     onSaved(id)
                 } catch (e: WorkoutDataException) {
                     UiEvents.show(e.text(res))
@@ -1389,11 +1397,6 @@ fun LibraryAction(nav: Nav) {
 }
 
 /**
- * A Session exercise's kind of sport and what it records (#249). Picking a kind fills in what the Session exercises
- * of that kind in the library record (or the kind's usual fields when there are none), and says which ones it
- * compared, so a new sport starts from its nearest neighbours. Every field can then be ticked on or off.
- */
-/**
  * The counts a Session or Rounds exercise keeps for itself (#266): up to two names, free text, with a few suggestions for
  * the kind of sport. Nothing is added unless tapped or typed.
  */
@@ -1430,6 +1433,11 @@ private fun CountsSetup(kind: String?, a: String, onA: (String) -> Unit, b: Stri
     }
 }
 
+/**
+ * A Session exercise's kind of sport and what it records (#249). Picking a kind fills in what the Session exercises
+ * of that kind in the library record (or the kind's usual fields when there are none), and says which ones it
+ * compared, so a new sport starts from its nearest neighbours. Every field can then be ticked on or off.
+ */
 @Composable
 private fun SessionSetup(
     snap: Snapshot,

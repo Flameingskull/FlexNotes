@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.poseText
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
