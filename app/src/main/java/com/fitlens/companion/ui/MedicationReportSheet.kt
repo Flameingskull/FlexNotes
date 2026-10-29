@@ -85,7 +85,7 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
         onDismiss()
         if (uri != null) runBusy(res.getString(R.string.mdr_busy)) {
             val s = Store.snapshot.value ?: snap
-            val pages = ctx.contentResolver.openOutputStream(uri, "wt")?.use { os -> MedicationReport.create(res, s, o, os) }
+            val pages = ctx.contentResolver.openOutputStream(uri, "wt")?.use { os -> MedicationReport.create(res, s, o, os, is24Hour = android.text.format.DateFormat.is24HourFormat(ctx)) }
                 ?: return@runBusy ImportSummary(res.getString(R.string.backup_pdf_failed), false)
             ImportSummary(res.getQuantityString(R.plurals.backup_pdf_saved, pages, pages), true)
         }
@@ -112,7 +112,7 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
                     val dir = File(ctx.cacheDir, "exports").apply { mkdirs() }
                     dir.listFiles()?.filter { it.name.startsWith("FlexNotes_Medications_") }?.forEach { it.delete() }
                     val f = File(dir, name(ext))
-                    if (ext == "pdf") f.outputStream().use { os -> MedicationReport.create(res, s, o, os) }
+                    if (ext == "pdf") f.outputStream().use { os -> MedicationReport.create(res, s, o, os, is24Hour = android.text.format.DateFormat.is24HourFormat(ctx)) }
                     else f.writeText(CsvExport.medications(s, o.from, o.to, o.names), Charsets.UTF_8)
                     f
                 }

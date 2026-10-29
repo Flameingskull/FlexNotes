@@ -366,14 +366,24 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
                                 )
                         ) {
                             PhotoThumb(snap, p, Modifier.fillMaxSize())
-                            Text(
-                                Dates.short(p.date!!) + if (p.pose.isNotBlank()) " · ${poseText(res, p.pose)}" else "",
-                                color = Brand.Ivory,
-                                style = MaterialTheme.typography.labelSmall,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            // The weekday date always has its own line, so it is never the part that gets cut off in a
+                            // narrow tile or at a large font size; the pose, when there is one, goes beneath and is
+                            // the part that ellipsises (#308).
+                            Column(
                                 modifier = Modifier.align(Alignment.BottomStart)
                                     .background(Brand.Black.copy(alpha = 0.6f), RoundedCornerShape(topEnd = 6.dp)).padding(horizontal = 4.dp, vertical = 1.dp)
-                            )
+                            ) {
+                                Text(
+                                    Dates.day(p.date!!), color = Brand.Ivory, style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 2, overflow = TextOverflow.Ellipsis
+                                )
+                                if (p.pose.isNotBlank()) {
+                                    Text(
+                                        poseText(res, p.pose), color = Brand.Ivory, style = MaterialTheme.typography.labelSmall,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
                             if (isSel) {
                                 Box(Modifier.fillMaxSize().border(3.dp, MaterialTheme.colorScheme.primary, FitShapes.row))
                                 Icon(

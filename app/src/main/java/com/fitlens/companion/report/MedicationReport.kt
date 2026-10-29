@@ -48,8 +48,11 @@ data class MedicationReportOptions(
  */
 object MedicationReport {
 
-    /** Writes the report to [os]. Returns the number of pages. */
-    suspend fun create(res: Resources, snap: Snapshot, o: MedicationReportOptions, os: OutputStream, today: String = Dates.today()): Int =
+    /**
+     * Writes the report to [os]. Returns the number of pages. Dose times follow the phone's clock style: callers pass
+     * `DateFormat.is24HourFormat(context)` as [is24Hour] (#280, #308).
+     */
+    suspend fun create(res: Resources, snap: Snapshot, o: MedicationReportOptions, os: OutputStream, today: String = Dates.today(), is24Hour: Boolean = true): Int =
         withContext(Dispatchers.Default) {
             val doc = PdfDocument()
             try {
@@ -58,13 +61,13 @@ object MedicationReport {
                 val names = o.names.ifEmpty { snap.medications.map { it.name }.toSet() }
                 val log = MedSchedules.doseLog(snap.medPlan, meds.records, o.from, o.to, today, names)
                 heading(w, o, names)
-                if (o.schedules) schedules(w, snap, names, today)
+                if (o.schedules) schedules(w, snap, names, today, is24Hour)
                 if (o.adherence) adherence(w, MedSchedules.adherence(log))
                 if (o.adherence) asNeeded(w, snap, o, names)
                 if (o.graphs) graphs(w, snap, o, names)
                 if (o.symptoms) symptoms(w, snap, o)
                 if (o.summary) bodyValues(w, snap, o)
-                if (o.doseLog) doseLog(w, log)
+                if (o.doseLog) doseLog(w, log, is24Hour)
                 if (o.comments) comments(w, log)
                 w.finish()
                 withContext(Dispatchers.IO) { doc.writeTo(os) }
@@ -106,7 +109,7 @@ object MedicationReport {
         w.y += 8f
     }
 
-    private fun schedules(w: PageWriter, snap: Snapshot, names: Set<String>, today: String) {
+    private fun schedules(w: PageWriter, snap: Snapshot, names: Set<String>, today: String, is24Hour: Boolean) {
         val res = w.res
         val plan = snap.medPlan
         label(w, res.getString(R.string.mdr_current))
@@ -129,7 +132,7 @@ object MedicationReport {
                         else -> res.getString(R.string.md_every_day)
                     }
                     val taper = com.fitlens.companion.ui.taperText(res, d)?.let { " · $it" }.orEmpty()
-                    para(w, "${fmtNum(d.amount)} ${d.unit} · ${d.time} · $days$taper", 9f, indent = 24f)
+                    para(w, "${fmtNum(d.amount)} ${d.unit} · ${Dates.time(d.time, is24Hour)} · $days$taper", 9f, indent = 24f)
                 }
                 plan.changes.filter { c -> run != null && c.activationId == run.id && plan.dosesById[c.doseId]?.second?.medication == n }.forEach { c ->
                     val unit = plan.dosesById[c.doseId]?.second?.unit.orEmpty()
@@ -203,8 +206,8 @@ object MedicationReport {
             val r = RectF(M + 28f, w.y + 18f, M + CW, w.y + 18f + h)
             PdfReport.lineChart(w, pts.map { Dates.epochDay(it.date) to it.value }, emptyList(), r)
             val dp = paint(w.p.muted, 7f)
-            w.c.drawText(Dates.short(pts.first().date), r.left, r.bottom + 12f, dp)
-            w.rightText(Dates.short(pts.last().date), dp, r.right, r.bottom + 12f)
+            w.c.drawText(Dates.medium(pts.first().date), r.left, r.bottom + 12f, dp)
+            w.rightText(Dates.medium(pts.last().date), dp, r.right, r.bottom + 12f)
             w.y = r.bottom + 24f
         }
     }
@@ -241,8 +244,8 @@ object MedicationReport {
                 val r = RectF(M + 28f, w.y + 4f, M + CW, w.y + 4f + h)
                 PdfReport.lineChart(w, pts.map { Dates.epochDay(it.date) to it.rating.toDouble() }, emptyList(), r)
                 val dp = paint(w.p.muted, 7f)
-                w.c.drawText(Dates.short(pts.first().date), r.left, r.bottom + 12f, dp)
-                w.rightText(Dates.short(pts.last().date), dp, r.right, r.bottom + 12f)
+                w.c.drawText(Dates.medium(pts.first().date), r.left, r.bottom + 12f, dp)
+                w.rightText(Dates.medium(pts.last().date), dp, r.right, r.bottom + 12f)
                 w.y = r.bottom + 20f
             }
             pts.filter { !it.comment.isNullOrBlank() }.forEach { rt ->
@@ -297,15 +300,15 @@ object MedicationReport {
                 val r = RectF(M + 28f, w.y + 4f, M + CW, w.y + 4f + h)
                 PdfReport.lineChart(w, pts.map { Dates.epochDay(it.date) to it.value }, emptyList(), r)
                 val dp = paint(w.p.muted, 7f)
-                w.c.drawText(Dates.short(first.date), r.left, r.bottom + 12f, dp)
-                w.rightText(Dates.short(last.date), dp, r.right, r.bottom + 12f)
+                w.c.drawText(Dates.medium(first.date), r.left, r.bottom + 12f, dp)
+                w.rightText(Dates.medium(last.date), dp, r.right, r.bottom + 12f)
                 w.y = r.bottom + 20f
             }
             w.y += 6f
         }
     }
 
-    private fun doseLog(w: PageWriter, log: List<MedSchedules.LogEntry>) {
+    private fun doseLog(w: PageWriter, log: List<MedSchedules.LogEntry>, is24Hour: Boolean) {
         val res = w.res
         label(w, res.getString(R.string.mdr_dose_log))
         if (log.isEmpty()) {
@@ -313,7 +316,8 @@ object MedicationReport {
             return
         }
         // The Site column (#223) holds where an injected dose went; it stays empty for any other value.
-        val cols = floatArrayOf(M, M + 68f, M + 108f, M + 150f, M + 278f, M + 368f, M + 435f)
+        // The date column is wide enough for "Mon 27 Oct 2025" (#308); the time columns for "10:05 PM".
+        val cols = floatArrayOf(M, M + 84f, M + 128f, M + 178f, M + 298f, M + 382f, M + 447f)
         val hp = paint(w.p.muted, 7.5f, bold = true, tracking = 0.15f)
         fun header() {
             listOf(R.string.mdr_col_date, R.string.mdr_col_due, R.string.mdr_col_taken_at, R.string.mdr_col_medication, R.string.mdr_col_site, R.string.mdr_col_amount, R.string.mdr_col_status)
@@ -336,9 +340,9 @@ object MedicationReport {
                 MedSchedules.Outcome.DUE -> res.getString(R.string.mdr_due)
                 null -> res.getString(R.string.mdr_logged)
             } + if (d?.change != null) " · " + res.getString(R.string.mdr_changed) else ""
-            w.c.drawText(Dates.short(e.date), cols[0], w.y + 9f, tp)
-            w.c.drawText(d?.time.orEmpty(), cols[1], w.y + 9f, tp)
-            w.c.drawText(r?.time?.take(5).orEmpty(), cols[2], w.y + 9f, tp)
+            w.c.drawText(clip(Dates.day(e.date), tp, cols[1] - cols[0] - 4f), cols[0], w.y + 9f, tp)
+            w.c.drawText(clip(d?.time?.let { Dates.time(it, is24Hour) }.orEmpty(), tp, cols[2] - cols[1] - 2f), cols[1], w.y + 9f, tp)
+            w.c.drawText(clip(r?.time?.take(5)?.let { Dates.time(it, is24Hour) }.orEmpty(), tp, cols[3] - cols[2] - 2f), cols[2], w.y + 9f, tp)
             w.c.drawText(clip(e.medication, tp, cols[4] - cols[3] - 6f), cols[3], w.y + 9f, tp)
             InjectionSite.of(r?.site)?.let { w.c.drawText(clip(siteName(res, it), tp, cols[5] - cols[4] - 6f), cols[4], w.y + 9f, tp) }
             w.c.drawText(amount, cols[5], w.y + 9f, tp)

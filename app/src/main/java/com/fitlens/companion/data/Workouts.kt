@@ -1016,7 +1016,10 @@ object Workouts {
 
         // Times: if both days have them, keep one row from the earliest start to the latest finish (#76).
         // Timestamps are `yyyy-MM-dd HH:mm:ss`, so they compare correctly as text.
-        val movedTimes = w.timesOn(f).map { it.copy(start = it.start?.let { s -> t + s.drop(10) }, finish = it.finish?.let { e -> t + e.drop(10) }) }
+        // Start and finish shift by the same number of days, so a finish after midnight stays on the day after
+        // its start and the recorded length is kept (#307).
+        val shiftDays = Dates.epochDay(t) - Dates.epochDay(f)
+        val movedTimes = w.timesOn(f).map { it.copy(start = Dates.shiftStamp(it.start, shiftDays), finish = Dates.shiftStamp(it.finish, shiftDays)) }
         val destTimes = w.timesOn(t)
         if (movedTimes.isNotEmpty() && destTimes.isNotEmpty()) {
             destTimes.filter { it.source == Sources.FITNOTES }.forEach { w.addSkip(RULE_TIME, timeKey(t, it.start, it.finish)) }
@@ -1027,9 +1030,9 @@ object Workouts {
             w.deleteTimesOn(t)
             if (start != null || finish != null) w.addTime(t, start, finish, Sources.FLEXNOTES)
         } else {
-            // Start and finish are full timestamps that begin with the date, so their day part moves with the workout
-            // and the recorded duration stays the same.
-            w.moveTimes(f, t, Sources.FLEXNOTES)
+            // Nothing on the target day to merge with: the shifted rows simply move over, as FlexNotes's own.
+            w.deleteTimesOn(f)
+            movedTimes.forEach { w.addTime(t, it.start, it.finish, Sources.FLEXNOTES) }
         }
         replayPrs(w, scope.exercises)
         moved

@@ -684,7 +684,10 @@ interface WorkoutDao {
     @Query("INSERT INTO workout_time(date, start, finish, source) VALUES(:date, :start, :finish, :source)")
     fun addTime(date: String, start: String?, finish: String?, source: String)
 
-    /** Start and finish begin with the date, so their day part moves with the workout and the duration is kept. */
+    /**
+     * Rewrites the date part of start and finish to [toDate]. That is only right when both stamps are on the same
+     * day, so `Workouts.moveWorkout` shifts them in Kotlin (`Dates.shiftStamp`, #307) instead of calling this.
+     */
     @Query(
         "UPDATE workout_time SET date = :toDate, source = :source, " +
             "start = CASE WHEN start IS NULL THEN NULL ELSE :toDate || substr(start, 11) END, " +

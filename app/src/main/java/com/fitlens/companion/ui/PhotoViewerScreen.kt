@@ -413,7 +413,7 @@ fun PhotoPickerDialog(snap: Snapshot, onDismiss: () -> Unit, onPick: (Long) -> U
                         Box(Modifier.aspectRatio(0.75f).clip(FitShapes.row).clickable(onClickLabel = stringResource(R.string.pv_choose)) { onPick(p.id) }) {
                             PhotoThumb(snap, p, Modifier.fillMaxSize(), sizePx = 240)
                             Text(
-                                Dates.short(p.date ?: ""), color = Brand.Ivory, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                Dates.day(p.date ?: ""), color = Brand.Ivory, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.align(Alignment.BottomStart).background(Brand.Black.copy(alpha = 0.6f)).padding(2.dp)
                             )
                         }

@@ -538,6 +538,16 @@ object Dates {
         }
     }
 
+    /**
+     * A workout stamp moved by [days] whole days, the clock part kept as it was, so a workout moved to another date
+     * keeps its length: a finish after midnight stays on the day after its start (#307). Missing or unreadable
+     * stamps are returned unchanged.
+     */
+    fun shiftStamp(stamp: String?, days: Long): String? {
+        val d = parse(stamp) ?: return stamp
+        return d.plusDays(days).format(ISO) + stamp!!.drop(10)
+    }
+
     /** Seconds between two workout stamps, or 0 when either is missing or unparseable. */
     fun secondsBetween(start: String?, end: String?): Long {
         val s = dateTime(start) ?: return 0L
