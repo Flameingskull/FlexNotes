@@ -27,7 +27,6 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -62,6 +61,7 @@ import java.time.ZoneOffset
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.ui.design.FitAlertDialog
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * How much a result weighs, which decides how it reaches the user (#62).
@@ -298,7 +298,7 @@ fun PickDateDialog(initial: String?, onDismiss: () -> Unit, onPicked: (String) -
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(onClick = {
+            FitTextButton(onClick = {
                 val ms = state.selectedDateMillis
                 if (ms != null) {
                     onPicked(Instant.ofEpochMilli(ms).atZone(ZoneOffset.UTC).toLocalDate().format(Dates.ISO))
@@ -306,7 +306,7 @@ fun PickDateDialog(initial: String?, onDismiss: () -> Unit, onPicked: (String) -
                 onDismiss()
             }) { Text(stringResource(R.string.cmn_ok)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+        dismissButton = { FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     ) {
         DatePicker(state = state, colors = fitDatePickerColors())
     }
@@ -339,11 +339,11 @@ fun ResultDialog(m: UiMessage, onDismiss: () -> Unit) {
         },
         confirmButton = {
             val action = m.actionLabel
-            if (action != null) TextButton(onClick = { onDismiss(); m.onAction?.invoke() }) { Text(action) }
-            else TextButton(onClick = onDismiss) { Text(stringResource(R.string.cmn_ok)) }
+            if (action != null) FitTextButton(onClick = { onDismiss(); m.onAction?.invoke() }) { Text(action) }
+            else FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cmn_ok)) }
         },
         dismissButton = {
-            if (m.actionLabel != null) TextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
+            if (m.actionLabel != null) FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.close)) }
         }
     )
 }
@@ -354,7 +354,7 @@ fun ConfirmDialog(title: String, text: String, confirm: String = stringResource(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(text) },
-        confirmButton = { TextButton(onClick = { onConfirm(); onDismiss() }) { Text(confirm) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+        confirmButton = { FitTextButton(onClick = { onConfirm(); onDismiss() }) { Text(confirm) } },
+        dismissButton = { FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }

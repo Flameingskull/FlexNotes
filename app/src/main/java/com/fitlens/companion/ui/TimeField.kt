@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -25,6 +24,7 @@ import com.fitlens.companion.data.Dates
 import java.time.LocalTime
 import java.util.Locale
 import com.fitlens.companion.ui.design.FitAlertDialog
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * A time chosen with the clock dialog (#270), never typed: a typed time was quietly replaced by "now" or 08:00 when it
@@ -63,13 +63,13 @@ internal fun TimeField(
             title = { Text(label) },
             text = { TimePicker(state = state, colors = fitTimePickerColors()) },
             confirmButton = {
-                TextButton(onClick = {
+                FitTextButton(onClick = {
                     // ASCII digits whatever the language, so the stored `HH:mm` always reads back.
                     onTime(String.format(Locale.ROOT, "%02d:%02d", state.hour, state.minute))
                     open = false
                 }) { Text(stringResource(R.string.wk_set)) }
             },
-            dismissButton = { TextButton(onClick = { open = false }) { Text(stringResource(R.string.cancel)) } }
+            dismissButton = { FitTextButton(onClick = { open = false }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }

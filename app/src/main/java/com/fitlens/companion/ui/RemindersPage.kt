@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -45,6 +44,7 @@ import com.fitlens.companion.ui.design.SettingsSwitchRow
 import java.util.Locale
 import com.fitlens.companion.ui.design.FitAlertDialog
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * Settings › Reminders (#219): a reminder to weigh in, take measurements, take progress photos and train, each
@@ -123,13 +123,13 @@ internal fun RemindersPage() {
             title = { Text(stringResource(switchTitle(kind))) },
             text = { TimePicker(state = state, colors = fitTimePickerColors()) },
             confirmButton = {
-                TextButton(onClick = {
+                FitTextButton(onClick = {
                     // ASCII digits whatever the language, so the stored `HH:mm` always reads back.
                     save(r.copy(time = String.format(Locale.ROOT, "%02d:%02d", state.hour, state.minute)))
                     timeFor = null
                 }) { Text(stringResource(R.string.wk_set)) }
             },
-            dismissButton = { TextButton(onClick = { timeFor = null }) { Text(stringResource(R.string.cancel)) } }
+            dismissButton = { FitTextButton(onClick = { timeFor = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
     daysFor?.let { kind ->
@@ -155,8 +155,8 @@ internal fun RemindersPage() {
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                TextButton(onClick = { days = (1..7).toSet() }) { Text(stringResource(R.string.lr_every_day)) }
-                TextButton(onClick = { days = (1..5).toSet() }) { Text(stringResource(R.string.lr_weekdays)) }
+                FitTextButton(onClick = { days = (1..7).toSet() }) { Text(stringResource(R.string.lr_every_day)) }
+                FitTextButton(onClick = { days = (1..5).toSet() }) { Text(stringResource(R.string.lr_weekdays)) }
             }
         }
     }

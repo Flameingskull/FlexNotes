@@ -30,12 +30,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -66,6 +64,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.fitlens.companion.ui.design.FitAlertDialog
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * Settings → Backup: backup files, automatic backups and PDF reports. Everything stays on the device. The page's text
@@ -349,8 +348,8 @@ private fun RestoreDialog(info: Backups.Info, onDismiss: () -> Unit, onConfirm: 
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.restore_confirm)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+        confirmButton = { FitTextButton(onClick = onConfirm) { Text(stringResource(R.string.restore_confirm)) } },
+        dismissButton = { FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 

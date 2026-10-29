@@ -12,7 +12,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -43,6 +42,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 private val HHMM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -185,7 +185,7 @@ fun MeasurementEntrySheet(
         // Body fat can be worked out from the tape measurements (#153).
         if (bodyFat) {
             BodyFatPrefillNote(estimate, theDate)
-            TextButton(onClick = { calculating = true }) { Text(stringResource(R.string.bm_calculate)) }
+            FitTextButton(onClick = { calculating = true }) { Text(stringResource(R.string.bm_calculate)) }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             GlassOutlinedButton(onClick = { pickDate = true }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {

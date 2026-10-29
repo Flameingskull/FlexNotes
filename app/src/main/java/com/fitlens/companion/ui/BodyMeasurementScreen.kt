@@ -18,7 +18,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -59,6 +58,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
+import com.fitlens.companion.ui.design.FitTextButton
 
 private val HHMM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -261,7 +261,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                                         modifier = Modifier.weight(1f).height(52.dp)
                                     ) { Text(stringResource(R.string.lib_delete)) }
                                 }
-                                TextButton(onClick = { selected = null }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.bm_new_instead)) }
+                                FitTextButton(onClick = { selected = null }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.bm_new_instead)) }
                             }
                         }
                     }

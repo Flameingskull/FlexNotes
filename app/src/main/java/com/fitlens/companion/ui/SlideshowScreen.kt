@@ -41,7 +41,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -89,6 +88,7 @@ import com.fitlens.companion.video.SlideWords
 import com.fitlens.companion.ui.design.FitSlider
 import com.fitlens.companion.ui.design.FitCheckbox
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 private data class Format(@StringRes val label: Int, val w: Int, val h: Int) {
     val key get() = "${w}x$h"
@@ -395,7 +395,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
             Text(stringResource(R.string.ss_size), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             DropdownPill(label = stringResource(R.string.ss_video_size), options = FORMATS.map { res.getString(it.label) }, selected = formatIdx) { formatIdx = it }
         }
-        TextButton(onClick = {
+        FitTextButton(onClick = {
             val d = SlideshowPrefs()
             pose = d.pose; onePerDay = d.onePerDay; seconds = d.seconds; fade = d.fade
             showDate = d.showDate; showSince = d.showSince; showPose = d.showPose; title = d.title; formatIdx = 0

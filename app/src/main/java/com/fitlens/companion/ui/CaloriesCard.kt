@@ -13,7 +13,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,6 +43,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import com.fitlens.companion.ui.design.FitTextButton
 
 /** A group of activities (#244), as the exercise editor's picker files them. */
 internal fun activityCategoryText(res: android.content.res.Resources, c: Energy.ActivityCategory): String = res.getString(
@@ -276,7 +276,7 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
 
         if (day == null) {
             SettingsNote(stringResource(R.string.cal_sheet_set_up_note, daily.missing.joinToString(", ") { missingText(res, it) }))
-            TextButton(onClick = { onDismiss(); nav.push(Screen.SettingsPage(SettingsSection.Profile)) }) {
+            FitTextButton(onClick = { onDismiss(); nav.push(Screen.SettingsPage(SettingsSection.Profile)) }) {
                 Text(stringResource(R.string.cal_card_set_up))
             }
         } else {
@@ -331,7 +331,7 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
                 SettingsNote(stringResource(R.string.cal_card_no_target))
             }
             SettingsNote(stringResource(R.string.cal_sheet_note, Energy.TYPICAL_ERROR_PERCENT))
-            TextButton(onClick = { onDismiss(); nav.push(Screen.Tdee) }) { Text(stringResource(R.string.cal_sheet_open_tdee)) }
+            FitTextButton(onClick = { onDismiss(); nav.push(Screen.Tdee) }) { Text(stringResource(R.string.cal_sheet_open_tdee)) }
         }
     }
 }

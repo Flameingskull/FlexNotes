@@ -35,7 +35,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -78,6 +77,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * The calendar (#87, #9), laid out after FitNotes: a month grid (swipe or arrows for other months) with category dots,
@@ -194,7 +194,7 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
                 Text(stringResource(R.string.cal_legend_other), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             // Medications is locked and its doses are left off: say why, and where to change it (#294).
-            if (locked && device.medCalendar == MED_CAL_HIDE) TextButton(
+            if (locked && device.medCalendar == MED_CAL_HIDE) FitTextButton(
                 onClick = { nav.push(Screen.SettingsPage(SettingsSection.Medications)) },
                 modifier = Modifier.padding(horizontal = Spacing.sm)
             ) { Text(stringResource(R.string.cal_locked_link), style = MaterialTheme.typography.labelMedium) }
@@ -254,7 +254,7 @@ private fun FilterBar(snap: Snapshot, filter: CalendarFilter, month: YearMonth, 
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        TextButton(onClick = onClear, modifier = Modifier.heightIn(min = Spacing.touch)) { Text(stringResource(R.string.cal_clear)) }
+        FitTextButton(onClick = onClear, modifier = Modifier.heightIn(min = Spacing.touch)) { Text(stringResource(R.string.cal_clear)) }
     }
 }
 

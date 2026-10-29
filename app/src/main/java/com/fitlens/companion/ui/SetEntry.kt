@@ -36,7 +36,6 @@ import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,7 +43,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
@@ -107,6 +105,7 @@ import com.fitlens.companion.ui.design.SetRow as SetRowView
 import kotlin.math.max
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitTextButton
 
 /** Global fallback increments. Per-exercise increments are #15, the global weight setting is #7. */
 internal const val DEFAULT_WEIGHT_STEP = 2.5
@@ -979,18 +978,18 @@ private fun TrackTab(
                     // Move the selected set within this exercise (#70).
                     val at = sets.indexOfFirst { it.id == selected }
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(
+                        FitTextButton(
                             onClick = { selected?.let { moveSet(snap, date, it, -1) } },
                             enabled = at > 0,
                             modifier = Modifier.weight(1f)
                         ) { Text(stringResource(R.string.set_move_up)) }
-                        TextButton(
+                        FitTextButton(
                             onClick = { selected?.let { moveSet(snap, date, it, 1) } },
                             enabled = at in 0 until sets.lastIndex,
                             modifier = Modifier.weight(1f)
                         ) { Text(stringResource(R.string.set_move_down)) }
                     }
-                    TextButton(onClick = { selected = null }, modifier = Modifier.fillMaxWidth()) {
+                    FitTextButton(onClick = { selected = null }, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.set_new_instead))
                     }
                 }

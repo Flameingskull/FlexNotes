@@ -27,7 +27,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,6 +57,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * The guided setup (#29): shown once on a fresh install, skippable at every step, and run again from Settings.
@@ -110,7 +110,7 @@ fun SetupScreen(snap: Snapshot, nav: Nav) {
             title = stringResource(R.string.su_title),
             subtitle = stringResource(R.string.su_step_of, stepIdx + 1, SetupStep.entries.size, stringResource(step.title)),
             centered = false,
-            trailing = { TextButton(onClick = { finish() }) { Text(stringResource(R.string.su_skip)) } }
+            trailing = { FitTextButton(onClick = { finish() }) { Text(stringResource(R.string.su_skip)) } }
         )
         GoldHairline()
         Column(
@@ -138,7 +138,7 @@ fun SetupScreen(snap: Snapshot, nav: Nav) {
             Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (stepIdx > 0) TextButton(onClick = { stepIdx-- }) { Text(stringResource(R.string.su_back)) }
+            if (stepIdx > 0) FitTextButton(onClick = { stepIdx-- }) { Text(stringResource(R.string.su_back)) }
             Spacer(Modifier.weight(1f))
             GoldButton(onClick = { if (last) finish() else stepIdx++ }) {
                 Text(if (last) stringResource(R.string.su_finish) else if (step == SetupStep.Welcome) stringResource(R.string.su_title) else stringResource(R.string.su_next))

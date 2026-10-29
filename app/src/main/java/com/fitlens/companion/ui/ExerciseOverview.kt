@@ -10,7 +10,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +23,7 @@ import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.ui.design.FitTabRow
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * The exercise overview (#26): one sheet with an exercise's History, Graph, Records, Stats and Goals, opened from the
@@ -55,7 +55,7 @@ fun ExerciseOverviewSheet(snap: Snapshot, nav: Nav, exId: Long, date: String, on
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                TextButton(onClick = {
+                FitTextButton(onClick = {
                     onDismiss()
                     nav.push(
                         when (tab) {

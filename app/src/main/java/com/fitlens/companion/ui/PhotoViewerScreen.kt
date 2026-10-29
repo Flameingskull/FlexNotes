@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,7 +41,6 @@ import androidx.compose.material3.OutlinedTextField
 import com.fitlens.companion.ui.design.FitSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -94,6 +92,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.data.PlainErrors
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * One photo at a time, edge to edge on black (#92). Swipe for the next; tap the photo to hide or show the controls,
@@ -188,7 +187,7 @@ fun PhotoViewerScreen(snap: Snapshot, nav: Nav, ids: List<Long>, index: Int) {
                             }
                         }
                         Spacer(Modifier.weight(1f))
-                        TextButton(onClick = { pickDate = true }) { Text(stringResource(R.string.pv_change_date)) }
+                        FitTextButton(onClick = { pickDate = true }) { Text(stringResource(R.string.pv_change_date)) }
                     }
                     Text(
                         "${dateSourceText(res, current.dateSource)}${current.takenAt?.let { formatTime(it) }?.let { " · $it" } ?: ""}" +
@@ -419,7 +418,7 @@ fun PhotoPickerDialog(snap: Snapshot, onDismiss: () -> Unit, onPick: (Long) -> U
                         }
                     }
                 }
-                TextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End).padding(8.dp)) { Text(stringResource(R.string.pv_cancel)) }
+                FitTextButton(onClick = onDismiss, modifier = Modifier.align(Alignment.End).padding(8.dp)) { Text(stringResource(R.string.pv_cancel)) }
             }
         }
     }

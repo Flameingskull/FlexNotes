@@ -26,7 +26,6 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -112,7 +111,7 @@ fun FitSheet(
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onDismiss, colors = fitTextButtonColors()) { Text(dismissLabel) }
+                FitTextButton(onClick = onDismiss) { Text(dismissLabel) }
                 val secondary = onSecondary
                 if (secondary != null && secondaryLabel != null) {
                     GlassOutlinedButton(onClick = secondary, enabled = confirmEnabled) { Text(secondaryLabel) }
@@ -289,7 +288,7 @@ fun SearchablePicker(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss, colors = fitTextButtonColors()) { Text(stringResource(R.string.cancel)) }
+                    FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     GoldButton(onClick = { onPick(chosen.toList()) }, enabled = chosen.isNotEmpty()) {
                         Text(if (chosen.isEmpty()) stringResource(R.string.cmn_add) else stringResource(R.string.cmn_add_n, chosen.size))
                     }

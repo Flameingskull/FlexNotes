@@ -46,7 +46,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -54,7 +53,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -113,6 +111,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import kotlin.math.abs
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitTextButton
 
 /** [date] moved by [days] calendar days, as an ISO date. */
 private fun shiftDay(date: String, days: Long): String =
@@ -492,7 +491,7 @@ private fun DayContent(
                     }
                     // A comment is added on the day's workout itself, not from the menu.
                     if (comments.isEmpty() && sets.isNotEmpty()) {
-                        TextButton(
+                        FitTextButton(
                             onClick = onEditComment,
                             modifier = Modifier.heightIn(min = Spacing.touch),
                             contentPadding = PaddingValues(horizontal = 0.dp)
@@ -818,7 +817,7 @@ private fun ExerciseOnDay(
         }
         val hidden = exSets.size - limit
         if (hidden > 0) {
-            TextButton(onClick = { expanded = true }, modifier = Modifier.heightIn(min = Spacing.touch)) {
+            FitTextButton(onClick = { expanded = true }, modifier = Modifier.heightIn(min = Spacing.touch)) {
                 Text(pluralStringResource(R.plurals.day_more_sets, hidden, hidden), style = MaterialTheme.typography.labelMedium)
             }
         }

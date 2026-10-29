@@ -44,7 +44,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -52,7 +51,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import android.content.res.Resources
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -82,6 +80,7 @@ import com.fitlens.companion.data.fmtSigned
 import com.fitlens.companion.ui.design.SetCell
 import com.fitlens.companion.ui.design.SetRow as SetRowView
 import com.fitlens.companion.ui.design.FitCard
+import com.fitlens.companion.ui.design.FitTextButton
 
 val RANGES = listOf("1M" to 30L, "3M" to 91L, "6M" to 182L, "1Y" to 365L, "All" to 0L)
 
@@ -180,15 +179,15 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
         } else if (measurements.isEmpty() && medications) {
             EmptyState(stringResource(R.string.md_empty_title), stringResource(R.string.md_empty_body)) {
                 Row {
-                    TextButton(onClick = { editing = true }) { Text(stringResource(R.string.md_add)) }
-                    TextButton(onClick = { nav.push(Screen.MedSchedule(0L)) }) { Text(stringResource(R.string.md_new_schedule)) }
+                    FitTextButton(onClick = { editing = true }) { Text(stringResource(R.string.md_add)) }
+                    FitTextButton(onClick = { nav.push(Screen.MedSchedule(0L)) }) { Text(stringResource(R.string.md_new_schedule)) }
                 }
             }
         } else if (measurements.isEmpty()) {
             EmptyState(stringResource(R.string.body_empty_title), stringResource(R.string.body_empty_body)) {
                 Row {
-                    TextButton(onClick = { editing = true }) { Text(stringResource(R.string.body_measurements)) }
-                    TextButton(onClick = { nav.push(Screen.SettingsPage(SettingsSection.Import)) }) { Text(stringResource(R.string.body_import)) }
+                    FitTextButton(onClick = { editing = true }) { Text(stringResource(R.string.body_measurements)) }
+                    FitTextButton(onClick = { nav.push(Screen.SettingsPage(SettingsSection.Import)) }) { Text(stringResource(R.string.body_import)) }
                 }
             }
         } else {

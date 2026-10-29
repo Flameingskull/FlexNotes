@@ -14,7 +14,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -31,6 +30,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.ui.design.FitAlertDialog
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * FitNotes imports that go through the pre-import summary (#6): the backup is read and checked first, the user sees
@@ -148,16 +148,16 @@ fun FitNotesImportHost() {
         },
         confirmButton = {
             if (plan.nothingNew) {
-                TextButton(onClick = close) { Text(stringResource(R.string.fi_close)) }
+                FitTextButton(onClick = close) { Text(stringResource(R.string.fi_close)) }
             } else {
-                TextButton(onClick = {
+                FitTextButton(onClick = {
                     FitNotesImports.staged.value = null
                     runBusy(ctx.getString(R.string.fi_importing)) { FitNotesImporter.importStaged(s) }
                 }) { Text(stringResource(R.string.fi_import)) }
             }
         },
         dismissButton = {
-            if (!plan.nothingNew) TextButton(onClick = close) { Text(stringResource(R.string.fi_cancel)) }
+            if (!plan.nothingNew) FitTextButton(onClick = close) { Text(stringResource(R.string.fi_cancel)) }
         }
     )
 }

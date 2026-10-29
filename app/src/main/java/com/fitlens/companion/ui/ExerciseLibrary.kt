@@ -60,7 +60,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
@@ -133,6 +132,7 @@ import kotlinx.coroutines.launch
 import com.fitlens.companion.ui.design.FitCheckbox
 import com.fitlens.companion.ui.design.FitAlertDialog
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * The exercise library (#13, redesigned in #83 after FitNotes): categories first, then a category's exercises, with a
@@ -347,7 +347,7 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = { picked.clear() }) { Text(stringResource(R.string.lib_clear)) }
+                FitTextButton(onClick = { picked.clear() }) { Text(stringResource(R.string.lib_clear)) }
                 GoldButton(onClick = { open(picked.toList()) }) { Text(pluralStringResource(R.plurals.lib_add_n, picked.size, picked.size)) }
             }
         }
@@ -415,7 +415,7 @@ private fun RoutineDayList(snap: Snapshot, routine: Routine, onOpen: (Long) -> U
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
-                        TextButton(
+                        FitTextButton(
                             onClick = { onLogAll(d) },
                             enabled = d.exercises.isNotEmpty(),
                             modifier = Modifier.heightIn(min = Spacing.touch)
@@ -704,7 +704,7 @@ fun ExerciseNotes(notes: String, modifier: Modifier = Modifier) {
         if (links.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 links.forEach { url ->
-                    TextButton(onClick = {
+                    FitTextButton(onClick = {
                         try {
                             ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                         } catch (e: Exception) {
@@ -1357,7 +1357,7 @@ fun StarterLibraryDialog(onDismiss: () -> Unit) {
             )
         },
         confirmButton = {
-            TextButton(onClick = {
+            FitTextButton(onClick = {
                 onDismiss()
                 AppScope.scope.launch {
                     UiEvents.busy.value = res.getString(R.string.lib_starter_adding)
@@ -1372,7 +1372,7 @@ fun StarterLibraryDialog(onDismiss: () -> Unit) {
                 }
             }) { Text(stringResource(R.string.lib_starter_add)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+        dismissButton = { FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }
 

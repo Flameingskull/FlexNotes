@@ -22,7 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -54,6 +53,7 @@ import com.fitlens.companion.ui.design.relativeDayLabel
 import kotlinx.coroutines.launch
 import com.fitlens.companion.ui.design.FitCheckbox
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * Editing a whole workout (#10), as FlexNotes bottom sheets (#84): its comment, copying it to another day, copying a
@@ -221,7 +221,7 @@ fun WorkoutCommentSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
             )
         }
         if (existing.isNotBlank()) {
-            TextButton(
+            FitTextButton(
                 onClick = {
                     onDismiss()
                     AppScope.scope.launch {
@@ -418,7 +418,7 @@ fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit
                 GoldHairline()
             }
         } else {
-            TextButton(onClick = { source = null }, modifier = Modifier.heightIn(min = Spacing.touch)) {
+            FitTextButton(onClick = { source = null }, modifier = Modifier.heightIn(min = Spacing.touch)) {
                 Text(stringResource(R.string.wk_another))
             }
             Text(

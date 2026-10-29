@@ -34,13 +34,11 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -86,6 +84,7 @@ import androidx.compose.foundation.layout.height
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import com.fitlens.companion.ui.design.FitLinearProgress
+import com.fitlens.companion.ui.design.FitTextButton
 
 /** Filter / group key for photos without a pose. */
 private const val UNSET = "Unset"
@@ -333,7 +332,7 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
                         // Each section under a FitNotes heading (#146), with Select beside it.
                         Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             SectionLabel(stringResource(R.string.ph_name_count, section.title, section.photos.size), Modifier.weight(1f))
-                            TextButton(onClick = { toggleAll(ids) }) {
+                            FitTextButton(onClick = { toggleAll(ids) }) {
                                 Text(
                                     when {
                                         allSel -> stringResource(R.string.ph_deselect)
@@ -503,8 +502,8 @@ fun ReviewScreen(snap: Snapshot, nav: Nav) {
                             Text(p.originalName ?: "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text(dateSourceText(LocalContext.current.resources, p.dateSource), style = MaterialTheme.typography.bodySmall)
                             Row {
-                                if (p.date != null) TextButton(onClick = { AppScope.scope.launch { Store.confirmPhotoDates(listOf(p.id)) } }) { Text(stringResource(R.string.ph_looks_right)) }
-                                TextButton(onClick = { editing = p }) { Text(stringResource(R.string.ph_set_date)) }
+                                if (p.date != null) FitTextButton(onClick = { AppScope.scope.launch { Store.confirmPhotoDates(listOf(p.id)) } }) { Text(stringResource(R.string.ph_looks_right)) }
+                                FitTextButton(onClick = { editing = p }) { Text(stringResource(R.string.ph_set_date)) }
                             }
                         }
                     }

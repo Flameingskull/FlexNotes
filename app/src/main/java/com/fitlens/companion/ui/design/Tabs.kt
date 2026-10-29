@@ -17,7 +17,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -150,9 +149,8 @@ fun DateRangePickerDialog(
     DatePickerDialog(
         onDismissRequest = onDismiss,
         confirmButton = {
-            TextButton(
+            FitTextButton(
                 enabled = state.selectedStartDateMillis != null,
-                colors = fitTextButtonColors(),
                 onClick = {
                     val start = state.selectedStartDateMillis
                     if (start != null) {
@@ -163,7 +161,7 @@ fun DateRangePickerDialog(
                 }
             ) { Text(stringResource(R.string.cmn_apply)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss, colors = fitTextButtonColors()) { Text(stringResource(R.string.cancel)) } }
+        dismissButton = { FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     ) {
         DateRangePicker(state = state, modifier = Modifier.weight(1f), colors = fitDatePickerColors())
     }

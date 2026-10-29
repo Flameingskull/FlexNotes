@@ -17,11 +17,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -63,6 +61,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.fitlens.companion.ui.design.FitAlertDialog
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * Workout tools on the day log: the workout time and timer (#12, #84). Times are stored in `workout_time` in
@@ -198,13 +197,13 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
             title = { Text(stringResource(if (isStart) R.string.wk_start_time_title else R.string.wk_end_time_title)) },
             text = { TimePicker(state = state, colors = fitTimePickerColors()) },
             confirmButton = {
-                TextButton(onClick = {
+                FitTextButton(onClick = {
                     val picked = WorkoutClock.stamp(date, LocalTime.of(state.hour, state.minute))
                     if (isStart) start = picked else end = picked
                     picking = null
                 }) { Text(stringResource(R.string.wk_set)) }
             },
-            dismissButton = { TextButton(onClick = { picking = null }) { Text(stringResource(R.string.cancel)) } }
+            dismissButton = { FitTextButton(onClick = { picking = null }) { Text(stringResource(R.string.cancel)) } }
         )
     }
 }

@@ -17,10 +17,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -55,6 +53,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * Analysis (#90), opened from the day log's menu. FitNotes-style navigation (#79) made it its own destination
@@ -449,7 +448,7 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
                     AnalysisNote(withUnit(shown(valueOf(t))) + change, deltaColour(delta, MaterialTheme.colorScheme.onSurfaceVariant))
                     if (overlay != null) AnalysisNote(overlayIn(t.start.format(Dates.ISO)) ?: stringResource(R.string.an_overlay_none, overlayName.orEmpty(), period.word(res)))
                     if (t.days.isNotEmpty()) {
-                        TextButton(onClick = { showDays = !showDays }, modifier = Modifier.padding(horizontal = 4.dp)) {
+                        FitTextButton(onClick = { showDays = !showDays }, modifier = Modifier.padding(horizontal = 4.dp)) {
                             Text(if (showDays) stringResource(R.string.an_hide_workouts) else pluralStringResource(R.plurals.an_open_workouts, t.days.size, t.days.size))
                         }
                         if (showDays) t.days.reversed().forEach { d ->

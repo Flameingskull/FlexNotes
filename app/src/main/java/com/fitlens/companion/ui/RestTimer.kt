@@ -49,7 +49,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableFloatStateOf
@@ -78,6 +77,7 @@ import kotlinx.coroutines.launch
 import com.fitlens.companion.ui.design.FitSlider
 import com.fitlens.companion.ui.design.FitLinearProgress
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * The rest timer (#20), shared by every exercise screen so it keeps counting as you move between exercises. While it
@@ -433,7 +433,7 @@ internal fun RestAlertOptions() {
                     },
                     modifier = Modifier.semantics { contentDescription = volumeLabel }
                 )
-                TextButton(
+                FitTextButton(
                     onClick = { RestSound.play(ctx, device.restSoundUri, volume.toInt()) },
                     enabled = soundOn,
                     modifier = Modifier.heightIn(min = Spacing.touch)
@@ -508,8 +508,8 @@ fun RestTimerSheet(exercise: Exercise? = null, onDismiss: () -> Unit) {
                 GlassOutlinedButton(onClick = { RestTimer.adjust(15) }, modifier = Modifier.weight(1f).heightIn(min = Spacing.row)) { Text(stringResource(R.string.rt_plus15)) }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
-                TextButton(onClick = { RestTimer.start(ctx, chosen) }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) { Text(stringResource(R.string.rt_restart)) }
-                TextButton(onClick = { RestTimer.stop() }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) { Text(stringResource(R.string.rt_stop)) }
+                FitTextButton(onClick = { RestTimer.start(ctx, chosen) }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) { Text(stringResource(R.string.rt_restart)) }
+                FitTextButton(onClick = { RestTimer.stop() }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) { Text(stringResource(R.string.rt_stop)) }
             }
         } else {
             GoldButton(
@@ -523,7 +523,7 @@ fun RestTimerSheet(exercise: Exercise? = null, onDismiss: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            TextButton(
+            FitTextButton(
                 onClick = {
                     AppScope.scope.launch {
                         Workouts.setExerciseDefaults(exercise.id, exercise.weightStepKg, exercise.defaultGraph, null, exercise.distanceUnit, exercise.weightUnit)

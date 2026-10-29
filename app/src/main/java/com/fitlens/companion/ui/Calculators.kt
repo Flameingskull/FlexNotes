@@ -17,7 +17,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -44,6 +43,7 @@ import kotlin.math.round
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.ui.design.FitTextButton
 
 /** Rounds [v] to the nearest multiple of [step] (both in the display unit); a step of 0 leaves it as it is. */
 internal fun roundTo(v: Double, step: Double): Double = if (step <= 0) v else round(v / step) * step
@@ -150,7 +150,7 @@ private fun CalcRow(label: String, value: String, note: String?, onUse: () -> Un
         Text(label, Modifier.width(88.dp), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
         if (note != null) Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        TextButton(onClick = onUse, modifier = Modifier.semantics { contentDescription = useLabel }) { Text(stringResource(R.string.calc_use)) }
+        FitTextButton(onClick = onUse, modifier = Modifier.semantics { contentDescription = useLabel }) { Text(stringResource(R.string.calc_use)) }
     }
 }
 
@@ -240,7 +240,7 @@ fun PlateCalculatorSheet(
             label = { Text(stringResource(R.string.calc_plates_field, unit)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
         )
-        TextButton(onClick = { platesText = defaultPlates(unit).joinToString(", ") { fmtNum(it, 2) }; barText = fmtNum(defaultBar(unit), 2) }) {
+        FitTextButton(onClick = { platesText = defaultPlates(unit).joinToString(", ") { fmtNum(it, 2) }; barText = fmtNum(defaultBar(unit), 2) }) {
             Text(stringResource(R.string.calc_reset))
         }
     }

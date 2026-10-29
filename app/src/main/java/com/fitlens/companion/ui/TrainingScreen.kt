@@ -29,14 +29,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -77,6 +75,7 @@ import com.fitlens.companion.ui.design.PeriodDropdown
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.MenuAction
 import com.fitlens.companion.ui.design.SearchablePicker
+import com.fitlens.companion.ui.design.FitTextButton
 
 /** Estimated one-rep max in kg (see [Records.factor] for the formula). */
 fun e1rm(s: SetRow): Double = Records.oneRepMax(s)
@@ -714,7 +713,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                 // What the user looked like then (#56), and Compare with the photos near a second point.
                 NearestPhotoThumb(snap, nav, p.date, Modifier.padding(horizontal = 16.dp))
                 if (photoFrom == null && nearestPhoto(snap, p.date, GRAPH_PHOTO_DAYS) != null) {
-                    TextButton(onClick = { photoFrom = p.date }, Modifier.padding(horizontal = 8.dp)) {
+                    FitTextButton(onClick = { photoFrom = p.date }, Modifier.padding(horizontal = 8.dp)) {
                         Text(stringResource(R.string.ex_compare_photo))
                     }
                 }
@@ -727,7 +726,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    TextButton(onClick = { photoFrom = null }) { Text(stringResource(R.string.cancel)) }
+                    FitTextButton(onClick = { photoFrom = null }) { Text(stringResource(R.string.cancel)) }
                 }
             }
             if (p == null && summary.isNotEmpty()) {
@@ -903,7 +902,7 @@ private fun CompareSheet(
             }
         }
         if (compare.size < GraphCompare.MAX - 1) {
-            TextButton(onClick = onAdd, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.ex_add_exercise)) }
+            FitTextButton(onClick = onAdd, modifier = Modifier.heightIn(min = 48.dp)) { Text(stringResource(R.string.ex_add_exercise)) }
         }
     }
 }
@@ -968,7 +967,7 @@ fun ExerciseHistoryPane(snap: Snapshot, nav: Nav, exId: Long) {
                             modifier = Modifier.weight(1f)
                         )
                         if (d.take(10) != Dates.today()) {
-                            TextButton(onClick = { copyToToday(res, d, l.map { it.id }) }, modifier = Modifier.heightIn(min = 48.dp)) {
+                            FitTextButton(onClick = { copyToToday(res, d, l.map { it.id }) }, modifier = Modifier.heightIn(min = 48.dp)) {
                                 Text(stringResource(R.string.ex_copy_today))
                             }
                         }

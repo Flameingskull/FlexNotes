@@ -22,7 +22,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import com.fitlens.companion.data.Medications
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -44,6 +43,7 @@ import kotlinx.coroutines.launch
 import com.fitlens.companion.ui.design.FitSwitch
 import com.fitlens.companion.ui.design.FitAlertDialog
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * Creates or edits a custom measurement (#3), from the Measurements screen (#88), or a medication from Medications
@@ -141,7 +141,7 @@ internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, medic
             }
         },
         confirmButton = {
-            TextButton(onClick = {
+            FitTextButton(onClick = {
                 val n = name.trim()
                 // Custom names are unique across body measurements and medications (#199).
                 val clash = snap.allCustomNames.any { it.equals(n, true) && it != existing?.name }
@@ -165,6 +165,6 @@ internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, medic
                 }
             }) { Text(stringResource(R.string.type_save)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
+        dismissButton = { FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } }
     )
 }

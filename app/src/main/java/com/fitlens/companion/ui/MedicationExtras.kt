@@ -27,7 +27,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,6 +66,7 @@ import java.time.LocalDate
 import kotlin.math.abs
 import com.fitlens.companion.ui.design.FitAssistChip
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * A medication's supply (#209) and injection sites (#210), shown on its Track tab and in the Medications TODAY list.
@@ -270,7 +270,7 @@ internal fun SupplySheet(snap: Snapshot, name: String, unit: String, onDismiss: 
             GlassOutlinedButton(onClick = { picking = true }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) {
                 Text(expires?.let { stringResource(R.string.sup_expires, Dates.day(it)) } ?: stringResource(R.string.sup_set_expiry))
             }
-            if (expires != null) TextButton(onClick = { expires = null }) { Text(stringResource(R.string.sup_clear_expiry)) }
+            if (expires != null) FitTextButton(onClick = { expires = null }) { Text(stringResource(R.string.sup_clear_expiry)) }
         }
         Text(stringResource(R.string.sup_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -508,7 +508,7 @@ internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> 
                             value = renameText, onValueChange = { renameText = it },
                             label = { Text(stringResource(R.string.sym_name)) }, singleLine = true, modifier = Modifier.weight(1f)
                         )
-                        TextButton(onClick = {
+                        FitTextButton(onClick = {
                             val text = renameText
                             AppScope.scope.launch { MedExtras.renameSymptom(s.id, text) }
                             renaming = null
@@ -570,7 +570,7 @@ internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> 
                 value = newName, onValueChange = { newName = it },
                 label = { Text(stringResource(R.string.sym_name)) }, singleLine = true, modifier = Modifier.weight(1f)
             )
-            TextButton(onClick = { add(newName) }, enabled = newName.isNotBlank()) { Text(stringResource(R.string.sym_add)) }
+            FitTextButton(onClick = { add(newName) }, enabled = newName.isNotBlank()) { Text(stringResource(R.string.sym_add)) }
         }
         val have = plan.symptoms.map { it.name.lowercase() }.toSet()
         val offered = SUGGESTED_SYMPTOMS.map { res.getString(it) }.filter { it.lowercase() !in have }

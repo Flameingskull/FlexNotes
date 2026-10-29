@@ -15,10 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import android.content.res.Resources
 import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
@@ -49,6 +47,7 @@ import com.fitlens.companion.ui.design.PickerItem
 import com.fitlens.companion.ui.design.SearchablePicker
 import com.fitlens.companion.ui.design.SegmentedSwitch
 import com.fitlens.companion.ui.design.DropdownPill
+import com.fitlens.companion.ui.design.FitTextButton
 
 private const val MAX_REPS = 15
 private val LABEL_W = 56.dp
@@ -143,7 +142,7 @@ fun RecordsBoard(snap: Snapshot, nav: Nav) {
                             Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium
                         )
-                        TextButton(onClick = { nav.push(Screen.Day(c.set.date.take(10))) }) { Text(stringResource(R.string.rb_open_workout)) }
+                        FitTextButton(onClick = { nav.push(Screen.Day(c.set.date.take(10))) }) { Text(stringResource(R.string.rb_open_workout)) }
                     }
                 }
                 RecordGrid(snap, cols, estimated, selected) { selected = it }

@@ -14,7 +14,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,10 +48,9 @@ fun DropdownPill(
     val current = options.getOrNull(selected).orEmpty()
     val changeLabel = stringResource(R.string.cmn_change_cd, label, current)
     Box(modifier) {
-        TextButton(
+        FitTextButton(
             onClick = { open = true },
             contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.xs),
-            colors = fitTextButtonColors(),
             modifier = Modifier.heightIn(min = Spacing.touch).semantics { contentDescription = changeLabel }
         ) {
             Text(current, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -80,10 +78,9 @@ fun DropdownPill(
 @Composable
 fun PickerPill(label: String, current: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val changeLabel = stringResource(R.string.cmn_change_cd, label, current)
-    TextButton(
+    FitTextButton(
         onClick = onClick,
         contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.xs),
-        colors = fitTextButtonColors(),
         modifier = modifier.heightIn(min = Spacing.touch).semantics { contentDescription = changeLabel }
     ) {
         Text(current, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)

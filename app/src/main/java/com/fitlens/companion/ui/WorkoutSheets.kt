@@ -25,7 +25,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -57,6 +56,7 @@ import java.util.Locale
 import kotlinx.coroutines.launch
 import com.fitlens.companion.ui.design.FitCheckbox
 import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * The day log's workout sheets (#100, merged into one model by #106): **Add workout** and **Replace this workout**
@@ -250,7 +250,7 @@ fun AddWorkoutSheet(snap: Snapshot, nav: Nav, date: String, replace: Boolean, on
             Text(stringResource(R.string.wk_choose_exercises), style = MaterialTheme.typography.titleMedium)
         }
         if (snap.routines.isEmpty()) {
-            TextButton(onClick = { onDismiss(); nav.push(Screen.WorkoutEditor(0L)) }) { Text(stringResource(R.string.wk_create_workout)) }
+            FitTextButton(onClick = { onDismiss(); nav.push(Screen.WorkoutEditor(0L)) }) { Text(stringResource(R.string.wk_create_workout)) }
         }
     }
 }
@@ -298,7 +298,7 @@ private fun ReviewWorkoutSheet(
             if (toOpen.isNotEmpty()) nav.push(Screen.SetEntry(date, toOpen.first(), toOpen.drop(1)))
         }
     ) {
-        TextButton(onClick = onBack, modifier = Modifier.heightIn(min = Spacing.touch)) { Text(stringResource(R.string.wk_choose_another)) }
+        FitTextButton(onClick = onBack, modifier = Modifier.heightIn(min = Spacing.touch)) { Text(stringResource(R.string.wk_choose_another)) }
         Text(
             stringResource(if (replace) R.string.wk_replaces_on else R.string.wk_adds_to, Dates.day(date)).uppercase(),
             style = MaterialTheme.typography.labelSmall,

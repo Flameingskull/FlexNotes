@@ -12,12 +12,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -43,6 +41,7 @@ import com.fitlens.companion.ui.design.DateRangePickerDialog
 import com.fitlens.companion.ui.design.SegmentedSwitch
 import com.fitlens.companion.ui.design.StatTile
 import com.fitlens.companion.ui.design.DropdownPill
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * Breakdown (#52): how training splits by category or exercise for one workout, week, month, year, all time or a
@@ -118,7 +117,7 @@ fun BreakdownTab(snap: Snapshot, nav: Nav, onOpen: (Analysis.Filter) -> Unit) {
 
         // The period: newest first, with only periods that hold training.
         if (span == Analysis.Span.Custom) {
-            TextButton(onClick = { pickingCustom = true }, modifier = Modifier.padding(horizontal = 4.dp)) {
+            FitTextButton(onClick = { pickingCustom = true }, modifier = Modifier.padding(horizontal = 4.dp)) {
                 Text(window?.label ?: stringResource(R.string.an_choose_dates))
             }
         } else if (windows.isNotEmpty() && span != Analysis.Span.All) {
@@ -201,14 +200,14 @@ fun BreakdownTab(snap: Snapshot, nav: Nav, onOpen: (Analysis.Filter) -> Unit) {
                     )
                 }
                 Row(Modifier.padding(horizontal = 4.dp)) {
-                    TextButton(onClick = {
+                    FitTextButton(onClick = {
                         onOpen(
                             if (group == Analysis.GroupBy.Exercise) Analysis.Filter(exerciseId = slice.id)
                             else Analysis.Filter(categoryId = slice.id)
                         )
                     }) { Text(stringResource(R.string.an_bd_totals_for, slice.label)) }
                     if (group == Analysis.GroupBy.Exercise) {
-                        TextButton(onClick = { nav.push(Screen.SetEntry(Dates.today(), slice.id, page = 2)) }) { Text(stringResource(R.string.an_open_exercise)) }
+                        FitTextButton(onClick = { nav.push(Screen.SetEntry(Dates.today(), slice.id, page = 2)) }) { Text(stringResource(R.string.an_open_exercise)) }
                     }
                 }
             }

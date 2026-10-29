@@ -34,13 +34,11 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
@@ -108,6 +106,7 @@ import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 import kotlin.math.sin
+import com.fitlens.companion.ui.design.FitTextButton
 
 // More shared chart components (#50): a donut for breakdowns, the compact graph controls and the full-screen viewer
 // every chart can open.
@@ -146,7 +145,7 @@ fun DonutChart(
 
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { onSelect((sel - 1 + slices.size) % slices.size) }) { Text(stringResource(R.string.ch_previous)) }
+            FitTextButton(onClick = { onSelect((sel - 1 + slices.size) % slices.size) }) { Text(stringResource(R.string.ch_previous)) }
             Box(Modifier.size(diameter), contentAlignment = Alignment.Center) {
                 Canvas(
                     Modifier
@@ -205,7 +204,7 @@ fun DonutChart(
                     Text(valueFormat(slices[sel].value), style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                 }
             }
-            TextButton(onClick = { onSelect((sel + 1) % slices.size) }) { Text(stringResource(R.string.ch_next)) }
+            FitTextButton(onClick = { onSelect((sel + 1) % slices.size) }) { Text(stringResource(R.string.ch_next)) }
         }
         if (legend) DonutLegend(slices, sel, onSelect, valueFormat)
     }

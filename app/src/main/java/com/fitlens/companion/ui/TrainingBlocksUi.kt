@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +42,7 @@ import com.fitlens.companion.ui.design.SectionLabel
 import com.fitlens.companion.ui.design.SegmentedSwitch
 import com.fitlens.companion.ui.design.SettingsSwitchRow
 import com.fitlens.companion.ui.design.StepperField
+import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * Training blocks in the workout editor (#218): the plan's start date, its blocks (tap to edit; ⋮ to duplicate or
@@ -93,7 +93,7 @@ internal fun TrainingBlocksSection(plan: TrainingPlan?, reordering: Boolean, onC
                 onMoveDown = if (reordering && i < blocks.lastIndex) ({ setBlocks(blocks.toMutableList().apply { add(i + 1, removeAt(i)) }) }) else null
             )
         }
-        TextButton(onClick = { editing = blocks.size }, modifier = Modifier.heightIn(min = Spacing.touch)) {
+        FitTextButton(onClick = { editing = blocks.size }, modifier = Modifier.heightIn(min = Spacing.touch)) {
             Text(stringResource(R.string.tb_add_block))
         }
         if (!plan.ongoing) {
@@ -103,7 +103,7 @@ internal fun TrainingBlocksSection(plan: TrainingPlan?, reordering: Boolean, onC
                 checked = plan.repeats
             ) { onChange(plan.copy(repeats = it)) }
         }
-        TextButton(onClick = { onChange(null) }, modifier = Modifier.heightIn(min = Spacing.touch)) {
+        FitTextButton(onClick = { onChange(null) }, modifier = Modifier.heightIn(min = Spacing.touch)) {
             Text(stringResource(R.string.tb_remove_plan))
         }
     }

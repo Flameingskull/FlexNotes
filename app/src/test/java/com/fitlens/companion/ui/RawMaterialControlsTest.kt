@@ -43,10 +43,10 @@ class RawMaterialControlsTest {
     private companion object {
         val SOURCES = File("src/main/java")
 
-        /** The Material controls that have a `Fit` wrapper. Stage C of #306 adds `TextButton`. */
+        /** The Material controls that have a `Fit` wrapper. Every Material control #306 wraps is listed. */
         val RAW = listOf(
             "Switch", "Slider", "Checkbox", "RadioButton", "AssistChip", "SuggestionChip",
-            "LinearProgressIndicator", "Card", "AlertDialog", "FilterChip"
+            "LinearProgressIndicator", "Card", "AlertDialog", "FilterChip", "TextButton"
         )
 
         /**

@@ -13,7 +13,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +35,7 @@ import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.DropdownPill
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.StepperField
+import com.fitlens.companion.ui.design.FitTextButton
 
 private const val MINUTE_STEP = 5.0
 
@@ -219,7 +219,7 @@ internal fun ZoneHelpSheet(date: String, onDismiss: () -> Unit, onOpenProfile: (
             }
         }
         if (maxHr == null || maxHr.estimated) {
-            TextButton(onClick = { onDismiss(); onOpenProfile() }) {
+            FitTextButton(onClick = { onDismiss(); onOpenProfile() }) {
                 Text(stringResource(if (maxHr == null) R.string.session_zone_add_profile else R.string.session_zone_set_profile))
             }
         }
