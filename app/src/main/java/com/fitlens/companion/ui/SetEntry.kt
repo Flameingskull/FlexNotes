@@ -48,6 +48,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -73,6 +75,8 @@ import com.fitlens.companion.data.Analysis
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Effort
 import com.fitlens.companion.data.EnergyEstimates
+import com.fitlens.companion.data.Exercise
+import com.fitlens.companion.data.SetEntryRules
 import com.fitlens.companion.data.PortableSettings
 import com.fitlens.companion.data.ExerciseTypes
 import com.fitlens.companion.data.SetRow
@@ -98,6 +102,7 @@ import com.fitlens.companion.ui.design.StepperField
 import com.fitlens.companion.ui.design.SearchablePicker
 import com.fitlens.companion.ui.design.ExerciseCommentRow
 import com.fitlens.companion.ui.design.SetCommentSheet
+import com.fitlens.companion.ui.design.SetLayoutGroup
 import com.fitlens.companion.ui.design.SetRow as SetRowView
 import kotlin.math.max
 import kotlinx.coroutines.delay
@@ -116,10 +121,6 @@ private val RoundsDraftSaver = listSaver<RoundsDraft, String>(
     restore = { RoundsDraft(it[0], it[1], it[2], it[3]) }
 )
 private const val DURATION_STEP = 15
-
-/** A session shorter or longer than this (15 and 240 minutes) is asked about once before it is saved (#243). */
-private const val SESSION_MIN_SEC = 15 * 60
-private const val SESSION_MAX_SEC = 240 * 60
 
 private fun num(s: String): Double = s.trim().replace(',', '.').toDoubleOrNull() ?: 0.0
 
@@ -302,27 +303,43 @@ fun SetEntryScreen(
         }
     }
 
-    var selected by rememberSaveable(date, exerciseId) { mutableStateOf(selectSet) }
-    var weight by rememberSaveable(date, exerciseId) { mutableStateOf("") }
-    var reps by rememberSaveable(date, exerciseId) { mutableStateOf("") }
-    var distance by rememberSaveable(date, exerciseId) { mutableStateOf("") }
-    var duration by rememberSaveable(date, exerciseId) { mutableStateOf("") }
-    var metric by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    val selectedState = rememberSaveable(date, exerciseId) { mutableStateOf(selectSet) }
+    var selected by selectedState
+    val weightState = rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var weight by weightState
+    val repsState = rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var reps by repsState
+    val distanceState = rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var distance by distanceState
+    val durationState = rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var duration by durationState
+    val metricState = rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var metric by metricState
     // A Session's length and hard or live minutes, in minutes as typed, and its intensity, type and cardio zone (#240, #241).
-    var sessionMin by rememberSaveable(date, exerciseId) { mutableStateOf("") }
-    var liveMin by rememberSaveable(date, exerciseId) { mutableStateOf("") }
-    var intensity by rememberSaveable(date, exerciseId) { mutableStateOf<Int?>(null) }
-    var sessionType by rememberSaveable(date, exerciseId) { mutableStateOf<Int?>(null) }
-    var zone by rememberSaveable(date, exerciseId) { mutableStateOf<Int?>(null) }
+    val sessionMinState = rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var sessionMin by sessionMinState
+    val liveMinState = rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var liveMin by liveMinState
+    val intensityState = rememberSaveable(date, exerciseId) { mutableStateOf<Int?>(null) }
+    var intensity by intensityState
+    val sessionTypeState = rememberSaveable(date, exerciseId) { mutableStateOf<Int?>(null) }
+    var sessionType by sessionTypeState
+    val zoneState = rememberSaveable(date, exerciseId) { mutableStateOf<Int?>(null) }
+    var zone by zoneState
     // A Session or Rounds set's two counts as typed (#266).
-    var countAText by rememberSaveable(date, exerciseId) { mutableStateOf("") }
-    var countBText by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    val countATextState = rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var countAText by countATextState
+    val countBTextState = rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var countBText by countBTextState
     // A Rounds set's rounds, round length, rest between rounds and hard rounds as typed (#246).
-    var roundsDraft by rememberSaveable(date, exerciseId, stateSaver = RoundsDraftSaver) { mutableStateOf(RoundsDraft()) }
+    val roundsDraftState = rememberSaveable(date, exerciseId, stateSaver = RoundsDraftSaver) { mutableStateOf(RoundsDraft()) }
+    var roundsDraft by roundsDraftState
     // Set type (#43): new sets start as working sets; editing a set shows its own type.
-    var setType by rememberSaveable(date, exerciseId) { mutableIntStateOf(SetTypes.WORKING) }
+    val setTypeState = rememberSaveable(date, exerciseId) { mutableIntStateOf(SetTypes.WORKING) }
+    var setType by setTypeState
     // Effort (#44), always held as RPE; null means not recorded.
-    var rpe by rememberSaveable(date, exerciseId) { mutableStateOf<Double?>(null) }
+    val rpeState = rememberSaveable(date, exerciseId) { mutableStateOf<Double?>(null) }
+    var rpe by rpeState
     // The exact kilograms the weight field was filled from, and the text it was filled with. Weights are stored in
     // kilograms but shown rounded in the user's unit, so converting the displayed text back on every save quietly
     // rewrote the stored value for anyone using pounds (#75). Only convert when the text has actually been edited.
@@ -428,8 +445,7 @@ fun SetEntryScreen(
         val live = if (isRounds) roundsDraft.hardSec else if (isSession && liveMin.isNotBlank()) minutesToSeconds(liveMin) else null
         // The rest between a Rounds set's rounds is kept with the set; a Session or any other set has none (#246).
         val roundsRest = if (isRounds) roundsDraft.restSec.takeIf { it > 0 } else null
-        val nothing = if (isTimed) dur == 0 && rpe == null else kg == 0.0 && r == 0 && dist == 0.0 && dur == 0 && met == null
-        if (nothing) {
+        if (SetEntryRules.nothingToSave(isTimed, rpe != null, kg, r, dist, dur, met != null)) {
             UiEvents.show(res.getString(R.string.set_enter_something))
             return
         }
@@ -438,7 +454,7 @@ fun SetEntryScreen(
             return
         }
         // Hard or live minutes are part of the session, so they can't be longer than it (#240).
-        if (!isRounds && live != null && live > dur) {
+        if (SetEntryRules.hardLongerThanSession(isRounds, live, dur)) {
             UiEvents.show(res.getString(R.string.session_hard_too_long))
             return
         }
@@ -446,8 +462,7 @@ fun SetEntryScreen(
         // Under 15 or over 240 minutes asks "Is that right?" once. A saved session whose length hasn't changed isn't
         // asked about again, and nothing blocks saving (#243).
         // Rounds are short by nature, so only a total over 240 minutes is asked about.
-        val unusual = if (isRounds) dur > SESSION_MAX_SEC else dur < SESSION_MIN_SEC || dur > SESSION_MAX_SEC
-        if (isTimed && !confirmed && dur > 0 && unusual && chosen?.durationSec != dur) {
+        if (SetEntryRules.isUnusualLength(isTimed, isRounds, dur, chosen?.durationSec, confirmed)) {
             unusualMinutes = minutesText(dur)
             return
         }
@@ -462,17 +477,16 @@ fun SetEntryScreen(
                         countA = if (isTimed) countValue(countAText) else null, countB = if (isTimed) countValue(countBText) else null)
                     // In a superset, saving a set moves on to the next exercise of the group, round-robin, as FitNotes
                     // does (#18). The rest timer then starts only after the round's last exercise (#20).
-                    val members = supersetMembers(snap, date, supersetOf(snap, date, exerciseId))
-                    val at = members.indexOf(exerciseId)
-                    val endOfRound = members.size < 2 || at == members.lastIndex
-                    if (endOfRound) startRestAfterSet(appContext, snap, date, exerciseId, fromSave = true, onStarting = askNotify)
-                    if (members.size > 1 && at >= 0) {
-                        val next = members[(at + 1) % members.size]
+                    val step = SetEntryRules.supersetStep(supersetMembers(snap, date, supersetOf(snap, date, exerciseId)), exerciseId)
+                    if (step.endOfRound) startRestAfterSet(appContext, snap, date, exerciseId, fromSave = true, onStarting = askNotify)
+                    step.nextExercise?.let { next ->
                         if (nav.top is Screen.SetEntry) nav.replace(Screen.SetEntry(date, next, queue))
                     }
                     // The first set of today can start the workout timer (#12), unless a time is already recorded.
-                    if (firstOfDay && date == Dates.today() && Settings.currentPortable().workoutTimerAuto &&
-                        Store.snapshot.value?.workoutTimes?.get(date).isNullOrEmpty()
+                    if (SetEntryRules.startsWorkoutTimer(
+                            firstOfDay, date == Dates.today(), Settings.currentPortable().workoutTimerAuto,
+                            !Store.snapshot.value?.workoutTimes?.get(date).isNullOrEmpty()
+                        )
                     ) {
                         Workouts.setWorkoutTime(date, WorkoutClock.now(), null)
                     }
@@ -501,11 +515,9 @@ fun SetEntryScreen(
                     )
                     Haptics.confirm(view)
                     // With auto-select next on, the following set of the day is selected, ready to adjust (#97).
-                    val next = if (Settings.currentPortable().autoSelectNext) {
-                        sets.getOrNull(sets.indexOfFirst { it.id == chosen.id } + 1)
-                    } else null
-                    selected = next?.id
-                    UiEvents.show(res.getString(if (next == null) R.string.set_updated else R.string.set_updated_next))
+                    val nextId = SetEntryRules.nextSelected(sets.map { it.id }, chosen.id, Settings.currentPortable().autoSelectNext)
+                    selected = nextId
+                    UiEvents.show(res.getString(if (nextId == null) R.string.set_updated else R.string.set_updated_next))
                 }
             } catch (e: WorkoutDataException) {
                 UiEvents.show(e.text(res))
@@ -595,277 +607,38 @@ fun SetEntryScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )
         }
+        val draft = TrackDraft(
+            selectedState, weightState, repsState, distanceState, durationState, metricState, sessionMinState, liveMinState,
+            intensityState, sessionTypeState, zoneState, countATextState, countBTextState, roundsDraftState, setTypeState, rpeState
+        )
+        val shown = TrackShown(showWeight, showReps, showDistance, showDuration, showMetric, isSession, isRounds)
         val setLayout = com.fitlens.companion.ui.design.rememberSetLayoutGroup()
         HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { tab ->
         when (tab) {
         1 -> ExerciseHistoryPane(snap, nav, exerciseId)
         2 -> ExerciseGraphPane(snap, nav, exerciseId)
-        else ->
-        // The inputs sit straight under the tabs, as in FitNotes (#136): no top padding, and the date and notes row
-        // only when it has something to show.
-        LazyColumn(contentPadding = PaddingValues(top = 0.dp, bottom = 32.dp)) {
-            val notes = ex?.notes?.takeIf { it.isNotBlank() }
-            if (date != Dates.today() || notes != null) {
-                item {
-                    if (date != Dates.today()) {
-                        Text(
-                            Dates.day(date).uppercase(),
-                            Modifier.padding(start = 16.dp, top = 4.dp),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Brand.Gold
-                        )
-                    }
-                    if (notes != null) {
-                        ExerciseNotes(notes, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
-                    }
-                }
-            }
-
-            // ---------- Entry ----------
-            item {
-                Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (showWeight) {
-                        StepperField(
-                            label = stringResource(R.string.set_field_weight, snap.weightUnitOf(exerciseId)),
-                            value = weight,
-                            onValue = { weight = it },
-                            onStep = { dir -> weight = fmtNum(max(0.0, num(weight) + dir * weightStep), 2) }
-                        )
-                    }
-                    if (showReps) {
-                        StepperField(
-                            label = stringResource(R.string.set_field_reps),
-                            value = reps,
-                            onValue = { reps = it },
-                            onStep = { dir -> reps = max(0, (reps.trim().toIntOrNull() ?: 0) + dir).toString() },
-                            keyboard = KeyboardType.Number
-                        )
-                    }
-                    if (showDistance) {
-                        StepperField(
-                            label = stringResource(R.string.set_field_distance, snap.distanceUnit(exerciseId)),
-                            value = distance,
-                            onValue = { distance = it },
-                            onStep = { dir -> distance = fmtNum(max(0.0, num(distance) + dir * DISTANCE_STEP), 2) }
-                        )
-                    }
-                    if (showDuration) {
-                        StepperField(
-                            label = stringResource(R.string.set_field_time),
-                            value = duration,
-                            onValue = { duration = it },
-                            onStep = { dir ->
-                                val next = max(0, parseDuration(duration) + dir * DURATION_STEP)
-                                duration = if (next == 0) "" else fmtDuration(next)
-                            },
-                            keyboard = KeyboardType.Text
-                        )
-                    }
-                    if (showMetric) {
-                        // The type's own metric (#14), stepping by 1.
-                        val unit = metricDef?.metricUnit?.let { " ($it)" }.orEmpty()
-                        StepperField(
-                            label = (metricDef?.metricName ?: stringResource(R.string.set_field_value)) + unit,
-                            value = metric,
-                            onValue = { metric = it },
-                            onStep = { dir ->
-                                val now = metric.trim().replace(',', '.').toDoubleOrNull() ?: 0.0
-                                metric = fmtNum(max(0.0, now + dir), 2)
-                            }
-                        )
-                    }
-                    if (isSession) {
-                        SessionFields(
-                            date = date,
-                            durationText = sessionMin, onDuration = { sessionMin = it },
-                            liveText = liveMin, onLive = { liveMin = it },
-                            intensity = intensity, onIntensity = { intensity = it },
-                            sessionType = sessionType, onSessionType = { sessionType = it },
-                            zone = zone, onZone = { zone = it },
-                            onOpenProfile = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) },
-                            rpe = rpe, onRpe = { rpe = it },
-                            fields = ex?.sessionFields
-                        )
-                    }
-                    // Set type (#43) and optional effort (#44) as two dropdowns on one row (#129), so the sets below
-                    // get the screen. Warm-ups stay out of records unless Settings counts them.
-                    if (isRounds) {
-                        RoundsFields(
-                            date = date,
-                            draft = roundsDraft, onDraft = { roundsDraft = it },
-                            zone = zone, onZone = { zone = it },
-                            onOpenProfile = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) },
-                            rpe = rpe, onRpe = { rpe = it }
-                        )
-                    }
-                    if (isTimed) CountFields(
-                        names = ex?.countNames.orEmpty(),
-                        aText = countAText, onA = { countAText = it },
-                        bText = countBText, onB = { countBText = it }
-                    )
-                    if (!isTimed) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        val types = SetTypes.all
-                        DropdownPill(
-                            stringResource(R.string.set_type),
-                            types.map { t -> SetTypes.badge(t)?.let { "$it · ${setTypeText(res, t)}" } ?: setTypeText(res, t) },
-                            types.indexOf(setType).coerceAtLeast(0)
-                        ) { i -> setType = types[i] }
-                        Spacer(Modifier.weight(1f))
-                        if (prefs.effortMode != Effort.OFF) {
-                            val rir = prefs.effortMode == Effort.RIR
-                            val choices: List<Pair<String, Double?>> = listOf(stringResource(if (rir) R.string.set_rir_none else R.string.set_rpe_none) to null) +
-                                if (rir) Effort.rirSteps.map { r ->
-                                    (if (r >= 5) res.getString(R.string.eff_rir_max) else res.getString(R.string.eff_rir, r)) to Effort.rpeFromRir(r)
-                                }
-                                else Effort.rpeSteps.map { v -> res.getString(R.string.eff_rpe, fmtNum(v, 1)) to v }
-                            DropdownPill(
-                                stringResource(if (rir) R.string.set_reps_in_reserve else R.string.set_effort),
-                                choices.map { it.first },
-                                choices.indexOfFirst { it.second == rpe }.coerceAtLeast(0)
-                            ) { i -> rpe = choices[i].second }
-                        }
-                    }
-                    // What the effort numbers mean, in plain words (#277).
-                    if (!isTimed && prefs.effortMode != Effort.OFF) {
-                        Text(
-                            stringResource(if (prefs.effortMode == Effort.RIR) R.string.settings_effort_rir_detail else R.string.settings_effort_rpe_detail),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    // As in FitNotes: Save and Clear for a new set, Update and Delete for the selected one.
-                    if (selected == null) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            GoldButton(onClick = { save() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
-                                Text(stringResource(R.string.set_save), style = MaterialTheme.typography.labelLarge)
-                            }
-                            GlassOutlinedButton(onClick = { clear() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.cal_clear)) }
-                        }
-                    } else {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            GoldButton(onClick = { save() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.set_update)) }
-                            GlassOutlinedButton(
-                                onClick = { deletingId = sets.firstOrNull { it.id == selected }?.id ?: NO_SET },
-                                modifier = Modifier.weight(1f).heightIn(min = 48.dp)
-                            ) { Text(stringResource(R.string.day_delete)) }
-                        }
-                        // Move the selected set within this exercise (#70).
-                        val at = sets.indexOfFirst { it.id == selected }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(
-                                onClick = { selected?.let { moveSet(snap, date, it, -1) } },
-                                enabled = at > 0,
-                                modifier = Modifier.weight(1f)
-                            ) { Text(stringResource(R.string.set_move_up)) }
-                            TextButton(
-                                onClick = { selected?.let { moveSet(snap, date, it, 1) } },
-                                enabled = at in 0 until sets.lastIndex,
-                                modifier = Modifier.weight(1f)
-                            ) { Text(stringResource(R.string.set_move_down)) }
-                        }
-                        TextButton(onClick = { selected = null }, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(R.string.set_new_instead))
-                        }
-                    }
-                    // The next of the exercises chosen together in the library (#83). Exercises already in the day's
-                    // logged workout are reached by auto-advance instead (#136), so the button is only for the rest.
-                    if (next != null && next.id !in displayOrder(snap, date)) {
-                        GlassOutlinedButton(
-                            onClick = { nav.replace(Screen.SetEntry(date, next.id, queue.drop(1))) },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
-                        ) {
-                            Text(
-                                if (queue.size > 1) pluralStringResource(R.plurals.set_next_exercise_more, queue.size - 1, next.name, queue.size - 1)
-                                else stringResource(R.string.set_next_exercise, next.name),
-                                maxLines = 2,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
-
-            // As in FitNotes, the sets follow the buttons with no rule between (#141).
-            item { Spacer(Modifier.height(Spacing.sm)) }
-
-            if (sets.isEmpty()) {
-                item {
-                    Text(
-                        when {
-                            !fillFromLast -> stringResource(R.string.set_none_today)
-                            template == null -> stringResource(R.string.set_none_ever)
-                            else -> stringResource(R.string.set_none_today_filled)
-                        },
-                        Modifier.padding(horizontal = 16.dp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            // Each value in its own labelled column (#101), chosen by the exercise type.
-            val fields = setFields(snap, exerciseId, sets)
-            sets.forEachIndexed { i, s ->
-                item(key = "s${s.id}") {
-                    val isSelected = selected == s.id
-                    val marks = setMarks(res, s, prefs, session = isTimed, rounds = isRounds, countNames = ex?.countNames.orEmpty())
-                    SetRowView(
-                        layoutGroup = setLayout,
-                        index = i + 1,
-                        summary = describeSet(res, snap, s.weightKg, s.reps, s.distance, s.durationSec, s.exerciseId, s.metric),
-                        cells = setCells(res, snap, fields, s),
-                        comment = s.comment,
-                        isPr = s.isPr,
-                        badge = marks.badge,
-                        badgeSpoken = marks.badgeSpoken,
-                        effort = marks.effort,
-                        effortSpoken = marks.effortSpoken,
-                        selected = isSelected,
-                        onClick = { selected = if (selected == s.id) null else s.id },
-                        // Each set's own comment, one tap away mid-workout (#108).
-                        onComment = { commentingId = s.id },
-                        // No "Edit" hint: the comment button needs the room at 320dp, and the gold-washed, gold-edged
-                        // frame already marks the selected set (#108, #112).
-                        // "Mark sets complete" (#19). Every set has its done tick (#129). Ticking one off starts the
-                        // rest timer when Settings starts it automatically, unless saving that set has only just
-                        // started it. Ticking the last set moves on by itself (#136).
-                        done = s.done,
-                        onDoneChange = { on ->
-                            if (on) Haptics.confirm(view)
-                            if (on) startRestAfterSet(
-                                appContext, snap, date, exerciseId,
-                                setId = s.id, last = sets.all { it.id == s.id || it.done }, onStarting = askNotify
-                            )
-                            AppScope.scope.launch {
-                                Workouts.setDone(s.id, on)
-                                if (on && sets.all { it.id == s.id || it.done }) {
-                                    autoAdvance(res, snap, nav, date, exerciseId, s.id, queue)
-                                }
-                            }
-                        }
-                    )
-                }
-            }
-            // One comment for the whole exercise in today's workout (#107), under its sets.
-            // The last note on this exercise from an earlier workout shows under it, to use today (owner, 2026-10-03).
-            item(key = "exercise-comment") {
-                ExerciseCommentRow(
-                    snap.exerciseComments[date.take(10)]?.get(exerciseId),
-                    onEdit = { editingExerciseComment = true },
-                    previous = earlierExerciseComments(snap, exerciseId, date, 1).firstOrNull()
+        else -> TrackTab(
+            snap = snap, nav = nav, date = date, exerciseId = exerciseId, queue = queue, ex = ex, sets = sets,
+            hasTemplate = template != null, fillFromLast = fillFromLast, prefs = prefs, weightStep = weightStep,
+            draft = draft, shown = shown, setLayout = setLayout, nextQueued = next,
+            onSave = { save() }, onClear = { clear() },
+            onDelete = { deletingId = sets.firstOrNull { it.id == selected }?.id ?: NO_SET },
+            onSetComment = { commentingId = it },
+            onEditExerciseComment = { editingExerciseComment = true },
+            onDoneChange = { s, on ->
+                if (on) Haptics.confirm(view)
+                if (on) startRestAfterSet(
+                    appContext, snap, date, exerciseId,
+                    setId = s.id, last = sets.all { it.id == s.id || it.done }, onStarting = askNotify
                 )
-            }
-            if (sets.isNotEmpty()) {
-                item {
-                    val volume = sets.sumOf { Analysis.volumeKg(it) }
-                    Text(
-                        pluralStringResource(R.plurals.day_sets, sets.size, sets.size) +
-                            if (volume > 0) " · " + stringResource(R.string.set_volume, fmtNum(snap.weight(volume, exerciseId), 0), snap.weightUnitOf(exerciseId)) else "",
-                        Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                AppScope.scope.launch {
+                    Workouts.setDone(s.id, on)
+                    if (on && sets.all { it.id == s.id || it.done }) {
+                        autoAdvance(res, snap, nav, date, exerciseId, s.id, queue)
+                    }
                 }
             }
-        }
+        )
         }
         }
     }
@@ -965,5 +738,347 @@ fun SetEntryScreen(
     }
     if (editExercise && ex != null) {
         ExerciseEditorSheet(snap, existing = ex, initialCategoryId = ex.categoryId, onDismiss = { editExercise = false })
+    }
+}
+
+/** The Track tab's typed fields, held as state objects. [SetEntryScreen] declares them (saved, #304); this only passes them on. */
+private class TrackDraft(
+    val selected: MutableState<Long?>,
+    val weight: MutableState<String>,
+    val reps: MutableState<String>,
+    val distance: MutableState<String>,
+    val duration: MutableState<String>,
+    val metric: MutableState<String>,
+    val sessionMin: MutableState<String>,
+    val liveMin: MutableState<String>,
+    val intensity: MutableState<Int?>,
+    val sessionType: MutableState<Int?>,
+    val zone: MutableState<Int?>,
+    val countAText: MutableState<String>,
+    val countBText: MutableState<String>,
+    val roundsDraft: MutableState<RoundsDraft>,
+    val setType: MutableIntState,
+    val rpe: MutableState<Double?>
+)
+
+/** Which fields the Track tab shows for the exercise (the type decides, but anything already logged stays editable). */
+private class TrackShown(
+    val weight: Boolean,
+    val reps: Boolean,
+    val distance: Boolean,
+    val duration: Boolean,
+    val metric: Boolean,
+    val session: Boolean,
+    val rounds: Boolean
+)
+
+/**
+ * The Track tab (#82, #305): the entry fields, Save / Clear or Update / Delete, then the day's sets with their comment
+ * and done controls. The typed fields live in [draft]; saving, deleting, commenting and ticking are callbacks, so the
+ * rules and side effects stay in [SetEntryScreen].
+ */
+@Composable
+private fun TrackTab(
+    snap: Snapshot,
+    nav: Nav,
+    date: String,
+    exerciseId: Long,
+    queue: List<Long>,
+    ex: Exercise?,
+    sets: List<SetRow>,
+    hasTemplate: Boolean,
+    fillFromLast: Boolean,
+    prefs: PortableSettings,
+    weightStep: Double,
+    draft: TrackDraft,
+    shown: TrackShown,
+    setLayout: SetLayoutGroup,
+    /** The next of the exercises chosen together in the library, if any (#83). */
+    nextQueued: Exercise?,
+    onSave: () -> Unit,
+    onClear: () -> Unit,
+    onDelete: () -> Unit,
+    onSetComment: (Long) -> Unit,
+    onEditExerciseComment: () -> Unit,
+    onDoneChange: (SetRow, Boolean) -> Unit
+) {
+    val res = LocalContext.current.resources
+    var selected by draft.selected
+    var weight by draft.weight
+    var reps by draft.reps
+    var distance by draft.distance
+    var duration by draft.duration
+    var metric by draft.metric
+    var sessionMin by draft.sessionMin
+    var liveMin by draft.liveMin
+    var intensity by draft.intensity
+    var sessionType by draft.sessionType
+    var zone by draft.zone
+    var countAText by draft.countAText
+    var countBText by draft.countBText
+    var roundsDraft by draft.roundsDraft
+    var setType by draft.setType
+    var rpe by draft.rpe
+    val showWeight = shown.weight
+    val showReps = shown.reps
+    val showDistance = shown.distance
+    val showDuration = shown.duration
+    val showMetric = shown.metric
+    val isSession = shown.session
+    val isRounds = shown.rounds
+    val isTimed = isSession || isRounds
+    val metricDef = ExerciseTypes.metricOf(ex?.type ?: ExerciseTypes.WEIGHT_REPS)
+    // The inputs sit straight under the tabs, as in FitNotes (#136): no top padding, and the date and notes row
+    // only when it has something to show.
+    LazyColumn(contentPadding = PaddingValues(top = 0.dp, bottom = 32.dp)) {
+        val notes = ex?.notes?.takeIf { it.isNotBlank() }
+        if (date != Dates.today() || notes != null) {
+            item {
+                if (date != Dates.today()) {
+                    Text(
+                        Dates.day(date).uppercase(),
+                        Modifier.padding(start = 16.dp, top = 4.dp),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Brand.Gold
+                    )
+                }
+                if (notes != null) {
+                    ExerciseNotes(notes, Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+                }
+            }
+        }
+
+        // ---------- Entry ----------
+        item {
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (showWeight) {
+                    StepperField(
+                        label = stringResource(R.string.set_field_weight, snap.weightUnitOf(exerciseId)),
+                        value = weight,
+                        onValue = { weight = it },
+                        onStep = { dir -> weight = fmtNum(max(0.0, num(weight) + dir * weightStep), 2) }
+                    )
+                }
+                if (showReps) {
+                    StepperField(
+                        label = stringResource(R.string.set_field_reps),
+                        value = reps,
+                        onValue = { reps = it },
+                        onStep = { dir -> reps = max(0, (reps.trim().toIntOrNull() ?: 0) + dir).toString() },
+                        keyboard = KeyboardType.Number
+                    )
+                }
+                if (showDistance) {
+                    StepperField(
+                        label = stringResource(R.string.set_field_distance, snap.distanceUnit(exerciseId)),
+                        value = distance,
+                        onValue = { distance = it },
+                        onStep = { dir -> distance = fmtNum(max(0.0, num(distance) + dir * DISTANCE_STEP), 2) }
+                    )
+                }
+                if (showDuration) {
+                    StepperField(
+                        label = stringResource(R.string.set_field_time),
+                        value = duration,
+                        onValue = { duration = it },
+                        onStep = { dir ->
+                            val next = max(0, parseDuration(duration) + dir * DURATION_STEP)
+                            duration = if (next == 0) "" else fmtDuration(next)
+                        },
+                        keyboard = KeyboardType.Text
+                    )
+                }
+                if (showMetric) {
+                    // The type's own metric (#14), stepping by 1.
+                    val unit = metricDef?.metricUnit?.let { " ($it)" }.orEmpty()
+                    StepperField(
+                        label = (metricDef?.metricName ?: stringResource(R.string.set_field_value)) + unit,
+                        value = metric,
+                        onValue = { metric = it },
+                        onStep = { dir ->
+                            val now = metric.trim().replace(',', '.').toDoubleOrNull() ?: 0.0
+                            metric = fmtNum(max(0.0, now + dir), 2)
+                        }
+                    )
+                }
+                if (isSession) {
+                    SessionFields(
+                        date = date,
+                        durationText = sessionMin, onDuration = { sessionMin = it },
+                        liveText = liveMin, onLive = { liveMin = it },
+                        intensity = intensity, onIntensity = { intensity = it },
+                        sessionType = sessionType, onSessionType = { sessionType = it },
+                        zone = zone, onZone = { zone = it },
+                        onOpenProfile = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) },
+                        rpe = rpe, onRpe = { rpe = it },
+                        fields = ex?.sessionFields
+                    )
+                }
+                // Set type (#43) and optional effort (#44) as two dropdowns on one row (#129), so the sets below
+                // get the screen. Warm-ups stay out of records unless Settings counts them.
+                if (isRounds) {
+                    RoundsFields(
+                        date = date,
+                        draft = roundsDraft, onDraft = { roundsDraft = it },
+                        zone = zone, onZone = { zone = it },
+                        onOpenProfile = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) },
+                        rpe = rpe, onRpe = { rpe = it }
+                    )
+                }
+                if (isTimed) CountFields(
+                    names = ex?.countNames.orEmpty(),
+                    aText = countAText, onA = { countAText = it },
+                    bText = countBText, onB = { countBText = it }
+                )
+                if (!isTimed) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    val types = SetTypes.all
+                    DropdownPill(
+                        stringResource(R.string.set_type),
+                        types.map { t -> SetTypes.badge(t)?.let { "$it · ${setTypeText(res, t)}" } ?: setTypeText(res, t) },
+                        types.indexOf(setType).coerceAtLeast(0)
+                    ) { i -> setType = types[i] }
+                    Spacer(Modifier.weight(1f))
+                    if (prefs.effortMode != Effort.OFF) {
+                        val rir = prefs.effortMode == Effort.RIR
+                        val choices: List<Pair<String, Double?>> = listOf(stringResource(if (rir) R.string.set_rir_none else R.string.set_rpe_none) to null) +
+                            if (rir) Effort.rirSteps.map { r ->
+                                (if (r >= 5) res.getString(R.string.eff_rir_max) else res.getString(R.string.eff_rir, r)) to Effort.rpeFromRir(r)
+                            }
+                            else Effort.rpeSteps.map { v -> res.getString(R.string.eff_rpe, fmtNum(v, 1)) to v }
+                        DropdownPill(
+                            stringResource(if (rir) R.string.set_reps_in_reserve else R.string.set_effort),
+                            choices.map { it.first },
+                            choices.indexOfFirst { it.second == rpe }.coerceAtLeast(0)
+                        ) { i -> rpe = choices[i].second }
+                    }
+                }
+                // What the effort numbers mean, in plain words (#277).
+                if (!isTimed && prefs.effortMode != Effort.OFF) {
+                    Text(
+                        stringResource(if (prefs.effortMode == Effort.RIR) R.string.settings_effort_rir_detail else R.string.settings_effort_rpe_detail),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                // As in FitNotes: Save and Clear for a new set, Update and Delete for the selected one.
+                if (selected == null) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GoldButton(onClick = onSave, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                            Text(stringResource(R.string.set_save), style = MaterialTheme.typography.labelLarge)
+                        }
+                        GlassOutlinedButton(onClick = onClear, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.cal_clear)) }
+                    }
+                } else {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GoldButton(onClick = onSave, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.set_update)) }
+                        GlassOutlinedButton(
+                            onClick = onDelete,
+                            modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                        ) { Text(stringResource(R.string.day_delete)) }
+                    }
+                    // Move the selected set within this exercise (#70).
+                    val at = sets.indexOfFirst { it.id == selected }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(
+                            onClick = { selected?.let { moveSet(snap, date, it, -1) } },
+                            enabled = at > 0,
+                            modifier = Modifier.weight(1f)
+                        ) { Text(stringResource(R.string.set_move_up)) }
+                        TextButton(
+                            onClick = { selected?.let { moveSet(snap, date, it, 1) } },
+                            enabled = at in 0 until sets.lastIndex,
+                            modifier = Modifier.weight(1f)
+                        ) { Text(stringResource(R.string.set_move_down)) }
+                    }
+                    TextButton(onClick = { selected = null }, modifier = Modifier.fillMaxWidth()) {
+                        Text(stringResource(R.string.set_new_instead))
+                    }
+                }
+                // The next of the exercises chosen together in the library (#83). Exercises already in the day's
+                // logged workout are reached by auto-advance instead (#136), so the button is only for the rest.
+                if (nextQueued != null && nextQueued.id !in displayOrder(snap, date)) {
+                    GlassOutlinedButton(
+                        onClick = { nav.replace(Screen.SetEntry(date, nextQueued.id, queue.drop(1))) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)
+                    ) {
+                        Text(
+                            if (queue.size > 1) pluralStringResource(R.plurals.set_next_exercise_more, queue.size - 1, nextQueued.name, queue.size - 1)
+                            else stringResource(R.string.set_next_exercise, nextQueued.name),
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+
+        // As in FitNotes, the sets follow the buttons with no rule between (#141).
+        item { Spacer(Modifier.height(Spacing.sm)) }
+
+        if (sets.isEmpty()) {
+            item {
+                Text(
+                    when {
+                        !fillFromLast -> stringResource(R.string.set_none_today)
+                        !hasTemplate -> stringResource(R.string.set_none_ever)
+                        else -> stringResource(R.string.set_none_today_filled)
+                    },
+                    Modifier.padding(horizontal = 16.dp),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        // Each value in its own labelled column (#101), chosen by the exercise type.
+        val fields = setFields(snap, exerciseId, sets)
+        sets.forEachIndexed { i, s ->
+            item(key = "s${s.id}") {
+                val isSelected = selected == s.id
+                val marks = setMarks(res, s, prefs, session = isTimed, rounds = isRounds, countNames = ex?.countNames.orEmpty())
+                SetRowView(
+                    layoutGroup = setLayout,
+                    index = i + 1,
+                    summary = describeSet(res, snap, s.weightKg, s.reps, s.distance, s.durationSec, s.exerciseId, s.metric),
+                    cells = setCells(res, snap, fields, s),
+                    comment = s.comment,
+                    isPr = s.isPr,
+                    badge = marks.badge,
+                    badgeSpoken = marks.badgeSpoken,
+                    effort = marks.effort,
+                    effortSpoken = marks.effortSpoken,
+                    selected = isSelected,
+                    onClick = { selected = if (selected == s.id) null else s.id },
+                    // Each set's own comment, one tap away mid-workout (#108).
+                    onComment = { onSetComment(s.id) },
+                    // No "Edit" hint: the comment button needs the room at 320dp, and the gold-washed, gold-edged
+                    // frame already marks the selected set (#108, #112).
+                    // "Mark sets complete" (#19). Every set has its done tick (#129). Ticking one off starts the
+                    // rest timer when Settings starts it automatically, unless saving that set has only just
+                    // started it. Ticking the last set moves on by itself (#136).
+                    done = s.done,
+                    onDoneChange = { on -> onDoneChange(s, on) }
+                )
+            }
+        }
+        // One comment for the whole exercise in today's workout (#107), under its sets.
+        // The last note on this exercise from an earlier workout shows under it, to use today (owner, 2026-10-03).
+        item(key = "exercise-comment") {
+            ExerciseCommentRow(
+                snap.exerciseComments[date.take(10)]?.get(exerciseId),
+                onEdit = onEditExerciseComment,
+                previous = earlierExerciseComments(snap, exerciseId, date, 1).firstOrNull()
+            )
+        }
+        if (sets.isNotEmpty()) {
+            item {
+                val volume = sets.sumOf { Analysis.volumeKg(it) }
+                Text(
+                    pluralStringResource(R.plurals.day_sets, sets.size, sets.size) +
+                        if (volume > 0) " · " + stringResource(R.string.set_volume, fmtNum(snap.weight(volume, exerciseId), 0), snap.weightUnitOf(exerciseId)) else "",
+                    Modifier.padding(16.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
