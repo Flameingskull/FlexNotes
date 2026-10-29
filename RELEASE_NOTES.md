@@ -1,34 +1,30 @@
-# FlexNotes 1.0.192
+# FlexNotes 1.0.193
 
 ## Overview
 
-This update keeps your work in place when the phone turns. Turning the screen, switching between light and dark,
-or Android closing FlexNotes in the background used to throw away anything you hadn't saved yet. Mid-workout, in
-the workout and schedule editors and on several other screens, what you typed and the sheet you had open now stay
-exactly as you left them.
-
-## Fixed
-
-- **Mid-workout:** on the exercise screen, the weight, reps, time, rounds and other values you've typed but not
-  saved stay put when you turn the phone. Open sheets stay open too: a half-typed set or exercise comment, the delete
-  question, the set and plate calculators, the rest timer and the exercise info.
-- **The day log:** an exercise's comment, swap, delete and superset dialogs stay open when you turn the phone, and
-  so do its expanded sets.
-- **Workouts:** the workout editor keeps its unsaved changes, including the name, notes, days, exercises, planned sets
-  and training blocks. Open sheets stay open too, such as the planned sets, a day's rest and renaming a day. Back
-  still asks before discarding them.
-- **Medication schedules:** the schedule editor keeps its unsaved phases and doses, the dose sheet (taper fields
-  included), the date pickers and the earlier-run dialogs.
-- **The exercise editor:** a new or edited exercise keeps everything you've entered.
-- **Backups:** the restore confirmation and the PDF report options stay open when you turn the phone.
-- **Analysis:** a pinned graph opened from the Overview opens once, with its settings. It now also does so after
-  Android has closed the app in the background.
+This update keeps FlexNotes looking the way it should, however Android's design library changes. Every switch,
+slider, checkbox, chip, button, card, progress bar and dialog now has its black and gold colours set by FlexNotes
+itself, and automated screenshot checks cover each one. It also brings weekday dates to your photos and the
+medication report, and fixes moving a workout that finished after midnight.
 
 ## Improved
 
-- Behind the scenes, the rules set entry follows when you save a set are now checked by automated tests on every
-  build: supersets moving to the next exercise, starting the rest and workout timers, selecting the next set and
-  asking about an unusually short or long session. They work exactly as before.
+- **Controls keep the FlexNotes look:** switches, sliders, checkboxes, radio buttons, chips, text buttons, cards,
+  progress bars and dialogs now draw in FlexNotes's own black and gold, whatever a future Android library update
+  changes. Before, a library update could quietly turn them grey or another colour.
+- **Easier to see:** a switch that's on is now light gold on a deep gold track, and the empty part of a slider (the
+  rest timer's sound, the camera's photo opacity, the slideshow) is clearly visible on black. A chip you haven't
+  chosen reads in ivory rather than grey.
+
+## Fixed
+
+- **Photo dates:** photo tiles and the photo chooser show the date with the weekday ("Mon 27 Oct"), with the year for
+  older photos, on its own line so it's never cut off. The pose, where there is one, goes underneath.
+- **Medication report:** the dose log shows weekday dates, and the due and taken times follow your phone's 12-hour
+  or 24-hour clock. The schedule list uses your clock style too, and the ends of each chart show the year, so a range
+  across New Year is clear.
+- **Moving a workout:** moving a workout that finished after midnight to another date keeps its finish on the
+  following day, so its length stays right instead of turning negative.
 
 ## Your data
 
@@ -39,6 +35,5 @@ exactly as you left them.
 
 - A few smaller sheets and pickers still reset when the phone turns: the library's delete, merge and new-category
   sheets, the search inside exercise pickers, the rest timer's length and Analysis's add-goal sheet (#311).
-- Photo tiles, the photo viewer and the medication report still show some dates without the weekday (#308).
-- Some controls (chips, switches, sliders) still use Material's default colours. They're being pinned to the brand
-  look with screenshot checks (#306).
+- A few graph end labels in shared images and the progress PDF still show dates without the year. They're part of
+  the next audit pass (#309).
