@@ -1,38 +1,34 @@
-# FlexNotes 1.0.191
+# FlexNotes 1.0.192
 
 ## Overview
 
-This update fixes five problems found in a full review of FlexNotes's code, and moves the app onto the current
-Android toolchain and libraries. Your workouts and photos are handled more safely: records are marked correctly when
-you log an earlier day, imports don't add values twice, typed values stay put, and saves tell you when they fail.
+This update keeps your work in place when the phone turns. Turning the screen, switching between light and dark,
+or Android closing FlexNotes in the background used to throw away anything you hadn't saved yet. Mid-workout, in
+the workout and schedule editors and on several other screens, what you typed and the sheet you had open now stay
+exactly as you left them.
 
 ## Fixed
 
-- Logging a heavier set on an earlier date now moves the PR mark correctly. Later sets it beats no longer show as
-  records.
-- Importing a FitNotes Body Tracker CSV in a different unit (pounds over kilograms, say) now converts each value to
-  your measurement's unit, so values you already have aren't added twice.
-- A weight or reps you've typed on the exercise screen now stays put when you tick a set done or add a comment.
-  Before, it was reset before you could save it.
-- Saving a progress video or a comparison image now tells you when the gallery couldn't save it, instead of saying it
-  was saved. A failed or stopped video no longer leaves a half-made file behind.
-- Comparing two photos now colours each body change by your goal for that measurement, so a smaller waist shows green
-  rather than red.
+- **Mid-workout:** on the exercise screen, the weight, reps, time, rounds and other values you've typed but not
+  saved stay put when you turn the phone. Open sheets stay open too: a half-typed set or exercise comment, the delete
+  question, the set and plate calculators, the rest timer and the exercise info.
+- **The day log:** an exercise's comment, swap, delete and superset dialogs stay open when you turn the phone, and
+  so do its expanded sets.
+- **Workouts:** the workout editor keeps its unsaved changes, including the name, notes, days, exercises, planned sets
+  and training blocks. Open sheets stay open too, such as the planned sets, a day's rest and renaming a day. Back
+  still asks before discarding them.
+- **Medication schedules:** the schedule editor keeps its unsaved phases and doses, the dose sheet (taper fields
+  included), the date pickers and the earlier-run dialogs.
+- **The exercise editor:** a new or edited exercise keeps everything you've entered.
+- **Backups:** the restore confirmation and the PDF report options stay open when you turn the phone.
+- **Analysis:** a pinned graph opened from the Overview opens once, with its settings. It now also does so after
+  Android has closed the app in the background.
 
 ## Improved
 
-- Analysis keeps your category or exercise filter when you open a workout day and come back.
-- The slideshow keeps its options when you turn the phone.
-- The day log's volume now counts sets the same way Analysis does. A set with an assisted (negative) weight no longer
-  lowers it.
-- Secondary buttons keep their gold text. The new Android libraries had turned it grey.
-- Deleting photos is now all or nothing: a delete that stops part-way never leaves a photo listed without its image.
-- Progress videos and dark PDF reports take their colours straight from the app's palette. Categories without a
-  colour no longer get a stray dot in the PDF, and poses print by name.
-- FlexNotes now builds with Gradle 9.8, the Android Gradle Plugin 9 (which compiles the Kotlin itself), Kotlin 2.4,
-  the 2026.09 Compose libraries, Room 2.8 and the current AndroidX libraries.
-- Behind the scenes: more database upgrade tests, stricter build checks (unused code and the no-internet rule can no
-  longer be skipped silently), and screenshot checks for settings rows that were never compared before.
+- Behind the scenes, the rules set entry follows when you save a set are now checked by automated tests on every
+  build: supersets moving to the next exercise, starting the rest and workout timers, selecting the next set and
+  asking about an unusually short or long session. They work exactly as before.
 
 ## Your data
 
@@ -41,8 +37,8 @@ you log an earlier day, imports don't add values twice, typed values stay put, a
 
 ## Known limitations
 
-- Turning the phone still closes the workout, schedule and exercise editors' unsaved changes and some sheets on the
-  exercise screen. That's next (#304).
+- A few smaller sheets and pickers still reset when the phone turns: the library's delete, merge and new-category
+  sheets, the search inside exercise pickers, the rest timer's length and Analysis's add-goal sheet (#311).
 - Photo tiles, the photo viewer and the medication report still show some dates without the weekday (#308).
 - Some controls (chips, switches, sliders) still use Material's default colours. They're being pinned to the brand
   look with screenshot checks (#306).
