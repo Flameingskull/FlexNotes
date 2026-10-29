@@ -1,5 +1,10 @@
 package com.fitlens.companion.report
 
+import com.fitlens.companion.data.rangeText
+import com.fitlens.companion.data.flagText
+import com.fitlens.companion.data.phaseText
+import com.fitlens.companion.data.scheduleSummary
+import com.fitlens.companion.data.taperText
 import android.content.res.Resources
 import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
@@ -124,8 +129,8 @@ object MedicationReport {
             plan.schedules.filter { s -> s.phases.any { p -> p.doses.any { it.medication == n } } }.forEach { s ->
                 val run = plan.current(s.id, today)
                 // Where the schedule is, in the same words and dates as the Medications screen (#237).
-                val state = if (run == null) res.getString(R.string.md_not_running) else com.fitlens.companion.ui.phaseText(res, s, run, today)
-                val phases = com.fitlens.companion.ui.scheduleSummary(res, s)
+                val state = if (run == null) res.getString(R.string.md_not_running) else phaseText(res, s, run, today)
+                val phases = scheduleSummary(res, s)
                 para(w, "${s.name}: $phases. $state", 9f, muted = true, indent = 12f)
                 s.phases.filter { it.on }.flatMap { it.doses }.filter { it.medication == n }.distinctBy { listOf(it.time, it.amount, it.days, it.step, it.stepEvery, it.stepLimit) }.forEach { d ->
                     val days = when {
@@ -133,7 +138,7 @@ object MedicationReport {
                         d.days.every > 1 -> res.getString(R.string.md_every_n_days, d.days.every)
                         else -> res.getString(R.string.md_every_day)
                     }
-                    val taper = com.fitlens.companion.ui.taperText(res, d)?.let { " · $it" }.orEmpty()
+                    val taper = taperText(res, d)?.let { " · $it" }.orEmpty()
                     para(w, "${fmtNum(d.amount)} ${d.unit} · ${Dates.time(d.time, is24Hour)} · $days$taper", 9f, indent = 24f)
                 }
                 plan.changes.filter { c -> run != null && c.activationId == run.id && plan.dosesById[c.doseId]?.second?.medication == n }.forEach { c ->
@@ -290,9 +295,9 @@ object MedicationReport {
             para(w, summary, 9f, muted = true)
             // Its reference range and the readings outside it (#211).
             val def = snap.allMeasurements.firstOrNull { it.name == n }
-            com.fitlens.companion.ui.rangeText(res, def)?.let { range ->
+            rangeText(res, def)?.let { range ->
                 val out = pts.count { def?.rangeFlag(it.value) != 0 }
-                val latest = com.fitlens.companion.ui.flagText(res, def, last.value)
+                val latest = flagText(res, def, last.value)
                 val line = if (out == 0) res.getString(R.string.mdr_range_in, range)
                     else res.getString(R.string.mdr_range_out, range, res.getQuantityString(R.plurals.mdr_range_out_count, out, out, pts.size)) +
                         (latest?.let { " · " + res.getString(R.string.mdr_range_latest, it) } ?: "")

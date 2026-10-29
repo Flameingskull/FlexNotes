@@ -1,5 +1,8 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.phaseText
+import com.fitlens.companion.data.scheduleSummary
+import com.fitlens.companion.data.taperText
 import android.content.res.Resources
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -295,49 +298,10 @@ internal fun skipDose(res: Resources, due: DueDose) {
 /** "Creatine 5 g", a dose in one line. */
 internal fun doseLine(due: DueDose): String = "${due.dose.medication} ${fmtNum(due.amount)} ${due.dose.unit}".trim()
 
-/**
- * Where [a] is on [date], as dates people plan by (#237), never a day count: "On until Mon 3 Nov", "Off · on again
- * Tue 4 Nov", "Off until Fri 14 Nov, then it ends", "Ongoing since Mon 6 Oct", "Paused since Sat 4 Oct",
- * "Starts Sat 1 Nov", "Finished".
- */
-internal fun phaseText(res: Resources, s: MedSchedule, a: MedActivation, date: String): String {
-    val pause = a.pauses.firstOrNull { it.to == null }
-    return when {
-        a.start > date -> res.getString(R.string.md_starts, Dates.day(a.start))
-        pause != null && date >= pause.from -> res.getString(R.string.md_paused_since, Dates.day(pause.from))
-        !a.runsOn(date) -> res.getString(R.string.md_ended)
-        else -> {
-            val st = MedSchedules.phaseOn(s, a, date) ?: return res.getString(R.string.md_finished)
-            val last = st.lastDay
-            val phases = s.phases.filter { it.length > 0 }
-            // Another phase follows unless this is the last one of a schedule that doesn't repeat.
-            val more = s.repeats || phases.indexOf(st.phase) < phases.size - 1
-            when {
-                // An ongoing phase (#228) has no end: when the run began says more than a count of days.
-                last == null -> if (st.phase.on) res.getString(R.string.md_phase_on_ongoing, Dates.day(a.start))
-                    else res.getString(R.string.md_phase_off_ongoing)
-                st.phase.on -> res.getString(R.string.md_phase_on, Dates.day(last))
-                !more -> res.getString(R.string.md_phase_off_last, Dates.day(last))
-                else -> res.getString(R.string.md_phase_off, Dates.day(Dates.plusDays(last, 1)))
-            }
-        }
-    }
-}
-
 /** A schedule's state on the list: running (and where), starting, or not running. */
 internal fun scheduleState(res: Resources, plan: MedPlan, s: MedSchedule, date: String): String {
     val a = plan.current(s.id, date) ?: return res.getString(R.string.md_not_running) + " · " + scheduleSummary(res, s)
     return phaseText(res, s, a, date)
-}
-
-/** "2 weeks on · 1 week off, repeating", or "2 weeks on · then on, ongoing" (#228). */
-internal fun scheduleSummary(res: Resources, s: MedSchedule): String {
-    if (s.phases.isEmpty()) return res.getString(R.string.md_no_phases)
-    val parts = s.phases.joinToString(" · ") { p ->
-        if (p.unit == PhaseUnit.ONGOING) res.getString(if (p.on) R.string.md_summary_on_ongoing else R.string.md_summary_off_ongoing)
-        else res.getString(if (p.on) R.string.md_summary_on else R.string.md_summary_off, phaseLength(res, p.length, p.unit))
-    }
-    return if (s.repeats && !s.ongoing) res.getString(R.string.md_summary_repeating, parts) else parts
 }
 
 /** The choices for when a dose counts as missed (#318), in [MedSchedules.MISSED_CHOICES] order, in plain words. */
@@ -354,15 +318,6 @@ internal fun missedAfterLabels(res: Resources): List<String> = MedSchedules.MISS
             else -> R.string.mr_missed_eod
         }
     )
-}
-
-/** "8 weeks", "1 month", or "ongoing" (#228). */
-internal fun phaseLength(res: Resources, n: Int, unit: PhaseUnit): String = when (unit) {
-    PhaseUnit.DAYS -> res.getQuantityString(R.plurals.md_days, n, n)
-    PhaseUnit.WEEKS -> res.getQuantityString(R.plurals.md_weeks, n, n)
-    PhaseUnit.MONTHS -> res.getQuantityString(R.plurals.md_months, n, n)
-    PhaseUnit.YEARS -> res.getQuantityString(R.plurals.md_years, n, n)
-    PhaseUnit.ONGOING -> res.getString(R.string.md_ongoing)
 }
 
 /**

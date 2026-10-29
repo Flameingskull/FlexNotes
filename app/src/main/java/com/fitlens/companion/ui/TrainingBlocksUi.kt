@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.phaseLength
 import android.content.res.Resources
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

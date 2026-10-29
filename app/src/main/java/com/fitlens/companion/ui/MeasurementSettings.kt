@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.rangeText
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.HorizontalDivider

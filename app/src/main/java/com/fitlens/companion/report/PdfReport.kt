@@ -1,9 +1,6 @@
 package com.fitlens.companion.report
 
 import android.content.res.Resources
-import androidx.compose.ui.graphics.toArgb
-import com.fitlens.companion.ui.Brand
-import com.fitlens.companion.ui.BrandFonts
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
@@ -11,6 +8,8 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
+import com.fitlens.companion.data.BrandFonts
+import com.fitlens.companion.data.CanvasColors
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Photo
 import com.fitlens.companion.data.Records
@@ -19,8 +18,8 @@ import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.fmtDuration
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.data.fmtSigned
-import com.fitlens.companion.ui.defOrder
-import com.fitlens.companion.ui.describeSet
+import com.fitlens.companion.data.defOrder
+import com.fitlens.companion.data.describeSet
 import com.fitlens.companion.data.poseText
 import com.fitlens.companion.video.FrameRenderer
 import kotlinx.coroutines.Dispatchers
@@ -50,11 +49,12 @@ internal class Palette(
     val gold: Int, val accent: Int, val line: Int, val fill: Int, val hairline: Int, val grid: Int
 )
 
-// Dark pages use the app's own colours, read from Brand so they never drift from it.
+// Dark pages use the app's own colours, read from CanvasColors (which Brand is built from) so they never drift from it.
 internal val DARK = Palette(
-    bg = Brand.Black.toArgb(), card = Brand.Surface.toArgb(), text = Brand.Ivory.toArgb(), muted = Brand.Muted.toArgb(),
-    gold = Brand.Gold.toArgb(), accent = Brand.GoldLight.toArgb(), line = Brand.Fall.toArgb(),
-    fill = Brand.Gold.copy(alpha = 0.2f).toArgb(), hairline = Brand.Hairline.toArgb(), grid = Brand.Ivory.copy(alpha = 0.2f).toArgb()
+    bg = CanvasColors.BLACK, card = CanvasColors.SURFACE, text = CanvasColors.IVORY, muted = CanvasColors.MUTED,
+    gold = CanvasColors.GOLD, accent = CanvasColors.GOLD_LIGHT, line = CanvasColors.FALL,
+    fill = CanvasColors.withAlpha(CanvasColors.GOLD, 0.2f), hairline = CanvasColors.HAIRLINE,
+    grid = CanvasColors.withAlpha(CanvasColors.IVORY, 0.2f)
 )
 
 // Deeper gold and red on white keep text readable when printed.

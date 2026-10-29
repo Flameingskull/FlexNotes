@@ -2,6 +2,9 @@
 
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.phaseText
+import com.fitlens.companion.data.phaseLength
+import com.fitlens.companion.data.taperText
 import android.content.res.Resources
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
@@ -769,19 +772,6 @@ private fun PhaseCard(
 /** "ON · 8 weeks" or "OFF · 4 weeks". */
 internal fun phaseLabel(res: Resources, p: MedPhase): String =
     res.getString(if (p.on) R.string.md_phase_label_on else R.string.md_phase_label_off, phaseLength(res, p.length, p.unit))
-
-/** "Down 5 mg every 7 days, to 10 mg" or "Up 2.5 mg every 14 days", a dose's taper or step-up (#234); null without one. */
-internal fun taperText(res: Resources, d: MedDose): String? {
-    if (!d.steps) return null
-    val every = res.getQuantityString(R.plurals.md_step_every, d.stepEvery, d.stepEvery)
-    fun amount(v: Double) = "${fmtNum(v)} ${d.unit}".trim()
-    val by = amount(abs(d.step))
-    return when {
-        d.step < 0 -> res.getString(R.string.md_taper_down, by, every, amount(minOf(d.stepLimit ?: 0.0, d.amount)))
-        d.stepLimit != null -> res.getString(R.string.md_taper_up, by, every, amount(maxOf(d.stepLimit, d.amount)))
-        else -> res.getString(R.string.md_taper_up_open, by, every)
-    }
-}
 
 /** "20 → 15 → 10 mg": the amounts a taper or step-up (#234) goes through, up to [max] of them. */
 internal fun taperPreview(d: MedDose, max: Int = 6): String {

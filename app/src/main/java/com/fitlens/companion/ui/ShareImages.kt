@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.BrandFonts
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas

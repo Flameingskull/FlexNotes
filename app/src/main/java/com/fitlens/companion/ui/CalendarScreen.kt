@@ -2,6 +2,7 @@
 
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.describeSet
 import androidx.compose.material3.HorizontalDivider
 import com.fitlens.companion.ui.design.SectionLabel
 import com.fitlens.companion.ui.design.currentWidthBucket

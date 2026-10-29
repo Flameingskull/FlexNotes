@@ -2,6 +2,7 @@
 
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.describeSet
 import android.content.res.Resources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource

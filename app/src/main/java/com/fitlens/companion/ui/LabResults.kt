@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.flagText
 import android.content.res.Resources
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -30,26 +31,6 @@ import kotlinx.coroutines.launch
  * Measurements editor or the measurement's ⋮. A value outside it is flagged Low or High wherever it's listed, with an
  * arrow so the flag never relies on colour, and the graph shades the range.
  */
-
-/** "Range 1–3 mmol/L", "Range up to 3 mmol/L" or "Range from 1 mmol/L", or null when no range is set. */
-internal fun rangeText(res: Resources, def: MeasurementDef?): String? {
-    if (def == null || !def.hasRange) return null
-    val unit = def.unit.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
-    val low = def.refLow
-    val high = def.refHigh
-    return when {
-        low != null && high != null -> res.getString(R.string.lab_range_both, fmtNum(low), "${fmtNum(high)}$unit")
-        high != null -> res.getString(R.string.lab_range_high, "${fmtNum(high)}$unit")
-        else -> res.getString(R.string.lab_range_low, "${fmtNum(low ?: 0.0)}$unit")
-    }
-}
-
-/** "▲ High" or "▼ Low" for a value outside [def]'s range, or null for one in it or without a range. */
-internal fun flagText(res: Resources, def: MeasurementDef?, value: Double): String? = when (def?.rangeFlag(value)) {
-    1 -> res.getString(R.string.lab_flag_high)
-    -1 -> res.getString(R.string.lab_flag_low)
-    else -> null
-}
 
 /** The flag for a value outside its range, in the theme's error colour, or nothing. */
 @Composable

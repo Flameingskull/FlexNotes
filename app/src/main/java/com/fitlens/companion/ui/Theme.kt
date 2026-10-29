@@ -1,9 +1,7 @@
 package com.fitlens.companion.ui
 
-import android.content.Context
-import android.graphics.Typeface
-import androidx.core.content.res.ResourcesCompat
 import com.fitlens.companion.R
+import com.fitlens.companion.data.CanvasColors
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DatePickerColors
 import androidx.compose.material3.DatePickerDefaults
@@ -31,22 +29,22 @@ import androidx.compose.ui.unit.sp
 
 /** Brand palette (1.0.71): black and vibrant gold, with red and green kept for rises, falls and graph lines. */
 object Brand {
-    val Black = Color(0xFF050505)
+    val Black = Color(CanvasColors.BLACK)
     val Onyx = Color(0xFF0D0D0D)
-    val Surface = Color(0xFF141414)
+    val Surface = Color(CanvasColors.SURFACE)
     val SurfaceHigh = Color(0xFF1C1C1C)
     val SurfaceHighest = Color(0xFF262626)
     /** Polished black for the primary button and the top bar: a step lighter than the page. */
     val Graphite = Color(0xFF1A1A1A)
     /** Chosen items (selected day, active row, segmented choice): a deep gold-brown that carries gold text. */
     val GoldDusk = Color(0xFF3A2E0A)
-    val Gold = Color(0xFFF2BE22)
-    val GoldLight = Color(0xFFFFDB6E)
+    val Gold = Color(CanvasColors.GOLD)
+    val GoldLight = Color(CanvasColors.GOLD_LIGHT)
     val GoldDeep = Color(0xFF9A7608)
-    val Ivory = Color(0xFFF7F3EA)
-    val Muted = Color(0xFFBDB6A8)
+    val Ivory = Color(CanvasColors.IVORY)
+    val Muted = Color(CanvasColors.MUTED)
     /** Decorative rules and chart grids only: too quiet to carry meaning on its own. */
-    val Hairline = Color(0xFF38342B)
+    val Hairline = Color(CanvasColors.HAIRLINE)
     /** Dims the screen behind a blocking progress card. */
     val Scrim = Color(0x99050505)
     /**
@@ -60,7 +58,7 @@ object Brand {
     /** A value that went up, and progress towards a goal. */
     val Rise = Color(0xFF4CC38A)
     /** A value that went down, progress away from a goal, and the line of every graph. 4.6:1 on [SurfaceHighest] (#157). */
-    val Fall = Color(0xFFF05E62)
+    val Fall = Color(CanvasColors.FALL)
     /** Warnings and error text (the theme's `error`), checked for contrast with the other text colours. */
     val Error = Color(0xFFFF7A7E)
     /** The camera's body outline only (#230): white, the one sanctioned colour outside the brand, for lining up. */
@@ -205,32 +203,6 @@ val Manrope = FontFamily(
     Font(R.font.manrope_semibold, FontWeight.SemiBold),
     Font(R.font.manrope_bold, FontWeight.Bold)
 )
-
-/**
- * Manrope for the screens drawn on an Android `Canvas` (share images, the PDF report, video frames), so they match
- * the app (#135). [init] runs from `App`; before it (or in JVM tests) the system sans-serif stands in.
- */
-object BrandFonts {
-    @Volatile private var regular: Typeface? = null
-    @Volatile private var bold: Typeface? = null
-
-    fun init(context: Context) {
-        regular = runCatching { ResourcesCompat.getFont(context, R.font.manrope_regular) }.getOrNull()
-        bold = runCatching { ResourcesCompat.getFont(context, R.font.manrope_bold) }.getOrNull()
-    }
-
-    fun typeface(bold: Boolean = false, italic: Boolean = false): Typeface {
-        val base = (if (bold) this.bold else regular) ?: Typeface.SANS_SERIF
-        // Manrope has no italic: Android slants it, and only fakes bold when the bold file is missing.
-        val style = when {
-            italic && bold && this.bold == null -> Typeface.BOLD_ITALIC
-            italic -> Typeface.ITALIC
-            bold && this.bold == null -> Typeface.BOLD
-            else -> Typeface.NORMAL
-        }
-        return if (style == Typeface.NORMAL) base else Typeface.create(base, style)
-    }
-}
 
 // One calm scale in Manrope (#135): display 40/34/28, headline 24/22/20, title 20/16/14, body 16/14/12, labels
 // 14/12/11. Letter-spacing only on the small uppercase labels (`titleSmall`, `labelSmall`), so text is never squeezed.

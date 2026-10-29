@@ -106,7 +106,12 @@ custom metrics.
   optional **You** step and its own **Body measurements** step to setup ([#278](https://github.com/Flameingskull/FlexNotes/issues/278)), lets you read and write a
   comment on any photo ([#271](https://github.com/Flameingskull/FlexNotes/issues/271)) and opens a screen's main graph full screen when you turn the phone
   ([#269](https://github.com/Flameingskull/FlexNotes/issues/269)). 1.0.191 moves FlexNotes onto the current Android toolchain and libraries ([#293](https://github.com/Flameingskull/FlexNotes/issues/293)) and
-  tidies code found in a full quality audit.
+  tidies code found in a full quality audit. From 1.0.192 to 1.0.195 nothing you've typed is lost when you turn the
+  phone or Android closes FlexNotes in the background: set entry, the day log, the editors, and every sheet and picker
+  keep their input ([#304](https://github.com/Flameingskull/FlexNotes/issues/304), [#311](https://github.com/Flameingskull/FlexNotes/issues/311), [#315](https://github.com/Flameingskull/FlexNotes/issues/315), [#316](https://github.com/Flameingskull/FlexNotes/issues/316)). Every switch, checkbox, chip and dialog is drawn in the FlexNotes colours
+  whatever Android's own defaults do ([#306](https://github.com/Flameingskull/FlexNotes/issues/306)), the Records board always shows its unit ([#319](https://github.com/Flameingskull/FlexNotes/issues/319)), and in Medications you
+  choose when a dose counts as missed, and removing a phase or a dose can be undone ([#318](https://github.com/Flameingskull/FlexNotes/issues/318), [#317](https://github.com/Flameingskull/FlexNotes/issues/317)). 1.0.196 keeps the PDF
+  and video code apart from the screens, with a test that stops them mixing again ([#320](https://github.com/Flameingskull/FlexNotes/issues/320)).
 - **Next:** your check of every screen on a real phone at large font sizes ([#263](https://github.com/Flameingskull/FlexNotes/issues/263)), with an
   accessibility pass ([#157](https://github.com/Flameingskull/FlexNotes/issues/157)); anything found there becomes a bug and the next build. The plan is `docs/plans/2026-10-24-roadmap.md`; other
   ideas are on the [feature request list](https://github.com/Flameingskull/FlexNotes/issues?q=is%3Aissue+is%3Aopen+label%3Aenhancement).
@@ -129,6 +134,11 @@ custom metrics.
 - **Work where the data is shown.** Anything you can see, you can change, move or delete right there, on any date,
   whether you typed it in or it came from FitNotes. Reordering is done in place: a **Reorder** button in the top bar
   shows drag handles, and turns gold while it's on.
+- **People first.** Dates read as real days ("Mon 27 Oct"), never counters like "day 12 of 56"; wording is plain;
+  rows keep one layout however long a name is; and mistakes can be undone where you made them. FlexNotes sticks to
+  what helps a workout, fitness and medication log, and doesn't copy what other apps already record.
+- **You choose.** Where something could reasonably work more than one way (what's shown, counted, defaulted or kept
+  private), FlexNotes asks, on the screen that shows it and in Settings, with a sensible default.
 - **Every update installs over the last one** and keeps your data. Database changes are always migrated, never reset.
 - **Android phones** (Android 10 or newer), across phone screen sizes. A self-hosted web version may come later.
 - **The FlexNotes look:** luxury black and vibrant gold. Cards, bars and buttons are smoked glass with fine gold
@@ -264,7 +274,10 @@ custom metrics.
   once. A running schedule's start date can be changed, or it can **start again from day 1**, keeping the earlier
   run's history; an ended one offers **Start again**. Each has Undo. The **Today** tab lists the doses due, each with
   a done box like a set's, where each schedule is in its cycle, in real dates ("On until Fri 7 Nov", "Off · on again Wed 3 Dec",
-  "Ongoing since Mon 6 Oct"), and missed or skipped doses. Ticking a dose logs it as an ordinary medication value, once, with Undo; tapping it offers Taken or Skip,
+  "Ongoing since Mon 6 Oct"), and missed or skipped doses. You choose when a dose counts as missed: 30 minutes, 1, 2
+  or 4 hours after its time, or at the end of the day (1 hour by default; Settings › Medications, or from a missed
+  dose itself), and Today, adherence, the report and the CSV all follow it. In the schedule editor, deleting a phase
+  or removing a dose shows **Undo**. Ticking a dose logs it as an ordinary medication value, once, with Undo; tapping it offers Taken or Skip,
   or a change of amount for that day or the rest of the run.
 - **Dose reminders:** a notification when a scheduled dose is due, with **Taken**, **Snooze** and **Skip**, and an
   optional second reminder (Settings › Medications). The lock screen hides medication names unless you choose to
@@ -377,7 +390,8 @@ custom metrics.
   a **camera** (Take photo or Choose from phone, for that day), **+** (the exercise library and workout switcher), the rest countdown while you rest, and a **⋮** menu with the
   day's workout actions, then Analysis, Body tracker, Medications, Photos and Settings. Each of those slides in on top of the log,
   and Back returns you to it. Rotating the phone, or Android closing FlexNotes in the background, keeps your place:
-  the screen you were on and the ones under it, with their open sheets, selections and filters. Choices such as a
+  the screen you were on and the ones under it, with their open sheets, selections and filters, and anything you've
+  typed but not saved yet. Choices such as a
   period, a pose or a sort order sit in compact dropdowns, so the data gets the screen; the controls you use
   mid-workout stay in view. Tapping an exercise card on the day log opens it out into the exercise screen, and Back
   shrinks it into the card again. With Android's **Remove animations** on, screens change at once. Screens with
@@ -452,7 +466,8 @@ custom metrics.
     approximate (≈), and nothing above 15 reps; **Settings → Estimated 1RM Formula** can switch to Epley, Brzycki, Lombardi,
     O'Conner, Mayhew or Wathan instead, with a worked example of each, and **Estimated 1RM Settings** (also the gear
     beside the calculator) sets the most reps a set can have to count. Pounds convert with the exact definition
-    (0.45359237 kg). Records can also cover a date range you choose.
+    (0.45359237 kg). Records can also cover a date range you choose. The Records board shows each exercise in its own
+    unit, with the unit once above the rows, or under each name when your exercises use different units.
   - **Analysis:** **Overview**, the first tab, shows every graph you've starred, Workouts or exercise graphs, as
     compact cards with the latest value and the change over its range; tap one to open it, or drag or use its menu to
     reorder or unpin it (Analysis opens there once something is pinned, and on Readiness before any sets are logged). **Workouts** shows your workouts, volume, sets, reps or duration per week, month or year, for all
@@ -655,7 +670,9 @@ recorded Room schema, run the database queries on a real database, import a made
 backup to check the merge rules, save and restore `.flexnotes` backups, and check the 1RM formulas and unit
 conversions, graph zoom, the remembered chart types, pinned graphs and comparisons, and the in-memory data
 updates. Screenshot tests draw the shared components at two phone widths and at double text size and compare them
-with saved images, so layout slips fail the build.
+with saved images, so layout slips fail the build. Guard tests read the source itself: every Material control must
+go through the FlexNotes wrappers that pin its colours (`RawMaterialControlsTest`), and the data, PDF and video code
+must not use the screens or Compose (`LayeringTest`). A script fails the build on private code that nothing uses.
 
 Every push to `main` runs the unit tests, then is built and signed by GitHub Actions and published as a release; a
 failing test stops the release. Pull requests run the tests and get a debug build only.

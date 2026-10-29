@@ -1,8 +1,5 @@
 package com.fitlens.companion.video
 
-import androidx.compose.ui.graphics.toArgb
-import com.fitlens.companion.ui.Brand
-import com.fitlens.companion.ui.BrandFonts
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.ImageDecoder
@@ -11,6 +8,8 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.RectF
 import android.graphics.Shader
+import com.fitlens.companion.data.BrandFonts
+import com.fitlens.companion.data.CanvasColors
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Photo
 import com.fitlens.companion.data.Snapshot
@@ -66,13 +65,13 @@ object FrameRenderer {
 
     const val MAX_OVERLAYS = 5
 
-    // The app's palette (1.0.71), read from Brand so frames never drift from the app: vibrant gold on black, red
-    // graph lines over translucent gold.
-    private val BLACK get() = Brand.Black.toArgb()
-    private val GOLD get() = Brand.Gold.toArgb()
-    private val RED get() = Brand.Fall.toArgb()
-    private val MUTED get() = Brand.Muted.toArgb()
-    private val IVORY get() = Brand.Ivory.toArgb()
+    // The app's palette (1.0.71), read from CanvasColors (which Brand is built from) so frames never drift from the
+    // app: vibrant gold on black, red graph lines over translucent gold.
+    private const val BLACK = CanvasColors.BLACK
+    private const val GOLD = CanvasColors.GOLD
+    private const val RED = CanvasColors.FALL
+    private const val MUTED = CanvasColors.MUTED
+    private const val IVORY = CanvasColors.IVORY
 
     /** [color] with its alpha set to [alpha] (0–255). */
     private fun withAlpha(color: Int, alpha: Int): Int = (color and 0x00FFFFFF) or (alpha shl 24)

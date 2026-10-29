@@ -10,7 +10,7 @@ import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Steps
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.ui.Brand
-import com.fitlens.companion.ui.BrandFonts
+import com.fitlens.companion.data.BrandFonts
 import com.fitlens.companion.ui.MainActivity
 import com.fitlens.companion.ui.TimerService
 import com.fitlens.companion.ui.TodayWidgets

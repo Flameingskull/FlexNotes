@@ -1,5 +1,7 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.defOrder
+import com.fitlens.companion.data.describeSet
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fitlens.companion.ui.design.exerciseTransformKey
 import com.fitlens.companion.ui.design.GlassOutlinedButton
@@ -905,30 +907,6 @@ private fun ExerciseOnDay(
             }
         }
     }
-}
-
-fun defOrder(snap: Snapshot, name: String): Int =
-    snap.measurementDefs.firstOrNull { it.name == name }?.sortOrder ?: 999
-
-fun describeSet(
-    res: android.content.res.Resources, snap: Snapshot, weightKg: Double, reps: Int, distance: Double, duration: Int, exerciseId: Long? = null,
-    /** A custom type's metric (#14), shown with its unit. */
-    metric: Double? = null
-): String {
-    val parts = ArrayList<String>()
-    // A bodyweight set has no weight to show; "0 kg x 10 reps" read as though the weight had been lost (#74).
-    if (weightKg != 0.0) parts.add("${snap.fmtWeight(weightKg, exerciseId)} ${snap.weightUnitOf(exerciseId)}")
-    // A Rounds set's reps are its rounds (#246).
-    val isRounds = exerciseId?.let { snap.exercises[it] }?.let { ExerciseTypes.isRounds(it.type) } == true
-    if (reps > 0) parts.add(res.getQuantityString(if (isRounds) R.plurals.rounds_count else R.plurals.reps_count, reps, reps))
-    // Distances carry their exercise's unit, or the global one when the exercise isn't known (#7).
-    if (distance > 0) parts.add("${fmtNum(distance)} ${exerciseId?.let { snap.distanceUnit(it) } ?: snap.globalDistanceUnit}")
-    if (duration > 0) parts.add(fmtDuration(duration))
-    if (metric != null) {
-        val m = exerciseId?.let { snap.exercises[it] }?.let { ExerciseTypes.metricOf(it.type) }
-        parts.add(listOfNotNull(fmtNum(metric, 2), m?.metricUnit, m?.metricName?.lowercase()).joinToString(" "))
-    }
-    return parts.joinToString(" · ").ifBlank { "—" }
 }
 
 fun formatTime(iso: String): String? =

@@ -1,5 +1,6 @@
 package com.fitlens.companion.ui
 
+import com.fitlens.companion.data.flagText
 import com.fitlens.companion.data.siteName
 import com.fitlens.companion.ui.design.DropdownPill
 import com.fitlens.companion.ui.design.MenuAction
