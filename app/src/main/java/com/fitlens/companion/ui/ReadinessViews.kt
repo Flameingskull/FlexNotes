@@ -18,6 +18,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshots.SnapshotStateMap
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -208,7 +211,23 @@ internal fun ReadinessSheet(snap: Snapshot, date: String, onDismiss: () -> Unit)
     val inputs = rememberReadinessInputs(snap)
     val day = Dates.epochDay(date)
     val saved = remember(snap.bodyKey, date) { Readiness.checkInOn(snap, date) }
-    val typed = remember(date) { mutableStateMapOf<Readiness.Item, Double>().apply { putAll(saved) } }
+    // The ratings typed so far survive rotation (#316): kept as a marker, then each item's name and rating. The marker
+    // makes "every rating removed" a state that restores, instead of an empty list that Android drops.
+    val typed = rememberSaveable(
+        date,
+        saver = listSaver<SnapshotStateMap<Readiness.Item, Double>, Any>(
+            save = { map -> listOf<Any>("typed") + map.entries.flatMap { listOf<Any>(it.key.name, it.value) } },
+            restore = { list ->
+                mutableStateMapOf<Readiness.Item, Double>().apply {
+                    for (i in 1 until list.size - 1 step 2) {
+                        val item = Readiness.Item.entries.firstOrNull { it.name == list[i] }
+                        val rating = list[i + 1] as? Double
+                        if (item != null && rating != null) put(item, rating)
+                    }
+                }
+            }
+        )
+    ) { mutableStateMapOf<Readiness.Item, Double>().apply { putAll(saved) } }
     val preview = Readiness.score(
         inputs.copy(checkIns = inputs.checkIns - day + (if (typed.isEmpty()) emptyMap() else mapOf(day to typed.toMap()))),
         day

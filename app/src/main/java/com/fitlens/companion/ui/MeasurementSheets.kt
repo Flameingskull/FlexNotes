@@ -23,6 +23,7 @@ import com.fitlens.companion.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -77,17 +78,17 @@ fun MeasurementEntrySheet(
     val names = remember(snap.bodyKey) {
         (snap.usedMeasurements.map { it.name } + snap.measurementDefs.filter { it.enabled }.map { it.name }).distinct()
     }
-    var name by remember(existing?.id) { mutableStateOf(existing?.name ?: initialName ?: names.firstOrNull() ?: if (snap.showsMedications) "" else "Bodyweight") }
-    var value by remember(existing?.id) { mutableStateOf(existing?.value?.let { fmtNum(it) } ?: "") }
-    var comment by remember(existing?.id) { mutableStateOf(existing?.comment ?: "") }
-    var theDate by remember(existing?.id) { mutableStateOf(existing?.date ?: date) }
-    var timeText by remember(existing?.id) {
+    var name by rememberSaveable(existing?.id) { mutableStateOf(existing?.name ?: initialName ?: names.firstOrNull() ?: if (snap.showsMedications) "" else "Bodyweight") }
+    var value by rememberSaveable(existing?.id) { mutableStateOf(existing?.value?.let { fmtNum(it) } ?: "") }
+    var comment by rememberSaveable(existing?.id) { mutableStateOf(existing?.comment ?: "") }
+    var theDate by rememberSaveable(existing?.id) { mutableStateOf(existing?.date ?: date) }
+    var timeText by rememberSaveable(existing?.id) {
         mutableStateOf(existing?.time?.take(5)?.takeIf { it.isNotBlank() } ?: LocalTime.now().format(HHMM))
     }
-    var pickDate by remember { mutableStateOf(false) }
-    var calculating by remember { mutableStateOf(false) }
+    var pickDate by rememberSaveable { mutableStateOf(false) }
+    var calculating by rememberSaveable { mutableStateOf(false) }
     // An injected medication's site (#210): the value's own, or the suggested next one for a new value.
-    var site by remember(existing?.id) { mutableStateOf(InjectionSite.of(existing?.site)) }
+    var site by rememberSaveable(existing?.id) { mutableStateOf(InjectionSite.of(existing?.site)) }
     val injected = snap.isInjected(name.trim())
     val suggestedSite = remember(snap.bodyKey, name) { InjectionSites.suggest(snap.records, name.trim()) }
     val unit = existing?.unit ?: snap.measurementDefs.firstOrNull { it.name == name }?.unit
@@ -99,12 +100,20 @@ fun MeasurementEntrySheet(
     val estimate = if (existing == null) rememberBodyFatEstimate(snap, theDate) else null
     val lengthUnit = Settings.portable.collectAsState().value.lengthUnit
     val prefill = if (bodyFat) estimate?.percent?.let { fmtNum(it, 1) to estimateComment(res, estimate, lengthUnit) } else null
-    var seeded by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var seeded by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
+    val firstSeed = remember { booleanArrayOf(true) }
     LaunchedEffect(bodyFat, theDate, prefill) {
         val was = seeded
+        // The first run after a restore leaves the restored fields alone (#316).
+        val restored = firstSeed[0] && was != null
+        firstSeed[0] = false
+        if (restored) return@LaunchedEffect
         if (prefill != null) {
-            value = prefill.first
-            comment = prefill.second
+            // The same figure as already seeded leaves what was typed or restored alone.
+            if (prefill != was) {
+                value = prefill.first
+                comment = prefill.second
+            }
         } else if (was != null && value == was.first && comment == was.second) {
             value = ""
             comment = ""

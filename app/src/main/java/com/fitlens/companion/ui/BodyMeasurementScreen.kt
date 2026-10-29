@@ -86,23 +86,27 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
 
     var date by rememberSaveable(name) { mutableStateOf(Dates.today()) }
     var selected by rememberSaveable(name) { mutableStateOf<Long?>(null) }
-    var value by remember(name) { mutableStateOf("") }
-    var timeText by remember(name) { mutableStateOf(LocalTime.now().format(HHMM)) }
-    var comment by remember(name) { mutableStateOf("") }
-    var editingGoal by remember { mutableStateOf(false) }
-    var editingMetric by remember { mutableStateOf(false) }
-    var editingRange by remember { mutableStateOf(false) }
+    var value by rememberSaveable(name) { mutableStateOf("") }
+    var timeText by rememberSaveable(name) { mutableStateOf(LocalTime.now().format(HHMM)) }
+    var comment by rememberSaveable(name) { mutableStateOf("") }
+    // Set once the fields have been filled, so a screen restored after rotation keeps what was typed instead of
+    // refilling it from the last value (#315, as Set entry does since #304).
+    var filled by rememberSaveable(name) { mutableStateOf(false) }
+    val firstFill = remember { booleanArrayOf(true) }
+    var editingGoal by rememberSaveable { mutableStateOf(false) }
+    var editingMetric by rememberSaveable { mutableStateOf(false) }
+    var editingRange by rememberSaveable { mutableStateOf(false) }
     // The History value open in its sheet (#169).
     var historyOpen by rememberSaveable(name) { mutableStateOf<Long?>(null) }
     // Body fat can be worked out from the tape measurements (#153).
     val isBodyFat = BodyFat.isBodyFat(name)
-    var calculating by remember { mutableStateOf(false) }
+    var calculating by rememberSaveable { mutableStateOf(false) }
     // A medication's supply sheet (#209), and the site of a new injected dose (#210): null means the suggested one.
-    var editingSupply by remember { mutableStateOf(false) }
-    var editingAsNeeded by remember { mutableStateOf(false) }
+    var editingSupply by rememberSaveable { mutableStateOf(false) }
+    var editingAsNeeded by rememberSaveable { mutableStateOf(false) }
     val injected = snap.isInjected(name)
     val suggestedSite = remember(snap.bodyKey, name) { InjectionSites.suggest(records, name) }
-    var site by remember(name) { mutableStateOf<InjectionSite?>(null) }
+    var site by rememberSaveable(name) { mutableStateOf<InjectionSite?>(null) }
 
     val dayValues = remember(records, date) { records.filter { it.date.take(10) == date } }
     val chosen = selected?.let { id -> records.firstOrNull { it.id == id } }
@@ -116,9 +120,13 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
     val prefill = estimate?.percent?.let { it to estimateComment(res, estimate, lengthUnit) }
 
     LaunchedEffect(selected, date, records, prefill) {
+        // The first run after a restore leaves the restored fields alone (#315).
+        val restored = firstFill[0] && filled
+        firstFill[0] = false
         if (selected != null && chosen == null) {
             selected = null
-        } else {
+        } else if (!restored) {
+            filled = true
             val source = chosen ?: template
             value = (if (chosen == null) prefill?.first else null)?.let { fmtNum(it, 1) } ?: source?.value?.let { fmtNum(it) } ?: ""
             timeText = chosen?.time?.take(5)?.takeIf { it.isNotBlank() } ?: LocalTime.now().format(HHMM)

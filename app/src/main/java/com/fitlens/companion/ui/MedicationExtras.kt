@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -204,11 +205,11 @@ internal fun SupplySheet(snap: Snapshot, name: String, unit: String, onDismiss: 
     val res = LocalContext.current.resources
     val info = snap.medPlan.infoOf(name)
     val left = remember(snap.bodyKey, name) { Supply.left(info, snap.medicationView.records) }
-    var onHand by remember { mutableStateOf(left?.let { fmtNum(it) } ?: "") }
-    var refill by remember { mutableStateOf("") }
-    var warn by remember { mutableStateOf(info.warnDays.toString()) }
-    var expires by remember { mutableStateOf(info.expires) }
-    var picking by remember { mutableStateOf(false) }
+    var onHand by rememberSaveable { mutableStateOf(left?.let { fmtNum(it) } ?: "") }
+    var refill by rememberSaveable { mutableStateOf("") }
+    var warn by rememberSaveable { mutableStateOf(info.warnDays.toString()) }
+    var expires by rememberSaveable { mutableStateOf(info.expires) }
+    var picking by rememberSaveable { mutableStateOf(false) }
     fun num(t: String) = t.trim().replace(',', '.').toDoubleOrNull()
     val hand = num(onHand)
     val add = if (refill.isBlank()) 0.0 else num(refill)
@@ -459,10 +460,10 @@ internal fun LazyListScope.symptomRows(snap: Snapshot, onRate: () -> Unit) {
 internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> Unit) {
     val res = LocalContext.current.resources
     val plan = snap.medPlan
-    var date by remember { mutableStateOf(initialDate) }
-    var newName by remember { mutableStateOf("") }
-    var renaming by remember { mutableStateOf<Long?>(null) }
-    var renameText by remember { mutableStateOf("") }
+    var date by rememberSaveable { mutableStateOf(initialDate) }
+    var newName by rememberSaveable { mutableStateOf("") }
+    var renaming by rememberSaveable { mutableStateOf<Long?>(null) }
+    var renameText by rememberSaveable { mutableStateOf("") }
     fun shift(days: Long) {
         date = (Dates.parse(date) ?: LocalDate.now()).plusDays(days).format(Dates.ISO)
     }
@@ -485,7 +486,7 @@ internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> 
         }
         plan.symptoms.forEach { s ->
             val rating = plan.ratings.firstOrNull { it.symptomId == s.id && it.date == date }
-            var menu by remember(s.id) { mutableStateOf(false) }
+            var menu by rememberSaveable(s.id) { mutableStateOf(false) }
             Column(Modifier.fillMaxWidth().padding(vertical = Spacing.xs)) {
                 if (renaming == s.id) {
                     Row(verticalAlignment = Alignment.CenterVertically) {

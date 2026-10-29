@@ -28,6 +28,7 @@ import com.fitlens.companion.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,12 +61,13 @@ import com.fitlens.companion.ui.design.FitCheckbox
 @Composable
 internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
     val res = LocalContext.current.resources
-    var creating by remember { mutableStateOf(false) }
-    var creatingLab by remember { mutableStateOf(false) }
-    var rangeFor by remember { mutableStateOf<MeasurementDef?>(null) }
-    var editing by remember { mutableStateOf<MeasurementDef?>(null) }
-    var deleting by remember { mutableStateOf<MeasurementDef?>(null) }
-    var goalFor by remember { mutableStateOf<MeasurementDef?>(null) }
+    var creating by rememberSaveable { mutableStateOf(false) }
+    var creatingLab by rememberSaveable { mutableStateOf(false) }
+    // The measurement a sheet or dialog is open for is kept as its name and looked up again (#316).
+    var rangeFor by rememberSaveable { mutableStateOf<String?>(null) }
+    var editing by rememberSaveable { mutableStateOf<String?>(null) }
+    var deleting by rememberSaveable { mutableStateOf<String?>(null) }
+    var goalFor by rememberSaveable { mutableStateOf<String?>(null) }
     val all = remember(snap.bodyKey) { snap.allMeasurements }
     val missing = remember(snap.bodyKey) {
         if (medications) emptyList()
@@ -130,7 +132,7 @@ internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
                     Modifier
                         .fillMaxWidth()
                         .heightIn(min = 72.dp)
-                        .clickable(onClickLabel = stringResource(R.string.ms_set_goal_for, m.name)) { goalFor = m }
+                        .clickable(onClickLabel = stringResource(R.string.ms_set_goal_for, m.name)) { goalFor = m.name }
                         .padding(start = Spacing.lg, end = Spacing.xs),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -181,14 +183,14 @@ internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
                     val canMove = medications || Medications.canBeMedication(m.name)
                     OverflowMenu(
                         listOfNotNull(
-                            if (m.custom) MenuAction(stringResource(R.string.lib_edit)) { editing = m } else null,
-                            if (!medications) MenuAction(stringResource(R.string.lab_range_menu)) { rangeFor = m } else null,
+                            if (m.custom) MenuAction(stringResource(R.string.lib_edit)) { editing = m.name } else null,
+                            if (!medications) MenuAction(stringResource(R.string.lab_range_menu)) { rangeFor = m.name } else null,
                             if (canMove) {
                                 MenuAction(stringResource(if (medications) R.string.md_move_to_body else R.string.md_move_to_meds)) {
                                     moveMeasurement(res, m, toMedications = !medications)
                                 }
                             } else null,
-                            if (m.custom) MenuAction(stringResource(R.string.lib_delete)) { deleting = m } else null
+                            if (m.custom) MenuAction(stringResource(R.string.lib_delete)) { deleting = m.name } else null
                         ),
                         description = stringResource(R.string.ms_options_for, m.name)
                     )
@@ -198,12 +200,12 @@ internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
         }
     }
 
-    goalFor?.let { m -> MeasurementGoalSheet(m) { goalFor = null } }
+    goalFor?.let { n -> all.firstOrNull { it.name == n } }?.let { m -> MeasurementGoalSheet(m) { goalFor = null } }
     if (creating) CustomMetricEditor(snap, null, medication = medications) { creating = false }
     if (creatingLab) CustomMetricEditor(snap, null, lab = true) { creatingLab = false }
-    rangeFor?.let { m -> ReferenceRangeSheet(m) { rangeFor = null } }
-    editing?.let { m -> CustomMetricEditor(snap, m) { editing = null } }
-    deleting?.let { m ->
+    rangeFor?.let { n -> all.firstOrNull { it.name == n } }?.let { m -> ReferenceRangeSheet(m) { rangeFor = null } }
+    editing?.let { n -> all.firstOrNull { it.name == n } }?.let { m -> CustomMetricEditor(snap, m) { editing = null } }
+    deleting?.let { n -> all.firstOrNull { it.name == n } }?.let { m ->
         val manual = Store.manualCount(snap, m.name)
         ConfirmDialog(
             title = stringResource(R.string.ms_delete_title, m.name),

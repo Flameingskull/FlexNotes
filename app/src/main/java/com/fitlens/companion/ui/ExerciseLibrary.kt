@@ -70,6 +70,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -190,7 +193,10 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
     var searching by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     // Exercises chosen with a long press, in the order they were ticked (#83).
-    val picked = remember { mutableStateListOf<Long>() }
+    // The exercises chosen with a long press survive rotation (#316), in the order they were chosen.
+    val picked = rememberSaveable(
+        saver = listSaver<SnapshotStateList<Long>, Long>(save = { it.toList() }, restore = { it.toMutableStateList() })
+    ) { mutableStateListOf<Long>() }
     // The exercise editor stays open through rotation (#304); the exercise being edited is kept as its id.
     var creating by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -1013,7 +1019,7 @@ fun ExerciseEditorSheet(
                     SectionLabel(stringResource(R.string.lib_activity))
                     // Grouped by kind of activity, with a search (#244); Automatic stays first.
                     val activities = com.fitlens.companion.data.Energy.Activity.entries.sortedBy { it.category.ordinal }
-                    var pickingActivity by remember { mutableStateOf(false) }
+                    var pickingActivity by rememberSaveable { mutableStateOf(false) }
                     val autoLabel = stringResource(R.string.lib_activity_auto)
                     PickerPill(
                         stringResource(R.string.lib_activity),

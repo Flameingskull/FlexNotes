@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.selection.selectable
@@ -351,13 +352,13 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
     val res = LocalContext.current.resources
     val taken = MedSchedules.takenRecord(snap.medicationView.records, due)
     val skipped = taken == null && snap.medPlan.isSkipped(due.dose.id, due.due)
-    var changing by remember { mutableStateOf(false) }
+    var changing by rememberSaveable { mutableStateOf(false) }
     // An injected dose's site (#210): the next one to begin with, or where a taken dose went.
     val injected = snap.isInjected(due.dose.medication)
     val suggested = remember(snap.bodyKey, due.dose.medication) {
         InjectionSites.suggest(snap.medicationView.records, due.dose.medication)
     }
-    var site by remember(taken?.id) { mutableStateOf(if (taken != null) InjectionSite.of(taken.site) else suggested) }
+    var site by rememberSaveable(taken?.id) { mutableStateOf(if (taken != null) InjectionSite.of(taken.site) else suggested) }
     if (changing) {
         DoseChangeSheet(snap, due, onDismiss)
         return
@@ -418,8 +419,8 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
 @Composable
 internal fun DoseChangeSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit) {
     val res = LocalContext.current.resources
-    var amount by remember { mutableStateOf(fmtNum(due.amount)) }
-    var dayOnly by remember { mutableStateOf(true) }
+    var amount by rememberSaveable { mutableStateOf(fmtNum(due.amount)) }
+    var dayOnly by rememberSaveable { mutableStateOf(true) }
     val taken = MedSchedules.takenRecord(snap.medicationView.records, due)
     FitSheet(
         title = stringResource(R.string.md_change_title, due.dose.medication),

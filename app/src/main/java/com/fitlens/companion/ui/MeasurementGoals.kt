@@ -17,7 +17,7 @@ import com.fitlens.companion.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -90,8 +90,8 @@ private fun goalTypeText(res: Resources, t: Int): String = res.getString(
 @Composable
 fun MeasurementGoalSheet(def: MeasurementDef, onDismiss: () -> Unit) {
     val res = LocalContext.current.resources
-    var type by remember { mutableIntStateOf(def.goalType.takeIf { it in MeasurementGoals.all } ?: MeasurementGoals.NONE) }
-    var text by remember { mutableStateOf(if (def.goalValue > 0) fmtNum(def.goalValue) else "") }
+    var type by rememberSaveable { mutableIntStateOf(def.goalType.takeIf { it in MeasurementGoals.all } ?: MeasurementGoals.NONE) }
+    var text by rememberSaveable { mutableStateOf(if (def.goalValue > 0) fmtNum(def.goalValue) else "") }
     val value = text.trim().replace(',', '.').toDoubleOrNull()
     val needsValue = type == MeasurementGoals.TARGET
     FitSheet(

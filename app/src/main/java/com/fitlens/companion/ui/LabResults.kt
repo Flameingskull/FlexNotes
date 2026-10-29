@@ -11,7 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -95,8 +95,8 @@ internal fun rangeValid(low: String, high: String): Boolean {
 /** Sets or clears [def]'s reference range, in the unit it's shown in. */
 @Composable
 internal fun ReferenceRangeSheet(def: MeasurementDef, onDismiss: () -> Unit) {
-    var low by remember { mutableStateOf(def.refLow?.let { fmtNum(it) } ?: "") }
-    var high by remember { mutableStateOf(def.refHigh?.let { fmtNum(it) } ?: "") }
+    var low by rememberSaveable { mutableStateOf(def.refLow?.let { fmtNum(it) } ?: "") }
+    var high by rememberSaveable { mutableStateOf(def.refHigh?.let { fmtNum(it) } ?: "") }
     FitSheet(
         title = stringResource(R.string.lab_range_title, def.name),
         onDismiss = onDismiss,

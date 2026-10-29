@@ -30,6 +30,7 @@ import com.fitlens.companion.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,13 +55,13 @@ import com.fitlens.companion.ui.design.FitTextButton
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, medication: Boolean = false, lab: Boolean = false, onDismiss: () -> Unit) {
-    var name by remember { mutableStateOf(existing?.name ?: "") }
-    var unit by remember { mutableStateOf(existing?.unit ?: "") }
-    var link by remember { mutableStateOf(existing?.link ?: "") }
-    var isMedication by remember { mutableStateOf(existing?.medication ?: medication) }
+    var name by rememberSaveable { mutableStateOf(existing?.name ?: "") }
+    var unit by rememberSaveable { mutableStateOf(existing?.unit ?: "") }
+    var link by rememberSaveable { mutableStateOf(existing?.link ?: "") }
+    var isMedication by rememberSaveable { mutableStateOf(existing?.medication ?: medication) }
     val isLab = existing?.lab ?: lab
-    var low by remember { mutableStateOf(existing?.refLow?.let { fmtNum(it) } ?: "") }
-    var high by remember { mutableStateOf(existing?.refHigh?.let { fmtNum(it) } ?: "") }
+    var low by rememberSaveable { mutableStateOf(existing?.refLow?.let { fmtNum(it) } ?: "") }
+    var high by rememberSaveable { mutableStateOf(existing?.refHigh?.let { fmtNum(it) } ?: "") }
     val suggestions = remember(snap.bodyKey) {
         if (isLab && existing == null) LabMarkers.suggestions(snap.allCustomNames + snap.measurementDefs.map { it.name }) else emptyList()
     }

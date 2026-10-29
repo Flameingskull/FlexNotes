@@ -162,7 +162,7 @@ internal fun ReadinessTab(snap: Snapshot) {
     val res = LocalContext.current.resources
     var rangeIdx by rememberSaveable { mutableIntStateOf(1) }
     var measureIdx by rememberSaveable { mutableIntStateOf(0) }
-    var checkIn by remember { mutableStateOf<String?>(null) }
+    var checkIn by rememberSaveable { mutableStateOf<String?>(null) }
     val today = LocalDate.now()
     val todayDay = today.toEpochDay()
     val todayIso = today.format(Dates.ISO)

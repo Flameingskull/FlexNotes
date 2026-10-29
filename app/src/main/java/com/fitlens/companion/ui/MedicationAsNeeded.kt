@@ -16,7 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,7 +69,7 @@ internal fun LazyListScope.asNeededRows(snap: Snapshot, nav: Nav) {
 @Composable
 private fun AsNeededRow(snap: Snapshot, nav: Nav, state: AsNeededState) {
     val res = LocalContext.current.resources
-    var confirm by remember { mutableStateOf(false) }
+    var confirm by rememberSaveable { mutableStateOf(false) }
     val last = state.last
     fun take() {
         // With nothing logged yet there's no amount to repeat: the medication's page logs the first one.
@@ -145,8 +145,8 @@ private fun countText(res: Resources, s: AsNeededState): String =
 internal fun AsNeededSheet(snap: Snapshot, name: String, onDismiss: () -> Unit) {
     val res = LocalContext.current.resources
     val info = snap.medPlan.infoOf(name)
-    var on by remember { mutableStateOf(info.asNeeded) }
-    var most by remember { mutableStateOf(info.maxPerDay?.toString().orEmpty()) }
+    var on by rememberSaveable { mutableStateOf(info.asNeeded) }
+    var most by rememberSaveable { mutableStateOf(info.maxPerDay?.toString().orEmpty()) }
     val mostValue = most.trim().toIntOrNull()
     val valid = most.isBlank() || (mostValue != null && mostValue in 1..99)
     FitSheet(

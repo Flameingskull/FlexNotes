@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,6 +44,7 @@ import com.fitlens.companion.data.Exercise
 import com.fitlens.companion.data.Records
 import com.fitlens.companion.data.SetRow
 import com.fitlens.companion.data.Snapshot
+import com.fitlens.companion.data.WeightUnits
 import com.fitlens.companion.ui.design.PickerItem
 import com.fitlens.companion.ui.design.SearchablePicker
 import com.fitlens.companion.ui.design.SegmentedSwitch
@@ -72,10 +74,12 @@ private enum class BoardSort(@StringRes val label: Int) { Category(R.string.rb_s
 fun RecordsBoard(snap: Snapshot, nav: Nav) {
     var estimated by rememberSaveable { mutableStateOf(false) }
     var sortIdx by rememberSaveable { mutableIntStateOf(0) }
-    var categoryId by remember { mutableStateOf<Long?>(null) }
-    var chosen by remember { mutableStateOf<Set<Long>>(emptySet()) }
-    var picking by remember { mutableStateOf<String?>(null) }
-    var selected by remember { mutableStateOf<Pair<Long, Int>?>(null) }
+    // Saved across rotation and process death (#316): ids only, never objects. A selected cell whose column or
+    // record has gone after a restore simply isn't shown (the lookup below finds nothing).
+    var categoryId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var chosen by rememberSaveable(stateSaver = IdSetSaver) { mutableStateOf<Set<Long>>(emptySet()) }
+    var picking by rememberSaveable { mutableStateOf<String?>(null) }
+    var selected by rememberSaveable(stateSaver = CellSaver) { mutableStateOf<Pair<Long, Int>?>(null) }
     val sort = BoardSort.entries[sortIdx]
 
     // The 1RM formula and rep limit are in the key too, so a Settings change isn't hidden by the cache (#60).
@@ -136,8 +140,8 @@ fun RecordsBoard(snap: Snapshot, nav: Nav) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             stringResource(
-                                R.string.rb_selected, col.exercise.name, r, cellText(snap, c),
-                                "${snap.fmtWeight(c.set.weightKg)} ${snap.weightUnit}", c.set.reps, Dates.day(c.set.date)
+                                R.string.rb_selected, col.exercise.name, r, cellText(snap, col.exercise.id, c, withUnit = true),
+                                weightWithUnit(snap, col.exercise.id, c.set.weightKg), c.set.reps, Dates.day(c.set.date)
                             ),
                             Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium
@@ -201,19 +205,45 @@ private fun RecordGrid(
     val hScroll = rememberScrollState()
     Column(Modifier.fillMaxSize()) {
         GoldHairline()
+        // The unit is always on screen (#319): once in the corner when every column agrees, otherwise under each
+        // exercise's name, since exercises can have their own unit (#7). Names take two lines in every header so
+        // the layout is the same for every column.
+        val units = cols.map { unitLabel(snap, it.exercise.id) }
+        val oneUnit = units.distinct().singleOrNull()
         Row {
-            Box(Modifier.width(LABEL_W))
-            Row(Modifier.horizontalScroll(hScroll)) {
-                cols.forEach { c ->
+            Box(Modifier.width(LABEL_W).padding(start = 12.dp, top = 6.dp)) {
+                if (oneUnit != null) {
                     Text(
-                        c.exercise.name,
-                        Modifier.width(CELL_W).padding(horizontal = 6.dp, vertical = 6.dp),
+                        oneUnit,
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+            }
+            Row(Modifier.horizontalScroll(hScroll)) {
+                cols.forEachIndexed { i, c ->
+                    Column(
+                        Modifier.width(CELL_W).padding(horizontal = 6.dp, vertical = 6.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            c.exercise.name,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            minLines = 2,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
+                        )
+                        if (oneUnit == null) {
+                            Text(
+                                units[i],
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -252,9 +282,9 @@ private fun GridRow(
             val isSel = selected == (c.exercise.id to r)
             val description = when {
                 cell == null -> res.getString(R.string.rb_cd_none, c.exercise.name, r)
-                estimated -> res.getString(R.string.rb_cd_estimated, c.exercise.name, r, spokenWeight(res, snap, cell.kg))
-                cell.direct -> res.getString(R.string.rb_cd_direct, c.exercise.name, r, spokenWeight(res, snap, cell.kg), Dates.day(cell.set.date))
-                else -> res.getString(R.string.rb_cd_carried, c.exercise.name, r, spokenWeight(res, snap, cell.kg), cell.set.reps)
+                estimated -> res.getString(R.string.rb_cd_estimated, c.exercise.name, r, spokenWeight(res, snap, c.exercise.id, cell.kg))
+                cell.direct -> res.getString(R.string.rb_cd_direct, c.exercise.name, r, spokenWeight(res, snap, c.exercise.id, cell.kg), Dates.day(cell.set.date))
+                else -> res.getString(R.string.rb_cd_carried, c.exercise.name, r, spokenWeight(res, snap, c.exercise.id, cell.kg), cell.set.reps)
             }
             Box(
                 Modifier
@@ -271,7 +301,7 @@ private fun GridRow(
                     val bright = estimated || cell.direct
                     Text(
                         // An estimate from more than 10 reps is marked approximate, as on the exercise's Records tab (#139).
-                        (if (estimated && Records.approximate(r)) "≈ " else "") + cellText(snap, cell) + if (bright) "" else " ↑",
+                        (if (estimated && Records.approximate(r)) "≈ " else "") + cellText(snap, c.exercise.id, cell) + if (bright) "" else " ↑",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = if (bright) FontWeight.SemiBold else FontWeight.Normal,
                         color = if (bright) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
@@ -282,10 +312,33 @@ private fun GridRow(
     }
 }
 
-private fun cellText(snap: Snapshot, c: RecordCell): String = snap.fmtWeight(c.kg)
+/** The unit [exerciseId]'s weights are shown in ("kg" or "lbs"), its own or the global one (#7, #319). */
+private fun unitLabel(snap: Snapshot, exerciseId: Long): String {
+    val unit = snap.weightUnitOf(exerciseId)
+    return WeightUnits.of(unit) ?: unit
+}
 
-private fun spokenWeight(res: Resources, snap: Snapshot, kg: Double): String =
-    res.getString(if (snap.weightUnit == "lbs") R.string.rb_pounds else R.string.rb_kilograms, snap.fmtWeight(kg))
+/** A record's weight in its exercise's unit; the unit follows only when [withUnit] (a grid cell leaves it to the header). */
+private fun cellText(snap: Snapshot, exerciseId: Long, c: RecordCell, withUnit: Boolean = false): String =
+    if (withUnit) weightWithUnit(snap, exerciseId, c.kg) else snap.fmtWeight(c.kg, exerciseId)
+
+private fun weightWithUnit(snap: Snapshot, exerciseId: Long, kg: Double): String =
+    "${snap.fmtWeight(kg, exerciseId)} ${unitLabel(snap, exerciseId)}"
+
+private fun spokenWeight(res: Resources, snap: Snapshot, exerciseId: Long, kg: Double): String =
+    res.getString(
+        if (unitLabel(snap, exerciseId) == "lbs") R.string.rb_pounds else R.string.rb_kilograms,
+        snap.fmtWeight(kg, exerciseId)
+    )
+
+/** Saves a set of ids as a LongArray, which a Bundle holds directly (#316). */
+private val IdSetSaver = Saver<Set<Long>, LongArray>(save = { it.toLongArray() }, restore = { it.toSet() })
+
+/** Saves the selected cell (exercise id, rep count) as two longs; null isn't saved and restores as null (#316). */
+private val CellSaver = Saver<Pair<Long, Int>?, LongArray>(
+    save = { cell -> cell?.let { longArrayOf(it.first, it.second.toLong()) } },
+    restore = { if (it.size == 2) it[0] to it[1].toInt() else null }
+)
 
 private fun buildColumns(
     snap: Snapshot,
