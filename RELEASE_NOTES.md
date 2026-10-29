@@ -1,39 +1,44 @@
-# FlexNotes 1.0.193
+# FlexNotes 1.0.194
 
 ## Overview
 
-This update keeps FlexNotes looking the way it should, however Android's design library changes. Every switch,
-slider, checkbox, chip, button, card, progress bar and dialog now has its black and gold colours set by FlexNotes
-itself, and automated screenshot checks cover each one. It also brings weekday dates to your photos and the
-medication report, and fixes moving a workout that finished after midnight.
+This update is about not losing what you're in the middle of. Sheets, pickers and half-made choices across the app
+now stay put when you turn the phone, and a name that's already taken no longer wipes the exercise or category you
+were typing. The rest timer's Start button now uses the rest your workout sets, just like the automatic start, and
+dates on graphs and in the custom date range are clear across New Year.
 
 ## Improved
 
-- **Controls keep the FlexNotes look:** switches, sliders, checkboxes, radio buttons, chips, text buttons, cards,
-  progress bars and dialogs now draw in FlexNotes's own black and gold, whatever a future Android library update
-  changes. Before, a library update could quietly turn them grey or another colour.
-- **Easier to see:** a switch that's on is now light gold on a deep gold track, and the empty part of a slider (the
-  rest timer's sound, the camera's photo opacity, the slideshow) is clearly visible on black. A chip you haven't
-  chosen reads in ivory rather than grey.
+- **Turning the phone keeps your place:** the exercise library's delete, merge and new-category sheets, the search,
+  section and ticked exercises in every exercise picker, the rest timer's length, Analysis's add-goal sheet and
+  overlay picker, the exercise screen's calculator and goal sheets, training blocks in the workout editor, the
+  medication report's ticked medications and Breakdown's period and custom dates all stay as you left them.
+- **Rest timer:** starting the timer by hand now uses the rest your workout sets for that exercise or set, the same
+  as when it starts after a saved set. You can still change the length for this rest; the sheet tells you that the
+  workout sets it, and your exercise and default rest lengths stay as they were.
+- **One clock:** Workout Time, reminders and every other time field now use the same clock dial, in your phone's
+  12-hour or 24-hour style.
+- **Records board:** a record estimated from a set of more than 10 reps is marked "≈", as it already is on the
+  exercise's Records tab.
 
 ## Fixed
 
-- **Photo dates:** photo tiles and the photo chooser show the date with the weekday ("Mon 27 Oct"), with the year for
-  older photos, on its own line so it's never cut off. The pose, where there is one, goes underneath.
-- **Medication report:** the dose log shows weekday dates, and the due and taken times follow your phone's 12-hour
-  or 24-hour clock. The schedule list uses your clock style too, and the ends of each chart show the year, so a range
-  across New Year is clear.
-- **Moving a workout:** moving a workout that finished after midnight to another date keeps its finish on the
-  following day, so its length stays right instead of turning negative.
+- **Names already in use:** saving an exercise or category with a name that's already taken now keeps the sheet
+  open with everything you typed, instead of closing it and losing your work.
+- **Medication report:** turning the phone while choosing where to save the report no longer brings back medications
+  you had unticked.
+- **Dates with the year:** the ends of graphs in shared images and the progress PDF show the year, and the custom
+  date range shows it for any date outside this year, so a range across New Year is never ambiguous.
 
 ## Your data
 
 - No database change. Your workouts, measurements, photos, medications and settings are kept, and older backups
   still restore.
+- Updating from a very old version is now stricter: if an upgrade would ever have to drop a row that isn't an exact
+  duplicate, it stops and leaves your data untouched instead.
 
 ## Known limitations
 
-- A few smaller sheets and pickers still reset when the phone turns: the library's delete, merge and new-category
-  sheets, the search inside exercise pickers, the rest timer's length and Analysis's add-goal sheet (#311).
-- A few graph end labels in shared images and the progress PDF still show dates without the year. They're part of
-  the next audit pass (#309).
+- A few sheets still reset when the phone turns: the body tracker's Track tab (#315) and some sheets in Medications,
+  Measurements, Records and Readiness (#316). They're next on the roadmap.
+- The Records board doesn't show the weight unit yet (#319).
