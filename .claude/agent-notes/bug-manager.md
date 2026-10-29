@@ -21,3 +21,4 @@ that stop being true. The repository is public: no personal data, secrets or `FI
   don't reuse that name. #96 still needs Y-axis zoom and the buttons on the redesign's future graph screens.
 
 - Trend lines (#152): every trend, on screen and in shared images, comes from `ui/Trend.kt` (`trendOf`, `trendText`), fitted to the points in view. Never fit against point indices or draw a trend without its figures.
+- 2026-10-29 (#304 stage A): a `rememberSaveable` draft is not enough if a `LaunchedEffect` refills it on entry (SetEntry's fill effect): keep a saved `filled` flag and skip that effect's first run after a restore. Sheets keep a set as its id and look it up in the current list. Several files are CRLF and others LF, so edit through a line-ending-aware script or the Edit tool.

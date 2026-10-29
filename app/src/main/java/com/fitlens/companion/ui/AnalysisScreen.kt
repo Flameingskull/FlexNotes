@@ -34,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fitlens.companion.data.Analysis
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.ui.design.MenuAction
@@ -105,6 +106,10 @@ private const val TAB_READINESS = 6
 fun AnalysisHub(snap: Snapshot, nav: Nav, tab: Int, onTab: (Int) -> Unit, addingGoal: Boolean, onAddingGoalDone: () -> Unit) {
     // Kept through a visit to a workout day and back, and through rotation.
     var filter by rememberSaveable(stateSaver = FilterSaver) { mutableStateOf(Analysis.Filter()) }
+    // A pinned graph (#55) waiting to be opened in Workouts or Exercises, as its saved text, so it survives rotation and
+    // Android stopping the app; choosing a tab clears it, so it opens once (#304).
+    val state = viewModel<AnalysisState>()
+    var waiting by state.saved("pin", "")
     Column(Modifier.fillMaxSize()) {
         FitTabRow(
             titles = listOf(
@@ -114,19 +119,20 @@ fun AnalysisHub(snap: Snapshot, nav: Nav, tab: Int, onTab: (Int) -> Unit, adding
                 stringResource(R.string.an_tab_readiness)
             ),
             selected = tab,
-            onSelect = onTab
+            onSelect = { waiting = ""; onTab(it) }
         )
+        val waitingPin = PinnedGraph.decode(waiting).firstOrNull()
         when (tab) {
             TAB_RECORDS -> RecordsBoard(snap, nav)
             // Readiness and training load (#216, #217), after FitNotes's tabs.
             TAB_READINESS -> ReadinessTab(snap)
             TAB_GOALS -> AnalysisGoalsTab(snap, nav, addingGoal, onAddingGoalDone)
-            TAB_EXERCISES -> AnalysisExercisesTab(snap, nav)
+            TAB_EXERCISES -> AnalysisExercisesTab(snap, nav, waitingPin)
             // A pinned card opens its graph, with its settings, in Exercises.
             TAB_OVERVIEW -> AnalysisOverviewTab(snap) { pin ->
+                waiting = PinnedGraph.encode(listOf(pin)).orEmpty()
                 if (pin.totals) {
                     filter = pin.totalsFilter
-                    TotalsChoice.pin = pin
                     onTab(TAB_WORKOUTS)
                 } else {
                     openPinnedGraph(pin)
@@ -137,7 +143,7 @@ fun AnalysisHub(snap: Snapshot, nav: Nav, tab: Int, onTab: (Int) -> Unit, adding
                 filter = f
                 onTab(TAB_WORKOUTS)
             }
-            else -> WorkoutsTab(snap, nav, filter) { filter = it }
+            else -> WorkoutsTab(snap, nav, filter, waitingPin) { filter = it }
         }
     }
 }
@@ -231,11 +237,6 @@ internal fun AnalysisNote(text: String, color: Color = MaterialTheme.colorScheme
 
 // ---------- Workouts: totals by week, month or year (#51) ----------
 
-/** A Workouts pin (#55) waiting to be opened in the Workouts tab, used once. */
-private object TotalsChoice {
-    var pin: PinnedGraph? = null
-}
-
 /** A period's value: its total, or for average duration the total over its timed workouts (#12). */
 internal fun totalsValue(t: Analysis.PeriodTotal, avgDuration: Boolean): Double =
     if (avgDuration) (if (t.timed > 0) t.value / t.timed else 0.0) else t.value
@@ -300,10 +301,10 @@ private fun totalsChartPoints(snap: Snapshot, metric: Analysis.Metric, avgDurati
     totals.map { ChartPoint(it.start.toEpochDay(), totalsShown(snap, metric, avgDuration, totalsValue(it, avgDuration)), it.start.format(Dates.ISO)) }
 
 @Composable
-private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, onFilter: (Analysis.Filter) -> Unit) {
+private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, openedPin: PinnedGraph?, onFilter: (Analysis.Filter) -> Unit) {
     val res = LocalContext.current.resources
     // A pinned Workouts graph opened from the Overview (#55) sets the graph, range and option once.
-    val opened = remember { TotalsChoice.pin.also { TotalsChoice.pin = null }?.let { p -> totalsOf(p)?.let { p to it } } }
+    val opened = remember { openedPin?.let { p -> totalsOf(p)?.let { p to it } } }
     var periodIdx by rememberSaveable { mutableIntStateOf(opened?.second?.second?.ordinal ?: 0) }
     var metricIdx by rememberSaveable { mutableIntStateOf(opened?.second?.first?.ordinal ?: 0) }
     var rangeIdx by rememberSaveable { mutableIntStateOf(opened?.first?.range ?: 1) }

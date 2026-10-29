@@ -326,6 +326,8 @@ private fun DayContent(
     markComplete: Boolean
 ) {
     val res = LocalContext.current.resources
+    // The day log's own state (the same one DayScreen holds), where each exercise card keeps its sheets (#304).
+    val state = viewModel<DayState>()
     val photos = snap.photosByDate[date] ?: emptyList()
     val dayRecords = snap.recordsByDate[date] ?: emptyList()
     // What was eaten is shown and edited in the calories card (#176), unless that card is hidden.
@@ -440,7 +442,7 @@ private fun DayContent(
                         modifier = Modifier.padding(start = Spacing.lg, top = Spacing.sm)
                     )
                 }
-                ExerciseOnDay(snap, nav, date, exId, exSets, showCategories, setsShown, shownOrder, markComplete)
+                ExerciseOnDay(snap, nav, state, date, exId, exSets, showCategories, setsShown, shownOrder, markComplete)
             }
         }
         // The workout's time, totals and comment, under the exercises so the day reads as FitNotes's does.
@@ -734,6 +736,8 @@ private fun EmptyDayAction(
 private fun ExerciseOnDay(
     snap: Snapshot,
     nav: Nav,
+    /** The day log's saved state, where this card keeps its open sheets and dialogs under keys with its exercise (#304). */
+    state: DayState,
     date: String,
     exId: Long,
     exSets: List<LoggedSet>,
@@ -745,12 +749,14 @@ private fun ExerciseOnDay(
 ) {
     val res = LocalContext.current.resources
     val name = snap.exercises[exId]?.name ?: stringResource(R.string.day_exercise_fallback, exId)
-    var expanded by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
-    var swapping by remember { mutableStateOf(false) }
-    var grouping by remember { mutableStateOf(false) }
-    var overview by remember { mutableStateOf(false) }
-    var commenting by remember { mutableStateOf(false) }
+    // Kept in the day's saved state, one set of keys per exercise and date, so they survive rotation (#304).
+    val key = "ex:$date:$exId:"
+    var expanded by state.saved(key + "expanded", false)
+    var confirmDelete by state.saved(key + "confirmDelete", false)
+    var swapping by state.saved(key + "swapping", false)
+    var grouping by state.saved(key + "grouping", false)
+    var overview by state.saved(key + "overview", false)
+    var commenting by state.saved(key + "commenting", false)
     val exerciseComment = snap.exerciseComments[date.take(10)]?.get(exId)
     val group = exSets.maxOfOrNull { it.superset } ?: 0
     val limit = if (setsShown == 0 || expanded) exSets.size else minOf(setsShown, exSets.size)

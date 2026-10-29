@@ -191,8 +191,10 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
     var query by rememberSaveable { mutableStateOf("") }
     // Exercises chosen with a long press, in the order they were ticked (#83).
     val picked = remember { mutableStateListOf<Long>() }
-    var creating by remember { mutableStateOf(false) }
-    var editing by remember { mutableStateOf<Exercise?>(null) }
+    // The exercise editor stays open through rotation (#304); the exercise being edited is kept as its id.
+    var creating by rememberSaveable { mutableStateOf(false) }
+    var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val editing = editingId?.let { snap.exercises[it] }
     var deleting by remember { mutableStateOf<Exercise?>(null) }
     var merging by remember { mutableStateOf<Exercise?>(null) }
     var creatingCategory by remember { mutableStateOf(false) }
@@ -253,7 +255,7 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
             emptyText = if (searching && q.isNotEmpty()) stringResource(R.string.lib_no_match, q) else stringResource(R.string.lib_category_empty),
             onOpen = { ex -> if (picked.isNotEmpty()) toggle(picked, ex.id) else open(listOf(ex.id)) },
             onPick = { ex -> toggle(picked, ex.id) },
-            onEdit = { editing = it },
+            onEdit = { editingId = it.id },
             onDetails = { nav.push(Screen.ExerciseDetail(it.id)) },
             onDelete = { deleting = it },
             onMerge = { merging = it }
@@ -361,7 +363,7 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
         )
     }
     editing?.let { ex ->
-        ExerciseEditorSheet(snap = snap, existing = ex, initialCategoryId = ex.categoryId, onDismiss = { editing = null })
+        ExerciseEditorSheet(snap = snap, existing = ex, initialCategoryId = ex.categoryId, onDismiss = { editingId = null })
     }
     deleting?.let { ex -> DeleteExerciseSheet(snap, ex) { deleting = null } }
     merging?.let { ex -> MergeExerciseFlow(snap, ex) { merging = null } }
@@ -793,29 +795,30 @@ fun ExerciseEditorSheet(
     onDismiss: () -> Unit,
     onSaved: (Long) -> Unit = {}
 ) {
-    var name by remember { mutableStateOf(existing?.name ?: "") }
-    var categoryId by remember { mutableStateOf(existing?.categoryId ?: initialCategoryId) }
-    var type by remember { mutableStateOf(existing?.type ?: ExerciseTypes.WEIGHT_REPS) }
-    var notes by remember { mutableStateOf(existing?.notes ?: "") }
-    var newCategory by remember { mutableStateOf(false) }
+    // The typed fields are saved, so rotating the phone keeps an unfinished exercise (#304).
+    var name by rememberSaveable { mutableStateOf(existing?.name ?: "") }
+    var categoryId by rememberSaveable { mutableStateOf(existing?.categoryId ?: initialCategoryId) }
+    var type by rememberSaveable { mutableStateOf(existing?.type ?: ExerciseTypes.WEIGHT_REPS) }
+    var notes by rememberSaveable { mutableStateOf(existing?.notes ?: "") }
+    var newCategory by rememberSaveable { mutableStateOf(false) }
     // The custom type being created ([TYPE_SHEET_NEW]) or edited (its id), or null (#14).
-    var typeSheet by remember { mutableStateOf<Int?>(null) }
+    var typeSheet by rememberSaveable { mutableStateOf<Int?>(null) }
     // This exercise's defaults (#15): weight step in kg (null = the global step) and the graph it opens on.
-    var stepKg by remember { mutableStateOf(existing?.weightStepKg) }
-    var defaultGraph by remember { mutableStateOf(existing?.defaultGraph ?: -1) }
-    var restSec by remember { mutableStateOf(existing?.restSeconds) }
+    var stepKg by rememberSaveable { mutableStateOf(existing?.weightStepKg) }
+    var defaultGraph by rememberSaveable { mutableStateOf(existing?.defaultGraph ?: -1) }
+    var restSec by rememberSaveable { mutableStateOf(existing?.restSeconds) }
     // Its own distance unit (#7), or null for the global one.
-    var distUnit by remember { mutableStateOf(existing?.distanceUnit) }
+    var distUnit by rememberSaveable { mutableStateOf(existing?.distanceUnit) }
     // Its own weight unit (#7), or null for the global one.
-    var weightUnit by remember { mutableStateOf(existing?.weightUnit) }
+    var weightUnit by rememberSaveable { mutableStateOf(existing?.weightUnit) }
     // Its own activity for its calories (#174), or null for automatic.
-    var activity by remember { mutableStateOf(existing?.activity) }
+    var activity by rememberSaveable { mutableStateOf(existing?.activity) }
     // A Session's kind of sport and the optional fields it records (#249); null fields records all of them.
-    var sessionKind by remember { mutableStateOf(existing?.sessionKind) }
-    var sessionFields by remember { mutableStateOf(existing?.sessionFields) }
+    var sessionKind by rememberSaveable { mutableStateOf(existing?.sessionKind) }
+    var sessionFields by rememberSaveable { mutableStateOf(existing?.sessionFields) }
     // The names of a Session or Rounds exercise's own counts (#266), as typed.
-    var countNameA by remember { mutableStateOf(existing?.countNames.orEmpty().getOrElse(0) { "" }) }
-    var countNameB by remember { mutableStateOf(existing?.countNames.orEmpty().getOrElse(1) { "" }) }
+    var countNameA by rememberSaveable { mutableStateOf(existing?.countNames.orEmpty().getOrElse(0) { "" }) }
+    var countNameB by rememberSaveable { mutableStateOf(existing?.countNames.orEmpty().getOrElse(1) { "" }) }
     val res = LocalContext.current.resources
 
     fun save(keepOpen: Boolean) {

@@ -35,18 +35,19 @@ import com.fitlens.companion.ui.design.PickerPill
 import com.fitlens.companion.ui.design.SearchablePicker
 
 /**
- * The exercise Analysis → Exercises showed last, kept between visits while the app is open (#90), and a pinned graph
- * (#55) waiting to be opened there.
+ * The exercise Analysis → Exercises showed last, kept between visits while the app is open (#90). The pinned graph
+ * (#55) waiting to be opened there is held by the hub, in its saved state (#304).
  */
 private object AnalysisChoice {
     var exerciseId: Long? = null
-    var pin: PinnedGraph? = null
 }
 
-/** Shows [pin] in Analysis → Exercises next time it opens (#55): its exercise, graph, range and comparison. */
+/**
+ * Points Analysis → Exercises at [pin]'s exercise and comparison (#55); the hub hands the pin itself to the tab, which
+ * opens its graph and range.
+ */
 internal fun openPinnedGraph(pin: PinnedGraph) {
     AnalysisChoice.exerciseId = pin.exerciseId
-    AnalysisChoice.pin = pin
     saveCompare(pin.exerciseId, pin.compare)
 }
 
@@ -55,10 +56,10 @@ internal fun openPinnedGraph(pin: PinnedGraph) {
  * goal and full-screen options as the exercise screen's Graph tab, because it is that pane.
  */
 @Composable
-fun AnalysisExercisesTab(snap: Snapshot, nav: Nav) {
+fun AnalysisExercisesTab(snap: Snapshot, nav: Nav, openedPin: PinnedGraph? = null) {
     var exId by rememberSaveable { mutableStateOf(AnalysisChoice.exerciseId) }
-    // A pinned graph opened from the Overview, used once.
-    val pin = remember { AnalysisChoice.pin.also { AnalysisChoice.pin = null } }
+    // A pinned graph opened from the Overview, taken once when the tab opens.
+    val pin = remember { openedPin }
     var picking by remember { mutableStateOf(false) }
     val chosen = exId?.takeIf { snap.exercises.containsKey(it) && snap.setsByExercise[it].orEmpty().isNotEmpty() }
     Column(Modifier.fillMaxSize()) {

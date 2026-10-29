@@ -53,6 +53,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -63,6 +65,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
@@ -103,6 +106,15 @@ import kotlinx.coroutines.launch
 /** Global fallback increments. Per-exercise increments are #15, the global weight setting is #7. */
 internal const val DEFAULT_WEIGHT_STEP = 2.5
 private const val DISTANCE_STEP = 0.5
+
+/** No set open in a sheet or dialog (#304). */
+private const val NO_SET = -1L
+
+/** A Rounds draft's four typed fields, so the Track tab keeps them across rotation (#304). */
+private val RoundsDraftSaver = listSaver<RoundsDraft, String>(
+    save = { listOf(it.rounds, it.length, it.rest, it.hard) },
+    restore = { RoundsDraft(it[0], it[1], it[2], it[3]) }
+)
 private const val DURATION_STEP = 15
 
 /** A session shorter or longer than this (15 and 240 minutes) is asked about once before it is saved (#243). */
@@ -290,41 +302,50 @@ fun SetEntryScreen(
         }
     }
 
-    var selected by remember(date, exerciseId) { mutableStateOf(selectSet) }
-    var weight by remember(date, exerciseId) { mutableStateOf("") }
-    var reps by remember(date, exerciseId) { mutableStateOf("") }
-    var distance by remember(date, exerciseId) { mutableStateOf("") }
-    var duration by remember(date, exerciseId) { mutableStateOf("") }
-    var metric by remember(date, exerciseId) { mutableStateOf("") }
+    var selected by rememberSaveable(date, exerciseId) { mutableStateOf(selectSet) }
+    var weight by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var reps by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var distance by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var duration by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var metric by rememberSaveable(date, exerciseId) { mutableStateOf("") }
     // A Session's length and hard or live minutes, in minutes as typed, and its intensity, type and cardio zone (#240, #241).
-    var sessionMin by remember(date, exerciseId) { mutableStateOf("") }
-    var liveMin by remember(date, exerciseId) { mutableStateOf("") }
-    var intensity by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
-    var sessionType by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
-    var zone by remember(date, exerciseId) { mutableStateOf<Int?>(null) }
+    var sessionMin by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var liveMin by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var intensity by rememberSaveable(date, exerciseId) { mutableStateOf<Int?>(null) }
+    var sessionType by rememberSaveable(date, exerciseId) { mutableStateOf<Int?>(null) }
+    var zone by rememberSaveable(date, exerciseId) { mutableStateOf<Int?>(null) }
     // A Session or Rounds set's two counts as typed (#266).
-    var countAText by remember(date, exerciseId) { mutableStateOf("") }
-    var countBText by remember(date, exerciseId) { mutableStateOf("") }
+    var countAText by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var countBText by rememberSaveable(date, exerciseId) { mutableStateOf("") }
     // A Rounds set's rounds, round length, rest between rounds and hard rounds as typed (#246).
-    var roundsDraft by remember(date, exerciseId) { mutableStateOf(RoundsDraft()) }
+    var roundsDraft by rememberSaveable(date, exerciseId, stateSaver = RoundsDraftSaver) { mutableStateOf(RoundsDraft()) }
     // Set type (#43): new sets start as working sets; editing a set shows its own type.
-    var setType by remember(date, exerciseId) { mutableIntStateOf(SetTypes.WORKING) }
+    var setType by rememberSaveable(date, exerciseId) { mutableIntStateOf(SetTypes.WORKING) }
     // Effort (#44), always held as RPE; null means not recorded.
-    var rpe by remember(date, exerciseId) { mutableStateOf<Double?>(null) }
+    var rpe by rememberSaveable(date, exerciseId) { mutableStateOf<Double?>(null) }
     // The exact kilograms the weight field was filled from, and the text it was filled with. Weights are stored in
     // kilograms but shown rounded in the user's unit, so converting the displayed text back on every save quietly
     // rewrote the stored value for anyone using pounds (#75). Only convert when the text has actually been edited.
-    var loadedWeightText by remember(date, exerciseId) { mutableStateOf("") }
-    var loadedWeightKg by remember(date, exerciseId) { mutableStateOf<Double?>(null) }
-    var deleting by remember { mutableStateOf<SetRow?>(null) }
-    var editExercise by remember { mutableStateOf(false) }
-    var showInfo by remember { mutableStateOf(false) }
-    var calculator by remember { mutableStateOf<String?>(null) }
+    var loadedWeightText by rememberSaveable(date, exerciseId) { mutableStateOf("") }
+    var loadedWeightKg by rememberSaveable(date, exerciseId) { mutableStateOf<Double?>(null) }
+    // Open sheets and dialogs come back after rotation or a restart in the background (#304). A set is kept as its id
+    // and looked up in today's sets each time, so a set deleted meanwhile just closes its sheet.
+    val state = viewModel<SetEntryState>()
+    var deletingId by state.saved("deleting", NO_SET)
+    val deleting = sets.firstOrNull { it.id == deletingId }
+    var editExercise by state.saved("editExercise", false)
+    var showInfo by state.saved("showInfo", false)
+    var calculator by state.saved<String?>("calculator", null)
     // The set whose Comment box is open (#108).
-    var commenting by remember { mutableStateOf<SetRow?>(null) }
-    var editingExerciseComment by remember { mutableStateOf(false) }
+    var commentingId by state.saved("commenting", NO_SET)
+    val commenting = sets.firstOrNull { it.id == commentingId }
+    var editingExerciseComment by state.saved("editingExerciseComment", false)
     // Add to superset from the workout drawer (#124).
-    var grouping by remember { mutableStateOf(false) }
+    var grouping by state.saved("grouping", false)
+    // Set once the fields have been filled for this exercise, so a screen restored after rotation keeps what was typed
+    // instead of refilling it (#304).
+    var filled by rememberSaveable(date, exerciseId) { mutableStateOf(false) }
+    val firstFill = remember { booleanArrayOf(true) }
 
     // The global step from Settings → Unit System (#7) is stored in kg; the field works in the display unit.
     // This exercise's own step comes first (#15), then the global one.
@@ -345,9 +366,13 @@ fun SetEntryScreen(
     // done or commented, so values typed but not yet saved stay put (#301).
     LaunchedEffect(selected, sets.map { it.id }, template?.id) {
         val chosen = selected?.let { id -> sets.firstOrNull { it.id == id } }
+        // The first run after a restore leaves the restored fields alone (#304).
+        val restored = firstFill[0] && filled
+        firstFill[0] = false
         if (selected != null && chosen == null) {
             selected = null
-        } else {
+        } else if (!restored) {
+            filled = true
             val source = chosen ?: template
             weight = source?.weightKg?.takeIf { it != 0.0 }?.let { fmtNum(snap.weight(it, exerciseId), 2) } ?: ""
             loadedWeightText = weight
@@ -384,12 +409,12 @@ fun SetEntryScreen(
 
     val appContext = LocalContext.current.applicationContext
     val res = LocalContext.current.resources
-    var restSheet by remember { mutableStateOf(false) }
+    var restSheet by state.saved("restSheet", false)
     // The first rest timer offers to turn notifications on, once (#250).
     val askNotify = rememberNotificationAsk()
 
     // A session that looks unusual is asked about once (#243); [unusualMinutes] is the length being asked about.
-    var unusualMinutes by remember { mutableStateOf<String?>(null) }
+    var unusualMinutes by state.saved<String?>("unusualMinutes", null)
 
     fun save(confirmed: Boolean = false) {
         // Untouched field: keep the stored kilograms exactly as they were, rather than round-tripping the
@@ -720,7 +745,7 @@ fun SetEntryScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             GoldButton(onClick = { save() }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) { Text(stringResource(R.string.set_update)) }
                             GlassOutlinedButton(
-                                onClick = { deleting = sets.firstOrNull { it.id == selected } },
+                                onClick = { deletingId = sets.firstOrNull { it.id == selected }?.id ?: NO_SET },
                                 modifier = Modifier.weight(1f).heightIn(min = 48.dp)
                             ) { Text(stringResource(R.string.day_delete)) }
                         }
@@ -796,7 +821,7 @@ fun SetEntryScreen(
                         selected = isSelected,
                         onClick = { selected = if (selected == s.id) null else s.id },
                         // Each set's own comment, one tap away mid-workout (#108).
-                        onComment = { commenting = s },
+                        onComment = { commentingId = s.id },
                         // No "Edit" hint: the comment button needs the room at 320dp, and the gold-washed, gold-edged
                         // frame already marks the selected set (#108, #112).
                         // "Mark sets complete" (#19). Every set has its done tick (#129). Ticking one off starts the
@@ -863,7 +888,7 @@ fun SetEntryScreen(
             title = stringResource(R.string.set_delete_title),
             text = describeSet(res, snap, s.weightKg, s.reps, s.distance, s.durationSec, s.exerciseId, s.metric),
             confirm = stringResource(R.string.day_delete),
-            onDismiss = { deleting = null }
+            onDismiss = { deletingId = NO_SET }
         ) {
             selected = null
             AppScope.scope.launch {
@@ -920,7 +945,7 @@ fun SetEntryScreen(
                     }
                 }
             },
-            onDismiss = { commenting = null }
+            onDismiss = { commentingId = NO_SET }
         )
     }
     when (calculator) {

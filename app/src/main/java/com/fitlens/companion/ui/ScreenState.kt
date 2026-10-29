@@ -54,3 +54,9 @@ class PhotosState(handle: SavedStateHandle) : ScreenState(handle)
 
 /** The photo viewer's open dialogs. */
 class PhotoViewerState(handle: SavedStateHandle) : ScreenState(handle)
+
+/** The exercise screen's open sheets and dialogs; a set is kept as its id (#304). */
+class SetEntryState(handle: SavedStateHandle) : ScreenState(handle)
+
+/** Analysis's waiting pinned graph (#304), kept in its saved form so it survives Android stopping the app. */
+class AnalysisState(handle: SavedStateHandle) : ScreenState(handle)

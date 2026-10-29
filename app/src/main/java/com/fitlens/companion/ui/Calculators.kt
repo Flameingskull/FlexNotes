@@ -23,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -91,8 +92,9 @@ fun SetCalculatorSheet(
     exerciseId: Long? = null
 ) {
     val unit = snap.weightUnitOf(exerciseId)
-    var mode by remember { mutableStateOf(if (bestOneRmKg > 0) 0 else 1) }
-    var base by remember(mode) {
+    // The typed fields are saved, so rotating the phone keeps them (#304).
+    var mode by rememberSaveable { mutableStateOf(if (bestOneRmKg > 0) 0 else 1) }
+    var base by rememberSaveable(mode) {
         mutableStateOf(
             if (mode == 0) bestOneRmKg.takeIf { it > 0 }?.let { fmtNum(roundTo(snap.weight(it, exerciseId), stepShown), 2) } ?: ""
             else targetText
@@ -172,9 +174,9 @@ fun PlateCalculatorSheet(
     val prefs by Settings.portable.collectAsState()
     val savedBar = prefs.barKg?.let { snap.weight(it, exerciseId) } ?: defaultBar(unit)
     val savedPlates = prefs.plates?.takeIf { ownPlates }?.let { parsePlates(it) }?.takeIf { it.isNotEmpty() } ?: defaultPlates(unit)
-    var target by remember { mutableStateOf(targetText) }
-    var barText by remember(savedBar) { mutableStateOf(fmtNum(savedBar, 2)) }
-    var platesText by remember(savedPlates) { mutableStateOf(savedPlates.joinToString(", ") { fmtNum(it, 2) }) }
+    var target by rememberSaveable { mutableStateOf(targetText) }
+    var barText by rememberSaveable(savedBar) { mutableStateOf(fmtNum(savedBar, 2)) }
+    var platesText by rememberSaveable(savedPlates) { mutableStateOf(savedPlates.joinToString(", ") { fmtNum(it, 2) }) }
     val bar = parse(barText) ?: 0.0
     val plates = parsePlates(platesText)
     val t = parse(target) ?: 0.0

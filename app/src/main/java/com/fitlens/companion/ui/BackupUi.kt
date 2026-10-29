@@ -45,6 +45,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -95,24 +97,26 @@ fun BackupsPage(snap: Snapshot) {
     val notifyReason = stringResource(R.string.notify_reason_backup)
     fun ensureNotifyPermission() = notify.ask(notifyReason)
     fun fmtTime(ms: Long): String = Dates.dayTime(ctx, ms)
-    var restoreUri by remember { mutableStateOf<Uri?>(null) }
-    var restoreInfo by remember { mutableStateOf<Backups.Info?>(null) }
-    var showReport by remember { mutableStateOf(false) }
-    var confirmUndo by remember { mutableStateOf(false) }
+    // The restore confirmation and the report options survive rotation (#304); the file is kept as its text form.
+    var restoreText by rememberSaveable { mutableStateOf<String?>(null) }
+    val restoreUri = restoreText?.let { Uri.parse(it) }
+    var restoreInfo by rememberSaveable(stateSaver = RestoreInfoSaver) { mutableStateOf<Backups.Info?>(null) }
+    var showReport by rememberSaveable { mutableStateOf(false) }
+    var confirmUndo by rememberSaveable { mutableStateOf(false) }
     // The safety copy (#47) and the last result (#62), re-read whenever a job finishes.
     val undoAt = remember(device, busy) { if (Backups.undoAvailable(ctx)) device.safetyAt else null }
     val undoReason = device.safetyReason
     val lastResult by UiEvents.lastResult.collectAsState()
 
     fun undo() = runBusy(res.getString(R.string.backup_busy_undo)) { Backups.undoLastRestore(ctx) }
-    var reportOpts by remember { mutableStateOf<ReportOptions?>(null) }
+    var reportOpts by rememberSaveable(stateSaver = ReportOptionsSaver) { mutableStateOf<ReportOptions?>(null) }
 
     fun inspect(uri: Uri) {
         AppScope.scope.launch {
             UiEvents.busy.value = res.getString(R.string.backup_busy_checking)
             val info = try { Backups.inspect(ctx, uri) } finally { UiEvents.busy.value = null }
             if (info == null) UiEvents.show(res.getString(R.string.backup_not_flexnotes))
-            else { restoreUri = uri; restoreInfo = info }
+            else { restoreText = uri.toString(); restoreInfo = info }
         }
     }
 
@@ -263,9 +267,9 @@ fun BackupsPage(snap: Snapshot) {
     val info = restoreInfo
     val uri = restoreUri
     if (info != null && uri != null) {
-        RestoreDialog(info, onDismiss = { restoreInfo = null; restoreUri = null }) {
+        RestoreDialog(info, onDismiss = { restoreInfo = null; restoreText = null }) {
             restoreInfo = null
-            restoreUri = null
+            restoreText = null
             runBusy(res.getString(R.string.backup_busy_restoring)) {
                 val r = Backups.restore(ctx, uri)
                 if (r.ok && Backups.undoAvailable(ctx)) {
@@ -294,6 +298,24 @@ fun BackupsPage(snap: Snapshot) {
         }
     }
 }
+
+/** A backup's summary in a form that fits a Bundle, so the restore confirmation survives rotation (#304). */
+private val RestoreInfoSaver = listSaver<Backups.Info?, Any?>(
+    save = { i -> if (i == null) emptyList() else listOf(i.createdAt, i.appVersion, i.dbVersion, i.photos, i.workouts, i.records, i.firstDate, i.lastDate, i.legacy) },
+    restore = { l ->
+        if (l.isEmpty()) null
+        else Backups.Info(l[0] as String?, l[1] as String?, l[2] as Int, l[3] as Int, l[4] as Int?, l[5] as Int?, l[6] as String?, l[7] as String?, l[8] as Boolean)
+    }
+)
+
+/** The report options in a form that fits a Bundle, kept while the file picker is open (#304). */
+private val ReportOptionsSaver = listSaver<ReportOptions?, Any>(
+    save = { o -> if (o == null) emptyList() else listOf(o.from, o.to, o.dark, o.measurements, o.training, o.dailyLog, o.photosPerDay, o.onlyPhotoDays, o.highQuality) },
+    restore = { l ->
+        if (l.isEmpty()) null
+        else ReportOptions(l[0] as String, l[1] as String, l[2] as Boolean, l[3] as Boolean, l[4] as Boolean, l[5] as Boolean, l[6] as Int, l[7] as Boolean, l[8] as Boolean)
+    }
+)
 
 @Composable
 private fun RestoreDialog(info: Backups.Info, onDismiss: () -> Unit, onConfirm: () -> Unit) {
@@ -342,17 +364,17 @@ private fun ReportDialog(snap: Snapshot, onDismiss: () -> Unit, onCreate: (Repor
     val first = snap.allDates.lastOrNull() ?: Dates.today()
     val last = snap.allDates.firstOrNull() ?: Dates.today()
     val saved = remember { Settings.currentPortable() }
-    var from by remember { mutableStateOf(first) }
-    var to by remember { mutableStateOf(last) }
-    var pickFrom by remember { mutableStateOf(false) }
-    var pickTo by remember { mutableStateOf(false) }
-    var dark by remember { mutableStateOf(saved.pdfDark) }
-    var measurements by remember { mutableStateOf(true) }
-    var training by remember { mutableStateOf(true) }
-    var daily by remember { mutableStateOf(true) }
-    var perDay by remember { mutableIntStateOf(saved.pdfPhotosPerDay.coerceIn(0, 4)) }
-    var onlyPhotoDays by remember { mutableStateOf(false) }
-    var hq by remember { mutableStateOf(false) }
+    var from by rememberSaveable { mutableStateOf(first) }
+    var to by rememberSaveable { mutableStateOf(last) }
+    var pickFrom by rememberSaveable { mutableStateOf(false) }
+    var pickTo by rememberSaveable { mutableStateOf(false) }
+    var dark by rememberSaveable { mutableStateOf(saved.pdfDark) }
+    var measurements by rememberSaveable { mutableStateOf(true) }
+    var training by rememberSaveable { mutableStateOf(true) }
+    var daily by rememberSaveable { mutableStateOf(true) }
+    var perDay by rememberSaveable { mutableIntStateOf(saved.pdfPhotosPerDay.coerceIn(0, 4)) }
+    var onlyPhotoDays by rememberSaveable { mutableStateOf(false) }
+    var hq by rememberSaveable { mutableStateOf(false) }
 
     val opts = ReportOptions(from, to, dark, measurements, training, daily, perDay, onlyPhotoDays, hq)
     val photos = remember(opts) { PdfReport.photoCount(snap, opts) }

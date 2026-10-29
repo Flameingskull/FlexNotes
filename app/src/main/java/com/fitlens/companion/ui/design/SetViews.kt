@@ -45,6 +45,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -647,7 +648,8 @@ fun SetCommentSheet(
     detailed: Boolean = false,
     earlier: List<Pair<String, String>> = emptyList()
 ) {
-    var text by remember { mutableStateOf(initial.orEmpty()) }
+    // Saved, so a half-typed comment survives rotation (#304).
+    var text by rememberSaveable { mutableStateOf(initial.orEmpty()) }
     FitSheet(
         title = title,
         onDismiss = onDismiss,
