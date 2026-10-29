@@ -7,6 +7,7 @@ import com.fitlens.companion.R
 import com.fitlens.companion.ui.countParts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 
 /**
  * Workouts, FitNotes's routines (#106). In the owner's vocabulary a user-made **workout** is one function: a name,
@@ -18,6 +19,7 @@ import kotlinx.coroutines.withContext
  */
 
 /** A prescribed set. Weights are in kg and times in seconds, like logged sets. */
+@Serializable
 data class PlannedSet(
     val weightKg: Double = 0.0,
     val reps: Int = 0,
@@ -45,6 +47,7 @@ data class PlannedSet(
  * One exercise in a workout day. [fill] decides its sets when the day is logged: [Routines.FILL_LAST] copies the
  * previous time's sets, [Routines.FILL_PLANNED] uses [sets], [Routines.FILL_NONE] adds the exercise with no sets.
  */
+@Serializable
 data class PlannedExercise(
     val exerciseId: Long,
     val fill: Int = Routines.FILL_LAST,

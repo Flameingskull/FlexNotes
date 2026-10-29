@@ -1,5 +1,7 @@
 package com.fitlens.companion.data
 
+import kotlinx.serialization.Serializable
+
 /**
  * Training blocks (#218): a workout's plan over the weeks, as named blocks in order (say, Build 3 weeks, Peak 2 weeks,
  * Deload 1 week), from a start date and optionally repeating. A [TrainingBlock.deload] block is a lighter one. The
@@ -9,6 +11,7 @@ package com.fitlens.companion.data
  * weights by [TrainingBlock.weightPct] percent and its sets per exercise by [TrainingBlock.setChange]. Both are 0 (off)
  * by default, and they're kept in the same `blocks` text, so they need no database change.
  */
+@Serializable
 data class TrainingBlock(
     val name: String,
     val length: Int,
@@ -24,6 +27,7 @@ data class TrainingBlock(
 }
 
 /** A workout's blocks from [start] (an ISO date). [repeats] starts the first block again after the last. */
+@Serializable
 data class TrainingPlan(val blocks: List<TrainingBlock>, val start: String, val repeats: Boolean = false) {
     /** Whether the last block is ongoing: the plan then never ends or repeats, as with an ongoing phase (#228). */
     val ongoing: Boolean get() = blocks.lastOrNull()?.unit == PhaseUnit.ONGOING

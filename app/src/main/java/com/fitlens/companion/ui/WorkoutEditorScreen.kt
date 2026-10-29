@@ -87,7 +87,15 @@ import com.fitlens.companion.ui.design.SectionLabel
 import com.fitlens.companion.ui.design.SegmentedSwitch
 import com.fitlens.companion.ui.design.TopBarAction
 import com.fitlens.companion.ui.design.raisedGlass
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.fitlens.companion.data.TrainingPlan
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.nullable
+import kotlinx.serialization.json.Json
 
 /**
  * The workout editor (#106, FitNotes's routine editor): a workout's name and notes, then its days as cards. Each day
@@ -97,9 +105,11 @@ import kotlinx.coroutines.launch
  */
 
 /** One exercise in the editor, with a stable [key] so moving keeps each row with its exercise. */
+@Serializable
 private data class Slot(val key: Long, val planned: PlannedExercise)
 
 /** One day in the editor. [id] is the saved day's id (0 for a new day), so logged dates keep pointing at it. */
+@Serializable
 private data class DayDraft(val key: Long, val id: Long, val name: String, val slots: List<Slot>)
 
 @Composable
@@ -107,29 +117,32 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     val context = LocalContext.current
     fun dayN(n: Int): String = context.getString(R.string.workout_day_n, n)
     val original = remember(id) { snap.routinesById[id] ?: Routine(0L, "", days = listOf(RoutineDay(0L, dayN(1)))) }
-    var name by remember(id) { mutableStateOf(original.name) }
-    var notes by remember(id) { mutableStateOf(original.notes.orEmpty()) }
+    // The draft and its open sheets come back after rotation or a restart in the background (#304). This screen is
+    // pushed once per workout and never replaced by another, so its state needn't be keyed by [id].
+    val state = viewModel<WorkoutEditorState>()
+    var name by state.saved("name", original.name)
+    var notes by state.saved("notes", original.notes.orEmpty())
     // Training blocks (#218), saved with the workout.
-    var plan by remember(id) { mutableStateOf(original.plan) }
-    // Stable keys for days and rows; a plain counter, since handing one out needn't recompose anything.
-    val keys = remember(id) { longArrayOf(0L) }
-    fun key(): Long = keys[0]++
-    val days = remember(id) {
-        mutableStateListOf<DayDraft>().apply {
-            original.days.forEach { d -> add(DayDraft(key(), d.id, d.name, d.exercises.map { Slot(key(), it) })) }
-        }
+    var plan by state.savedJson("plan", TrainingPlan.serializer().nullable) { original.plan }
+    // Stable keys for days and rows. A restored draft keeps its keys, so new ones start after the highest.
+    val days = state.savedList("days", DayDraft.serializer()) {
+        var next = 0L
+        original.days.map { d -> DayDraft(next++, d.id, d.name, d.exercises.map { Slot(next++, it) }) }
     }
-    var adding by remember { mutableStateOf<Long?>(null) }
-    var editingSets by remember { mutableStateOf<Pair<Long, Long>?>(null) }
-    var swapping by remember { mutableStateOf<Pair<Long, Long>?>(null) }
-    var renaming by remember { mutableStateOf<Long?>(null) }
-    var copying by remember { mutableStateOf<Long?>(null) }
+    val keys = remember { longArrayOf(days.maxOfOrNull { d -> maxOf(d.key, d.slots.maxOfOrNull { it.key } ?: 0L) }?.plus(1) ?: 0L) }
+    fun key(): Long = keys[0]++
+    var adding by state.saved<Long?>("adding", null)
+    // A day and one of its exercises are kept as two ids.
+    var editingSetsAt by state.saved<LongArray?>("editingSets", null)
+    var swappingAt by state.saved<LongArray?>("swapping", null)
+    var renaming by state.saved<Long?>("renaming", null)
+    var copying by state.saved<Long?>("copying", null)
     // The day whose "Set rest for every exercise" sheet is open (#138).
-    var restingDay by remember { mutableStateOf<Long?>(null) }
-    var confirmLeave by remember { mutableStateOf(false) }
+    var restingDay by state.saved<Long?>("restingDay", null)
+    var confirmLeave by state.saved("confirmLeave", false)
     // Set once Save is tapped with no name, so the Name field shows what's missing (#287).
-    var nameMissing by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
+    var nameMissing by state.saved("nameMissing", false)
+    var confirmDelete by state.saved("confirmDelete", false)
     // Reorder in place (#170): drag handles on the days and their exercises while the toggle is on.
     var reordering by rememberSaveable(id) { mutableStateOf(false) }
 
@@ -230,8 +243,8 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                                 context.getString(R.string.workout_undo)
                             ) { days.add(at.coerceAtMost(days.size), removed) }
                         },
-                        onSets = { editingSets = day.key to it },
-                        onSwap = { swapping = day.key to it },
+                        onSets = { editingSetsAt = longArrayOf(day.key, it) },
+                        onSwap = { swappingAt = longArrayOf(day.key, it) },
                         onChange = { slots -> updateDay(day.key) { it.copy(slots = slots) } }
                     )
                 }
@@ -273,13 +286,13 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                 val added = ids.map { Slot(key(), PlannedExercise(it, Routines.FILL_LAST)) }
                 updateDay(dayKey) { it.copy(slots = it.slots + added) }
                 // One exercise at a time asks straight away how its sets are filled, as FitNotes does.
-                added.singleOrNull()?.let { editingSets = dayKey to it.key }
+                added.singleOrNull()?.let { editingSetsAt = longArrayOf(dayKey, it.key) }
             }
         )
     }
     fun slotAt(at: Pair<Long, Long>?): Slot? =
         at?.let { (dayKey, slotKey) -> days.firstOrNull { it.key == dayKey }?.slots?.firstOrNull { it.key == slotKey } }
-    val swapAt = swapping
+    val swapAt = swappingAt?.let { it[0] to it[1] }
     val swapSlot = slotAt(swapAt)
     if (swapAt != null && swapSlot != null) {
         val (dayKey, slotKey) = swapAt
@@ -287,28 +300,28 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
         SearchablePicker(
             title = stringResource(R.string.workout_swap_title, snap.exercises[current.planned.exerciseId]?.name ?: stringResource(R.string.workout_exercise)),
             items = exercisePickerItems(snap).filter { it.id != current.planned.exerciseId },
-            onDismiss = { swapping = null },
+            onDismiss = { swappingAt = null },
             onPick = { ids ->
-                swapping = null
+                swappingAt = null
                 ids.firstOrNull()?.let { to -> updateSlot(dayKey, slotKey) { it.copy(exerciseId = to) } }
             }
         )
     }
-    val setsAt = editingSets
+    val setsAt = editingSetsAt?.let { it[0] to it[1] }
     val setsSlot = slotAt(setsAt)
     if (setsAt != null && setsSlot != null) {
         val (dayKey, slotKey) = setsAt
         PlannedSetsSheet(
-            snap, setsSlot.planned, onDismiss = { editingSets = null },
+            snap, setsSlot.planned, onDismiss = { editingSetsAt = null },
             onProfile = { nav.push(Screen.SettingsPage(SettingsSection.Profile)) }
         ) { updated ->
             updateSlot(dayKey, slotKey) { updated }
-            editingSets = null
+            editingSetsAt = null
         }
     }
     renaming?.let { dayKey ->
         val day = days.firstOrNull { it.key == dayKey }
-        var dayName by remember(dayKey) { mutableStateOf(day?.name.orEmpty()) }
+        var dayName by rememberSaveable(dayKey) { mutableStateOf(day?.name.orEmpty()) }
         FitSheet(
             title = stringResource(R.string.workout_rename_day),
             onDismiss = { renaming = null },
@@ -413,7 +426,7 @@ private fun DayCard(
     onSwap: (Long) -> Unit,
     onChange: (List<Slot>) -> Unit
 ) {
-    var menu by remember { mutableStateOf(false) }
+    var menu by rememberSaveable { mutableStateOf(false) }
     val slots = day.slots
     // A day moves by its own height at each step of its handle (#170).
     var cardHeight by remember { mutableStateOf(0) }
@@ -580,6 +593,7 @@ fun restSummary(res: Resources, p: PlannedExercise, setRests: Boolean = true): S
 // ---------------------------------------------------------------------------------------------------------
 
 /** A prescribed set as the user types it, in their own units. */
+@Serializable
 private data class SetDraft(
     val weight: String = "",
     val reps: String = "",
@@ -598,6 +612,12 @@ private data class SetDraft(
     /** A Session or Rounds set's own counts as typed (#266); blank for none. */
     val countA: String = "",
     val countB: String = ""
+)
+
+/** The rows of the sets sheet as JSON text, so a half-edited sheet survives rotation (#304). */
+private val SetRowsSaver = Saver<SnapshotStateList<SetDraft>, String>(
+    save = { Json.encodeToString(ListSerializer(SetDraft.serializer()), it.toList()) },
+    restore = { text -> mutableStateListOf<SetDraft>().apply { addAll(Json.decodeFromString(ListSerializer(SetDraft.serializer()), text)) } }
 )
 
 private fun num(s: String): Double = s.trim().replace(',', '.').toDoubleOrNull() ?: 0.0
@@ -637,9 +657,10 @@ private fun PlannedSetsSheet(
     val last = remember(snap.trainingKey, planned.exerciseId) {
         Routines.resolve(snap, planned.copy(fill = Routines.FILL_LAST), "9999-12-31")
     }
-    var fill by remember { mutableStateOf(planned.fill) }
+    // The sheet's fields are saved, so rotating the phone keeps them (#304).
+    var fill by rememberSaveable { mutableStateOf(planned.fill) }
     val start = planned.sets.ifEmpty { last }.ifEmpty { listOf(PlannedSet()) }
-    val rows = remember {
+    val rows = rememberSaveable(saver = SetRowsSaver) {
         mutableStateListOf<SetDraft>().apply {
             start.forEach { s ->
                 val rd = if (isRounds) RoundsDraft.of(s.reps, s.durationSec, s.restSeconds, s.liveSec) else null
@@ -666,10 +687,10 @@ private fun PlannedSetsSheet(
     // Prescribed rest (#138). Per-set rests only exist for predefined sets.
     // "Copy previous rest" (#151) takes every rest from the exercise's most recent workout, as "Copy previous sets"
     // does for its sets.
-    var copyRest by remember { mutableStateOf(Routines.copiesRest(planned)) }
-    var sameRest by remember { mutableStateOf(planned.sets.none { it.restSeconds != null }) }
-    var rest by remember { mutableStateOf(planned.restSeconds?.takeIf { it > 0 }) }
-    var restAfter by remember { mutableStateOf(planned.restAfterSeconds?.takeIf { it > 0 }) }
+    var copyRest by rememberSaveable { mutableStateOf(Routines.copiesRest(planned)) }
+    var sameRest by rememberSaveable { mutableStateOf(planned.sets.none { it.restSeconds != null }) }
+    var rest by rememberSaveable { mutableStateOf(planned.restSeconds?.takeIf { it > 0 }) }
+    var restAfter by rememberSaveable { mutableStateOf(planned.restAfterSeconds?.takeIf { it > 0 }) }
     val fallbackRest = ex?.restSeconds ?: Settings.currentPortable().restSeconds
     val perSet = fill == Routines.FILL_PLANNED && !sameRest && !copyRest && !isRounds
     // What "Copy previous rest" would copy today, in the same words as the exercise row.
@@ -879,10 +900,10 @@ private fun PlannedSetsSheet(
 @Composable
 private fun DayRestSheet(dayName: String, onDismiss: () -> Unit, onDone: (Int?, Int?) -> Unit) {
     val fallback = Settings.currentPortable().restSeconds
-    var rest by remember { mutableStateOf<Int?>(null) }
-    var after by remember { mutableStateOf<Int?>(null) }
+    var rest by rememberSaveable { mutableStateOf<Int?>(null) }
+    var after by rememberSaveable { mutableStateOf<Int?>(null) }
     // "Copy previous rest" (#151) for the whole day: each exercise takes its rest from its own last workout.
-    var copyRest by remember { mutableStateOf(false) }
+    var copyRest by rememberSaveable { mutableStateOf(false) }
     FitSheet(
         title = stringResource(R.string.workout_day_rest_title, dayName),
         onDismiss = onDismiss,

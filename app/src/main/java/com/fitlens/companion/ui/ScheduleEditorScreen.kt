@@ -83,7 +83,9 @@ import com.fitlens.companion.ui.design.SegmentedSwitch
 import com.fitlens.companion.ui.design.StepperField
 import com.fitlens.companion.ui.design.TopBarAction
 import com.fitlens.companion.ui.design.raisedGlass
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import kotlin.math.max
 
@@ -99,7 +101,11 @@ import kotlin.math.max
  */
 
 /** A phase in the editor with a stable [key]; doses carry their own keys so moving keeps each row with its dose. */
+@Serializable
 private data class PhaseDraft(val key: Long, val phase: MedPhase, val doseKeys: List<Long>)
+
+/** An [editingDoseAt] dose key meaning a new dose. */
+private const val NEW_DOSE = -1L
 
 @Composable
 fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
@@ -110,37 +116,40 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             0L, "", phases = listOf(MedPhase(0L, true, 8, PhaseUnit.WEEKS), MedPhase(0L, false, 4, PhaseUnit.WEEKS)), repeats = true
         )
     }
-    var name by remember(id) { mutableStateOf(original.name) }
-    var notes by remember(id) { mutableStateOf(original.notes.orEmpty()) }
-    var repeats by remember(id) { mutableStateOf(original.repeats) }
-    val keys = remember(id) { longArrayOf(0L) }
-    fun key(): Long = keys[0]++
-    val phases = remember(id) {
-        mutableStateListOf<PhaseDraft>().apply {
-            original.phases.forEach { p -> add(PhaseDraft(key(), p, p.doses.map { key() })) }
-        }
+    // The draft and its open sheets come back after rotation or a restart in the background (#304). This screen is
+    // pushed once per schedule and never replaced by another, so its state needn't be keyed by [id].
+    val state = viewModel<ScheduleEditorState>()
+    var name by state.saved("name", original.name)
+    var notes by state.saved("notes", original.notes.orEmpty())
+    var repeats by state.saved("repeats", original.repeats)
+    // Stable keys for phases and doses. A restored draft keeps its keys, so new ones start after the highest.
+    val phases = state.savedList("phases", PhaseDraft.serializer()) {
+        var next = 0L
+        original.phases.map { p -> PhaseDraft(next++, p, p.doses.map { next++ }) }
     }
+    val keys = remember { longArrayOf(phases.maxOfOrNull { d -> maxOf(d.key, d.doseKeys.maxOrNull() ?: 0L) }?.plus(1) ?: 0L) }
+    fun key(): Long = keys[0]++
     var reordering by rememberSaveable(id) { mutableStateOf(false) }
-    var editingPhase by remember { mutableStateOf<Long?>(null) }
-    var addingPhase by remember { mutableStateOf(false) }
-    // The dose sheet: the phase's key, and the dose's key (null adds one).
-    var editingDose by remember { mutableStateOf<Pair<Long, Long?>?>(null) }
-    var confirmLeave by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
+    var editingPhase by state.saved<Long?>("editingPhase", null)
+    var addingPhase by state.saved("addingPhase", false)
+    // The dose sheet: the phase's key, and the dose's key (-1 adds one). Kept as two ids.
+    var editingDoseAt by state.saved<LongArray?>("editingDose", null)
+    var confirmLeave by state.saved("confirmLeave", false)
+    var confirmDelete by state.saved("confirmDelete", false)
     var startDate by rememberSaveable(id) { mutableStateOf(Dates.today()) }
-    var pickStart by remember { mutableStateOf(false) }
-    var confirmEnd by remember { mutableStateOf(false) }
+    var pickStart by state.saved("pickStart", false)
+    var confirmEnd by state.saved("confirmEnd", false)
     // A changed start or a restart (#229): first the date picker, then a confirm with the picked date.
-    var pickNewStart by remember { mutableStateOf(false) }
+    var pickNewStart by state.saved("pickNewStart", false)
     var newStart by rememberSaveable { mutableStateOf<String?>(null) }
-    var pickRestart by remember { mutableStateOf(false) }
+    var pickRestart by state.saved("pickRestart", false)
     var restartOn by rememberSaveable { mutableStateOf<String?>(null) }
-    // An earlier run being changed (#231): its id, and whether its first day (else its last) is picked; one to delete.
-    var runEdit by remember { mutableStateOf<Pair<Long, Boolean>?>(null) }
-    var runDelete by remember { mutableStateOf<Long?>(null) }
+    // An earlier run being changed (#231): its id, and whether its first day (1, else its last, 0) is picked; one to delete.
+    var runEditAt by state.saved<LongArray?>("runEdit", null)
+    var runDelete by state.saved<Long?>("runDelete", null)
     // A new schedule first asks how it's taken (#232); new doses then start on the days chosen there.
-    var setup by remember(id) { mutableStateOf(id == 0L) }
-    var newDoseDays by remember(id) { mutableStateOf(MedDays()) }
+    var setup by state.saved("setup", id == 0L)
+    var newDoseDays by state.savedJson("newDoseDays", MedDays.serializer()) { MedDays() }
 
     val draft = MedSchedule(original.id, name, notes.ifBlank { null }, repeats, original.sortOrder, phases.map { it.phase })
     val dirty = draft.name != original.name || draft.notes.orEmpty() != original.notes.orEmpty() ||
@@ -190,7 +199,7 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             newDoseDays = start.days
             setup = false
             // Straight on to the first dose, the one thing the setup can't guess.
-            phases.firstOrNull { it.phase.on }?.let { editingDose = it.key to null }
+            phases.firstOrNull { it.phase.on }?.let { editingDoseAt = longArrayOf(it.key, NEW_DOSE) }
         }
         return
     }
@@ -240,8 +249,8 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                         draft = draftPhase,
                         reordering = reordering,
                         onEdit = { editingPhase = draftPhase.key },
-                        onAddDose = { editingDose = draftPhase.key to null },
-                        onEditDose = { k -> editingDose = draftPhase.key to k },
+                        onAddDose = { editingDoseAt = longArrayOf(draftPhase.key, NEW_DOSE) },
+                        onEditDose = { k -> editingDoseAt = longArrayOf(draftPhase.key, k) },
                         onDuplicate = if (fixed) null else ({
                             val p = draftPhase.phase
                             phases.add(pi + 1, PhaseDraft(key(), p.copy(id = 0L, doses = p.doses.map { it.copy(id = 0L) }), p.doses.map { key() }))
@@ -327,7 +336,7 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             }
             // This run's dose changes (#204), each removable with Undo.
             if (current != null) doseChangeRows(snap, snap.medPlan.changes.filter { it.activationId == current.id })
-            pastRunRows(snap, pastRuns, onEdit = { a, first -> runEdit = a.id to first }, onDelete = { runDelete = it.id })
+            pastRunRows(snap, pastRuns, onEdit = { a, first -> runEditAt = longArrayOf(a.id, if (first) 1L else 0L) }, onDelete = { runDelete = it.id })
         }
         GoldHairline()
         GoldButton(
@@ -350,15 +359,15 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             editingPhase = null
         }
     }
-    editingDose?.let { (phaseKey, doseKey) ->
+    editingDoseAt?.let { (phaseKey, doseKey) ->
         val d = phases.firstOrNull { it.key == phaseKey } ?: return@let
-        val at = doseKey?.let { d.doseKeys.indexOf(it) } ?: -1
-        DoseSheet(snap, d.phase.doses.getOrNull(at), newDoseDays, onDismiss = { editingDose = null }) { dose ->
+        val at = if (doseKey == NEW_DOSE) -1 else d.doseKeys.indexOf(doseKey)
+        DoseSheet(snap, d.phase.doses.getOrNull(at), newDoseDays, onDismiss = { editingDoseAt = null }) { dose ->
             updatePhase(phaseKey) {
                 if (at >= 0) it.copy(phase = it.phase.copy(doses = it.phase.doses.toMutableList().also { l -> l[at] = dose }))
                 else it.copy(phase = it.phase.copy(doses = it.phase.doses + dose), doseKeys = it.doseKeys + key())
             }
-            editingDose = null
+            editingDoseAt = null
         }
     }
     if (pickStart) PickDateDialog(startDate, onDismiss = { pickStart = false }) { startDate = it }
@@ -429,8 +438,8 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             }
         )
     }
-    runEdit?.let { (runId, first) -> runs.firstOrNull { it.id == runId }?.let { it to first } }?.let { (a, first) ->
-        PickDateDialog(if (first) a.start else MedSchedules.lastDayOf(a), onDismiss = { runEdit = null }) { picked ->
+    runEditAt?.let { (runId, firstFlag) -> runs.firstOrNull { it.id == runId }?.let { it to (firstFlag == 1L) } }?.let { (a, first) ->
+        PickDateDialog(if (first) a.start else MedSchedules.lastDayOf(a), onDismiss = { runEditAt = null }) { picked ->
             val moved = if (first) MedSchedules.withStart(a, picked) else MedSchedules.withLastDay(a, picked)
             when {
                 moved == null -> UiEvents.show(res.getString(R.string.md_run_dates_invalid))
@@ -657,7 +666,7 @@ private fun PhaseCard(
 ) {
     val res = LocalContext.current.resources
     val p = draft.phase
-    var menu by remember { mutableStateOf(false) }
+    var menu by rememberSaveable { mutableStateOf(false) }
     val label = phaseLabel(res, p)
     val moves = listOfNotNull(
         onMoveUp?.let { f -> CustomAccessibilityAction(res.getString(R.string.cmn_move_up)) { f(); true } },
@@ -775,9 +784,10 @@ internal fun daysText(res: Resources, days: MedDays): String = when {
 @Composable
 private fun PhaseSheet(existing: MedPhase?, canBeOngoing: Boolean, onDismiss: () -> Unit, onSave: (MedPhase) -> Unit) {
     val res = LocalContext.current.resources
-    var on by remember { mutableStateOf(existing?.on ?: true) }
-    var length by remember { mutableStateOf((existing?.length ?: 4).toString()) }
-    var unit by remember { mutableStateOf(existing?.unit ?: PhaseUnit.WEEKS) }
+    // The sheets' typed fields are saved, so rotating the phone keeps them (#304).
+    var on by rememberSaveable { mutableStateOf(existing?.on ?: true) }
+    var length by rememberSaveable { mutableStateOf((existing?.length ?: 4).toString()) }
+    var unit by rememberSaveable { mutableStateOf(existing?.unit ?: PhaseUnit.WEEKS) }
     val offered = PhaseUnit.entries.filter { it != PhaseUnit.ONGOING || (canBeOngoing && on) }
     // Turning a phase off (or a phase that can't be ongoing) falls back to weeks.
     val chosen = if (unit in offered) unit else PhaseUnit.WEEKS
@@ -829,23 +839,23 @@ private fun PhaseSheet(existing: MedPhase?, canBeOngoing: Boolean, onDismiss: ()
 private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, onDismiss: () -> Unit, onSave: (MedDose) -> Unit) {
     val res = LocalContext.current.resources
     val names = remember(snap.bodyKey) { snap.medications.map { it.name } }
-    var medication by remember { mutableStateOf(existing?.medication ?: names.firstOrNull().orEmpty()) }
+    var medication by rememberSaveable { mutableStateOf(existing?.medication ?: names.firstOrNull().orEmpty()) }
     fun unitOf(n: String) = snap.medications.firstOrNull { it.name == n }?.unit.orEmpty()
-    var amount by remember { mutableStateOf(existing?.amount?.let { fmtNum(it) } ?: "") }
-    var unit by remember { mutableStateOf(existing?.unit ?: unitOf(medication)) }
-    var time by remember { mutableStateOf(Dates.clock(existing?.time.orEmpty())?.let { String.format(java.util.Locale.ROOT, "%02d:%02d", it.hour, it.minute) } ?: "08:00") }
+    var amount by rememberSaveable { mutableStateOf(existing?.amount?.let { fmtNum(it) } ?: "") }
+    var unit by rememberSaveable { mutableStateOf(existing?.unit ?: unitOf(medication)) }
+    var time by rememberSaveable { mutableStateOf(Dates.clock(existing?.time.orEmpty())?.let { String.format(java.util.Locale.ROOT, "%02d:%02d", it.hour, it.minute) } ?: "08:00") }
     // 0 every day, 1 chosen weekdays, 2 every N days.
     val startDays = existing?.days ?: defaultDays
-    var mode by remember { mutableStateOf(if (startDays.weekdays.isNotEmpty()) 1 else if (startDays.every > 1) 2 else 0) }
-    var weekdays by remember { mutableStateOf(startDays.weekdays.ifEmpty { setOf(1, 2, 3, 4, 5, 6, 7) }) }
-    var every by remember { mutableStateOf((startDays.every.takeIf { it > 1 } ?: 2).toString()) }
-    var comment by remember { mutableStateOf(existing?.comment.orEmpty()) }
+    var mode by rememberSaveable { mutableStateOf(if (startDays.weekdays.isNotEmpty()) 1 else if (startDays.every > 1) 2 else 0) }
+    var weekdays by rememberSaveable { mutableStateOf(startDays.weekdays.ifEmpty { setOf(1, 2, 3, 4, 5, 6, 7) }) }
+    var every by rememberSaveable { mutableStateOf((startDays.every.takeIf { it > 1 } ?: 2).toString()) }
+    var comment by rememberSaveable { mutableStateOf(existing?.comment.orEmpty()) }
     // A taper or step-up (#234): 0 the same every day, 1 down, 2 up; by how much, how often, and the floor or ceiling.
     val stepped = existing?.takeIf { it.steps }
-    var stepMode by remember { mutableStateOf(if (stepped == null) 0 else if (stepped.step < 0) 1 else 2) }
-    var stepBy by remember { mutableStateOf(stepped?.let { fmtNum(abs(it.step)) }.orEmpty()) }
-    var stepEvery by remember { mutableStateOf((stepped?.stepEvery ?: 7).toString()) }
-    var stepLimit by remember { mutableStateOf(stepped?.stepLimit?.let { fmtNum(it) }.orEmpty()) }
+    var stepMode by rememberSaveable { mutableStateOf(if (stepped == null) 0 else if (stepped.step < 0) 1 else 2) }
+    var stepBy by rememberSaveable { mutableStateOf(stepped?.let { fmtNum(abs(it.step)) }.orEmpty()) }
+    var stepEvery by rememberSaveable { mutableStateOf((stepped?.stepEvery ?: 7).toString()) }
+    var stepLimit by rememberSaveable { mutableStateOf(stepped?.stepLimit?.let { fmtNum(it) }.orEmpty()) }
     fun number(text: String) = text.trim().replace(',', '.').toDoubleOrNull()
 
     /** The taper fields as a dose's step, amount and limit: null when they're asked for but not filled in. */

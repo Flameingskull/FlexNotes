@@ -7,6 +7,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
+import kotlinx.serialization.Serializable
 
 /**
  * Medication schedules (#201), built like a workout: a schedule is its **phases** in order, each on (holding doses) or
@@ -47,6 +48,7 @@ enum class PhaseUnit(val code: String) {
  * days counted from the phase's first day. Stored as text: "" (every day), "w:1,3,5" or "n:2"; anything unreadable
  * is every day.
  */
+@Serializable
 data class MedDays(val weekdays: Set<Int> = emptySet(), val every: Int = 1) {
     val everyDay: Boolean get() = weekdays.isEmpty() && every <= 1
 
@@ -82,6 +84,7 @@ data class MedDays(val weekdays: Set<Int> = emptySet(), val every: Int = 1) {
  * [amount] by [step] (negative tapers down) every [stepEvery] days of the phase, stopping at [stepLimit]: a floor when
  * tapering (0 when none is set), a ceiling when stepping up (none when not set). The count starts again each phase.
  */
+@Serializable
 data class MedDose(
     val id: Long,
     val medication: String,
@@ -108,6 +111,7 @@ data class MedDose(
 }
 
 /** One phase: on (with [doses]) or off, [length] [unit]s long. An [id] of 0 is one not saved yet. */
+@Serializable
 data class MedPhase(
     val id: Long,
     val on: Boolean,
