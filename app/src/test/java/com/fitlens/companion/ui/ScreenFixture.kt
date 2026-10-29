@@ -3,7 +3,9 @@ package com.fitlens.companion.ui
 import com.fitlens.companion.data.Category
 import com.fitlens.companion.data.DateSources
 import com.fitlens.companion.data.Exercise
+import com.fitlens.companion.data.ExerciseGoal
 import com.fitlens.companion.data.ExerciseTypes
+import com.fitlens.companion.data.GoalKinds
 import com.fitlens.companion.data.LibraryPart
 import com.fitlens.companion.data.MRecord
 import com.fitlens.companion.data.BodyPart
@@ -97,7 +99,14 @@ internal object ScreenFixture {
                 RoutineDay(3, "Leg Day", listOf(PlannedExercise(EX_ROMANIAN, sets = listOf(PlannedSet(weightKg = 40.0, reps = 10)))))
             )
         )
-        return LibraryPart(categories, exercises, emptyList(), listOf(workout), mapOf(DATE to WorkoutOrigin(DATE, 1, 1)))
+        // Goals in kilograms, as stored: the pounds exercise's is 30 lb.
+        val goals = listOf(
+            ExerciseGoal(1, EX_BENCH, GoalKinds.MAX_WEIGHT, 100.0, 0),
+            ExerciseGoal(2, EX_BENCH, GoalKinds.E1RM, 120.0, 1),
+            ExerciseGoal(3, EX_RAISE, GoalKinds.MAX_WEIGHT, 13.6078, 0),
+            ExerciseGoal(4, EX_ROMANIAN, GoalKinds.MAX_REPS, 15.0, 0)
+        )
+        return LibraryPart(categories, exercises, goals, listOf(workout), mapOf(DATE to WorkoutOrigin(DATE, 1, 1)))
     }
 
     private var nextId = 1000L
@@ -150,6 +159,7 @@ internal object ScreenFixture {
                 set(EX_BENCH, d, 80.0 - i * 2.5, 6, Sources.FITNOTES),
                 set(EX_ROMANIAN, d, 37.5 - i * 2.5, 10),
                 set(EX_PULLUP, d, 12.5 - i * 1.25, 6, Sources.FITNOTES),
+                set(EX_RAISE, d, 8.2 - i * 0.45, 12),
                 set(EX_RUN, d, distance = 5.0 - i * 0.3, durationSec = 1800 - i * 20)
             )
         }

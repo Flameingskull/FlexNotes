@@ -292,8 +292,10 @@ Last updated: 1.0.196.
   past the right edge (a scrolling row is exempt). The 320dp images are kept in the `screenshots-N` artifact
   (`roborazzi/phone/`), not compared. The samples live in `ui/DesignSamples.kt`, shared with the screenshot tests: a
   new component adds its sample there and a test in both.
-- **Whole-screen checks (#323):** `ui/WholeScreenTest.kt` draws real screens (the day log and exercise screen so far,
-  plus their menus and sheets, opened by clicking the control that opens them) from the seeded phone in
+- **Whole-screen checks (#323):** `ui/WholeScreenTest.kt` draws real screens (so far the day log and exercise screen, #251, and the exercise
+  library, editor, custom type sheet, info and overview sheets and the details screen's Records, Stats and Goals, #252,
+  plus their menus and sheets, opened by clicking, long-pressing or typing into the control that opens them; the
+  details screen is drawn directly because the harness's `Nav` has no back stack) from the seeded phone in
   `ui/ScreenFixture.kt` (long names, FitNotes and FlexNotes sets, kg and lb, a Session, comments, body values, photos,
   a workout with named days, fixed on Tue 27 Oct 2026). The window itself is 320dp or 411dp wide (`WholeScreen320Test`,
   `WholeScreen411Test` share the tests in `WholeScreenChecks`), each at 100% and 200% font, so sheets and menus are

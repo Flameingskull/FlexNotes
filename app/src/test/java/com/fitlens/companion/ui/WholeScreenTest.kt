@@ -12,11 +12,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ApplicationProvider
 import com.fitlens.companion.R
@@ -56,9 +62,15 @@ import java.io.File
  * Every problem in every variant is collected and reported once at the end of each test, after the goldens are
  * captured, so one run lists everything. A problem already filed as an issue goes in [KNOWN]; any other fails the test.
  *
- * Screens covered so far (#251): the day log, with its menu, workout comment, workout timer, rest timer and the copy,
- * move and share sheets; and the exercise screen's Track, History and Graph tabs, set comment, exercise comment and
- * workout drawer.
+ * Screens covered so far:
+ * - #251: the day log, with its menu, workout comment, workout timer, rest timer and the copy, move and share sheets;
+ *   and the exercise screen's Track, History and Graph tabs, set comment, exercise comment and workout drawer.
+ * - #252: the exercise library (categories, a category opened, search, the workout switcher, a workout's days), the
+ *   exercise editor for a new and an existing exercise and the custom type sheet, the exercise info sheet, the
+ *   exercise overview sheet (History and Graph tabs, opened from the day log card's long-press menu), and the
+ *   exercise details screen's Records, Stats and Goals tabs. The exercise comment editor with its earlier notes is
+ *   the #251 exercise comment test. The details screen is drawn directly: it is pushed from the exercise screen's
+ *   trophy and the library's menu, and the harness's Nav is not attached to a back stack.
  */
 @OptIn(ExperimentalRoborazziApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -91,7 +103,7 @@ abstract class WholeScreenChecks(private val width: Int) {
         app.deleteDatabase(Db.NAME)
     }
 
-    private fun str(id: Int): String = app.getString(id)
+    private fun str(id: Int, vararg args: Any): String = if (args.isEmpty()) app.getString(id) else app.getString(id, *args)
 
     // Built once per test: a screen is given the same snapshot on every recomposition, as the app does.
     private val snap: Snapshot by lazy { ScreenFixture.snapshot() }
@@ -201,6 +213,82 @@ abstract class WholeScreenChecks(private val width: Int) {
         shoot("Set entry, rest timer running", "set_rest_running") { SetEntryScreen(snap, nav, DAY, ScreenFixture.EX_BENCH) }
     }
 
+    // ---- the exercise library and the exercise's own screens (#252) -------------------------------------------
+
+    private val libraryName = ScreenFixture.ROMANIAN
+    private val legs = "Legs and posterior chain"
+
+    @Test fun libraryCategories() = shoot("Library, categories", "lib_categories") { ExerciseLibraryScreen(snap, nav, DAY) }
+
+    @Test fun libraryCategoryOpened() = shoot("Library, a category opened", "lib_category", steps = { tap(legs) }) {
+        ExerciseLibraryScreen(snap, nav, DAY)
+    }
+
+    @Test fun librarySearch() = shoot("Library, search", "lib_search", steps = { typeText("dumbbell") }) {
+        ExerciseLibraryScreen(snap, nav, DAY)
+    }
+
+    @Test fun libraryWorkoutSwitcher() = shoot("Library, workout switcher", "lib_switcher", steps = { tap(str(R.string.lib_all_exercises)) }) {
+        ExerciseLibraryScreen(snap, nav, DAY)
+    }
+
+    @Test fun libraryWorkoutDays() =
+        shoot("Library, a workout's days", "lib_workout", PortableSettings().copy(lastRoutineId = 1L)) {
+            ExerciseLibraryScreen(snap, nav, DAY)
+        }
+
+    @Test fun libraryNewExercise() = shoot("New exercise", "lib_new_exercise", steps = { tap(str(R.string.lib_new_exercise)) }) {
+        ExerciseLibraryScreen(snap, nav, DAY)
+    }
+
+    @Test fun libraryEditExercise() = shoot(
+        "Edit exercise, long name", "lib_edit_exercise",
+        steps = { tap(legs); tap(str(R.string.lib_options_for, libraryName)); tap(str(R.string.lib_edit)) }
+    ) { ExerciseLibraryScreen(snap, nav, DAY) }
+
+    @Test fun libraryCustomType() = shoot(
+        "Custom exercise type", "lib_custom_type",
+        steps = { tap(str(R.string.lib_new_exercise)); tap(str(R.string.types_new), scroll = true) }
+    ) { ExerciseLibraryScreen(snap, nav, DAY) }
+
+    @Test fun exerciseInfo() = shoot("Exercise info", "set_info", steps = { tap(str(R.string.set_exercise_info)) }) {
+        SetEntryScreen(snap, nav, DAY, ScreenFixture.EX_ROMANIAN)
+    }
+
+    @Test fun exerciseHistoryLongName() = shoot("Exercise History, long name", "set_history_long") {
+        SetEntryScreen(snap, nav, DAY, ScreenFixture.EX_ROMANIAN, page = 1)
+    }
+
+    @Test fun exerciseGraphPounds() = shoot("Exercise Graph, pounds", "set_graph_lbs") {
+        SetEntryScreen(snap, nav, DAY, ScreenFixture.EX_RAISE, page = 2)
+    }
+
+    @Test fun exerciseOverview() = shoot(
+        "Exercise overview, History", "overview_history",
+        steps = { longPress(ScreenFixture.BENCH); tap(str(R.string.day_ex_overview)) }
+    ) { DayScreen(snap, nav, DAY) }
+
+    @Test fun exerciseOverviewGraph() = shoot(
+        "Exercise overview, Graph", "overview_graph",
+        steps = { longPress(ScreenFixture.BENCH); tap(str(R.string.day_ex_overview)); tap(str(R.string.set_tab_graph)) }
+    ) { DayScreen(snap, nav, DAY) }
+
+    @Test fun exerciseRecords() = shoot("Exercise Records", "detail_records") {
+        ExerciseDetailScreen(snap, nav, ScreenFixture.EX_BENCH, 0)
+    }
+
+    @Test fun exerciseStatsLongName() = shoot("Exercise Stats, long name", "detail_stats") {
+        ExerciseDetailScreen(snap, nav, ScreenFixture.EX_ROMANIAN, 1)
+    }
+
+    @Test fun exerciseGoals() = shoot("Exercise Goals", "detail_goals") {
+        ExerciseDetailScreen(snap, nav, ScreenFixture.EX_BENCH, 2)
+    }
+
+    @Test fun exerciseGoalsPounds() = shoot("Exercise Goals, pounds", "detail_goals_lbs") {
+        ExerciseDetailScreen(snap, nav, ScreenFixture.EX_RAISE, 2)
+    }
+
     // ---- how a screen is drawn and checked --------------------------------------------------------------------
 
     /**
@@ -220,19 +308,42 @@ abstract class WholeScreenChecks(private val width: Int) {
         tap(str(item))
     }
 
-    /** Clicks the control with this text or description, noting a problem when it can't be found or clicked. */
-    private fun tap(label: String, substring: Boolean = false) {
+    /**
+     * Clicks the control with this text or description, noting a problem when it can't be found or clicked. With
+     * [scroll] the control is first scrolled into view in the sheet or list it sits in.
+     */
+    private fun tap(label: String, substring: Boolean = false, scroll: Boolean = false) =
+        withControl(label, substring, "click") {
+            if (scroll) runCatching { performScrollTo() }
+            performClick()
+        }
+
+    /** A long press on the control with this text or description (a card whose menu opens that way). */
+    private fun longPress(label: String, substring: Boolean = false) =
+        withControl(label, substring, "press") { performTouchInput { longClick() } }
+
+    /** Types [text] into the screen's text field. */
+    private fun typeText(text: String) {
+        try {
+            compose.onNode(hasSetTextAction()).performTextInput(text)
+            compose.waitForIdle()
+        } catch (e: Throwable) {
+            found += "Could not type \"$text\": ${e.message?.lineSequence()?.firstOrNull()}"
+        }
+    }
+
+    private fun withControl(label: String, substring: Boolean, verb: String, action: SemanticsNodeInteraction.() -> Unit) {
         try {
             val control = hasClickAction() and (hasText(label, substring, true) or hasContentDescription(label, substring, true))
             val matches = compose.onAllNodes(control)
             if (matches.fetchSemanticsNodes().isEmpty()) {
-                found += "Could not find \"$label\" to click"
+                found += "Could not find \"$label\" to $verb"
                 return
             }
-            matches[0].performClick()
+            matches[0].action()
             compose.waitForIdle()
         } catch (e: Throwable) {
-            found += "Could not click \"$label\": ${e.message?.lineSequence()?.firstOrNull()}"
+            found += "Could not $verb \"$label\": ${e.message?.lineSequence()?.firstOrNull()}"
         }
     }
 
