@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDateTime
 
 /** Medication schedules (#201, #202, #204): phases, calendar months and years, repeats, pauses, dose days and changes. */
 class MedSchedulesTest {
@@ -347,5 +348,60 @@ class MedSchedulesTest {
         val changed = MedSchedules.dosesOn(s, a, "2026-10-08", listOf(change)).single()
         assertEquals(12.5, changed.amount, 0.0)
         assertEquals(15.0, changed.planned, 0.0)
+    }
+
+    // ---------- When a dose counts as missed (#318) ----------
+
+    private fun at(date: String, time: String) = LocalDateTime.parse("${date}T$time:00")
+
+    @Test
+    fun aDoseIsMissedOnlyOncePastItsWindow() {
+        // Due 08:00 with a 60 minute window: still due inside it, missed after it.
+        assertFalse(MedSchedules.isMissed("2026-10-29", "08:00", at("2026-10-29", "08:01"), 60))
+        assertFalse(MedSchedules.isMissed("2026-10-29", "08:00", at("2026-10-29", "09:00"), 60))
+        assertTrue(MedSchedules.isMissed("2026-10-29", "08:00", at("2026-10-29", "09:01"), 60))
+        assertFalse(MedSchedules.isMissed("2026-10-29", "08:00", at("2026-10-29", "07:00"), 30))
+        assertTrue(MedSchedules.isMissed("2026-10-29", "08:00", at("2026-10-29", "08:31"), 30))
+    }
+
+    @Test
+    fun aLateDoseCrossesMidnightCorrectly() {
+        // Due 23:30 with a 2 hour window: missed from 01:30 the next morning, not before.
+        assertFalse(MedSchedules.isMissed("2026-10-29", "23:30", at("2026-10-30", "01:00"), 120))
+        assertTrue(MedSchedules.isMissed("2026-10-29", "23:30", at("2026-10-30", "01:31"), 120))
+        assertFalse(MedSchedules.isMissed("2026-10-29", "23:30", at("2026-10-29", "23:59"), 120))
+    }
+
+    @Test
+    fun endOfDayMeansTheDueDateIsOver() {
+        val end = MedSchedules.MISSED_END_OF_DAY
+        assertFalse(MedSchedules.isMissed("2026-10-29", "08:00", at("2026-10-29", "23:59"), end))
+        assertTrue(MedSchedules.isMissed("2026-10-29", "08:00", at("2026-10-30", "00:00"), end))
+        assertFalse(MedSchedules.isMissed("not a date", "08:00", at("2026-10-30", "00:00"), end))
+        assertFalse(MedSchedules.isMissed("2026-10-29", "oops", at("2026-10-30", "12:00"), 60))
+    }
+
+    @Test
+    fun theDoseLogFollowsTheWindowForTodayAndIgnoresItWithoutAClock() {
+        val s = schedule(on(1, PhaseUnit.YEARS, dose(1, time = "08:00")))
+        val plan = MedPlan(listOf(s), listOf(run("2026-10-29")))
+        fun outcome(now: LocalDateTime?, after: Int) =
+            MedSchedules.doseLog(plan, emptyList(), "2026-10-29", "2026-10-29", "2026-10-29", missedAfter = after, now = now).single().outcome
+        // No clock: today's dose is Due, as before.
+        assertEquals(MedSchedules.Outcome.DUE, outcome(null, 60))
+        assertEquals(MedSchedules.Outcome.DUE, outcome(at("2026-10-29", "08:30"), 60))
+        assertEquals(MedSchedules.Outcome.MISSED, outcome(at("2026-10-29", "09:30"), 60))
+        // End of the day keeps it Due all day.
+        assertEquals(MedSchedules.Outcome.DUE, outcome(at("2026-10-29", "23:00"), MedSchedules.MISSED_END_OF_DAY))
+        // A taken dose never turns Missed.
+        val taken = MRecord(5, "Creatine", "g", "2026-10-29", "08:05:00", 5.0, null, Sources.FLEXNOTES, doseId = 1, due = "2026-10-29 08:00")
+        val log = MedSchedules.doseLog(plan, listOf(taken), "2026-10-29", "2026-10-29", "2026-10-29", missedAfter = 30, now = at("2026-10-29", "23:00"))
+        assertEquals(MedSchedules.Outcome.TAKEN, log.single { it.due != null }.outcome)
+    }
+
+    @Test
+    fun theMissedChoicesIncludeTheDefault() {
+        assertTrue(MedSchedules.MISSED_DEFAULT_MINUTES in MedSchedules.MISSED_CHOICES)
+        assertEquals(MedSchedules.MISSED_END_OF_DAY, MedSchedules.MISSED_CHOICES.last())
     }
 }

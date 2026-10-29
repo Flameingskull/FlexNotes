@@ -114,11 +114,14 @@ object CsvExport {
      * injection site of a sited dose (#223). Only
      * medication data: no workouts, body values or photos.
      */
-    fun medications(snap: Snapshot, from: String, to: String, names: Set<String> = emptySet(), today: String = Dates.today()): String {
+    fun medications(
+        snap: Snapshot, from: String, to: String, names: Set<String> = emptySet(), today: String = Dates.today(),
+        missedAfter: Int = MedSchedules.MISSED_END_OF_DAY, now: java.time.LocalDateTime? = null
+    ): String {
         val sb = StringBuilder()
         row(sb, MEDICATION_COLUMNS)
         val meds = snap.medicationView
-        MedSchedules.doseLog(snap.medPlan, meds.records, from, to, today, names).forEach { e ->
+        MedSchedules.doseLog(snap.medPlan, meds.records, from, to, today, names, missedAfter, now).forEach { e ->
             val d = e.due
             val r = e.record
             val amount = r?.value ?: d?.amount

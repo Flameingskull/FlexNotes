@@ -37,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateListOf
@@ -64,6 +65,7 @@ import com.fitlens.companion.data.MedSchedule
 import com.fitlens.companion.data.MedSchedules
 import com.fitlens.companion.data.Medications
 import com.fitlens.companion.data.PhaseUnit
+import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.ConfirmSheet
@@ -255,7 +257,24 @@ fun ScheduleEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                             val p = draftPhase.phase
                             phases.add(pi + 1, PhaseDraft(key(), p.copy(id = 0L, doses = p.doses.map { it.copy(id = 0L) }), p.doses.map { key() }))
                         }),
-                        onDelete = { phases.removeAt(pi) },
+                        onDelete = {
+                            // At once, with Undo (#317): the phase comes back at its place with its doses and keys.
+                            val removed = phases.removeAt(pi)
+                            UiEvents.show(res.getString(R.string.md_phase_removed, phaseLabel(res, removed.phase)), res.getString(R.string.bm_undo)) {
+                                if (phases.none { it.key == removed.key }) phases.add(pi.coerceIn(0, phases.size), removed)
+                            }
+                        },
+                        onRestoreDose = { at, dose, doseKey ->
+                            updatePhase(draftPhase.key) { d ->
+                                if (doseKey in d.doseKeys) d else {
+                                    val i = at.coerceIn(0, d.phase.doses.size)
+                                    d.copy(
+                                        phase = d.phase.copy(doses = d.phase.doses.toMutableList().also { it.add(i, dose) }),
+                                        doseKeys = d.doseKeys.toMutableList().also { it.add(i, doseKey) }
+                                    )
+                                }
+                            }
+                        },
                         onMoveUp = if (pi > 0 && !fixed) ({ phases.add(pi - 1, phases.removeAt(pi)) }) else null,
                         onMoveDown = if (pi < phases.lastIndex && !fixed && !belowFixed) ({ phases.add(pi + 1, phases.removeAt(pi)) }) else null,
                         onChange = { doses, doseKeys -> updatePhase(draftPhase.key) { it.copy(phase = it.phase.copy(doses = doses), doseKeys = doseKeys) } }
@@ -619,7 +638,10 @@ private fun LazyListScope.pastRunRows(snap: Snapshot, runs: List<MedActivation>,
         val a = runs[i]
         val res = LocalContext.current.resources
         val today = Dates.today()
-        val summary = remember(snap.bodyKey, a) { MedSchedules.runSummary(snap.medPlan, snap.medicationView.records, a, today) }
+        val missedAfter = Settings.portable.collectAsState().value.medMissedAfter
+        val summary = remember(snap.bodyKey, a, missedAfter) {
+            MedSchedules.runSummary(snap.medPlan, snap.medicationView.records, a, today, missedAfter, java.time.LocalDateTime.now())
+        }
         val days = res.getQuantityString(R.plurals.md_days, summary.days.toInt(), summary.days.toInt())
         ListRowWithMenu(
             title = res.getString(R.string.md_run_dates, Dates.day(a.start), Dates.day(summary.lastDay ?: today)),
@@ -660,6 +682,7 @@ private fun PhaseCard(
     onEditDose: (Long) -> Unit,
     onDuplicate: (() -> Unit)?,
     onDelete: () -> Unit,
+    onRestoreDose: (Int, MedDose, Long) -> Unit,
     onMoveUp: (() -> Unit)?,
     onMoveDown: (() -> Unit)?,
     onChange: (List<MedDose>, List<Long>) -> Unit
@@ -728,6 +751,10 @@ private fun PhaseCard(
                         },
                         MenuAction(stringResource(R.string.workout_remove)) {
                             onChange(p.doses.filterIndexed { j, _ -> j != i }, draft.doseKeys.filterIndexed { j, _ -> j != i })
+                            // With Undo (#317): back at the same place with the same key.
+                            UiEvents.show(res.getString(R.string.md_dose_removed, "${d.medication} ${fmtNum(d.amount)} ${d.unit}".trim()), res.getString(R.string.bm_undo)) {
+                                onRestoreDose(i, d, doseKey)
+                            }
                         }
                     ),
                     onMoveUp = if (i > 0) ({ val (a, b) = moved(-1); onChange(a, b) }) else null,

@@ -64,7 +64,11 @@ import com.fitlens.companion.ui.design.Haptics
 import com.fitlens.companion.ui.design.ListRowWithMenu
 import com.fitlens.companion.ui.design.SectionLabel
 import kotlinx.coroutines.launch
+import java.time.LocalDateTime
 import java.time.LocalTime
+import androidx.compose.runtime.collectAsState
+import com.fitlens.companion.data.Settings
+import com.fitlens.companion.ui.design.DropdownPill
 import java.time.format.DateTimeFormatter
 import com.fitlens.companion.ui.design.FitCheckbox
 import com.fitlens.companion.ui.design.FitRadioButton
@@ -175,7 +179,9 @@ private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> U
     val view = LocalView.current
     val taken = MedSchedules.takenRecord(snap.medicationView.records, due)
     val skipped = taken == null && snap.medPlan.isSkipped(due.dose.id, due.due)
-    val missed = taken == null && !skipped && due.date == Dates.today() && due.time < LocalTime.now().toString().take(5)
+    // Missed once the user's window after the due time has passed (#318), the same test as the report and adherence.
+    val missedAfter = Settings.portable.collectAsState().value.medMissedAfter
+    val missed = taken == null && !skipped && MedSchedules.isMissed(due.date, due.time, LocalDateTime.now(), missedAfter)
     val amount = "${fmtNum(due.amount)} ${due.dose.unit}".trim()
     val hint = when {
         skipped -> res.getString(R.string.md_skipped)
@@ -334,6 +340,22 @@ internal fun scheduleSummary(res: Resources, s: MedSchedule): String {
     return if (s.repeats && !s.ongoing) res.getString(R.string.md_summary_repeating, parts) else parts
 }
 
+/** The choices for when a dose counts as missed (#318), in [MedSchedules.MISSED_CHOICES] order, in plain words. */
+@Composable
+internal fun missedAfterOptions(): List<String> = missedAfterLabels(LocalContext.current.resources)
+
+internal fun missedAfterLabels(res: Resources): List<String> = MedSchedules.MISSED_CHOICES.map { m ->
+    res.getString(
+        when (m) {
+            30 -> R.string.mr_missed_30
+            60 -> R.string.mr_missed_60
+            120 -> R.string.mr_missed_120
+            240 -> R.string.mr_missed_240
+            else -> R.string.mr_missed_eod
+        }
+    )
+}
+
 /** "8 weeks", "1 month", or "ongoing" (#228). */
 internal fun phaseLength(res: Resources, n: Int, unit: PhaseUnit): String = when (unit) {
     PhaseUnit.DAYS -> res.getQuantityString(R.plurals.md_days, n, n)
@@ -396,6 +418,15 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
             // A tapering dose (#234) says how it changes.
             taperText(res, due.dose)?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (!due.dose.comment.isNullOrBlank()) Text("“${due.dose.comment}”", style = MaterialTheme.typography.bodySmall)
+            // Where a missed dose is met, the choice behind "Missed" is one tap away (#318); it is also in Settings.
+            val missedAfter = Settings.portable.collectAsState().value.medMissedAfter
+            if (taken == null && !skipped && MedSchedules.isMissed(due.date, due.time, LocalDateTime.now(), missedAfter)) {
+                DropdownPill(
+                    label = stringResource(R.string.mr_missed),
+                    options = missedAfterOptions(),
+                    selected = MedSchedules.MISSED_CHOICES.indexOf(missedAfter).coerceAtLeast(0)
+                ) { i -> Settings.updatePortable { it.copy(medMissedAfter = MedSchedules.MISSED_CHOICES[i]) } }
+            }
             GlassOutlinedButton(onClick = { changing = true }, modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.touch)) {
                 Text(stringResource(R.string.md_change_amount))
             }

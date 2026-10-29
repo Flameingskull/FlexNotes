@@ -1707,6 +1707,8 @@
     <string name="md_edit_phase">Edit phase</string>
     <string name="md_duplicate_phase">Duplicate phase</string>
     <string name="md_delete_phase">Delete phase</string>
+    <string name="md_phase_removed">Removed %1$s</string>
+    <string name="md_dose_removed">Removed %1$s</string>
     <string name="md_phase_label_on">ON · %1$s</string>
     <string name="md_phase_label_off">OFF · %1$s</string>
     <string name="md_on">On</string>
@@ -1992,6 +1994,13 @@
     <string name="mr_nudge">Remind again after</string>
     <string name="mr_nudge_summary">One more reminder when a dose hasn\'t been taken or skipped</string>
     <string name="mr_minutes">%1$d min</string>
+    <string name="mr_missed">Count a dose as missed</string>
+    <string name="mr_missed_summary">How long after its time a dose that isn\'t taken or skipped shows as Missed, in Today, adherence and reports</string>
+    <string name="mr_missed_30">30 minutes after</string>
+    <string name="mr_missed_60">1 hour after</string>
+    <string name="mr_missed_120">2 hours after</string>
+    <string name="mr_missed_240">4 hours after</string>
+    <string name="mr_missed_eod">At the end of the day</string>
     <string name="mr_group_privacy">Privacy</string>
     <string name="mr_names">Show medication names on the lock screen</string>
     <string name="mr_cal_lock">Calendar while Medications is locked</string>
@@ -2004,6 +2013,7 @@
     <string name="mr_local_note">Reminders are set on this phone. Nothing about your medications leaves it.</string>
     <string name="search_mr_reminders_kw">medication dose reminder notification alarm pills</string>
     <string name="search_mr_exact_kw">exact alarm on time minute late reminder</string>
+    <string name="search_mr_missed_kw">missed late overdue dose window adherence count</string>
     <string name="search_mr_nudge_kw">remind again follow up nudge missed dose</string>
     <string name="search_mr_names_kw">lock screen private hide medication names privacy</string>
     <!-- Reminders for other logging (#219) -->

@@ -4,6 +4,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -356,11 +357,35 @@ object MedSchedules {
         val outcome: Outcome?
     )
 
+    /** [missedAfter] meaning a dose counts as missed only once its day is over (#318). */
+    const val MISSED_END_OF_DAY = -1
+
+    /** The window choices in minutes ([MISSED_END_OF_DAY] last), as offered in Settings > Medications (#318). */
+    val MISSED_CHOICES: List<Int> = listOf(30, 60, 120, 240, MISSED_END_OF_DAY)
+
+    /** How long after the due time an untaken dose counts as missed unless the user chooses (#318). */
+    const val MISSED_DEFAULT_MINUTES = 60
+
+    /**
+     * Whether a dose due on [dueDate] at [dueTime] (`HH:mm`) that was neither taken nor skipped counts as missed at [now]:
+     * [afterMinutes] after its due time have passed (crossing midnight correctly), or, for [MISSED_END_OF_DAY], its
+     * date is over (#318). Taken and skipped doses are never missed, so callers check those first.
+     */
+    fun isMissed(dueDate: String, dueTime: String, now: LocalDateTime, afterMinutes: Int): Boolean {
+        val day = Dates.parse(dueDate) ?: return false
+        if (afterMinutes < 0) return day.isBefore(now.toLocalDate())
+        val time = try { LocalTime.parse(dueTime) } catch (e: Exception) { return false }
+        return day.atTime(time).plusMinutes(afterMinutes.toLong()).isBefore(now)
+    }
+
     /**
      * Every scheduled dose from [from] to [to] (inclusive, not after [today]) with its outcome, plus every value of
      * [names] logged by hand, oldest first. [names] empty means every medication.
      */
-    fun doseLog(plan: MedPlan, records: List<MRecord>, from: String, to: String, today: String, names: Set<String> = emptySet()): List<LogEntry> {
+    fun doseLog(
+        plan: MedPlan, records: List<MRecord>, from: String, to: String, today: String, names: Set<String> = emptySet(),
+        missedAfter: Int = MISSED_END_OF_DAY, now: LocalDateTime? = null
+    ): List<LogEntry> {
         fun wanted(n: String) = names.isEmpty() || n in names
         val out = ArrayList<LogEntry>()
         val linked = HashSet<Long>()
@@ -376,6 +401,8 @@ object MedSchedules {
                     r != null -> Outcome.TAKEN
                     plan.isSkipped(d.dose.id, d.due) -> Outcome.SKIPPED
                     date < today -> Outcome.MISSED
+                    // Today's dose past the user's window (#318); without a clock ([now] null) only a finished day is missed.
+                    now != null && isMissed(date, d.time, now, missedAfter) -> Outcome.MISSED
                     else -> Outcome.DUE
                 }
                 out += LogEntry(date, d.dose.medication, d, r, outcome)
@@ -592,7 +619,10 @@ object MedSchedules {
     fun lastDayOf(a: MedActivation): String? = a.endedOn?.let { Dates.parse(it)?.minusDays(1)?.format(Dates.ISO) }
 
     /** [a]'s dates, length (to [today] at most) and the share of its doses taken, counting only doses whose day came. */
-    fun runSummary(plan: MedPlan, records: List<MRecord>, a: MedActivation, today: String): RunSummary {
+    fun runSummary(
+        plan: MedPlan, records: List<MRecord>, a: MedActivation, today: String,
+        missedAfter: Int = MISSED_END_OF_DAY, now: LocalDateTime? = null
+    ): RunSummary {
         val last = lastDayOf(a)
         val to = minOf(last ?: today, today)
         val first = Dates.parse(a.start)
@@ -601,7 +631,7 @@ object MedSchedules {
         val s = plan.schedulesById[a.scheduleId]
         val adherence = if (s == null || days <= 0L) null else {
             val only = MedPlan(listOf(s), listOf(a), plan.skipped, plan.changes)
-            val counted = doseLog(only, records, a.start, to, today).filter { it.due != null && it.outcome != Outcome.DUE }
+            val counted = doseLog(only, records, a.start, to, today, missedAfter = missedAfter, now = now).filter { it.due != null && it.outcome != Outcome.DUE }
             if (counted.isEmpty()) null else Math.round(counted.count { it.outcome == Outcome.TAKEN } * 100.0 / counted.size).toInt()
         }
         return RunSummary(a, last, days, adherence)

@@ -16,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.fitlens.companion.R
 import com.fitlens.companion.data.MedReminders
+import com.fitlens.companion.data.MedSchedules
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.ui.design.SettingsActionRow
 import com.fitlens.companion.ui.design.SettingsChoiceRow
@@ -34,6 +35,7 @@ import com.fitlens.companion.ui.design.SettingsSwitchRow
 internal fun MedicationsPage() {
     val ctx = LocalContext.current
     val device by Settings.device.collectAsState()
+    val prefs by Settings.portable.collectAsState()
     val notify = rememberNotificationAccess()
     var exact by remember { mutableStateOf(MedReminders.canExact(ctx)) }
     LifecycleResumeEffect(Unit) {
@@ -78,6 +80,14 @@ internal fun MedicationsPage() {
         Settings.updateDevice { it.copy(medNudgeMinutes = m) }
         MedReminders.rearm()
     }
+
+    // When an untaken dose shows as Missed (#318): Today, the report and adherence all follow it.
+    SettingsChoiceRow(
+        stringResource(R.string.mr_missed),
+        missedAfterOptions(),
+        MedSchedules.MISSED_CHOICES.indexOf(prefs.medMissedAfter).coerceAtLeast(0),
+        summary = stringResource(R.string.mr_missed_summary)
+    ) { i -> Settings.updatePortable { it.copy(medMissedAfter = MedSchedules.MISSED_CHOICES[i]) } }
 
     SettingsGroup(stringResource(R.string.mr_group_privacy))
     val lockable = MedLock.available(ctx)

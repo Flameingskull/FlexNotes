@@ -52,14 +52,16 @@ object MedicationReport {
      * Writes the report to [os]. Returns the number of pages. Dose times follow the phone's clock style: callers pass
      * `DateFormat.is24HourFormat(context)` as [is24Hour] (#280, #308).
      */
-    suspend fun create(res: Resources, snap: Snapshot, o: MedicationReportOptions, os: OutputStream, today: String = Dates.today(), is24Hour: Boolean = true): Int =
+    suspend fun create(res: Resources, snap: Snapshot, o: MedicationReportOptions, os: OutputStream, today: String = Dates.today(), is24Hour: Boolean = true,
+        missedAfter: Int = MedSchedules.MISSED_END_OF_DAY, now: java.time.LocalDateTime? = null
+    ): Int =
         withContext(Dispatchers.Default) {
             val doc = PdfDocument()
             try {
                 val w = PageWriter(res, doc, if (o.dark) DARK else LIGHT, res.getString(R.string.mdr_footer, Dates.day(o.from), Dates.day(o.to)))
                 val meds = snap.medicationView
                 val names = o.names.ifEmpty { snap.medications.map { it.name }.toSet() }
-                val log = MedSchedules.doseLog(snap.medPlan, meds.records, o.from, o.to, today, names)
+                val log = MedSchedules.doseLog(snap.medPlan, meds.records, o.from, o.to, today, names, missedAfter, now)
                 heading(w, o, names)
                 if (o.schedules) schedules(w, snap, names, today, is24Hour)
                 if (o.adherence) adherence(w, MedSchedules.adherence(log))

@@ -158,6 +158,11 @@ data class PortableSettings(
     val workoutTimerAuto: Boolean = false,
     /** The rest timer's length in seconds (#20). */
     val restSeconds: Int = 90,
+    /**
+     * Minutes after its due time that an untaken, unskipped dose counts as missed (#318), or
+     * [MedSchedules.MISSED_END_OF_DAY] for once its day is over. Today, the reports, the CSV and adherence all follow it.
+     */
+    val medMissedAfter: Int = MedSchedules.MISSED_DEFAULT_MINUTES,
     /** Start the rest timer when a set is saved (#20). */
     val restAutoStart: Boolean = false,
     /** Vibrate when the rest timer ends (#20). */
@@ -443,6 +448,7 @@ object Settings {
             P_LAST_ROUTINE to s.lastRoutineId.takeIf { it != 0L }?.toString(),
             P_TIMER_AUTO to if (s.workoutTimerAuto) "1" else null,
             P_REST_SECONDS to s.restSeconds.takeIf { it != 90 }?.toString(),
+            P_MED_MISSED to s.medMissedAfter.takeIf { it != MedSchedules.MISSED_DEFAULT_MINUTES }?.toString(),
             P_REST_AUTO to if (s.restAutoStart) "1" else null,
             P_REST_VIBRATE to if (s.restVibrate) null else "0",
             P_REST_SOUND to if (s.restSound) null else "0",
@@ -568,6 +574,7 @@ object Settings {
     private const val P_LAST_ROUTINE = "last_routine"
     private const val P_TIMER_AUTO = "workout_timer_auto"
     private const val P_REST_SECONDS = "rest_seconds"
+    private const val P_MED_MISSED = "med_missed_after"
     private const val P_REST_AUTO = "rest_auto_start"
     private const val P_REST_VIBRATE = "rest_vibrate"
     private const val P_REST_SOUND = "rest_sound"
@@ -733,6 +740,7 @@ object Settings {
         workoutTimerAuto = bool(get(P_TIMER_AUTO)),
         // Any exact length from 1 s to 60 min (#105).
         restSeconds = get(P_REST_SECONDS)?.toIntOrNull()?.takeIf { it in 1..3600 } ?: 90,
+        medMissedAfter = get(P_MED_MISSED)?.toIntOrNull()?.takeIf { it in MedSchedules.MISSED_CHOICES } ?: MedSchedules.MISSED_DEFAULT_MINUTES,
         restAutoStart = bool(get(P_REST_AUTO)),
         restVibrate = get(P_REST_VIBRATE) != "0",
         restSound = get(P_REST_SOUND) != "0",

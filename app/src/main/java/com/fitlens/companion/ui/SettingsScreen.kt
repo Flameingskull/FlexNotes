@@ -40,6 +40,7 @@ import com.fitlens.companion.data.DistanceUnits
 import com.fitlens.companion.data.WeightUnits
 import com.fitlens.companion.data.Effort
 import com.fitlens.companion.data.ImportSummary
+import com.fitlens.companion.data.MedSchedules
 import com.fitlens.companion.data.LengthUnits
 import com.fitlens.companion.data.LogKind
 import com.fitlens.companion.data.LogReminderSet
@@ -197,6 +198,9 @@ private val CATALOGUE = listOf(
     SettingEntry(R.string.mr_exact, SettingsSection.Medications, R.string.search_mr_exact_kw),
     SettingEntry(R.string.mr_nudge, SettingsSection.Medications, R.string.search_mr_nudge_kw) {
         if (device.medNudgeMinutes == 0) res.getString(R.string.settings_value_off) else res.getString(R.string.mr_minutes, device.medNudgeMinutes)
+    },
+    SettingEntry(R.string.mr_missed, SettingsSection.Medications, R.string.search_mr_missed_kw) {
+        missedAfterLabels(res)[MedSchedules.MISSED_CHOICES.indexOf(prefs.medMissedAfter).coerceAtLeast(0)]
     },
     SettingEntry(R.string.mr_names, SettingsSection.Medications, R.string.search_mr_names_kw) { onOff(device.medNamesOnLockScreen) },
     SettingEntry(R.string.ml_lock, SettingsSection.Medications, R.string.search_ml_lock_kw) { onOff(device.medLock) },
