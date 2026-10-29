@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -36,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * The Medications report for a doctor (#205), from the Medications screen's ⋮: the date range (the last 90 days by
@@ -149,13 +149,13 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
             val today = Dates.today()
             RANGE_PRESETS.forEach { (days, label) ->
                 val start = Dates.parse(today)!!.minusDays(days - 1L).format(Dates.ISO)
-                FilterChip(selected = from == start && to == today, onClick = { from = start; to = today }, label = { Text(stringResource(label)) })
+                FitFilterChip(selected = from == start && to == today, onClick = { from = start; to = today }, label = { Text(stringResource(label)) })
             }
         }
         SectionLabel(stringResource(R.string.md_title))
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             all.forEach { n ->
-                FilterChip(selected = n in chosen, onClick = { chosen = if (n in chosen) chosen - n else chosen + n }, label = { Text(n) })
+                FitFilterChip(selected = n in chosen, onClick = { chosen = if (n in chosen) chosen - n else chosen + n }, label = { Text(n) })
             }
         }
         OutlinedTextField(
@@ -177,7 +177,7 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
             Text(stringResource(R.string.mdr_body_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 bodyNames.forEach { n ->
-                    FilterChip(selected = n in body, onClick = { body = if (n in body) body - n else body + n }, label = { Text(n) })
+                    FitFilterChip(selected = n in body, onClick = { body = if (n in body) body - n else body + n }, label = { Text(n) })
                 }
             }
         }

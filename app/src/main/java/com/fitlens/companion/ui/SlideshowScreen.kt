@@ -35,14 +35,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -89,6 +86,9 @@ import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.data.PlainErrors
 import com.fitlens.companion.video.SlideWords
+import com.fitlens.companion.ui.design.FitSlider
+import com.fitlens.companion.ui.design.FitCheckbox
+import com.fitlens.companion.ui.design.FitFilterChip
 
 private data class Format(@StringRes val label: Int, val w: Int, val h: Int) {
     val key get() = "${w}x$h"
@@ -349,7 +349,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
 
         SectionLabel(stringResource(R.string.ss_timing))
         Text(stringResource(R.string.ss_per_photo, fmtNum(seconds.toDouble(), 1)), style = MaterialTheme.typography.bodyLarge)
-        Slider(value = seconds, onValueChange = { seconds = it }, valueRange = SlideshowPrefs.SECONDS)
+        FitSlider(value = seconds, onValueChange = { seconds = it }, valueRange = SlideshowPrefs.SECONDS)
         ToggleRow(stringResource(R.string.ss_crossfade), fade, inset = 0.dp) { fade = it }
 
         SectionLabel(stringResource(R.string.ss_overlay))
@@ -365,7 +365,7 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             snap.usedMeasurements.forEach { m ->
                 val on = overlays.any { it.name == m.name }
-                FilterChip(
+                FitFilterChip(
                     selected = on,
                     enabled = on || overlays.size < FrameRenderer.MAX_OVERLAYS,
                     onClick = { if (on) overlays.removeAll { it.name == m.name } else overlays.add(Overlay(m.name, chart = false)) },
@@ -376,9 +376,9 @@ fun SlideshowScreen(snap: Snapshot, nav: Nav, ids: List<Long>?) {
         overlays.forEachIndexed { i, o ->
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("${i + 1}. ${o.name}", Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
-                FilterChip(selected = !o.chart, onClick = { overlays[i] = o.copy(chart = false) }, label = { Text(stringResource(R.string.ss_value)) })
+                FitFilterChip(selected = !o.chart, onClick = { overlays[i] = o.copy(chart = false) }, label = { Text(stringResource(R.string.ss_value)) })
                 Spacer(Modifier.width(6.dp))
-                FilterChip(selected = o.chart, onClick = { overlays[i] = o.copy(chart = true) }, label = { Text(stringResource(R.string.ss_chart)) })
+                FitFilterChip(selected = o.chart, onClick = { overlays[i] = o.copy(chart = true) }, label = { Text(stringResource(R.string.ss_chart)) })
                 IconButton(enabled = i > 0, onClick = { overlays.add(i - 1, overlays.removeAt(i)) }) {
                     Icon(Icons.Filled.KeyboardArrowUp, contentDescription = stringResource(R.string.ss_move_up, o.name))
                 }
@@ -433,6 +433,6 @@ fun ToggleRow(label: String, checked: Boolean, inset: Dp = 16.dp, onChange: (Boo
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, Modifier.weight(1f))
-        Checkbox(checked = checked, onCheckedChange = null)
+        FitCheckbox(checked = checked, onCheckedChange = null)
     }
 }

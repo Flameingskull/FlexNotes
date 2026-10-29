@@ -21,8 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -233,10 +231,10 @@ fun SearchablePicker(
                     horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
                 ) {
                     item {
-                        FilterChip(selected = section == null, onClick = { section = null }, label = { Text(stringResource(R.string.cmn_all)) })
+                        FitFilterChip(selected = section == null, onClick = { section = null }, label = { Text(stringResource(R.string.cmn_all)) })
                     }
                     items(sections) { s ->
-                        FilterChip(selected = section == s, onClick = { section = if (section == s) null else s }, label = { Text(s) })
+                        FitFilterChip(selected = section == s, onClick = { section = if (section == s) null else s }, label = { Text(s) })
                     }
                 }
             }
@@ -281,7 +279,7 @@ fun SearchablePicker(
                                 Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        if (multiSelect) Checkbox(checked = isChosen, onCheckedChange = null)
+                        if (multiSelect) FitCheckbox(checked = isChosen, onCheckedChange = null)
                     }
                 }
             }

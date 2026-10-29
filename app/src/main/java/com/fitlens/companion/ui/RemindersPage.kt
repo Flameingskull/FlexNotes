@@ -14,8 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -45,6 +43,8 @@ import com.fitlens.companion.ui.design.SettingsGroup
 import com.fitlens.companion.ui.design.SettingsNote
 import com.fitlens.companion.ui.design.SettingsSwitchRow
 import java.util.Locale
+import com.fitlens.companion.ui.design.FitAlertDialog
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * Settings › Reminders (#219): a reminder to weigh in, take measurements, take progress photos and train, each
@@ -118,7 +118,7 @@ internal fun RemindersPage() {
     timeFor?.let { kind ->
         val r = set.of(kind)
         val state = rememberTimePickerState(r.localTime.hour, r.localTime.minute, is24Hour = android.text.format.DateFormat.is24HourFormat(ctx))
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { timeFor = null },
             title = { Text(stringResource(switchTitle(kind))) },
             text = { TimePicker(state = state, colors = fitTimePickerColors()) },
@@ -147,7 +147,7 @@ internal fun RemindersPage() {
         ) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 MedSchedules.weekOrder(prefs.weekStart).forEach { d ->
-                    FilterChip(
+                    FitFilterChip(
                         selected = d in days,
                         onClick = { days = if (d in days) days - d else days + d },
                         label = { Text(MedSchedules.weekdayShort(d)) }

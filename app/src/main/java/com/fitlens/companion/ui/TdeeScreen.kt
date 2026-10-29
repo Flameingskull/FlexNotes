@@ -12,7 +12,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -46,6 +45,7 @@ import com.fitlens.companion.ui.design.SettingsNote
 import com.fitlens.companion.ui.design.SettingsNumberRow
 import java.util.Locale
 import kotlin.math.roundToInt
+import com.fitlens.companion.ui.design.FitRadioButton
 
 /** Kilocalories with thousands separators, whole: "2,640". */
 internal fun kcalText(kcal: Double): String = String.format(Locale.getDefault(), "%,d", kcal.roundToInt())
@@ -336,7 +336,7 @@ private fun GoalRow(title: String, detail: String, selected: Boolean, onSelect: 
             .padding(horizontal = Spacing.lg, vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(selected = selected, onClick = null)
+        FitRadioButton(selected = selected, onClick = null)
         Column(Modifier.weight(1f).padding(start = Spacing.md)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

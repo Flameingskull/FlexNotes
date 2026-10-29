@@ -6,7 +6,6 @@ import com.fitlens.companion.ui.design.OverflowMenu
 import com.fitlens.companion.ui.design.StepperField
 import android.content.res.Resources
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.RadioButton
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.background
@@ -38,7 +37,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -96,6 +94,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.json.Json
+import com.fitlens.companion.ui.design.FitSwitch
+import com.fitlens.companion.ui.design.FitRadioButton
 
 /**
  * The workout editor (#106, FitNotes's routine editor): a workout's name and notes, then its days as cards. Each day
@@ -864,7 +864,7 @@ private fun PlannedSetsSheet(
             if (fill == Routines.FILL_PLANNED && !isRounds) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.workout_rest_same), Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = sameRest, onCheckedChange = { sameRest = it })
+                    FitSwitch(checked = sameRest, onCheckedChange = { sameRest = it })
                 }
             }
             if (perSet) {
@@ -946,7 +946,7 @@ private fun FillChoice(title: String, description: String, selected: Boolean, on
             .padding(vertical = Spacing.xs),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        RadioButton(selected = selected, onClick = null)
+        FitRadioButton(selected = selected, onClick = null)
         Spacer(Modifier.width(Spacing.md))
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)

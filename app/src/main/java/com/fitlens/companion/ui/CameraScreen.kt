@@ -37,8 +37,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -93,6 +91,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.fitlens.companion.ui.design.FitSwitch
+import com.fitlens.companion.ui.design.FitSlider
 
 /** Where a shot waits for Retake or Use photo. The import copies it into the photo folder, then it's deleted. */
 private const val CAMERA_DIR = "camera"
@@ -368,7 +368,7 @@ private fun Viewfinder(snap: Snapshot, pose: String, onPose: (String) -> Unit, o
                         style = MaterialTheme.typography.bodyMedium,
                         modifier = Modifier.weight(1f)
                     )
-                    Switch(checked = outline, onCheckedChange = { outline = it })
+                    FitSwitch(checked = outline, onCheckedChange = { outline = it })
                 }
                 if (outline) {
                     OutlineControls(
@@ -504,7 +504,7 @@ private fun OutlineControls(
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(opacityValue, style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(96.dp))
-            Slider(
+            FitSlider(
                 value = opacity,
                 onValueChange = onOpacity,
                 valueRange = 0f..60f,

@@ -19,7 +19,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -62,6 +61,7 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.ui.design.FitAlertDialog
 
 /**
  * How much a result weighs, which decides how it reaches the user (#62).
@@ -320,7 +320,7 @@ fun PickDateDialog(initial: String?, onDismiss: () -> Unit, onPicked: (String) -
 @Composable
 fun ResultDialog(m: UiMessage, onDismiss: () -> Unit) {
     val failure = m.level == ResultLevel.Failure
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
@@ -350,7 +350,7 @@ fun ResultDialog(m: UiMessage, onDismiss: () -> Unit) {
 
 @Composable
 fun ConfirmDialog(title: String, text: String, confirm: String = stringResource(R.string.cmn_delete), onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = { Text(text) },

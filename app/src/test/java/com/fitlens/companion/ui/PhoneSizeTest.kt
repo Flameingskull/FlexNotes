@@ -156,6 +156,7 @@ class PhoneSizeTest {
     @Test fun settingsRows() = check("Settings rows") { DesignSamples.settingsRows() }
     @Test fun settingsRowVariants() = check("Settings row variants") { DesignSamples.settingsRowVariants() }
     @Test fun tabsAndButtons() = check("Tabs and buttons") { DesignSamples.tabsAndButtons() }
+    @Test fun materialDefaults() = check("Material defaults") { DesignSamples.materialDefaults() }
 
     private companion object {
         const val TAG = "phone"

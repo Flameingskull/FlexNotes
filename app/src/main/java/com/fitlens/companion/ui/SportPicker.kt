@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +27,7 @@ import com.fitlens.companion.data.Workouts
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.SectionLabel
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitCheckbox
 
 /**
  * "Add sport exercises" in the exercise library (#247): more sports to add on request, grouped by the kind of activity
@@ -84,7 +84,7 @@ internal fun SportPickerSheet(snap: Snapshot, onDismiss: () -> Unit) {
                         ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Checkbox(checked = on, onCheckedChange = null, enabled = !pick.inLibrary)
+                    FitCheckbox(checked = on, onCheckedChange = null, enabled = !pick.inLibrary)
                     Column(Modifier.padding(start = Spacing.sm)) {
                         Text(
                             name,

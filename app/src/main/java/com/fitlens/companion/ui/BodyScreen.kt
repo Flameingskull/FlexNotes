@@ -43,7 +43,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -82,6 +81,7 @@ import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.data.fmtSigned
 import com.fitlens.companion.ui.design.SetCell
 import com.fitlens.companion.ui.design.SetRow as SetRowView
+import com.fitlens.companion.ui.design.FitCard
 
 val RANGES = listOf("1M" to 30L, "3M" to 91L, "6M" to 182L, "1Y" to 365L, "All" to 0L)
 
@@ -597,7 +597,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
 private fun SelectedPointCard(snap: Snapshot, nav: Nav, r: MRecord) {
     val photo = snap.photosByDate[r.date]?.firstOrNull()
     val near = if (photo == null) nearestPhoto(snap, r.date, 7) else null
-    Card(Modifier.fillMaxWidth().padding(12.dp).clickable { nav.push(Screen.Day(r.date)) }) {
+    FitCard(Modifier.fillMaxWidth().padding(12.dp).clickable { nav.push(Screen.Day(r.date)) }) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             val shownPhoto = photo ?: near
             if (shownPhoto != null) {

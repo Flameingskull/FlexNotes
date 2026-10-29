@@ -1,18 +1,37 @@
 package com.fitlens.companion.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.ui.design.ExerciseCard
+import com.fitlens.companion.ui.design.FitAssistChip
+import com.fitlens.companion.ui.design.FitCard
+import com.fitlens.companion.ui.design.FitCheckbox
+import com.fitlens.companion.ui.design.FitFilterChip
+import com.fitlens.companion.ui.design.FitLinearProgress
+import com.fitlens.companion.ui.design.FitRadioButton
+import com.fitlens.companion.ui.design.FitSlider
+import com.fitlens.companion.ui.design.FitSuggestionChip
+import com.fitlens.companion.ui.design.FitSwitch
 import com.fitlens.companion.ui.design.FitTabRow
+import com.fitlens.companion.ui.design.FitTextButton
 import com.fitlens.companion.ui.design.FitIcons
 import com.fitlens.companion.ui.design.FitTopBar
 import com.fitlens.companion.ui.design.GlassOutlinedButton
@@ -122,6 +141,58 @@ object DesignSamples {
                 GoldButton(onClick = {}) { Text("Save") }
                 GlassOutlinedButton(onClick = {}, modifier = Modifier.padding(start = 8.dp)) { Text("Clear") }
             }
+        }
+    }
+
+    /**
+     * Every `Fit` control from `ui/design/FitControls.kt` in each state (#306), so a Material update that moves a
+     * default colour shows in the screenshot. A control that needs a name for TalkBack has one, as on a real screen.
+     */
+    @Composable
+    fun materialDefaults() {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            SectionLabel("Chips")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FitFilterChip(selected = true, onClick = {}, label = { Text("Squat") }, modifier = Modifier.semantics { stateDescription = "chosen" })
+                FitFilterChip(selected = false, onClick = {}, label = { Text("Bench") }, modifier = Modifier.semantics { stateDescription = "not chosen" })
+            }
+            FitFilterChip(selected = false, onClick = {}, enabled = false, label = { Text("Deadlift") }, modifier = Modifier.semantics { stateDescription = "unavailable" })
+            FitAssistChip(onClick = {}, label = { Text("+ Zinc") })
+            FitSuggestionChip(onClick = {}, label = { Text("Weight 82.4 kg") })
+            FitTextButton(onClick = {}) { Text("Text button") }
+            FitTextButton(onClick = {}, enabled = false) { Text("Disabled button") }
+
+            SectionLabel("Switch, checkbox, radio")
+            SampleRow("Switch on") { FitSwitch(checked = true, onCheckedChange = {}, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "Switch on" }) }
+            SampleRow("Switch off") { FitSwitch(checked = false, onCheckedChange = {}, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "Switch off" }) }
+            SampleRow("Switch disabled") { FitSwitch(checked = true, onCheckedChange = {}, enabled = false, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "Switch disabled" }) }
+            SampleRow("Checkbox on") { FitCheckbox(checked = true, onCheckedChange = {}, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "Checkbox on" }) }
+            SampleRow("Checkbox off") { FitCheckbox(checked = false, onCheckedChange = {}, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "Checkbox off" }) }
+            Column(Modifier.selectableGroup()) {
+                SampleRow("Radio on") { FitRadioButton(selected = true, onClick = {}, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "Radio on" }) }
+                SampleRow("Radio off") { FitRadioButton(selected = false, onClick = {}, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = "Radio off" }) }
+            }
+
+            SectionLabel("Slider, progress, card")
+            FitSlider(value = 0.4f, onValueChange = {}, steps = 4, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Volume" })
+            FitSlider(value = 0.7f, onValueChange = {}, enabled = false, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Volume locked" })
+            FitLinearProgress(
+                progress = { 0.6f },
+                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp).height(6.dp).semantics { contentDescription = "Goal 60 percent" }
+            )
+            FitCard(Modifier.fillMaxWidth()) { Text("A card of made-up text", Modifier.padding(12.dp)) }
+            FitCard(onClick = {}, modifier = Modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 56.dp)) {
+                Text("A tappable card", Modifier.padding(12.dp))
+            }
+        }
+    }
+
+    /** A label with a control on its right, as a settings row has. */
+    @Composable
+    private fun SampleRow(label: String, control: @Composable () -> Unit) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, Modifier.weight(1f))
+            control()
         }
     }
 

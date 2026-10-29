@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -31,6 +30,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.ui.design.FitAlertDialog
 
 /**
  * FitNotes imports that go through the pre-import summary (#6): the backup is read and checked first, the user sees
@@ -114,7 +114,7 @@ fun FitNotesImportHost() {
         FitNotesImporter.discard(s)
     }
 
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = close,
         title = { Text(stringResource(R.string.fi_title)) },
         text = {

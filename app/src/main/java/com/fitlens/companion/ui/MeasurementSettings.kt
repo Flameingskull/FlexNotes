@@ -3,7 +3,6 @@ package com.fitlens.companion.ui
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.clickable
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Checkbox
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -48,6 +47,7 @@ import com.fitlens.companion.data.Store
 import com.fitlens.companion.ui.design.MenuAction
 import com.fitlens.companion.ui.design.OverflowMenu
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitCheckbox
 
 /**
  * The Body tracker's edit mode (#88, #27, #167): every body measurement in one place, in the tracker itself rather than
@@ -171,7 +171,7 @@ internal fun MeasurementsEditor(snap: Snapshot, medications: Boolean = false) {
                             }
                         }
                     }
-                    Checkbox(
+                    FitCheckbox(
                         checked = m.enabled,
                         onCheckedChange = { on -> AppScope.scope.launch { Store.setMeasurementEnabled(m.name, m.unit, on) } },
                         modifier = Modifier.semantics {

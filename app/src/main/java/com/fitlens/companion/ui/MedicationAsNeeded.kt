@@ -12,7 +12,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -44,6 +43,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import com.fitlens.companion.ui.design.FitSwitch
 
 /**
  * As-needed medications (#233): ones taken only when needed (pain relief, an inhaler) rather than on a schedule. Today
@@ -174,7 +174,7 @@ internal fun AsNeededSheet(snap: Snapshot, name: String, onDismiss: () -> Unit) 
                 Text(stringResource(R.string.prn_switch), style = MaterialTheme.typography.bodyLarge)
                 Text(stringResource(R.string.prn_switch_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Switch(checked = on, onCheckedChange = null)
+            FitSwitch(checked = on, onCheckedChange = null)
         }
         if (on) {
             OutlinedTextField(

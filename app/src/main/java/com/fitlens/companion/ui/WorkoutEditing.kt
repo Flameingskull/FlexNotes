@@ -18,8 +18,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -54,6 +52,8 @@ import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.relativeDayLabel
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitCheckbox
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * Editing a whole workout (#10), as FlexNotes bottom sheets (#84): its comment, copying it to another day, copying a
@@ -139,7 +139,7 @@ internal fun SetChecklist(snap: Snapshot, date: String, ticked: Set<Long>, onTic
                         }
                     }
                 }
-                Checkbox(checked = on, onCheckedChange = null, modifier = Modifier.padding(start = Spacing.sm))
+                FitCheckbox(checked = on, onCheckedChange = null, modifier = Modifier.padding(start = Spacing.sm))
             }
         }
     }
@@ -321,7 +321,7 @@ fun CopyOrMoveWorkoutSheet(snap: Snapshot, date: String, move: Boolean, onDismis
         val quick = listOf(-1L, 0L, 1L).map { shift(today, it) }.filter { it != date }.distinct()
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             quick.forEach { d ->
-                FilterChip(selected = chosen == d, onClick = { target = d }, label = { Text(relativeDayLabel(d)) })
+                FitFilterChip(selected = chosen == d, onClick = { target = d }, label = { Text(relativeDayLabel(d)) })
             }
         }
         GlassOutlinedButton(onClick = { picking = true }, modifier = Modifier.heightIn(min = Spacing.touch)) {
@@ -466,7 +466,7 @@ private fun ExerciseChecklist(
                 .toggleable(value = on, role = Role.Checkbox, onValueChange = { onToggle(exId, it) }),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(checked = on, onCheckedChange = null)
+            FitCheckbox(checked = on, onCheckedChange = null)
             Column(Modifier.weight(1f).padding(start = Spacing.sm)) { ExerciseLines(snap, day, exId) }
         }
     }

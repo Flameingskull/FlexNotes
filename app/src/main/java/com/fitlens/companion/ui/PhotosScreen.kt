@@ -83,9 +83,9 @@ import com.fitlens.companion.R
 import com.fitlens.companion.ui.design.SegmentedSwitch
 import com.fitlens.companion.data.PhotoExport
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
+import com.fitlens.companion.ui.design.FitLinearProgress
 
 /** Filter / group key for photos without a pose. */
 private const val UNSET = "Unset"
@@ -597,7 +597,7 @@ private fun PhotoExportProgressSheet() {
         onSecondary = { PhotoExport.cancel() }
     ) {
         Text(stringResource(R.string.ph_export_progress, p.done, p.total), style = MaterialTheme.typography.bodyLarge)
-        LinearProgressIndicator(
+        FitLinearProgress(
             progress = { if (p.total == 0) 0f else p.done.toFloat() / p.total },
             modifier = Modifier.fillMaxWidth().height(6.dp),
             color = Brand.Gold,

@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +32,7 @@ import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.ui.design.ListRowWithMenu
 import com.fitlens.companion.ui.design.PickerPill
 import com.fitlens.companion.ui.design.SearchablePicker
+import com.fitlens.companion.ui.design.FitLinearProgress
 
 /**
  * The exercise Analysis → Exercises showed last, kept between visits while the app is open (#90). The pinned graph
@@ -120,7 +120,7 @@ fun AnalysisGoalsTab(snap: Snapshot, nav: Nav, adding: Boolean, onAddingDone: ()
                     )
                     val fraction = p.fraction(g.target)
                     val percentText = stringResource(R.string.goals_percent, (fraction * 100).toInt())
-                    LinearProgressIndicator(
+                    FitLinearProgress(
                         progress = { fraction },
                         modifier = Modifier
                             .fillMaxWidth()

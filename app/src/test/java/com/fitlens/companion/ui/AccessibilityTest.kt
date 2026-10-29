@@ -114,6 +114,7 @@ class AccessibilityTest {
     @Test fun exerciseCard() = check("Exercise card") { DesignSamples.exerciseCard() }
     @Test fun statTiles() = check("Stat tiles") { DesignSamples.statTiles() }
     @Test fun settingsRowVariants() = check("Settings row variants") { DesignSamples.settingsRowVariants() }
+    @Test fun materialDefaults() = check("Material defaults") { DesignSamples.materialDefaults() }
 
     @Test
     fun setRowsReadAsOneSet() {

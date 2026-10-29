@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -43,6 +42,7 @@ import com.fitlens.companion.ui.design.FitSheet
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import com.fitlens.companion.ui.design.FitFilterChip
 
 private val HHMM: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
@@ -168,7 +168,7 @@ fun MeasurementEntrySheet(
     ) {
         if (existing == null) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                names.forEach { n -> FilterChip(selected = n == name, onClick = { name = n }, label = { Text(n) }) }
+                names.forEach { n -> FitFilterChip(selected = n == name, onClick = { name = n }, label = { Text(n) }) }
             }
             OutlinedTextField(
                 value = name, onValueChange = { name = it },

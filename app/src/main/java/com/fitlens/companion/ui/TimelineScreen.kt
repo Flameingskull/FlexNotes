@@ -22,11 +22,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -46,6 +44,8 @@ import com.fitlens.companion.ui.design.DropdownPill
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.ui.design.FitSuggestionChip
+import com.fitlens.companion.ui.design.FitCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,7 +101,7 @@ fun DayCard(snap: Snapshot, date: String, onClick: () -> Unit) {
     val photos = snap.photosByDate[date] ?: emptyList()
     val records = snap.recordsByDate[date] ?: emptyList()
     val sets = snap.setsByDate[date] ?: emptyList()
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
+    FitCard(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(12.dp)) {
             Text(Dates.long(date), style = MaterialTheme.typography.titleMedium)
             if (photos.isNotEmpty()) {
@@ -122,7 +122,7 @@ fun DayCard(snap: Snapshot, date: String, onClick: () -> Unit) {
                 ) {
                     records.groupBy { it.name }.forEach { (name, list) ->
                         val r = list.last()
-                        SuggestionChip(onClick = onClick, label = { Text(stringResource(R.string.tl_value, name, fmtNum(r.value), r.unit).trim()) })
+                        FitSuggestionChip(onClick = onClick, label = { Text(stringResource(R.string.tl_value, name, fmtNum(r.value), r.unit).trim()) })
                     }
                 }
             }

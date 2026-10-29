@@ -16,10 +16,8 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -63,6 +61,8 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitAlertDialog
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * Workout tools on the day log: the workout time and timer (#12, #84). Times are stored in `workout_time` in
@@ -193,7 +193,7 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
     picking?.let { isStart ->
         val current = (if (isStart) s else e)?.let { Dates.dateTime(it)?.toLocalTime() } ?: LocalTime.now()
         val state = rememberTimePickerState(current.hour, current.minute, is24Hour = android.text.format.DateFormat.is24HourFormat(androidx.compose.ui.platform.LocalContext.current))
-        AlertDialog(
+        FitAlertDialog(
             onDismissRequest = { picking = null },
             title = { Text(stringResource(if (isStart) R.string.wk_start_time_title else R.string.wk_end_time_title)) },
             text = { TimePicker(state = state, colors = fitTimePickerColors()) },
@@ -353,10 +353,10 @@ fun ShareWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
                 Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(Spacing.sm)
             ) {
-                FilterChip(selected = withDate, onClick = { withDate = !withDate }, label = { Text(stringResource(R.string.wk_date)) })
-                FilterChip(selected = withDuration, onClick = { withDuration = !withDuration }, label = { Text(stringResource(R.string.wk_duration_label)) })
-                FilterChip(selected = withComment, onClick = { withComment = !withComment }, label = { Text(stringResource(R.string.wk_comment)) })
-                FilterChip(selected = withPrs, onClick = { withPrs = !withPrs }, label = { Text(stringResource(R.string.wk_pr_marks)) })
+                FitFilterChip(selected = withDate, onClick = { withDate = !withDate }, label = { Text(stringResource(R.string.wk_date)) })
+                FitFilterChip(selected = withDuration, onClick = { withDuration = !withDuration }, label = { Text(stringResource(R.string.wk_duration_label)) })
+                FitFilterChip(selected = withComment, onClick = { withComment = !withComment }, label = { Text(stringResource(R.string.wk_comment)) })
+                FitFilterChip(selected = withPrs, onClick = { withPrs = !withPrs }, label = { Text(stringResource(R.string.wk_pr_marks)) })
             }
             // A progress photo goes on the image only when one is chosen here (#11).
             if (asImage && photos.isNotEmpty()) {

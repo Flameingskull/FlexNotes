@@ -29,11 +29,9 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -66,6 +64,8 @@ import com.fitlens.companion.report.PdfReport
 import com.fitlens.companion.report.ReportOptions
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.fitlens.companion.ui.design.FitAlertDialog
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * Settings → Backup: backup files, automatic backups and PDF reports. Everything stays on the device. The page's text
@@ -319,7 +319,7 @@ private val ReportOptionsSaver = listSaver<ReportOptions?, Any>(
 
 @Composable
 private fun RestoreDialog(info: Backups.Info, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.restore_title)) },
         text = {
@@ -397,10 +397,10 @@ private fun ReportDialog(snap: Snapshot, onDismiss: () -> Unit, onCreate: (Repor
     ) {
         SectionLabel(stringResource(R.string.report_period))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            FilterChip(selected = from == first && to == last, onClick = { range(null) }, label = { Text(stringResource(R.string.report_all)) })
-            FilterChip(selected = false, onClick = { range(12) }, label = { Text(stringResource(R.string.report_last_year)) })
-            FilterChip(selected = false, onClick = { range(3) }, label = { Text(stringResource(R.string.report_3_months)) })
-            FilterChip(selected = false, onClick = { range(1) }, label = { Text(stringResource(R.string.report_1_month)) })
+            FitFilterChip(selected = from == first && to == last, onClick = { range(null) }, label = { Text(stringResource(R.string.report_all)) })
+            FitFilterChip(selected = false, onClick = { range(12) }, label = { Text(stringResource(R.string.report_last_year)) })
+            FitFilterChip(selected = false, onClick = { range(3) }, label = { Text(stringResource(R.string.report_3_months)) })
+            FitFilterChip(selected = false, onClick = { range(1) }, label = { Text(stringResource(R.string.report_1_month)) })
         }
         val fromLabel = stringResource(R.string.report_from)
         val toLabel = stringResource(R.string.report_to_label)

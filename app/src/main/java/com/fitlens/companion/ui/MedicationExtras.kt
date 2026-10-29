@@ -20,10 +20,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -67,6 +65,8 @@ import com.fitlens.companion.ui.design.ListRowWithMenu
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import kotlin.math.abs
+import com.fitlens.companion.ui.design.FitAssistChip
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * A medication's supply (#209) and injection sites (#210), shown on its Track tab and in the Medications TODAY list.
@@ -549,7 +549,7 @@ internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> 
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.xs), modifier = Modifier.selectableGroup()) {
                     (0..Symptoms.MAX).forEach { n ->
                         val chosen = rating?.rating == n
-                        FilterChip(
+                        FitFilterChip(
                             selected = chosen,
                             onClick = {
                                 val d = date
@@ -576,7 +576,7 @@ internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> 
         val offered = SUGGESTED_SYMPTOMS.map { res.getString(it) }.filter { it.lowercase() !in have }
         if (offered.isNotEmpty()) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                offered.forEach { n -> AssistChip(onClick = { add(n) }, label = { Text("+ $n") }) }
+                offered.forEach { n -> FitAssistChip(onClick = { add(n) }, label = { Text("+ $n") }) }
             }
         }
         Text(stringResource(R.string.sym_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

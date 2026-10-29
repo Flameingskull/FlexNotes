@@ -12,15 +12,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import com.fitlens.companion.data.Medications
@@ -44,6 +41,9 @@ import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Store
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitSwitch
+import com.fitlens.companion.ui.design.FitAlertDialog
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * Creates or edits a custom measurement (#3), from the Measurements screen (#88), or a medication from Medications
@@ -68,7 +68,7 @@ internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, medic
     val fitNotes = snap.fitNotesMeasurementNames
     val res = LocalContext.current.resources
 
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -87,7 +87,7 @@ internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, medic
                     Text(stringResource(R.string.lab_common), style = MaterialTheme.typography.labelLarge)
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         suggestions.forEach { (n, u) ->
-                            FilterChip(selected = name == n, onClick = { name = n; unit = u }, label = { Text(n) })
+                            FitFilterChip(selected = name == n, onClick = { name = n; unit = u }, label = { Text(n) })
                         }
                     }
                 }
@@ -100,7 +100,7 @@ internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, medic
                 // A dose's unit is free text (#200); these are the usual ones.
                 if (isMedication) {
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Medications.UNITS.forEach { u -> FilterChip(selected = unit == u, onClick = { unit = u }, label = { Text(u) }) }
+                        Medications.UNITS.forEach { u -> FitFilterChip(selected = unit == u, onClick = { unit = u }, label = { Text(u) }) }
                     }
                 }
                 if (isLab) {
@@ -125,13 +125,13 @@ internal fun CustomMetricEditor(snap: Snapshot, existing: MeasurementDef?, medic
                             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Switch(checked = isMedication && allowed, onCheckedChange = null, enabled = allowed)
+                    FitSwitch(checked = isMedication && allowed, onCheckedChange = null, enabled = allowed)
                 }
                 if (!isLab) {
                     Text(stringResource(R.string.cm_fill_from), style = MaterialTheme.typography.labelLarge)
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        FilterChip(selected = link.isBlank(), onClick = { link = "" }, label = { Text(stringResource(R.string.cm_same_name)) })
-                        fitNotes.forEach { n -> FilterChip(selected = link == n, onClick = { link = n }, label = { Text(n) }) }
+                        FitFilterChip(selected = link.isBlank(), onClick = { link = "" }, label = { Text(stringResource(R.string.cm_same_name)) })
+                        fitNotes.forEach { n -> FitFilterChip(selected = link == n, onClick = { link = n }, label = { Text(n) }) }
                     }
                     Text(
                         if (link.isBlank()) stringResource(R.string.cm_same_name_note) else stringResource(R.string.cm_link_note, link),

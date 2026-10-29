@@ -35,8 +35,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -86,6 +84,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import com.fitlens.companion.ui.design.FitCard
 
 /**
  * Destinations. Navigation follows FitNotes (#79): the day log ([Day]) is home and the root of the stack, and
@@ -575,7 +574,7 @@ fun AppRoot(nav: Nav, onRetry: () -> Unit) {
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {},
                     contentAlignment = Alignment.Center
                 ) {
-                    Card(colors = CardDefaults.cardColors(containerColor = Brand.SurfaceHighest, contentColor = Brand.Ivory)) {
+                    FitCard {
                         Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             CircularProgressIndicator(color = Brand.Gold)
                             Text(busy ?: "", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 16.dp))

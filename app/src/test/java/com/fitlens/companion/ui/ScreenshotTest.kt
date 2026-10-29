@@ -21,6 +21,7 @@ import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.RoborazziTaskType
 import com.github.takahirom.roborazzi.captureRoboImage
+import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -36,8 +37,10 @@ import java.io.File
  *
  * The golden images live in `app/src/test/screenshots/`. A component whose golden exists is verified against it, and
  * a change fails the build, with the diff in `app/build/outputs/roborazzi/` (CI keeps it as an artifact). A component
- * without a golden is recorded instead; CI keeps the new images as an artifact so they can be committed. To accept an
- * intended change, delete the old golden and commit the newly recorded one.
+ * without a golden is recorded instead, so a pull request run (and a local run) records new images and CI keeps them
+ * as the `screenshots-N` artifact, to be committed. The release build (`build.yml`) sets `SCREENSHOT_STRICT=true`,
+ * and then a variant with no committed golden fails instead of passing unchecked (#306). To accept an intended
+ * change, delete the old golden and commit the newly recorded one.
  */
 @OptIn(ExperimentalRoborazziApi::class, ExperimentalMaterial3Api::class)
 @RunWith(RobolectricTestRunner::class)
@@ -72,6 +75,11 @@ class ScreenshotTest {
             compose.runOnIdle { variant = v }
             compose.waitForIdle()
             val golden = File(GOLDEN_DIR, "${name}_${v.label}.png")
+            // The release build sets SCREENSHOT_STRICT: a variant with no committed golden would otherwise pass
+            // unchecked, because recording it never fails.
+            if (!golden.exists() && System.getenv("SCREENSHOT_STRICT") == "true") {
+                fail("No golden for ${golden.name}; record it on a PR run and commit it from the screenshots artifact")
+            }
             val options = RoborazziOptions(
                 taskType = if (golden.exists()) RoborazziTaskType.Verify else RoborazziTaskType.Record,
                 // Anti-aliasing can move a handful of pixels between runs; a real layout change moves far more.
@@ -94,6 +102,8 @@ class ScreenshotTest {
     @Test fun settingsRowVariants() = shoot("settings_row_variants") { DesignSamples.settingsRowVariants() }
 
     @Test fun tabsAndButtons() = shoot("tabs_buttons") { DesignSamples.tabsAndButtons() }
+
+    @Test fun materialDefaults() = shoot("material_defaults") { DesignSamples.materialDefaults() }
 
     private companion object {
         const val TAG = "screenshot"

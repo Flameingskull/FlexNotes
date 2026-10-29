@@ -83,6 +83,8 @@ jobs:
         if: steps.guard.outputs.skip != 'true'
         id: build
         env:
+          # A screenshot variant with no committed golden fails here (#306); PR runs record it instead.
+          SCREENSHOT_STRICT: "true"
           FITLENS_STORE_PASSWORD: ${{ secrets.FITLENS_STORE_PASSWORD }}
           FITLENS_KEY_ALIAS: ${{ secrets.FITLENS_KEY_ALIAS }}
           FITLENS_KEY_PASSWORD: ${{ secrets.FITLENS_KEY_PASSWORD }}

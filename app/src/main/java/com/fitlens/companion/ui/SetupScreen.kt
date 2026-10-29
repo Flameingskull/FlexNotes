@@ -24,7 +24,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -58,6 +57,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.fitlens.companion.R
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * The guided setup (#29): shown once on a fresh install, skippable at every step, and run again from Settings.
@@ -219,7 +219,7 @@ private fun BackupsStep() {
         StepText(stringResource(R.string.su_how_often))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(1 to stringResource(R.string.su_daily), 7 to stringResource(R.string.su_weekly)).forEach { (d, label) ->
-                FilterChip(
+                FitFilterChip(
                     selected = device.autoBackupDays == d,
                     onClick = {
                         Backups.setAutoDays(d)

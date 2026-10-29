@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -34,6 +33,7 @@ import com.fitlens.companion.data.fmtSigned
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.ListRowWithMenu
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * The colour of a change between two values of a measurement with a goal (#27): green when it moved the way the goal
@@ -108,7 +108,7 @@ fun MeasurementGoalSheet(def: MeasurementDef, onDismiss: () -> Unit) {
     ) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             MeasurementGoals.all.forEach { t ->
-                FilterChip(selected = type == t, onClick = { type = t }, label = { Text(goalTypeText(res, t)) })
+                FitFilterChip(selected = type == t, onClick = { type = t }, label = { Text(goalTypeText(res, t)) })
             }
         }
         if (type != MeasurementGoals.NONE) {

@@ -21,8 +21,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -57,6 +55,8 @@ import com.fitlens.companion.ui.design.SegmentedSwitch
 import java.time.format.TextStyle
 import java.util.Locale
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitCheckbox
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * The day log's workout sheets (#100, merged into one model by #106): **Add workout** and **Replace this workout**
@@ -69,7 +69,7 @@ import kotlinx.coroutines.launch
 private fun ChoiceChips(options: List<Pair<Long, String>>, selected: Long, onSelect: (Long) -> Unit) {
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         options.forEach { (id, label) ->
-            FilterChip(selected = id == selected, onClick = { onSelect(id) }, label = { Text(label, maxLines = 1) })
+            FitFilterChip(selected = id == selected, onClick = { onSelect(id) }, label = { Text(label, maxLines = 1) })
         }
     }
 }
@@ -322,7 +322,7 @@ private fun ReviewWorkoutSheet(
                     .toggleable(value = on, role = Role.Checkbox, onValueChange = { ticked = if (it) ticked + i else ticked - i }),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Checkbox(checked = on, onCheckedChange = null)
+                FitCheckbox(checked = on, onCheckedChange = null)
                 Column(Modifier.weight(1f).padding(start = Spacing.sm)) {
                     Text(snap.exercises[p.exerciseId]?.name ?: stringResource(R.string.workout_exercise_title), style = MaterialTheme.typography.bodyLarge)
                     Text(
@@ -343,7 +343,7 @@ private fun ReviewWorkoutSheet(
                     .toggleable(value = saveIt, role = Role.Checkbox, onValueChange = { saveIt = it }),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Checkbox(checked = saveIt, onCheckedChange = null)
+                FitCheckbox(checked = saveIt, onCheckedChange = null)
                 Text(stringResource(R.string.wk_save_new), Modifier.padding(start = Spacing.sm))
             }
             if (saveIt) {

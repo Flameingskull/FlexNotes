@@ -46,11 +46,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -78,6 +75,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitSlider
+import com.fitlens.companion.ui.design.FitLinearProgress
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * The rest timer (#20), shared by every exercise screen so it keeps counting as you move between exercises. While it
@@ -347,10 +347,10 @@ fun RestLengthStepper(
     )
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         if (onDefault != null) {
-            FilterChip(selected = isDefault, onClick = onDefault, label = { Text(stringResource(R.string.rt_default)) })
+            FitFilterChip(selected = isDefault, onClick = onDefault, label = { Text(stringResource(R.string.rt_default)) })
         }
         REST_CHOICES.forEach { secs ->
-            FilterChip(
+            FitFilterChip(
                 selected = !isDefault && seconds == secs,
                 onClick = { onChange(secs) },
                 label = { Text(fmtDuration(secs)) }
@@ -421,7 +421,7 @@ internal fun RestAlertOptions() {
             // Lined up with the rows above (#86).
             Column(Modifier.padding(horizontal = Spacing.lg).alpha(if (soundOn) 1f else 0.45f)) {
                 Text(stringResource(R.string.rest_volume, volume.toInt()), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Slider(
+                FitSlider(
                     value = volume,
                     onValueChange = { volume = it },
                     enabled = soundOn,
@@ -493,7 +493,7 @@ fun RestTimerSheet(exercise: Exercise? = null, onDismiss: () -> Unit) {
             color = Brand.Gold
         )
         if (st.active) {
-            LinearProgressIndicator(
+            FitLinearProgress(
                 progress = { if (st.total > 0) left.toFloat() / st.total else 0f },
                 modifier = Modifier.fillMaxWidth(),
                 color = Brand.Gold,

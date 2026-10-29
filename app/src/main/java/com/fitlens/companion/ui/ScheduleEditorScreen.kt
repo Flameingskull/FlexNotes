@@ -31,13 +31,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -88,6 +85,9 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlin.math.abs
 import kotlin.math.max
+import com.fitlens.companion.ui.design.FitSwitch
+import com.fitlens.companion.ui.design.FitRadioButton
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * The schedule editor (#201), built like the workout editor: a schedule's name and notes, whether the cycle repeats,
@@ -535,7 +535,7 @@ private fun ScheduleSetup(weekStart: Int, onBack: () -> Unit, onDone: (MedSchedu
         )
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             PhaseUnit.entries.filter { it != PhaseUnit.ONGOING }.forEach { u ->
-                FilterChip(
+                FitFilterChip(
                     selected = unit == u, onClick = { onUnitChange(u) },
                     label = { Text(phaseLength(res, value.toIntOrNull() ?: 1, u).substringAfter(' ')) }
                 )
@@ -559,7 +559,7 @@ private fun ScheduleSetup(weekStart: Int, onBack: () -> Unit, onDone: (MedSchedu
                             .padding(vertical = Spacing.xs),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RadioButton(selected = choice == i, onClick = null)
+                        FitRadioButton(selected = choice == i, onClick = null)
                         Column(Modifier.padding(start = Spacing.sm)) {
                             Text(stringResource(title), style = MaterialTheme.typography.bodyLarge)
                             Text(stringResource(note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -570,7 +570,7 @@ private fun ScheduleSetup(weekStart: Int, onBack: () -> Unit, onDone: (MedSchedu
             when (choice) {
                 1 -> Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                     MedSchedules.weekOrder(weekStart).forEach { d ->
-                        FilterChip(
+                        FitFilterChip(
                             selected = d in weekdays,
                             onClick = { weekdays = if (d in weekdays) weekdays - d else weekdays + d },
                             label = { Text(MedSchedules.weekdayShort(d)) }
@@ -646,7 +646,7 @@ private fun SwitchLine(title: String, note: String, on: Boolean, onChange: (Bool
             Text(title, style = MaterialTheme.typography.bodyLarge)
             Text(note, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Switch(checked = on, onCheckedChange = null)
+        FitSwitch(checked = on, onCheckedChange = null)
     }
 }
 
@@ -819,7 +819,7 @@ private fun PhaseSheet(existing: MedPhase?, canBeOngoing: Boolean, onDismiss: ()
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
             offered.forEach { u ->
                 val n = length.toIntOrNull() ?: 1
-                FilterChip(
+                FitFilterChip(
                     selected = chosen == u, onClick = { unit = u },
                     label = { Text(if (u == PhaseUnit.ONGOING) stringResource(R.string.md_ongoing_choice) else phaseLength(res, n, u).substringAfter(' ')) }
                 )
@@ -900,7 +900,7 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
         if (names.isNotEmpty()) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 names.forEach { n ->
-                    FilterChip(selected = n == medication, onClick = { medication = n; unit = unitOf(n).ifBlank { unit } }, label = { Text(n) })
+                    FitFilterChip(selected = n == medication, onClick = { medication = n; unit = unitOf(n).ifBlank { unit } }, label = { Text(n) })
                 }
             }
         }
@@ -925,7 +925,7 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
                     Modifier.fillMaxWidth().heightIn(min = Spacing.touch).selectable(selected = mode == i, role = Role.RadioButton) { mode = i },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    RadioButton(selected = mode == i, onClick = null)
+                    FitRadioButton(selected = mode == i, onClick = null)
                     Text(stringResource(label), Modifier.padding(start = Spacing.sm))
                 }
             }
@@ -933,7 +933,7 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
         if (mode == 1) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
                 MedSchedules.weekOrder(snap.weekStart).forEach { d ->
-                    FilterChip(
+                    FitFilterChip(
                         selected = d in weekdays,
                         onClick = { weekdays = if (d in weekdays) weekdays - d else weekdays + d },
                         label = { Text(MedSchedules.weekdayShort(d)) }

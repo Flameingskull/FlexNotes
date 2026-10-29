@@ -14,8 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -47,6 +45,8 @@ import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.ListRowWithMenu
 import com.fitlens.companion.ui.design.MenuAction
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitLinearProgress
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /** A goal's value in the display unit: weights in kg or lbs, times in minutes, counts as they are. */
 internal fun goalShown(snap: Snapshot, kind: Int, v: Double, exerciseId: Long? = null): Double = when {
@@ -135,7 +135,7 @@ fun GoalsTab(
                 onMoveDown = if (i < goals.lastIndex) { { move(i, 1) } } else null
             )
             val percentText = stringResource(R.string.goals_percent, (p.fraction(g.target) * 100).toInt())
-            LinearProgressIndicator(
+            FitLinearProgress(
                 progress = { p.fraction(g.target) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -214,7 +214,7 @@ internal fun GoalEditor(snap: Snapshot, goal: ExerciseGoal, timeBased: Boolean, 
     ) {
         Text(stringResource(R.string.goal_generic), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            kinds.forEach { k -> FilterChip(selected = kind == k, onClick = { kind = k }, label = { Text(goalKindText(res, k)) }) }
+            kinds.forEach { k -> FitFilterChip(selected = kind == k, onClick = { kind = k }, label = { Text(goalKindText(res, k)) }) }
         }
         val unit = goalUnit(res, snap, kind, goal.exerciseId)
         OutlinedTextField(

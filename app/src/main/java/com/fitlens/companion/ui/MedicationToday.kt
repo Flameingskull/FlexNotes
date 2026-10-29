@@ -22,11 +22,9 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Checkbox
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -67,6 +65,8 @@ import com.fitlens.companion.ui.design.SectionLabel
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import com.fitlens.companion.ui.design.FitCheckbox
+import com.fitlens.companion.ui.design.FitRadioButton
 
 private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
@@ -246,7 +246,7 @@ private fun DueDoseRow(snap: Snapshot, due: DueDose, index: Int, onOpen: () -> U
             }
         }
         val doneLabel = res.getString(R.string.md_take) + ", " + doseLine(due)
-        Checkbox(
+        FitCheckbox(
             checked = taken != null,
             onCheckedChange = { on ->
                 if (on && snap.isInjected(due.dose.medication)) {
@@ -464,7 +464,7 @@ internal fun DoseChangeSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit
                         .selectable(selected = dayOnly == only, role = Role.RadioButton) { dayOnly = only },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    RadioButton(selected = dayOnly == only, onClick = null)
+                    FitRadioButton(selected = dayOnly == only, onClick = null)
                     Text(stringResource(label, Dates.day(due.date)), Modifier.padding(start = Spacing.sm))
                 }
             }

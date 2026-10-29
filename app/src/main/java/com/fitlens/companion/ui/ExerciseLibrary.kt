@@ -53,10 +53,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -133,6 +130,9 @@ import com.fitlens.companion.ui.design.OverflowMenu
 import com.fitlens.companion.ui.design.TopBarAction
 import com.fitlens.companion.ui.design.relativeDayLabel
 import kotlinx.coroutines.launch
+import com.fitlens.companion.ui.design.FitCheckbox
+import com.fitlens.companion.ui.design.FitAlertDialog
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /**
  * The exercise library (#13, redesigned in #83 after FitNotes): categories first, then a category's exercises, with a
@@ -665,7 +665,7 @@ private fun ExerciseRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (choosing) {
-            Checkbox(checked = order != null, onCheckedChange = null)
+            FitCheckbox(checked = order != null, onCheckedChange = null)
             Spacer(Modifier.width(Spacing.sm))
         }
         // As FitNotes lists exercises (#143): the name and a ⋮, a fine rule under each. A favourite keeps a small gold
@@ -910,20 +910,20 @@ fun ExerciseEditorSheet(
                     SectionLabel(stringResource(R.string.lib_category))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         snap.categoriesSorted.forEach { c ->
-                            FilterChip(
+                            FitFilterChip(
                                 selected = categoryId == c.id,
                                 onClick = { categoryId = c.id },
                                 label = { Text(c.name) },
                                 leadingIcon = { Dot(categoryColour(c.colour), 8.dp) }
                             )
                         }
-                        FilterChip(
+                        FitFilterChip(
                             selected = categoryId == Workouts.UNCATEGORISED,
                             onClick = { categoryId = Workouts.UNCATEGORISED },
                             label = { Text(stringResource(R.string.lib_uncategorised)) }
                         )
                         // FitNotes's + beside CATEGORY.
-                        FilterChip(
+                        FitFilterChip(
                             selected = false,
                             onClick = { newCategory = true },
                             label = { Text(stringResource(R.string.lib_new_category)) },
@@ -936,13 +936,13 @@ fun ExerciseEditorSheet(
                     val main = listOf(ExerciseTypes.WEIGHT_REPS, ExerciseTypes.DISTANCE_TIME, ExerciseTypes.SESSION)
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         main.forEach { t ->
-                            FilterChip(selected = type == t, onClick = { type = t }, label = { Text(exerciseTypeText(LocalContext.current.resources, t)) })
+                            FitFilterChip(selected = type == t, onClick = { type = t }, label = { Text(exerciseTypeText(LocalContext.current.resources, t)) })
                         }
                     }
                     FieldLabel(stringResource(R.string.lib_more_types))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         ExerciseTypes.all.filter { it !in main }.forEach { t ->
-                            FilterChip(selected = type == t, onClick = { type = t }, label = { Text(exerciseTypeText(LocalContext.current.resources, t)) })
+                            FitFilterChip(selected = type == t, onClick = { type = t }, label = { Text(exerciseTypeText(LocalContext.current.resources, t)) })
                         }
                     }
                     // The user's own types (#14); the library is in the key so a new or edited type shows at once.
@@ -950,16 +950,16 @@ fun ExerciseEditorSheet(
                     val customTypes = remember(snap.libraryKey) { ExerciseTypes.custom.values.sortedBy { it.name.lowercase() } }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         customTypes.forEach { t ->
-                            FilterChip(selected = type == t.id, onClick = { type = t.id }, label = { Text(t.name) })
+                            FitFilterChip(selected = type == t.id, onClick = { type = t.id }, label = { Text(t.name) })
                         }
-                        FilterChip(
+                        FitFilterChip(
                             selected = false,
                             onClick = { typeSheet = TYPE_SHEET_NEW },
                             label = { Text(stringResource(R.string.types_new)) },
                             leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp)) }
                         )
                         if (ExerciseTypes.custom.containsKey(type)) {
-                            FilterChip(
+                            FitFilterChip(
                                 selected = false,
                                 onClick = { typeSheet = type },
                                 label = { Text(stringResource(R.string.types_edit, exerciseTypeText(LocalContext.current.resources, type))) },
@@ -1052,10 +1052,10 @@ fun ExerciseEditorSheet(
                         val steps = if (lbs) listOf(1.0, 2.5, 5.0, 10.0) else listOf(0.5, 1.0, 1.25, 2.5, 5.0)
                         FieldLabel(stringResource(R.string.lib_weight_step))
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            FilterChip(selected = stepKg == null, onClick = { stepKg = null }, label = { Text(stringResource(R.string.lib_as_settings)) })
+                            FitFilterChip(selected = stepKg == null, onClick = { stepKg = null }, label = { Text(stringResource(R.string.lib_as_settings)) })
                             steps.forEach { v ->
                                 val kg = WeightUnits.convert(v, shownUnit, "kg")
-                                FilterChip(
+                                FitFilterChip(
                                     selected = stepKg?.let { kotlin.math.abs(it - kg) < 0.001 } == true,
                                     onClick = { stepKg = kg },
                                     label = { Text("${fmtNum(v, 2)} $shownUnit") }
@@ -1093,7 +1093,7 @@ fun ExerciseEditorSheet(
                     FieldLabel(stringResource(R.string.lib_opens_graph))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         graphLabels(type, timeBased = ExerciseTypes.timeBased(type, anyWeightOrReps = false), countNames = SportCounts.parse(SportCounts.join(listOf(countNameA, countNameB)))).forEachIndexed { i, label ->
-                            FilterChip(
+                            FitFilterChip(
                                 selected = defaultGraph == i || (defaultGraph < 0 && i == 0),
                                 onClick = { defaultGraph = i },
                                 label = { Text(graphName(LocalContext.current.resources, label)) }
@@ -1343,7 +1343,7 @@ fun CategoryEditorSheet(
 @Composable
 fun StarterLibraryDialog(onDismiss: () -> Unit) {
     val res = LocalContext.current.resources
-    AlertDialog(
+    FitAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.lib_starter_title)) },
         text = {
@@ -1416,7 +1416,7 @@ private fun CountsSetup(kind: String?, a: String, onA: (String) -> Unit, b: Stri
     if (suggestions.isNotEmpty() && (a.isBlank() || b.isBlank())) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             suggestions.forEach { s ->
-                FilterChip(
+                FitFilterChip(
                     selected = false,
                     onClick = { if (a.isBlank()) onA(s) else onB(s) },
                     label = { Text(s) }
@@ -1439,7 +1439,7 @@ private fun SessionSetup(
     SectionLabel(stringResource(R.string.sport_kind))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         SessionKinds.all.forEach { k ->
-            FilterChip(
+            FitFilterChip(
                 selected = kind == k,
                 onClick = { onKind(k, SportLibrary.suggest(k, snap.exercises.values, exceptId).fields) },
                 label = { Text(sportKindText(res, k)) }
@@ -1470,7 +1470,7 @@ private fun SessionSetup(
                 .toggleable(value = on, role = Role.Checkbox, onValueChange = { onFields(SessionMetrics.of(fields) xor m) }),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Checkbox(checked = on, onCheckedChange = null)
+            FitCheckbox(checked = on, onCheckedChange = null)
             Text(sessionMetricText(res, m), Modifier.padding(start = Spacing.sm))
         }
     }

@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,6 +42,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.abs
 import kotlin.math.roundToInt
+import com.fitlens.companion.ui.design.FitFilterChip
 
 /** A readiness score's word (#216): Ready, Steady or Take it easy. */
 internal fun readinessBand(res: android.content.res.Resources, score: Int): String = res.getString(
@@ -187,7 +187,7 @@ private fun RatingRow(item: Readiness.Item, value: Double?, onValue: (Double?) -
             (Readiness.MIN..Readiness.MAX).forEach { r ->
                 val chosen = value != null && abs(value - r) < 0.01
                 val label = res.getString(R.string.rd_rating_desc, name, r)
-                FilterChip(
+                FitFilterChip(
                     selected = chosen,
                     onClick = { onValue(if (chosen) null else r.toDouble()) },
                     label = { Text("$r") },

@@ -28,11 +28,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -144,7 +142,7 @@ fun SettingsSwitchRow(
     ) {
         RowText(title, if (enabled) summary else disabledReason ?: summary, Modifier.weight(1f))
         Spacer(Modifier.width(Spacing.md))
-        Checkbox(checked = checked, onCheckedChange = null, enabled = enabled)
+        FitCheckbox(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }
 
@@ -199,7 +197,7 @@ fun SettingsChoiceRow(
                             },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        RadioButton(selected = i == selected, onClick = null)
+                        FitRadioButton(selected = i == selected, onClick = null)
                         Spacer(Modifier.width(Spacing.md))
                         RowText(label, descriptions.getOrNull(i), Modifier.weight(1f))
                     }
