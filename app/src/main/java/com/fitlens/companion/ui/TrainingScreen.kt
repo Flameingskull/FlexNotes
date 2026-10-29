@@ -985,7 +985,7 @@ fun ExerciseHistoryPane(snap: Snapshot, nav: Nav, exId: Long) {
  */
 internal fun historyDay(date: String): String {
     val d = Dates.parse(date) ?: return date
-    val pattern = if (d.year == java.time.LocalDate.now().year) "EEEE, MMMM d" else "EEEE, MMMM d, yyyy"
+    val pattern = if (d.year == Dates.todayDate().year) "EEEE, MMMM d" else "EEEE, MMMM d, yyyy"
     return d.format(java.time.format.DateTimeFormatter.ofPattern(pattern, java.util.Locale.getDefault())).uppercase()
 }
 

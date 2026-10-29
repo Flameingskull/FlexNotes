@@ -54,7 +54,7 @@ private val RelativeDayFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("
  * ("Mon 3 Aug"), with the year added when it isn't the current one. [date] is an ISO date.
  */
 @Composable
-fun relativeDayLabel(date: String, today: LocalDate = LocalDate.now()): String {
+fun relativeDayLabel(date: String, today: LocalDate = Dates.todayDate()): String {
     val d = Dates.parse(date) ?: return date
     return when (d.toEpochDay() - today.toEpochDay()) {
         0L -> stringResource(R.string.day_today)

@@ -125,7 +125,7 @@ enum class RangePreset(@StringRes val label: Int, val months: Long?) {
     All(R.string.rp_all, null);
 
     /** The first ISO date inside this window, or null for all time. */
-    fun startDate(today: LocalDate = LocalDate.now()): String? = months?.let { today.minusMonths(it).format(Dates.ISO) }
+    fun startDate(today: LocalDate = Dates.todayDate()): String? = months?.let { today.minusMonths(it).format(Dates.ISO) }
 }
 
 private fun isoToMillis(iso: String?): Long? =

@@ -151,7 +151,7 @@ object Records {
      * The sets that fall in [period]. Week, month and year count back from today. Workout is the exercise's most
      * recent workout day.
      */
-    fun inPeriod(sets: List<SetRow>, period: Period, today: LocalDate = LocalDate.now()): List<SetRow> {
+    fun inPeriod(sets: List<SetRow>, period: Period, today: LocalDate = Dates.todayDate()): List<SetRow> {
         val from = when (period) {
             Period.ALL -> return sets
             Period.WORKOUT -> return sets.maxOfOrNull { it.date.take(10) }?.let { last -> sets.filter { it.date.take(10) == last } } ?: sets

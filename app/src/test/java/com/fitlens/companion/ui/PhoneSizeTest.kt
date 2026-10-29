@@ -7,21 +7,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.SemanticsActions
-import androidx.compose.ui.semantics.SemanticsNode
-import androidx.compose.ui.semantics.SemanticsProperties
-import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.SemanticsMatcher
-import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.toSize
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.RoborazziOptions
 import com.github.takahirom.roborazzi.RoborazziTaskType
@@ -67,51 +58,8 @@ class PhoneSizeTest {
             }
         }
         compose.waitForIdle()
-        val out = mutableListOf<String>()
-        val px = compose.density.density
-        val minTouch = MIN_TOUCH * px - 0.5f
-        val right = compose.onNodeWithTag(TAG).fetchSemanticsNode().boundsInRoot.right + 0.5f
-
-        // Compose stretches a smaller control's touch area to 48dp, as long as no other control is in the way.
-        val controls = compose.onAllNodes(hasClickAction()).fetchSemanticsNodes().map { it to it.unclipped() }
-        controls.forEach { (node, r) ->
-            if (r.width >= minTouch && r.height >= minTouch) return@forEach
-            val target = Rect(
-                r.center.x - maxOf(r.width, minTouch) / 2, r.center.y - maxOf(r.height, minTouch) / 2,
-                r.center.x + maxOf(r.width, minTouch) / 2, r.center.y + maxOf(r.height, minTouch) / 2
-            ).deflate(0.5f)
-            val crowded = controls.any { (other, o) ->
-                other.id != node.id && !o.encloses(r) && !r.encloses(o) && o.overlaps(target)
-            }
-            if (crowded) {
-                out += "$name: \"${node.label()}\" has a ${dp(r.width, px)} × ${dp(r.height, px)}dp touch target with no room to grow"
-            }
-        }
-        val texts = compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
-            .fetchSemanticsNodes()
-        // Two pieces of text drawn over each other, such as a value running into the next column.
-        texts.forEachIndexed { i, a ->
-            texts.drop(i + 1).forEach { b ->
-                if (a.unclipped().deflate(1f).overlaps(b.unclipped().deflate(1f))) {
-                    out += "$name: \"${a.label()}\" overlaps \"${b.label()}\""
-                }
-            }
-        }
-        texts.forEach { node ->
-            val layouts = mutableListOf<TextLayoutResult>()
-            node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(layouts)
-            val layout = layouts.firstOrNull()
-            if (layout != null && layout.lineCount > 0 && layout.isLineEllipsized(layout.lineCount - 1)) {
-                out += "$name: \"${node.label()}\" is cut short with an ellipsis"
-            }
-            // Text in a row that scrolls sideways (a scrolling tab row) is meant to run past the edge.
-            if (node.inHorizontalScroll()) return@forEach
-            // A parent that clips the text shows less of it than it laid out.
-            val r = node.unclipped()
-            val shown = node.boundsInRoot
-            if (shown.width < r.width - 1f || shown.height < r.height - 1f) out += "$name: \"${node.label()}\" is clipped"
-            if (r.right > right) out += "$name: \"${node.label()}\" runs ${dp(r.right - right, px)}dp off the screen"
-        }
+        // The rules live in LayoutChecks, shared with the whole-screen checks (#323).
+        val out = LayoutChecks.problems(compose, name, TAG)
         // Kept for a look at 320dp; not compared (the screenshot tests compare their own widths).
         File("build/outputs/roborazzi/phone").mkdirs()
         compose.onNodeWithTag(TAG).captureRoboImage(
@@ -120,29 +68,6 @@ class PhoneSizeTest {
         )
         return out
     }
-
-    /** Whether [other] lies wholly inside this rectangle (a control nested in another, such as a row's switch). */
-    private fun Rect.encloses(other: Rect) =
-        left <= other.left + 0.5f && top <= other.top + 0.5f && right >= other.right - 0.5f && bottom >= other.bottom - 0.5f
-
-    private fun SemanticsNode.inHorizontalScroll(): Boolean {
-        var p = parent
-        while (p != null) {
-            if (p.config.getOrNull(SemanticsProperties.HorizontalScrollAxisRange) != null) return true
-            p = p.parent
-        }
-        return false
-    }
-
-    /** Where the node is laid out, before any parent clips it. */
-    private fun SemanticsNode.unclipped(): Rect = Rect(positionInRoot, size.toSize())
-
-    private fun SemanticsNode.label(): String =
-        config.getOrNull(SemanticsProperties.Text)?.joinToString(" ") { it.text }
-            ?: config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString(" ")
-            ?: "(unlabelled)"
-
-    private fun dp(value: Float, px: Float) = "%.0f".format(value / px)
 
     private fun check(name: String, content: @Composable () -> Unit) {
         val found = problems(name, content)
@@ -162,6 +87,5 @@ class PhoneSizeTest {
         const val TAG = "phone"
         const val WIDTH = 320
         const val FONT_SCALE = 2f
-        const val MIN_TOUCH = 48f
     }
 }

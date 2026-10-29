@@ -328,6 +328,14 @@ object Settings {
         return _portable.value
     }
 
+    /**
+     * For the whole-screen layout tests (#323): shows screens with these preferences, without saving them or touching
+     * the database, so a test can draw a screen with an option switched on.
+     */
+    internal fun showWith(preferences: PortableSettings) {
+        _portable.value = preferences
+    }
+
     /** Changes phone settings. The change shows at once and is saved in the background, in order. */
     fun updateDevice(change: (DeviceSettings) -> DeviceSettings) {
         current()

@@ -286,11 +286,24 @@ Last updated: 1.0.196.
   `Backups.writeArchive`, `unpack` and `installDatabase`. All use a plain `Application`, so `Store` and `Settings`
   don't start: test seams take a database or file, not the singletons. **Every database change adds an upgrade test**,
   and every change to the importer's rules or the archive format adds a case.
-- **Phone-size checks (#157):** `ui/PhoneSizeTest.kt` draws the same samples at 320dp and 200% font and fails on a
+- **Phone-size checks (#157):** `ui/PhoneSizeTest.kt` draws the same samples at 320dp and 200% font; the rules live
+  once in `ui/LayoutChecks.kt` (shared with the whole-screen test below) and fail on a
   control under 48dp with no room for Compose to stretch it, text cut short or clipped, two texts overlapping, or text
   past the right edge (a scrolling row is exempt). The 320dp images are kept in the `screenshots-N` artifact
   (`roborazzi/phone/`), not compared. The samples live in `ui/DesignSamples.kt`, shared with the screenshot tests: a
   new component adds its sample there and a test in both.
+- **Whole-screen checks (#323):** `ui/WholeScreenTest.kt` draws real screens (the day log and exercise screen so far,
+  plus their menus and sheets, opened by clicking the control that opens them) from the seeded phone in
+  `ui/ScreenFixture.kt` (long names, FitNotes and FlexNotes sets, kg and lb, a Session, comments, body values, photos,
+  a workout with named days, fixed on Tue 27 Oct 2026). The window itself is 320dp or 411dp wide (`WholeScreen320Test`,
+  `WholeScreen411Test` share the tests in `WholeScreenChecks`), each at 100% and 200% font, so sheets and menus are
+  laid out at that width too. Each drawing runs `LayoutChecks.problems(..., scrollingScreen = true)` (text scrolled past
+  a list's edge, or laid out beside the window like a closed drawer, isn't a problem) and a golden
+  `screen_<name>_<width>dp[_font2].png`, with the same Record/Verify/`SCREENSHOT_STRICT` rules as `ScreenshotTest`. A
+  test collects every problem and asserts once at the end; one already filed goes in `KNOWN` (line prefix to issue).
+  A new screen adds a `@Test` to `WholeScreenChecks`. **Test seams in the app:** `Dates.clockSource` (`todayDate()`,
+  `nowDateTime()`: "today", "this year" and the workout timer) and `Settings.showWith(prefs)`; tests set a fixed clock
+  and reset it. A running rest timer isn't deterministic, so draw one paused (`RestTimer.start`, `pause`, `adjust`).
 - **Contrast checks (#157):** `ui/ContrastTest.kt` checks every `Brand` text colour (rises and falls included) against
   every background at 4.5:1, text on coloured containers, and `Brand.Outline` at 3:1. A new text colour or background
   joins its lists.

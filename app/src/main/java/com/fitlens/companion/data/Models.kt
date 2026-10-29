@@ -499,12 +499,12 @@ object Dates {
     /** "3 Mar" this year, "3 Mar 2025" otherwise, so a date range is never ambiguous across New Year (#309). */
     fun dayMonth(s: String): String {
         val d = parse(s) ?: return s
-        return if (d.year == LocalDate.now().year) d.format(short) else d.format(medium)
+        return if (d.year == todayDate().year) d.format(short) else d.format(medium)
     }
     /** The weekday and date people plan by, "Mon 27 Oct", with the year only when it isn't this year ("Mon 2 Nov 2027"). */
     fun day(s: String): String {
         val d = parse(s) ?: return s
-        return if (d.year == LocalDate.now().year) d.format(weekday) else d.format(long)
+        return if (d.year == todayDate().year) d.format(weekday) else d.format(long)
     }
     /** A moment as people read it, "Mon 27 Oct, 14:05" or "Mon 27 Oct, 2:05 PM" in the phone's clock style (the year only when it isn't this year). */
     fun dayTime(context: Context, epochMs: Long): String {
@@ -527,7 +527,15 @@ object Dates {
     fun monthYear(d: LocalDate): String = d.format(monthYear)
     fun monthYearShort(d: LocalDate): String = d.format(monthYearShort)
     fun epochDay(s: String): Long = parse(s)?.toEpochDay() ?: 0L
-    fun today(): String = LocalDate.now().format(ISO)
+    /**
+     * The clock "today", "this year" and the running workout timer read. Always the phone's own clock in the app; the
+     * whole-screen layout tests (#323) set a fixed one, so a golden image never changes with the real date.
+     */
+    @Volatile
+    internal var clockSource: java.time.Clock = java.time.Clock.systemDefaultZone()
+    internal fun todayDate(): LocalDate = LocalDate.now(clockSource)
+    internal fun nowDateTime(): LocalDateTime = LocalDateTime.now(clockSource)
+    fun today(): String = todayDate().format(ISO)
 
     /**
      * Parses a workout start/finish stamp. FitNotes writes `yyyy-MM-dd HH:mm:ss` — a space separator and no zone —

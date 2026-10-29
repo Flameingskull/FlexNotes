@@ -68,7 +68,7 @@ import com.fitlens.companion.ui.design.FitTextButton
 object WorkoutClock {
     private val STAMP: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
 
-    fun now(): String = LocalDateTime.now().format(STAMP)
+    fun now(): String = Dates.nowDateTime().format(STAMP)
 
     fun stamp(date: String, time: LocalTime): String = "$date ${time.withNano(0).format(DateTimeFormatter.ofPattern("HH:mm:ss"))}"
 
