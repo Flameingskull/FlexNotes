@@ -60,7 +60,7 @@ fun AnalysisExercisesTab(snap: Snapshot, nav: Nav, openedPin: PinnedGraph? = nul
     var exId by rememberSaveable { mutableStateOf(AnalysisChoice.exerciseId) }
     // A pinned graph opened from the Overview, taken once when the tab opens.
     val pin = remember { openedPin }
-    var picking by remember { mutableStateOf(false) }
+    var picking by rememberSaveable { mutableStateOf(false) }
     val chosen = exId?.takeIf { snap.exercises.containsKey(it) && snap.setsByExercise[it].orEmpty().isNotEmpty() }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {

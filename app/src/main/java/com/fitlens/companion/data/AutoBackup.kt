@@ -13,7 +13,6 @@ import android.net.Uri
 import android.os.Build
 import android.provider.DocumentsContract
 import android.system.Os
-import androidx.compose.ui.graphics.toArgb
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.work.Constraints
@@ -25,8 +24,6 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.fitlens.companion.ui.Brand
-import com.fitlens.companion.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -199,7 +196,7 @@ object AutoBackup {
                 description = context.getString(R.string.ab_channel_desc)
             }
         )
-        val open = Intent(context, MainActivity::class.java).apply {
+        val open = AppHooks.openApp(context).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra(EXTRA_OPEN_BACKUPS, true)
         }
@@ -212,7 +209,7 @@ object AutoBackup {
             // The FlexNotes character beside the notification, in colour (the torso art, branding/torso/). The status-bar icon has to
             // stay a plain glyph: Android keeps only its outline.
             .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.notification_character))
-            .setColor(Brand.Gold.toArgb())
+            .setColor(AppHooks.accent)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

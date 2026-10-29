@@ -141,7 +141,7 @@ fun PeriodDropdown(
     modifier: Modifier = Modifier
 ) {
     var picking by remember { mutableStateOf(false) }
-    val customLabel = if (selected < 0 && custom != null) stringResource(R.string.cmn_range, Dates.short(custom.first), Dates.short(custom.second)) else stringResource(R.string.cmn_custom)
+    val customLabel = if (selected < 0 && custom != null) stringResource(R.string.cmn_range, Dates.dayMonth(custom.first), Dates.dayMonth(custom.second)) else stringResource(R.string.cmn_custom)
     DropdownPill(label, options + customLabel, if (selected < 0) options.size else selected, modifier) { i ->
         if (i < options.size) onSelect(i) else picking = true
     }

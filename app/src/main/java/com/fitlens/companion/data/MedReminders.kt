@@ -12,12 +12,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
-import androidx.compose.ui.graphics.toArgb
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.fitlens.companion.R
-import com.fitlens.companion.ui.Brand
-import com.fitlens.companion.ui.MainActivity
 import com.fitlens.companion.ui.siteName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -251,7 +248,7 @@ object MedReminders {
             ?: context.getString(if (sites.isEmpty()) R.string.md_take else R.string.mr_taken_sites)
         val tap = PendingIntent.getActivity(
             context, notificationId(key),
-            Intent(context, MainActivity::class.java).apply {
+            AppHooks.openApp(context).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(EXTRA_OPEN_MEDICATIONS, true)
             },
@@ -265,14 +262,14 @@ object MedReminders {
         // What the lock screen shows when names are kept private: no medication, no amount.
         val public = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_medication)
-            .setColor(Brand.Gold.toArgb())
+            .setColor(AppHooks.accent)
             .setContentTitle(context.getString(R.string.mr_public_title))
             .setContentText(context.getString(R.string.mr_public_text))
             .build()
         val n = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_medication)
             .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.notification_character))
-            .setColor(Brand.Gold.toArgb())
+            .setColor(AppHooks.accent)
             .setContentTitle(title)
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

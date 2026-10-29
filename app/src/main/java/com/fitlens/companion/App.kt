@@ -1,6 +1,7 @@
 package com.fitlens.companion
 
 import android.app.Application
+import com.fitlens.companion.data.AppHooks
 import com.fitlens.companion.data.AutoBackup
 import com.fitlens.companion.data.HealthConnect
 import com.fitlens.companion.data.LogReminders
@@ -8,14 +9,22 @@ import com.fitlens.companion.data.MedReminders
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Steps
 import com.fitlens.companion.data.Store
+import com.fitlens.companion.ui.Brand
 import com.fitlens.companion.ui.BrandFonts
+import com.fitlens.companion.ui.MainActivity
 import com.fitlens.companion.ui.TimerService
 import com.fitlens.companion.ui.TodayWidgets
 import com.fitlens.companion.ui.AppScope
+import androidx.compose.ui.graphics.toArgb
+import android.content.Intent
 
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+        // What the data layer needs from the UI (#309), set before anything can post a notification or refresh a widget.
+        AppHooks.accent = Brand.Gold.toArgb()
+        AppHooks.openApp = { context -> Intent(context, MainActivity::class.java) }
+        AppHooks.dataChanged = { TodayWidgets.refreshSoon() }
         AppScope.init(this)
         BrandFonts.init(this)
         Store.init(this)

@@ -15,7 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,8 +53,9 @@ import com.fitlens.companion.ui.design.FitTextButton
 @Composable
 internal fun TrainingBlocksSection(plan: TrainingPlan?, reordering: Boolean, onChange: (TrainingPlan?) -> Unit) {
     val res = LocalContext.current.resources
-    var editing by remember { mutableStateOf<Int?>(null) }
-    var pickingStart by remember { mutableStateOf(false) }
+    // Which block is open (its position in the saved draft) and the date picker survive rotation (#311).
+    var editing by rememberSaveable { mutableStateOf<Int?>(null) }
+    var pickingStart by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.sm)) {
         SectionLabel(stringResource(R.string.tb_title))
         if (plan == null) {
@@ -132,14 +133,14 @@ internal fun TrainingBlocksSection(plan: TrainingPlan?, reordering: Boolean, onC
 /** One block's name, length and unit, and whether it's a deload. Ongoing is offered only for the last block. */
 @Composable
 private fun BlockSheet(block: TrainingBlock, adding: Boolean, canBeOngoing: Boolean, onDismiss: () -> Unit, onDone: (TrainingBlock) -> Unit) {
-    var name by remember(block) { mutableStateOf(block.name) }
-    var length by remember(block) { mutableStateOf(block.length.toString()) }
-    var unit by remember(block) { mutableStateOf(if (!canBeOngoing && block.unit == PhaseUnit.ONGOING) PhaseUnit.WEEKS else block.unit) }
-    var deload by remember(block) { mutableStateOf(block.deload) }
+    var name by rememberSaveable(block) { mutableStateOf(block.name) }
+    var length by rememberSaveable(block) { mutableStateOf(block.length.toString()) }
+    var unit by rememberSaveable(block) { mutableStateOf(if (!canBeOngoing && block.unit == PhaseUnit.ONGOING) PhaseUnit.WEEKS else block.unit) }
+    var deload by rememberSaveable(block) { mutableStateOf(block.deload) }
     // Changing the planned sets (#235): off by default; turned on, a deload starts at 10% lighter and one set fewer.
-    var changing by remember(block) { mutableStateOf(block.adjusts) }
-    var pct by remember(block) { mutableStateOf(block.weightPct.toString()) }
-    var sets by remember(block) { mutableStateOf(block.setChange.toString()) }
+    var changing by rememberSaveable(block) { mutableStateOf(block.adjusts) }
+    var pct by rememberSaveable(block) { mutableStateOf(block.weightPct.toString()) }
+    var sets by rememberSaveable(block) { mutableStateOf(block.setChange.toString()) }
     val units = TrainingBlocks.UNITS.filter { canBeOngoing || it != PhaseUnit.ONGOING }
     val n = length.toIntOrNull()
     val pctValue = pct.toIntOrNull()

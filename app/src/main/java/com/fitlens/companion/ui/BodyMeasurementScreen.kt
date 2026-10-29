@@ -66,8 +66,9 @@ private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 /** The value stepper's step, as FitNotes's body tracker steps. */
 private const val VALUE_STEP = 0.1
 
+/** An unreadable date steps from today, as before. */
 private fun shiftDay(date: String, days: Long): String =
-    (Dates.parse(date) ?: LocalDate.now()).plusDays(days).format(Dates.ISO)
+    Dates.plusDays(if (Dates.parse(date) != null) date else LocalDate.now().format(Dates.ISO), days)
 
 /**
  * One body measurement, as in FitNotes's body tracker: TRACK, HISTORY and GRAPH tabs laid out like the exercise screen.

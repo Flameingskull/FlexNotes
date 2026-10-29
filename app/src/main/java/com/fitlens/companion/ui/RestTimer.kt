@@ -23,9 +23,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
@@ -460,7 +460,8 @@ fun RestTimerSheet(exercise: Exercise? = null, onDismiss: () -> Unit) {
     // The stepper edits a local length that is saved a moment after the last change (#105), so holding + doesn't
     // write the setting, or reload the database for an exercise's own length, on every step.
     // Closing the sheet sooner saves it straight away.
-    var chosen by remember(length) { mutableIntStateOf(length) }
+    // Saved, so turning the phone keeps a length that hasn't been committed yet (#311).
+    var chosen by rememberSaveable(length) { mutableStateOf(length) }
     val saved by rememberUpdatedState(length)
     val latest by rememberUpdatedState(chosen)
     fun commit(secs: Int) {

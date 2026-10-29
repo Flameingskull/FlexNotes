@@ -494,6 +494,13 @@ object Dates {
     fun long(s: String): String = parse(s)?.format(long) ?: s
     fun medium(s: String): String = parse(s)?.format(medium) ?: s
     fun short(s: String): String = parse(s)?.format(short) ?: s
+    /** [iso] moved by [days] calendar days, as an ISO date; an unreadable date is returned as it was (#309). */
+    fun plusDays(iso: String, days: Long): String = parse(iso)?.plusDays(days)?.format(ISO) ?: iso
+    /** "3 Mar" this year, "3 Mar 2025" otherwise, so a date range is never ambiguous across New Year (#309). */
+    fun dayMonth(s: String): String {
+        val d = parse(s) ?: return s
+        return if (d.year == LocalDate.now().year) d.format(short) else d.format(medium)
+    }
     /** The weekday and date people plan by, "Mon 27 Oct", with the year only when it isn't this year ("Mon 2 Nov 2027"). */
     fun day(s: String): String {
         val d = parse(s) ?: return s

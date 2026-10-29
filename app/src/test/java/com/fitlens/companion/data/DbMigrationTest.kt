@@ -452,4 +452,54 @@ class DbMigrationTest {
             assertEquals(1, db.count("SELECT COUNT(*) FROM exercise WHERE count_names='Takedowns|Submissions'"))
         }
     }
+
+    /** A v29 database whose `workout_origin` has no key yet, so two rows can share a date: only the rebuild adds one. */
+    private fun v29WithUnkeyedOrigins(fill: (SQLiteDatabase) -> Unit) = oldDatabase(
+        29,
+        v12Schema.map {
+            if (it.startsWith("CREATE TABLE workout_origin")) "CREATE TABLE workout_origin(date TEXT, workout_id INTEGER NOT NULL, routine_day_id INTEGER)" else it
+        } + listOf(
+            "CREATE TABLE routine_day_exercise(id INTEGER PRIMARY KEY AUTOINCREMENT, day_id INTEGER NOT NULL, " +
+                "exercise_id INTEGER NOT NULL, sort_order INTEGER NOT NULL DEFAULT 0, fill INTEGER NOT NULL DEFAULT 0, " +
+                "superset INTEGER NOT NULL DEFAULT 0, rest_seconds INTEGER, rest_after_seconds INTEGER)",
+            "CREATE TABLE routine_day_set(id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER NOT NULL, " +
+                "sort_order INTEGER NOT NULL DEFAULT 0, weight REAL NOT NULL DEFAULT 0, reps INTEGER NOT NULL DEFAULT 0, " +
+                "distance REAL NOT NULL DEFAULT 0, duration INTEGER NOT NULL DEFAULT 0, set_type INTEGER NOT NULL DEFAULT 0, " +
+                "rest_seconds INTEGER, metric REAL)"
+        ),
+        fill
+    )
+
+    @Test
+    fun rebuildMergesExactDuplicateRows() {
+        v29WithUnkeyedOrigins { db ->
+            db.row("workout_origin", "date" to "2026-10-20", "workout_id" to 7L, "routine_day_id" to 3L)
+            db.row("workout_origin", "date" to "2026-10-20", "workout_id" to 7L, "routine_day_id" to 3L)
+            db.row("workout_origin", "date" to "2026-10-21", "workout_id" to 8L, "routine_day_id" to null)
+        }
+        Db(app).writableDatabase.use { db ->
+            assertEquals(Db.VERSION, db.version)
+            assertEquals(2, db.count("SELECT COUNT(*) FROM workout_origin"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM workout_origin WHERE date='2026-10-20' AND workout_id=7 AND routine_day_id=3"))
+            assertEquals(1, db.count("SELECT COUNT(*) FROM workout_origin WHERE date='2026-10-21' AND workout_id=8 AND routine_day_id IS NULL"))
+        }
+    }
+
+    @Test
+    fun rebuildStopsWhenDifferentRowsShareAKey() {
+        v29WithUnkeyedOrigins { db ->
+            db.row("workout_origin", "date" to "2026-10-20", "workout_id" to 7L, "routine_day_id" to 3L)
+            db.row("workout_origin", "date" to "2026-10-20", "workout_id" to 9L, "routine_day_id" to 3L)
+        }
+        val failure = runCatching { Db(app).writableDatabase.close() }.exceptionOrNull()
+        assertTrue("the upgrade should have stopped", failure != null)
+        val messages = generateSequence(failure) { it.cause }.mapNotNull { it.message }.joinToString(" | ")
+        assertTrue(messages, messages.contains("Upgrade stopped so no data is lost"))
+        // The old file is as it was: still version 29, both rows, no half-built table.
+        SQLiteDatabase.openDatabase(app.getDatabasePath(Db.NAME).path, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            assertEquals(29, db.version)
+            assertEquals(2, db.count("SELECT COUNT(*) FROM workout_origin"))
+            assertEquals(0, db.count("SELECT COUNT(*) FROM sqlite_master WHERE name='workout_origin_v${Db.VERSION}'"))
+        }
+    }
 }

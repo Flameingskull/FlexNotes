@@ -113,10 +113,6 @@ import kotlin.math.abs
 import kotlinx.coroutines.launch
 import com.fitlens.companion.ui.design.FitTextButton
 
-/** [date] moved by [days] calendar days, as an ISO date. */
-private fun shiftDay(date: String, days: Long): String =
-    Dates.parse(date)?.plusDays(days)?.format(Dates.ISO) ?: date
-
 /**
  * The day log (#81, #8): the home screen, laid out like FitNotes's training log in the FlexNotes look.
  *
@@ -167,7 +163,7 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
         nav.replace(Screen.Day(d))
     }
     // The swipe detector is set up once, so it reads the current day through this.
-    val step by rememberUpdatedState<(Long) -> Unit>({ days -> go(shiftDay(date, days)) })
+    val step by rememberUpdatedState<(Long) -> Unit>({ days -> go(Dates.plusDays(date, days)) })
 
     Column(Modifier.fillMaxSize()) {
         FitTopBar(
@@ -210,8 +206,8 @@ fun DayScreen(snap: Snapshot, nav: Nav, date: String) {
         )
         DayNavigator(
             date = date,
-            onPrevious = { go(shiftDay(date, -1)) },
-            onNext = { go(shiftDay(date, 1)) },
+            onPrevious = { go(Dates.plusDays(date, -1)) },
+            onNext = { go(Dates.plusDays(date, 1)) },
             onPickDate = { d -> go(d) },
             onToday = { go(Dates.today()) }
         )

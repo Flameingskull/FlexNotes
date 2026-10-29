@@ -11,12 +11,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.BitmapFactory
 import android.os.Build
-import androidx.compose.ui.graphics.toArgb
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.fitlens.companion.R
-import com.fitlens.companion.ui.Brand
-import com.fitlens.companion.ui.MainActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -246,7 +243,7 @@ object LogReminders {
         }
         val tap = PendingIntent.getActivity(
             context, notificationId(kind),
-            Intent(context, MainActivity::class.java).apply {
+            AppHooks.openApp(context).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(EXTRA_OPEN_LOG, kind.key)
             },
@@ -255,7 +252,7 @@ object LogReminders {
         val n = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_reminder)
             .setLargeIcon(BitmapFactory.decodeResource(context.resources, R.drawable.notification_character))
-            .setColor(Brand.Gold.toArgb())
+            .setColor(AppHooks.accent)
             .setContentTitle(context.getString(title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))

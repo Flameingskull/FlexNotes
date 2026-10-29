@@ -32,6 +32,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -189,7 +193,11 @@ fun SearchablePicker(
     searchLabel: String = stringResource(R.string.cmn_search),
     emptyText: String = stringResource(R.string.cmn_no_match)
 ) {
-    val chosen = remember { mutableStateListOf<Long>() }
+    // The search text, the section chip and the ticked rows are saved, so turning the phone keeps a half-made
+    // choice (#311). Only ids are kept, never the rows.
+    val chosen = rememberSaveable(
+        saver = listSaver<SnapshotStateList<Long>, Long>(save = { it.toList() }, restore = { it.toMutableStateList() })
+    ) { mutableStateListOf<Long>() }
     val selectedSuffix = stringResource(R.string.cmn_selected_suffix)
     // With exercises ticked, only Cancel closes the picker: a drag, a tap outside or Back leave it open, so a choice
     // is never lost by accident (#103).
@@ -197,8 +205,8 @@ fun SearchablePicker(
         skipPartiallyExpanded = true,
         confirmValueChange = { it != SheetValue.Hidden || chosen.isEmpty() }
     )
-    var query by remember { mutableStateOf("") }
-    var section by remember { mutableStateOf<String?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var section by rememberSaveable { mutableStateOf<String?>(null) }
     val sections = remember(items) { items.mapNotNull { it.section }.distinct() }
     val q = query.trim()
     val shown = items.filter { item ->
@@ -289,7 +297,7 @@ fun SearchablePicker(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     FitTextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
-                    GoldButton(onClick = { onPick(chosen.toList()) }, enabled = chosen.isNotEmpty()) {
+                    GoldButton(onClick = { onPick(chosen.filter { id -> items.any { it.id == id } }) }, enabled = chosen.isNotEmpty()) {
                         Text(if (chosen.isEmpty()) stringResource(R.string.cmn_add) else stringResource(R.string.cmn_add_n, chosen.size))
                     }
                 }

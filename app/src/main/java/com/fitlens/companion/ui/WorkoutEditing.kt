@@ -318,7 +318,7 @@ fun CopyOrMoveWorkoutSheet(snap: Snapshot, date: String, move: Boolean, onDismis
         )
         Text(stringResource(R.string.wk_to_which_day), style = MaterialTheme.typography.titleMedium)
         val today = Dates.today()
-        val quick = listOf(-1L, 0L, 1L).map { shift(today, it) }.filter { it != date }.distinct()
+        val quick = listOf(-1L, 0L, 1L).map { Dates.plusDays(today, it) }.filter { it != date }.distinct()
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
             quick.forEach { d ->
                 FitFilterChip(selected = chosen == d, onClick = { target = d }, label = { Text(relativeDayLabel(d)) })
@@ -491,7 +491,6 @@ private fun ExerciseLines(snap: Snapshot, day: String, exId: Long) {
     )
 }
 
-private fun shift(date: String, days: Long): String = Dates.parse(date)?.plusDays(days)?.format(Dates.ISO) ?: date
 
 /** Copies [ids] from [from] into [to], then offers to remove exactly the copies again. */
 private fun copyWithUndo(res: Resources, from: String, to: String, ids: List<Long>) {

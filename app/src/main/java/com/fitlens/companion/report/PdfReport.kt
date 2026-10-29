@@ -304,8 +304,8 @@ object PdfReport {
             if (pts.size >= 2) {
                 lineChart(w, pts.map { Dates.epochDay(it.date) to it.value }, photoDays, chart)
                 val dp = paint(p.muted, 7f)
-                c.drawText(Dates.short(first.date), chart.left, chart.bottom + 13f, dp)
-                w.rightText(Dates.short(last.date), dp, chart.right, chart.bottom + 13f)
+                c.drawText(Dates.medium(first.date), chart.left, chart.bottom + 13f, dp)
+                w.rightText(Dates.medium(last.date), dp, chart.right, chart.bottom + 13f)
             } else {
                 c.drawText(res.getString(R.string.pdf_one_entry), chart.left, chart.centerY(), paint(p.muted, 8.5f, italic = true))
             }

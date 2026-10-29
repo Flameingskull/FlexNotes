@@ -229,9 +229,9 @@ fun ExerciseDetailScreen(snap: Snapshot, nav: Nav, exId: Long, initialTab: Int =
     // Records leave out warm-ups unless Settings counts them (#43).
     val statSets = snap.statSetsByExercise[exId] ?: emptyList()
     var tab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
-    var calculator by remember { mutableStateOf(false) }
-    var e1rmSettings by remember { mutableStateOf(false) }
-    var addGoal by remember { mutableStateOf(false) }
+    var calculator by rememberSaveable { mutableStateOf(false) }
+    var e1rmSettings by rememberSaveable { mutableStateOf(false) }
+    var addGoal by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         // FitNotes's bar follows the tab (#142): the calculator on Records, + on Goals.
         BackTopBar(ex?.name ?: stringResource(R.string.ex_fallback), onBack = { nav.pop() }) {
@@ -425,10 +425,10 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
     // Compare (#53): the other exercises on this graph, remembered per exercise, and whether values are relative.
     val (compare, setCompare) = rememberCompare(exId)
     var relative by rememberSaveable { mutableStateOf(initial?.relative ?: false) }
-    var comparing by remember { mutableStateOf<String?>(null) }
+    var comparing by rememberSaveable { mutableStateOf<String?>(null) }
     // A body measurement drawn over the graph on a second axis (#56), kept while the screen is open.
     var overlayName by rememberSaveable(exId) { mutableStateOf<String?>(null) }
-    var pickOverlay by remember { mutableStateOf(false) }
+    var pickOverlay by rememberSaveable { mutableStateOf(false) }
     // The first of two points whose nearest photos open in Compare (#56), waiting for the second tap.
     var photoFrom by rememberSaveable(exId) { mutableStateOf<String?>(null) }
     // Set by the ⋮ menu's "Share graph as image" (#22); the graph item below draws and shares what it shows.

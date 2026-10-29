@@ -134,8 +134,8 @@ object ShareImages {
             val s = g.format(v)
             c.drawText(s, r.left - 20f - label.measureText(s), gy + 10f, label)
         }
-        c.drawText(Dates.short(pts.first().date), r.left, r.bottom + 50f, label)
-        val last = Dates.short(pts.last().date)
+        c.drawText(Dates.medium(pts.first().date), r.left, r.bottom + 50f, label)
+        val last = Dates.medium(pts.last().date)
         c.drawText(last, r.right - label.measureText(last), r.bottom + 50f, label)
 
         g.goal?.let { goal ->

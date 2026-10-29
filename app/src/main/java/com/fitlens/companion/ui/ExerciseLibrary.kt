@@ -195,14 +195,15 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
     var creating by rememberSaveable { mutableStateOf(false) }
     var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
     val editing = editingId?.let { snap.exercises[it] }
-    var deleting by remember { mutableStateOf<Exercise?>(null) }
-    var merging by remember { mutableStateOf<Exercise?>(null) }
-    var creatingCategory by remember { mutableStateOf(false) }
+    // The delete and merge sheets stay open through rotation too (#311); only the exercise's id is saved.
+    var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var mergingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var creatingCategory by rememberSaveable { mutableStateOf(false) }
     // Reorder in place (#170): drag handles on the categories while the toggle is on.
     var reordering by rememberSaveable { mutableStateOf(false) }
-    var seeding by remember { mutableStateOf(false) }
+    var seeding by rememberSaveable { mutableStateOf(false) }
     // The optional "Add sport exercises" list (#247).
-    var addingSports by remember { mutableStateOf(false) }
+    var addingSports by rememberSaveable { mutableStateOf(false) }
 
     fun open(ids: List<Long>) {
         if (ids.isEmpty()) return
@@ -257,8 +258,8 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
             onPick = { ex -> toggle(picked, ex.id) },
             onEdit = { editingId = it.id },
             onDetails = { nav.push(Screen.ExerciseDetail(it.id)) },
-            onDelete = { deleting = it },
-            onMerge = { merging = it }
+            onDelete = { deletingId = it.id },
+            onMerge = { mergingId = it.id }
         )
     }
 
@@ -365,8 +366,9 @@ fun ExerciseLibraryScreen(snap: Snapshot, nav: Nav, forDate: String?) {
     editing?.let { ex ->
         ExerciseEditorSheet(snap = snap, existing = ex, initialCategoryId = ex.categoryId, onDismiss = { editingId = null })
     }
-    deleting?.let { ex -> DeleteExerciseSheet(snap, ex) { deleting = null } }
-    merging?.let { ex -> MergeExerciseFlow(snap, ex) { merging = null } }
+    // An exercise deleted or merged away while its sheet is open simply closes the sheet.
+    deletingId?.let { id -> snap.exercises[id]?.let { ex -> DeleteExerciseSheet(snap, ex) { deletingId = null } } }
+    mergingId?.let { id -> snap.exercises[id]?.let { ex -> MergeExerciseFlow(snap, ex) { mergingId = null } } }
     if (creatingCategory) CategoryEditorSheet(snap, existing = null, onDismiss = { creatingCategory = false })
     if (seeding) StarterLibraryDialog { seeding = false }
     if (addingSports) SportPickerSheet(snap) { addingSports = false }
@@ -472,8 +474,9 @@ private fun CategoryList(
     onOpen: (Long) -> Unit
 ) {
     val counts = remember(snap.libraryKey) { snap.exercisesSorted.groupingBy { it.categoryId }.eachCount() }
-    var editing by remember { mutableStateOf<com.fitlens.companion.data.Category?>(null) }
-    var deleting by remember { mutableStateOf<com.fitlens.companion.data.Category?>(null) }
+    // The category being edited or deleted is kept as its id, so its sheet survives rotation (#311).
+    var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var deletingId by rememberSaveable { mutableStateOf<Long?>(null) }
     // Categories are edited, deleted and moved where they're listed (#170): each one's ⋮, and its drag handle while
     // Reorder is on, saved once when the finger lifts.
     val shown = snap.categoriesSorted.map { it.id }
@@ -491,8 +494,8 @@ private fun CategoryList(
                 CategoryRow(
                     c.name, counts[c.id] ?: 0, selectedId == c.id,
                     listOf(
-                        MenuAction(stringResource(R.string.lib_edit_category)) { editing = c },
-                        MenuAction(stringResource(R.string.lib_delete_category)) { deleting = c }
+                        MenuAction(stringResource(R.string.lib_edit_category)) { editingId = c.id },
+                        MenuAction(stringResource(R.string.lib_delete_category)) { deletingId = c.id }
                     ),
                     handle = reordering,
                     onMoveUp = if (i > 0) ({ dragOrder.step(shown, id, -1) }) else null,
@@ -510,8 +513,8 @@ private fun CategoryList(
             }
         }
     }
-    editing?.let { c -> CategoryEditorSheet(snap, existing = c, onDismiss = { editing = null }) }
-    deleting?.let { c -> DeleteCategorySheet(snap, c) { deleting = null } }
+    editingId?.let { id -> snap.categories[id]?.let { c -> CategoryEditorSheet(snap, existing = c, onDismiss = { editingId = null }) } }
+    deletingId?.let { id -> snap.categories[id]?.let { c -> DeleteCategorySheet(snap, c) { deletingId = null } } }
 }
 
 /**
@@ -1187,8 +1190,9 @@ private fun DeleteExerciseSheet(snap: Snapshot, ex: Exercise, onDismiss: () -> U
 private fun MergeExerciseFlow(snap: Snapshot, ex: Exercise, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val res = ctx.resources
-    var into by remember { mutableStateOf<Exercise?>(null) }
-    val target = into
+    // The chosen exercise to keep is saved as its id, so the confirm step survives rotation (#311).
+    var intoId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val target = intoId?.let { snap.exercises[it] }
     if (target == null) {
         // Built in composition, because categoryColour reads the theme.
         val items = snap.exercisesSorted.filter { it.id != ex.id && it.type == ex.type }.map { other ->
@@ -1205,7 +1209,7 @@ private fun MergeExerciseFlow(snap: Snapshot, ex: Exercise, onDismiss: () -> Uni
             title = stringResource(R.string.lib_merge_title, ex.name),
             items = items,
             onDismiss = onDismiss,
-            onPick = { ids -> into = ids.firstOrNull()?.let { snap.exercises[it] } },
+            onPick = { ids -> intoId = ids.firstOrNull() },
             searchLabel = stringResource(R.string.ex_search_exercises),
             emptyText = stringResource(R.string.lib_merge_none)
         )
@@ -1271,8 +1275,8 @@ fun CategoryEditorSheet(
     onDismiss: () -> Unit,
     onSaved: (Long) -> Unit = {}
 ) {
-    var name by remember { mutableStateOf(existing?.name ?: "") }
-    var colour by remember { mutableStateOf(existing?.colour?.takeIf { it != 0 } ?: CategoryPaletteArgb.first()) }
+    var name by rememberSaveable { mutableStateOf(existing?.name ?: "") }
+    var colour by rememberSaveable { mutableStateOf(existing?.colour?.takeIf { it != 0 } ?: CategoryPaletteArgb.first()) }
     val res = LocalContext.current.resources
 
     FitSheet(

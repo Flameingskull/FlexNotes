@@ -386,9 +386,10 @@ class Db(context: Context) : Closeable {
         /**
          * The v21 step (#36): every table is rebuilt exactly as Room creates it, so Room's schema check passes on a
          * database that has grown through twenty versions of hand-written SQL. Room's own SQL is read from an empty
-         * in-memory copy, so it can never drift from `Schema.kt`. Each table keeps every row and every value: a column
-         * the old table has and the new one doesn't stops the upgrade (Room then leaves the old file untouched)
-         * rather than losing data. Missing tables are created, and AUTOINCREMENT counters carry on where they were, so
+         * in-memory copy, so it can never drift from `Schema.kt`. No information is lost: a column the old table has
+         * and the new one doesn't stops the upgrade (Room then leaves the old file untouched) rather than losing data,
+         * and so does a set of rows that would collide on a key with different values. Only exact duplicate rows
+         * (every copied value identical) may merge into one, because the key can't hold both and nothing is lost. Missing tables are created, and AUTOINCREMENT counters carry on where they were, so
          * a deleted row's id is never reused. Runs inside the upgrade's transaction and replays safely (#77).
          */
         internal fun reconcile(context: Context, db: SupportSQLiteDatabase) {
@@ -454,10 +455,21 @@ class Db(context: Context) : Closeable {
             } else null
             val before = db.rawQuery("SELECT COUNT(*) FROM `$table`", null).use { c -> if (c.moveToFirst()) c.getLong(0) else 0L }
             if (into.isNotEmpty()) {
+                // INSERT OR IGNORE skips a row whose key is already taken. That is only safe when the row it skips is an
+                // exact copy of the one that took it, which the distinct count below proves.
                 db.execSQL("INSERT OR IGNORE INTO `$temp`(${into.joinToString()}) SELECT ${from.joinToString()} FROM `$table`")
             }
             val after = db.rawQuery("SELECT COUNT(*) FROM `$temp`", null).use { c -> if (c.moveToFirst()) c.getLong(0) else 0L }
-            if (after != before) Log.w("FlexNotes", "Rebuilding $table kept $after of $before rows (the others had no key)")
+            if (into.isNotEmpty()) {
+                // The number of different rows the copy should hold: exact duplicates count once. Fewer than that means
+                // two different rows shared a key and one was dropped, so stop and let the transaction roll back.
+                val distinct = db.rawQuery("SELECT COUNT(*) FROM (SELECT DISTINCT ${from.joinToString()} FROM `$table`)", null)
+                    .use { c -> if (c.moveToFirst()) c.getLong(0) else 0L }
+                check(after >= distinct) {
+                    "Upgrade stopped so no data is lost: $table has ${distinct - after} rows that share a key with a different row"
+                }
+            }
+            if (after < before) Log.w("FlexNotes", "Rebuilding $table merged ${before - after} exact duplicate rows ($before became $after)")
             db.execSQL("DROP TABLE `$table`")
             db.execSQL("ALTER TABLE `$temp` RENAME TO `$table`")
             if (sequence != null) {

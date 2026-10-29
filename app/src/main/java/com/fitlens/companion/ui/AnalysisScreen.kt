@@ -73,7 +73,7 @@ fun AnalysisScreen(snap: Snapshot, nav: Nav) {
             }
         )
     }
-    var addingGoal by remember { mutableStateOf(false) }
+    var addingGoal by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.fillMaxSize()) {
         FitTopBar(
             title = stringResource(R.string.an_title),
@@ -164,7 +164,7 @@ internal fun filterLabel(res: Resources, snap: Snapshot, f: Analysis.Filter): St
 @Composable
 internal fun AnalysisFilterChips(snap: Snapshot, filter: Analysis.Filter, onFilter: (Analysis.Filter) -> Unit) {
     val res = LocalContext.current.resources
-    var picking by remember { mutableStateOf<String?>(null) }
+    var picking by rememberSaveable { mutableStateOf<String?>(null) }
     val current = when {
         filter.exerciseId != null -> 2
         filter.categoryId != null -> 1
@@ -309,12 +309,12 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
     var rangeIdx by rememberSaveable { mutableIntStateOf(opened?.first?.range ?: 1) }
     var showTrend by rememberSaveable { mutableStateOf(false) }
     var fullScreen by rememberSaveable { mutableStateOf(false) }
-    var showDays by remember { mutableStateOf(false) }
+    var showDays by rememberSaveable { mutableStateOf(false) }
     // Duration as the period's total, or as the average length of its timed workouts (#12).
     var durationAvg by rememberSaveable { mutableStateOf(opened?.first?.average ?: false) }
     // A body measurement's average per period over the totals (#56), on its own axis; kept while the screen is open.
     var overlayName by rememberSaveable { mutableStateOf<String?>(null) }
-    var pickOverlay by remember { mutableStateOf(false) }
+    var pickOverlay by rememberSaveable { mutableStateOf(false) }
     val period = Analysis.Period.entries[periodIdx]
     val metric = Analysis.Metric.entries[metricIdx]
     val from = rangeFrom(rangeIdx)
