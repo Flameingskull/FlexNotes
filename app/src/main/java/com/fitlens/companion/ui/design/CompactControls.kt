@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.data.Dates
+import com.fitlens.companion.ui.FitShapes
 import com.fitlens.companion.ui.Spacing
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
@@ -51,6 +52,8 @@ fun DropdownPill(
         FitTextButton(
             onClick = { open = true },
             contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.xs),
+            // Not a pill's round ends: they clip the corners of a choice long enough to take two lines.
+            shape = FitShapes.row,
             modifier = Modifier.heightIn(min = Spacing.touch).semantics { contentDescription = changeLabel }
         ) {
             Text(current, style = MaterialTheme.typography.labelLarge)
@@ -81,6 +84,7 @@ fun PickerPill(label: String, current: String, modifier: Modifier = Modifier, on
     FitTextButton(
         onClick = onClick,
         contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.xs),
+        shape = FitShapes.row,
         modifier = modifier.heightIn(min = Spacing.touch).semantics { contentDescription = changeLabel }
     ) {
         Text(current, style = MaterialTheme.typography.labelLarge)

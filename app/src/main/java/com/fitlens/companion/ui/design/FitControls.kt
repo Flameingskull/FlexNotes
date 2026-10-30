@@ -69,12 +69,14 @@ fun FitTextButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     contentPadding: PaddingValues = ButtonDefaults.TextButtonContentPadding,
+    shape: androidx.compose.ui.graphics.Shape = ButtonDefaults.textShape,
     content: @Composable RowScope.() -> Unit
 ) {
     TextButton(
         onClick = onClick,
         modifier = modifier,
         enabled = enabled,
+        shape = shape,
         colors = fitTextButtonColors(),
         contentPadding = contentPadding,
         content = content
