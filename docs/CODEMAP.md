@@ -5,7 +5,7 @@ Source root: `app/src/main/java/com/fitlens/companion/` (paths below are relativ
 **Keep it current:** any build that adds, moves or renames a file, or changes a pattern below, updates this map in the
 same commit.
 
-Last updated: 1.0.196.
+Last updated: 1.0.197.
 
 ## How data flows
 
@@ -298,9 +298,10 @@ Last updated: 1.0.196.
   details screen is drawn directly because the harness's `Nav` has no back stack) from the seeded phone in
   `ui/ScreenFixture.kt` (long names, FitNotes and FlexNotes sets, kg and lb, a Session, comments, body values, photos,
   a workout with named days, fixed on Tue 27 Oct 2026). The window itself is 320dp or 411dp wide (`WholeScreen320Test`,
-  `WholeScreen411Test` share the tests in `WholeScreenChecks`), each at 100% and 200% font, so sheets and menus are
+  `WholeScreen411Test` share the tests in `WholeScreenChecks`, window `h3200dp-mdpi`), each at 100% and 200% font, so sheets and menus are
   laid out at that width too. Each drawing runs `LayoutChecks.problems(..., scrollingScreen = true)` (text scrolled past
-  a list's edge, or laid out beside the window like a closed drawer, isn't a problem) and a golden
+  a list's edge, or laid out beside the window like a closed drawer, isn't a problem; only the open pane of a window is
+  checked, unplaced measuring copies are skipped, and a word broken across lines fails) and a golden
   `screen_<name>_<width>dp[_font2].png`, with the same Record/Verify/`SCREENSHOT_STRICT` rules as `ScreenshotTest`. A
   test collects every problem and asserts once at the end; one already filed goes in `KNOWN` (line prefix to issue).
   A new screen adds a `@Test` to `WholeScreenChecks`. **Test seams in the app:** `Dates.clockSource` (`todayDate()`,
