@@ -78,6 +78,8 @@ jobs:
           set -o pipefail
           # Straight into build.log: the step stops at a failing check, so a later copy would never run.
           python3 -I .github/scripts/unused_private.py app/src 2>&1 | tee build.log
+          # Every source file belongs to an audit area, so the audits can't quietly skip code.
+          python3 -I .github/scripts/audit_coverage.py 2>&1 | tee -a build.log
 
       - name: Build release APK
         if: steps.guard.outputs.skip != 'true'

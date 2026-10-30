@@ -73,6 +73,13 @@ and list it under "New requests filed" in your report.
 
 ## Fixing (when told which bugs to fix, or "fix the ready bugs")
 
+You may use any Claude skill, plugin or agent type that helps, without asking (owner, 2026-10-28, 2026-10-30).
+
+**Done means it works (CLAUDE.md rule 8):** write or extend a test that drives the function and asserts the outcome
+with the data that broke it. Search for the same pattern and concept on every other screen, and fix those too or report
+them. Follow your change to what a person sees, and set the function's row in `docs/audit/<area>.md` to `Proved` with
+the test's name. Report honestly what you couldn't prove.
+
 1. Work from highest priority down. Make the smallest correct fix; don't refactor unrelated code.
 2. Keep updates installable over the existing app: never change `applicationId`, the version numbering or the signing
    setup, and never add a keystore or any secret to the repository. Any database change needs a version bump and an `onUpgrade` migration in `Db.kt`

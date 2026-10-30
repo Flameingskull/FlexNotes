@@ -79,6 +79,13 @@ under "New requests filed" in your report.
 
 ## Building (when told which features to build, or "build the ready features")
 
+You may use any Claude skill, plugin or agent type that helps, without asking (owner, 2026-10-28, 2026-10-30).
+
+**Done means it works (CLAUDE.md rule 8):** meeting the acceptance criteria isn't enough on its own. A person must be
+able to find the feature from an obvious control, and a test must drive it and assert the outcome across the data it
+could meet (none, years of it, several at once, each state, late or refused). Add its functions to
+`docs/audit/<area>.md` as `Proved`, with the tests' names. Report honestly what you couldn't prove.
+
 1. Implement to the acceptance criteria, following the existing code style and the brand theme.
 2. Keep updates installable over the existing app: never change `applicationId`, the version numbering or the signing
    setup, and never add a keystore or any secret to the repository. Any database change needs a version bump and an `onUpgrade` migration in `Db.kt`

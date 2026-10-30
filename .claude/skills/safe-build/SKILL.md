@@ -146,6 +146,16 @@ compiler. Check imports, types, nullability, named arguments, `when` exhaustiven
 database migrations (`Db.VERSION` bump plus `onUpgrade` that keeps data, migration test, exported schema), and the
 brand theme. Check that the stages fit together: nothing duplicated, no conflicting edits.
 Fix problems before pushing. Make sure nothing adds a keystore, secret or credential.
+
+**Does it work? (CLAUDE.md rule 8, owner 2026-10-30.)** A compiling diff isn't a working function. For each item:
+- **Reach it:** name the control a person taps to get there. If it's hard to find, fix that in this build.
+- **Prove it:** name the test that drives it and asserts the outcome, across the data it could meet (none, years of
+  it, several at once, each state, late or refused). No test means it isn't done, and is reported as such.
+- **Sweep it:** search for the same pattern and concept on every other screen, fix them or file them, and list them in
+  the commit.
+- **Audit it:** run `/function-audit changed` for the areas touched, within budget, and update their ledgers. If the budget
+  doesn't cover it, say so in the report. Check `python .github/scripts/audit_coverage.py`.
+- **Full audit:** if this build's version is at or past the next-due version in `CLAUDE.md` rule 8, run `/function-audit all` first.
 If the build added, moved or renamed a file or changed a pattern, check that `docs/CODEMAP.md` was updated (and its
 "Last updated" version). Check that the agents' notes in `.claude/agent-notes/` gained only short, true, public-safe
 lines.
@@ -174,4 +184,4 @@ lines.
 
 ## 8. Report to the owner
 Give the release name and link, the issues resolved (with links), which stretch stages were built or skipped and
-why, anything deferred, and what to test on the phone.
+why, anything deferred, what each item's proof is and what wasn't proved, and what to test on the phone.

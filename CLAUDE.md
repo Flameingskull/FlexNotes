@@ -54,6 +54,27 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
 7. **Refresh the README every 5 releases**, both on GitHub and locally. Rewrite `README.md` so it matches the app as
    released, its purpose and direction, and every other section. Last refresh: **1.0.196**. Next due: **1.0.201**.
    The `/new-build`, `/safe-build` and `/slice-build` skills check this in their release-notes step.
+8. **Reviews and audits must be reliable (owner, 2026-10-30).** Whether something works is checked by following it to
+   its result, not by reading its text or layout, and only a test that drives it counts as proof. Findings from a real
+   phone that a review should have caught led to this rule:
+   - `/function-audit` (`.claude/skills/function-audit/SKILL.md`, the `function-auditor` agent) is the one method for
+     whether things work. Each function has a row
+     in `docs/audit/<area>.md` saying what is known: Proved, Read OK, Fails, Gap or Not checked. Never call anything
+     reviewed, audited or checked beyond what its ledger says, and always say what wasn't.
+   - `/code-audit` (`.claude/skills/code-audit/SKILL.md`, the `code-auditor` agent) is the one method for whether the
+     code is sound: correctness, data safety, concurrency, lifecycle, failure, security, performance, structure, tests
+     and release safety, in `docs/audit/code/<area>.md`. The owner triggers it.
+   - **Audits fix nothing (owner, 2026-10-30).** Auditors change no code, tests, resources or build files, not even one
+     line. An audit ends by putting every action needed to resolve its findings into GitHub issues, the tracker and
+     the roadmap, so any build picks them up, and it isn't finished until that's done.
+   - Every build runs `/function-audit changed` on the areas it touched. A full `/function-audit` runs every 10
+     releases. Last full: **none yet** (the first attempt, 2026-10-30, stopped with nothing recorded). Next due: **now**,
+     when the owner runs it, and by **1.0.207** at the latest.
+   - A build's item is done only when a person can reach it from an obvious control and a test drives it and asserts
+     the outcome, across the data it could meet (years of history, several at once, each state, late or refused).
+   - A defect fixed in one place is swept for everywhere: same pattern, same concept, every screen, listed in the commit.
+   - Usage limits shrink what is audited, never how well. What wasn't done is reported as not done.
+   - Agents may use any Claude skill, plugin or agent type that fits, without asking, in every build and audit.
 
 ## Product direction (owner decisions, 2026-09-23)
 
@@ -164,6 +185,8 @@ Rules:
 | --- | --- | --- |
 | `bug-manager` | Bug list | `bug` |
 | `feature-manager` | Feature request list | `enhancement` |
+| `function-auditor` | One area's function audit, `docs/audit/<area>.md`. Changes no code | (reports findings; the audit's end step files them) |
+| `code-auditor` | One area's code audit, `docs/audit/code/<area>.md`. Changes no code | (reports findings; the audit's end step files them) |
 
 Shared labels: `needs-triage`, `triaged`, `needs-info`, `ready`, `priority: high|medium|low`.
 Agents don't re-read the codebase: they start from `docs/CODEMAP.md` (which file owns what, data flow, conventions)

@@ -26,6 +26,9 @@ jobs:
       # The same unused-private-code gate as releases (#260), so a pull request that passes here passes there too.
       - name: Check for unused private code (#260)
         run: python3 -I .github/scripts/unused_private.py app/src
+      # Every source file belongs to an audit area, so the audits can't quietly skip code.
+      - name: Check audit coverage
+        run: python3 -I .github/scripts/audit_coverage.py
       - name: Unit tests and debug APK
         run: |
           chmod +x gradlew
