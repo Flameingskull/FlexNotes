@@ -507,12 +507,13 @@ fun RestTimerSheet(exercise: Exercise? = null, prescribed: Int? = null, onDismis
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 GlassOutlinedButton(onClick = { RestTimer.adjust(-15) }, modifier = Modifier.weight(1f).heightIn(min = Spacing.row)) { Text(stringResource(R.string.rt_minus15)) }
-                GoldButton(
-                    onClick = { if (st.paused) RestTimer.resume() else RestTimer.pause() },
-                    modifier = Modifier.weight(1f).heightIn(min = Spacing.row)
-                ) { Text(if (st.paused) stringResource(R.string.rt_resume) else stringResource(R.string.rt_pause)) }
                 GlassOutlinedButton(onClick = { RestTimer.adjust(15) }, modifier = Modifier.weight(1f).heightIn(min = Spacing.row)) { Text(stringResource(R.string.rt_plus15)) }
             }
+            // Its own row: three buttons side by side broke "Resume" in two on a small phone.
+            GoldButton(
+                onClick = { if (st.paused) RestTimer.resume() else RestTimer.pause() },
+                modifier = Modifier.fillMaxWidth().heightIn(min = Spacing.row)
+            ) { Text(if (st.paused) stringResource(R.string.rt_resume) else stringResource(R.string.rt_pause)) }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 FitTextButton(onClick = { RestTimer.start(ctx, chosen) }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) { Text(stringResource(R.string.rt_restart)) }
                 FitTextButton(onClick = { RestTimer.stop() }, modifier = Modifier.weight(1f).heightIn(min = Spacing.touch)) { Text(stringResource(R.string.rt_stop)) }

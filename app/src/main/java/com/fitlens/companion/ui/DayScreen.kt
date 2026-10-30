@@ -612,12 +612,7 @@ private fun BodyValuesCard(
                     .padding(horizontal = Spacing.lg, vertical = Spacing.md),
                 verticalArrangement = Arrangement.Center
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        r.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f).padding(end = Spacing.md)
-                    )
+                val valueAndUnit: @Composable () -> Unit = {
                     Text(
                         fmtNum(r.value),
                         style = MaterialTheme.typography.titleMedium,
@@ -632,6 +627,22 @@ private fun BodyValuesCard(
                             maxLines = 1,
                             softWrap = false
                         )
+                    }
+                }
+                if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.3f) {
+                    // At large fonts the name takes the full width: beside the value, a long word broke mid-word.
+                    Text(r.name, style = MaterialTheme.typography.titleMedium)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                        valueAndUnit()
+                    }
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            r.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f).padding(end = Spacing.md)
+                        )
+                        valueAndUnit()
                     }
                 }
                 if (change != null && prev != null) {
