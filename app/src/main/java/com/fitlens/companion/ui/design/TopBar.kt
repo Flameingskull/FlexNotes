@@ -141,8 +141,6 @@ fun FitTopBar(
             if (!subtitle.isNullOrBlank()) {
                 Text(
                     subtitle.uppercase(),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -294,7 +292,7 @@ private const val MIN_TITLE_SIZE = 0.8f
 fun OverflowMenu(items: List<MenuAction>, description: String = stringResource(R.string.cmn_more_options)) {
     var open by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { open = true }) {
+        IconButton(onClick = { open = true }, modifier = Modifier.size(Spacing.touch)) {
             Icon(Icons.Filled.MoreVert, contentDescription = description)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

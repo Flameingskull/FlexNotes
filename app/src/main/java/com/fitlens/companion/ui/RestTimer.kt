@@ -348,13 +348,14 @@ fun RestLengthStepper(
     )
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
         if (onDefault != null) {
-            FitFilterChip(selected = isDefault, onClick = onDefault, label = { Text(stringResource(R.string.rt_default)) })
+            FitFilterChip(selected = isDefault, onClick = onDefault, label = { Text(stringResource(R.string.rt_default)) }, modifier = Modifier.heightIn(min = Spacing.touch))
         }
         REST_CHOICES.forEach { secs ->
             FitFilterChip(
                 selected = !isDefault && seconds == secs,
                 onClick = { onChange(secs) },
-                label = { Text(fmtDuration(secs)) }
+                label = { Text(fmtDuration(secs)) },
+                modifier = Modifier.heightIn(min = Spacing.touch)
             )
         }
     }

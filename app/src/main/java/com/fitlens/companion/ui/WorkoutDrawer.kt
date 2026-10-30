@@ -233,7 +233,7 @@ fun WorkoutDrawer(
                     // As in FitNotes, rows carry no colour bar; a superset keeps a gold one so its group reads (#18, #141).
                     Box(Modifier.width(4.dp).heightIn(min = Spacing.row).background(if (group > 0) Brand.Gold else Brand.Onyx))
                     Column(Modifier.weight(1f).padding(horizontal = Spacing.md, vertical = Spacing.sm)) {
-                        Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                        Text(name, style = MaterialTheme.typography.bodyLarge,
                             color = if (isCurrent) Brand.GoldLight else MaterialTheme.colorScheme.onSurface)
                         Text(
                             (if (!hasSets) stringResource(R.string.drawer_no_sets)
@@ -242,8 +242,6 @@ fun WorkoutDrawer(
                             else pluralStringResource(R.plurals.day_sets, count, count)) +
                                 (letters[group]?.let { "  ·  " + stringResource(R.string.drawer_superset_suffix, it) } ?: ""),
                             style = MaterialTheme.typography.bodyMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }

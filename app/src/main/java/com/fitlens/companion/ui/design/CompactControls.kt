@@ -53,7 +53,7 @@ fun DropdownPill(
             contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.xs),
             modifier = Modifier.heightIn(min = Spacing.touch).semantics { contentDescription = changeLabel }
         ) {
-            Text(current, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(current, style = MaterialTheme.typography.labelLarge)
             Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -83,7 +83,7 @@ fun PickerPill(label: String, current: String, modifier: Modifier = Modifier, on
         contentPadding = PaddingValues(start = Spacing.sm, end = Spacing.xs),
         modifier = modifier.heightIn(min = Spacing.touch).semantics { contentDescription = changeLabel }
     ) {
-        Text(current, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(current, style = MaterialTheme.typography.labelLarge)
         Icon(Icons.Filled.ArrowDropDown, contentDescription = null)
     }
 }
@@ -100,7 +100,7 @@ fun OptionsMenu(options: List<ToggleOption>, description: String = stringResourc
     if (options.isEmpty() && actions.isEmpty()) return
     var open by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { open = true }) {
+        IconButton(onClick = { open = true }, modifier = Modifier.size(Spacing.touch)) {
             Icon(Icons.Filled.MoreVert, contentDescription = description, tint = MaterialTheme.colorScheme.primary)
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {

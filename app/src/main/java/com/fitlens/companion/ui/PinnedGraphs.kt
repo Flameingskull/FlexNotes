@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -147,7 +148,7 @@ fun saveCompare(exId: Long, ids: List<Long>) {
 /** The star on a graph's option row (#55): gold and filled when the graph is pinned to the Overview. */
 @Composable
 fun PinGraphButton(pinned: Boolean, onToggle: () -> Unit) {
-    IconButton(onClick = onToggle) {
+    IconButton(onClick = onToggle, modifier = Modifier.size(Spacing.touch)) {
         Icon(
             if (pinned) Icons.Filled.Star else FitIcons.StarOutline,
             contentDescription = stringResource(if (pinned) R.string.pin_unpin_cd else R.string.pin_pin_cd),

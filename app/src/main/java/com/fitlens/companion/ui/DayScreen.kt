@@ -616,8 +616,6 @@ private fun BodyValuesCard(
                     Text(
                         r.name,
                         style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f).padding(end = Spacing.md)
                     )
                     Text(
@@ -641,8 +639,6 @@ private fun BodyValuesCard(
                         change,
                         style = MaterialTheme.typography.bodySmall,
                         color = changeColour(def, prev.value, r.value),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                         textAlign = TextAlign.End,
                         modifier = Modifier.fillMaxWidth().padding(top = Spacing.xxs)
                     )

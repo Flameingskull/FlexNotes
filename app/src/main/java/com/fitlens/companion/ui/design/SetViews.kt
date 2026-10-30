@@ -443,7 +443,7 @@ fun SetRow(
         Row(frame.then(click).padding(setInnerPadding(framed, onComment != null)), verticalAlignment = align) {
             if (onComment != null) {
                 val label = if (hasComment) stringResource(R.string.sv_edit_comment, noun.lowercase(), index) else stringResource(R.string.sv_add_comment, noun.lowercase(), index)
-                IconButton(onClick = onComment) {
+                IconButton(onClick = onComment, modifier = Modifier.size(Spacing.touch)) {
                     Icon(
                         if (hasComment) FitIcons.Comment else FitIcons.CommentOutline,
                         contentDescription = label,
@@ -524,10 +524,8 @@ fun SetRow(
                         Text(
                             "“$comment”",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            // Twice the lines at large font sizes, where each holds half as much (#157).
-                            maxLines = if (LocalDensity.current.fontScale > 1.3f) 4 else 2,
-                            overflow = TextOverflow.Ellipsis
+                            // A comment is read in full: it wraps to as many lines as it needs.
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -624,9 +622,7 @@ fun ExerciseCommentRow(
                 Text(
                     previous.second,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 4,
-                    overflow = TextOverflow.Ellipsis
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

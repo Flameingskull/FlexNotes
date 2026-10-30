@@ -259,7 +259,7 @@ val FullscreenIcon: ImageVector = materialIcon(name = "FlexNotes.Fullscreen") {
 /** The visible full-screen button for a graph (#96), placed next to its chips. */
 @Composable
 fun ExpandGraphButton(onClick: () -> Unit) {
-    IconButton(onClick = { ChartHints.expanded(); onClick() }) {
+    IconButton(onClick = { ChartHints.expanded(); onClick() }, modifier = Modifier.size(Spacing.touch)) {
         Icon(FullscreenIcon, contentDescription = stringResource(R.string.ch_full_screen), tint = MaterialTheme.colorScheme.primary)
     }
 }

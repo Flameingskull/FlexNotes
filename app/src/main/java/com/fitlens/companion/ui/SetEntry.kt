@@ -612,8 +612,6 @@ fun SetEntryScreen(
                     members.joinToString(" → ") { id -> (snap.exercises[id]?.name ?: unnamed).let { if (id == exerciseId) it.uppercase() else it } },
                 style = MaterialTheme.typography.labelSmall,
                 color = Brand.Gold,
-                maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )
         }
@@ -1015,9 +1013,7 @@ private fun TrackTab(
                     ) {
                         Text(
                             if (queue.size > 1) pluralStringResource(R.plurals.set_next_exercise_more, queue.size - 1, nextQueued.name, queue.size - 1)
-                            else stringResource(R.string.set_next_exercise, nextQueued.name),
-                            maxLines = 2,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            else stringResource(R.string.set_next_exercise, nextQueued.name)
                         )
                     }
                 }

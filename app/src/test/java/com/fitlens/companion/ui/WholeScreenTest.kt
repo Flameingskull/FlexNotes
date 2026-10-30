@@ -413,14 +413,14 @@ abstract class WholeScreenChecks(private val width: Int) {
 
     private fun report() {
         val problems = found.distinct()
-        val fresh = problems.filter { p -> KNOWN.keys.none { p.startsWith(it) } }
+        val fresh = problems.filter { p -> KNOWN.none { (pattern, _) -> pattern.containsMatchIn(p) } }
         val known = problems - fresh.toSet()
         val text = buildString {
             append("Whole-screen checks at ${width}dp (#323):\n")
             fresh.forEach { append(it).append('\n') }
             if (known.isNotEmpty()) {
                 append("Already filed:\n")
-                known.forEach { p -> append(p).append("  (#").append(KNOWN.entries.first { p.startsWith(it.key) }.value).append(")\n") }
+                known.forEach { p -> append(p).append("  (#").append(KNOWN.first { (pattern, _) -> pattern.containsMatchIn(p) }.second).append(")\n") }
             }
         }
         assertTrue(text, fresh.isEmpty())
@@ -435,12 +435,32 @@ abstract class WholeScreenChecks(private val width: Int) {
         /** The font scale, the golden name's suffix and the percentage for the message. */
         val FONTS = listOf(Triple(1f, "", 100), Triple(2f, "_font2", 200))
 
+        /** Every exercise name in the fixture, as a regular expression alternative. */
+        private val NAMES = listOf(
+            ScreenFixture.BENCH, ScreenFixture.ROMANIAN, ScreenFixture.PULLUP, "Dumbbell Lateral Raise",
+            "Treadmill intervals (incline 2%)", "Brazilian jiu-jitsu class"
+        ).joinToString("|") { Regex.escape(it) }
+
         /**
-         * Problems already filed as issues: the start of the problem line (it begins with the screen, width and font)
-         * to the issue number. These are reported but don't fail the build, so a filed finding never blocks a release
-         * while any new one still does. Empty until the first run's report is triaged.
+         * Problems already filed as issues: a pattern matched anywhere in the problem line (which begins with the
+         * screen, width and font) and the issue number. These are reported but don't fail the build, so a filed
+         * finding never blocks a release while any new one still does. A pattern names the screen and the text it
+         * is about, never a whole kind of problem.
          */
-        val KNOWN: Map<String, Int> = emptyMap()
+        val KNOWN: List<Pair<Regex, Int>> = listOf(
+            // #325: a top-bar or sheet title is held to one line and ends in an ellipsis. The exercise name on the
+            // exercise screen and its sheets (not the workout drawer's rows, which wrap)...
+            Regex("""^(Set entry|Exercise (?!overview)|Set comment box)[^\[]*\[[^\]]*\]: "($NAMES)" is cut short with an ellipsis""") to 325,
+            // ...the library's title: All exercises, a category or a workout name...
+            Regex(
+                """^(Library|New exercise|Edit exercise|Custom exercise type)[^\[]*\[[^\]]*\]: "(All exercises|""" +
+                    """Legs and posterior chain|Upper and lower strength block with a long name)" is cut short with an ellipsis"""
+            ) to 325,
+            // ...and "FlexNotes" while the rest countdown shows beside it.
+            Regex("""^(Day log, rest timer running|Rest timer sheet)[^\[]*\[[^\]]*\]: "FlexNotes" is cut short with an ellipsis""") to 325,
+            // #326: History set rows are 34 to 36dp tall.
+            Regex("""^(Set entry, History|Exercise History, long name|Exercise overview, History)[^\[]*\[[^\]]*\]: "Set \d+, .*" has a \d+ × 3[4-6]dp touch target""") to 326
+        )
     }
 }
 
@@ -448,12 +468,12 @@ abstract class WholeScreenChecks(private val width: Int) {
 @OptIn(ExperimentalRoborazziApi::class)
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], application = Application::class, qualifiers = "w320dp-h1000dp-xhdpi")
+@Config(sdk = [34], application = Application::class, qualifiers = "w320dp-h3200dp-mdpi")
 class WholeScreen320Test : WholeScreenChecks(320)
 
 /** A large phone: 411dp wide. */
 @OptIn(ExperimentalRoborazziApi::class)
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], application = Application::class, qualifiers = "w411dp-h1000dp-xhdpi")
+@Config(sdk = [34], application = Application::class, qualifiers = "w411dp-h3200dp-mdpi")
 class WholeScreen411Test : WholeScreenChecks(411)

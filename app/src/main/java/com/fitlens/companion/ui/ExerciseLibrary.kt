@@ -419,8 +419,6 @@ private fun RoutineDayList(snap: Snapshot, routine: Routine, onOpen: (Long) -> U
                             if (isNext) stringResource(R.string.lib_day_next, d.name) else d.name,
                             style = MaterialTheme.typography.titleMedium,
                             color = if (isNext) Brand.Gold else MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
                         FitTextButton(
@@ -443,17 +441,15 @@ private fun RoutineDayList(snap: Snapshot, routine: Routine, onOpen: (Long) -> U
                                 .clickable(onClickLabel = openLabel) { onOpen(p.exerciseId) }
                                 .padding(horizontal = Spacing.lg, vertical = Spacing.sm)
                         ) {
-                            Text(snap.exercises[p.exerciseId]?.name ?: stringResource(R.string.ex_fallback), style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(snap.exercises[p.exerciseId]?.name ?: stringResource(R.string.ex_fallback), style = MaterialTheme.typography.bodyLarge)
                             Text(
                                 planSummary(LocalContext.current.resources, snap, p),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                             // Its prescribed rest (#138), "Rest 90 s · then 2 min".
                             restSummary(LocalContext.current.resources, p, !ExerciseTypes.isRounds(snap.exercises[p.exerciseId]?.type ?: -1))?.let { rest ->
-                                Text(rest, style = MaterialTheme.typography.bodySmall, color = Brand.Gold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(rest, style = MaterialTheme.typography.bodySmall, color = Brand.Gold)
                             }
                         }
                     }
@@ -680,7 +676,7 @@ private fun ExerciseRow(
         // As FitNotes lists exercises (#143): the name and a ⋮, a fine rule under each. A favourite keeps a small gold
         // star after its name; while choosing several, each chosen one shows its place.
         Row(Modifier.weight(1f).padding(vertical = Spacing.sm), verticalAlignment = Alignment.CenterVertically) {
-            Text(ex.name, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            Text(ex.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f, fill = false))
             if (ex.favourite) {
                 Icon(Icons.Filled.Star, contentDescription = stringResource(R.string.lib_favourite_mark), tint = Brand.Gold, modifier = Modifier.padding(start = Spacing.xs).size(16.dp))
             }

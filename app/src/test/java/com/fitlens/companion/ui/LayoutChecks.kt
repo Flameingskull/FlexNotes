@@ -51,9 +51,22 @@ internal object LayoutChecks {
         val mainRootId = tag.rootNode().id
         val mainRight = tag.boundsInRoot.right + 0.5f
 
+        // An open drawer or sheet covers what is under it, and covered content is not seen: on a whole screen only
+        // the topmost modal pane of each window is checked while one is open (a closed drawer sits beside the window).
+        val panes: Map<Int, SemanticsNode> = if (!scrollingScreen) emptyMap() else
+            compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.PaneTitle), useUnmergedTree = true)
+                .fetchSemanticsNodes()
+                .filter { it.onScreen() }
+                .groupBy { it.rootNode().id }
+                .mapValues { it.value.last() }
+        fun SemanticsNode.seen(): Boolean = !scrollingScreen || (onScreen() && uncovered(panes))
+        // What is drawn: on a whole screen only the part a parent doesn't clip, so text scrolled under a footer isn't
+        // counted as touching it.
+        fun SemanticsNode.area(): Rect = if (scrollingScreen) boundsInRoot else unclipped()
+
         // Compose stretches a smaller control's touch area to 48dp, as long as no other control is in the way.
         val controls = compose.onAllNodes(hasClickAction()).fetchSemanticsNodes()
-            .filter { !scrollingScreen || it.onScreen() }
+            .filter { it.seen() }
             .map { it to it.unclipped() }
         controls.forEach { (node, r) ->
             if (r.width >= minTouch && r.height >= minTouch) return@forEach
@@ -61,7 +74,8 @@ internal object LayoutChecks {
                 r.center.x - maxOf(r.width, minTouch) / 2, r.center.y - maxOf(r.height, minTouch) / 2,
                 r.center.x + maxOf(r.width, minTouch) / 2, r.center.y + maxOf(r.height, minTouch) / 2
             ).deflate(0.5f)
-            val crowded = controls.any { (other, o) ->
+            val crowded = controls.any { (other, _) ->
+                val o = other.area()
                 other.id != node.id && other.rootNode().id == node.rootNode().id &&
                     !o.encloses(r) && !r.encloses(o) && o.overlaps(target)
             }
@@ -71,14 +85,25 @@ internal object LayoutChecks {
         }
         val texts = compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.GetTextLayoutResult), useUnmergedTree = true)
             .fetchSemanticsNodes()
-            .filter { !scrollingScreen || it.onScreen() }
+            .filter { it.seen() }
         // Two pieces of text drawn over each other, such as a value running into the next column.
         texts.forEachIndexed { i, a ->
             val window = a.rootNode().id
             texts.drop(i + 1).forEach { b ->
-                if (b.rootNode().id == window && a.unclipped().deflate(1f).overlaps(b.unclipped().deflate(1f))) {
-                    out += "$name: \"${a.label()}\" overlaps \"${b.label()}\""
-                }
+                if (b.rootNode().id != window) return@forEach
+                val ra = a.area().deflate(1f)
+                val rb = b.area().deflate(1f)
+                if (scrollingScreen) {
+                    if (ra.isEmpty || rb.isEmpty || !ra.overlaps(rb)) return@forEach
+                    // A touch of one pixel or two is not an overlap anyone can see.
+                    val both = ra.intersect(rb)
+                    if (both.width < 2f * px || both.height < 2f * px) return@forEach
+                    // A text field's own node covers its placeholder, label and typed text.
+                    if ((a.isTextField() && a.unclipped().encloses(b.unclipped())) ||
+                        (b.isTextField() && b.unclipped().encloses(a.unclipped()))
+                    ) return@forEach
+                } else if (!ra.overlaps(rb)) return@forEach
+                out += "$name: \"${a.label()}\" overlaps \"${b.label()}\""
             }
         }
         texts.forEach { node ->
@@ -140,6 +165,15 @@ internal object LayoutChecks {
     private fun SemanticsNode.scrolledPastEdge(laidOut: Rect): Boolean {
         val box = verticalScroller()?.boundsInRoot ?: return false
         return laidOut.bottom > box.bottom + 0.5f || laidOut.top < box.top - 0.5f
+    }
+
+    /** An editable text field: its own node reads as text but holds its placeholder and typed text. */
+    private fun SemanticsNode.isTextField(): Boolean = config.getOrNull(SemanticsActions.SetText) != null
+
+    /** Whether this node is inside [panes]' open pane for its window, or its window has none open. */
+    private fun SemanticsNode.uncovered(panes: Map<Int, SemanticsNode>): Boolean {
+        val pane = panes[rootNode().id] ?: return true
+        return generateSequence(this) { it.parent }.any { it.id == pane.id }
     }
 
     /** Whether any of the node is inside its window: false for a closed drawer's content, laid out beside the screen. */
