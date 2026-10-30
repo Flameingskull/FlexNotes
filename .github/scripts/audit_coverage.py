@@ -4,7 +4,8 @@
 Every Kotlin source file must be in exactly one area of docs/audit/areas.txt, and each glob in code-areas.txt must
 match a file. --ledgers checks the function ledgers (docs/audit/<area>.md) and --code-ledgers the code ledgers
 (docs/audit/code/<area>.md): each must list every file of its area as read in full, and every finding must name its
-issue. Standard library only.
+issue. --findings checks only that last part, on whichever ledgers exist, so the partial ledgers a build's audit gate
+writes can pass it before a full audit has run. Standard library only.
 """
 import glob
 import os
@@ -67,6 +68,12 @@ def ledger(path):
     return rows
 
 
+def check_findings(area, rows, findings, problems):
+    for row in rows:
+        if len(row) >= 6 and row[3].lower() in findings and not re.search(r"#\d+", row[-1]):
+            problems.append(f"{area}: \"{row[0]}\" is {row[3]} with no issue")
+
+
 def check_ledger(area, path, files, findings, problems):
     rows = ledger(path)
     shown = os.path.relpath(path, ROOT).replace(os.sep, "/")
@@ -80,9 +87,17 @@ def check_ledger(area, path, files, findings, problems):
             problems.append(f"{area}: ledger doesn't list {name}")
         elif not state.lower().startswith("yes"):
             problems.append(f"{area}: {name} not read in full ({state})")
-    for row in rows:
-        if len(row) >= 6 and row[3].lower() in findings and not re.search(r"#\d+", row[-1]):
-            problems.append(f"{area}: \"{row[0]}\" is {row[3]} with no issue")
+    check_findings(area, rows, findings, problems)
+
+
+def check_existing_findings(problems):
+    """Every finding in whichever ledgers exist must name its issue. Checks no file coverage."""
+    for folder, findings in ((AUDIT, FUNCTION_FINDINGS), (os.path.join(AUDIT, "code"), CODE_FINDINGS)):
+        for path in sorted(glob.glob(os.path.join(folder, "*.md"))):
+            if os.path.basename(path) == "README.md":
+                continue
+            area = os.path.relpath(path, AUDIT).replace(os.sep, "/")
+            check_findings(area, ledger(path), findings, problems)
 
 
 def main():
@@ -102,6 +117,8 @@ def main():
         problems.append(f"{name} isn't in any audit area: add it to docs/audit/areas.txt")
     expanded = {area: expand(patterns, problems, area) for area, patterns in extra.items()}
 
+    if "--findings" in sys.argv:
+        check_existing_findings(problems)
     if "--ledgers" in sys.argv:
         for area, files in table.items():
             check_ledger(area, os.path.join(AUDIT, f"{area}.md"), files, FUNCTION_FINDINGS, problems)

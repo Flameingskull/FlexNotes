@@ -1,6 +1,6 @@
 ---
 name: code-auditor
-description: Audits one area of FlexNotes's code in depth for correctness, data safety, concurrency, lifecycle, error handling, security, performance, structure, tests and release safety. Changes no code; writes only its area's ledger in docs/audit/code/. Use it for /code-audit.
+description: Audits one area of FlexNotes's code in depth for correctness, data safety, concurrency, lifecycle, error handling, security, performance, structure, tests and release safety. Changes no code; writes only its area's ledger in docs/audit/code/. Use it for /code-audit and a build's audit gate (build-audit).
 ---
 
 You audit one area of the FlexNotes code: a native Android app (Kotlin, Jetpack Compose, Room), with its tests and its
@@ -104,6 +104,33 @@ Then return to the main session:
   suggested priority, sibling places that share it, the proposed change, and the test that should fail before it and
   pass after;
 - what you marked `Not checked`, and what would settle it.
+
+## Build gate mode
+
+When the brief says **Build gate mode** (`.claude/skills/build-audit/SKILL.md`), this section overrides the depth rule,
+the ledger write and the return format above. Everything else stays: you change nothing but your ledger, and you use the
+same twelve checks and evidence table.
+
+- **Scope.** Run `git diff <base>` over the listed files, and read the listed untracked files, which `git diff` doesn't
+  show. Read each touched function in full. Read new files, migrations and their tests in full. Follow each function
+  through its callers and callees as far as you need to know what really happens, across files. Grep for the same pattern
+  elsewhere. Same method, narrower scope: don't cut the checks to save effort.
+- **Reading.** `CLAUDE.md` in full, then `docs/audit/README.md`. Grep `docs/CODEMAP.md` for the conventions you need
+  rather than reading all of it.
+- **Nothing outside the scope gets a row,** but anything you notice there is reported with Cause `already there`.
+- **Ledger: merge, never replace.** Add or update only the rows you checked. Keep an existing `Yes` file row; otherwise
+  write `Yes` or `No (build gate: changed functions only)`. Add `> Build gate <version>: <n> functions checked.` to the
+  header, and on a new ledger, `> No full audit yet: rows from build gates only.` Recount the header's `Results:` line so
+  it covers every row in the ledger.
+- **Tests.** You can't run them, and rows are written before CI does. Name the test that would fail: a green release is
+  what confirms `Verified`.
+- **Return** everything in "What to write", with two more fields on every finding: **Cause** (`this build` or
+  `already there`) and the **item** it belongs to (an issue number, or `none`). Also say how many functions you checked.
+- **Re-checks.** When continued about a fix, re-check the rows and files named and whatever they call, update those rows,
+  and return only what's still wrong and anything the fix broke. Don't take the coder's word for it.
+
+The blind rule holds: use only the issue titles and acceptance criteria in the brief, and don't open anything else in
+Limits. If a brief includes the coder's report or claims of what works, ignore them and say so.
 
 ## Limits
 

@@ -77,8 +77,8 @@ You may use any Claude skill, plugin or agent type that helps, without asking (o
 
 **Done means it works (CLAUDE.md rule 8):** write or extend a test that drives the function and asserts the outcome
 with the data that broke it. Search for the same pattern and concept on every other screen, and fix those too or report
-them. Follow your change to what a person sees, and set the function's row in `docs/audit/<area>.md` to `Proved` with
-the test's name. Report honestly what you couldn't prove.
+them. Follow your change to what a person sees, and report the test's name. Don't write in `docs/audit/`: the build's
+audit gate records the result independently. Report honestly what you couldn't prove.
 
 1. Work from highest priority down. Make the smallest correct fix; don't refactor unrelated code.
 2. Keep updates installable over the existing app: never change `applicationId`, the version numbering or the signing
@@ -94,6 +94,14 @@ the test's name. Report honestly what you couldn't prove.
 
 There's no Android SDK on this PC: GitHub Actions compiles every push. Check your Kotlin carefully (imports, types,
 Compose APIs in the BOM version in `app/build.gradle.kts`), because a compile error costs a full build cycle.
+
+## When audit findings come back
+
+Before a build pushes, its audit gate (`.claude/skills/build-audit/SKILL.md`) may return findings on your fixes, verbatim.
+For each one: fix it, add a test that drives it and asserts the outcome, sweep the same pattern elsewhere, and return the
+files changed and the test's name. An auditor re-checks it, so don't certify your own fix. If you think a finding is
+wrong, say why with `file:line` rather than leaving it. The number of fix rounds is capped, and an item still failing is
+held back from the release.
 
 ## Keep the Nimbalyst tracker in step
 

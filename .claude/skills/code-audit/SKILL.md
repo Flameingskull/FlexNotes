@@ -15,6 +15,8 @@ The owner triggers this by hand. Arguments: `$ARGUMENTS`
 and maintainable, including what no person can see yet: a race, a lost write on failure, a leak, a restore that trusts
 its file, a gate that can't fail. The method is in `.claude/agents/code-auditor.md` and `docs/audit/README.md`, the same
 every run. Any Claude skill, plugin or agent type that helps may be used, without asking, as long as it changes nothing.
+This is the owner's full audit. The targeted form, on only what a build changed, is the gate in
+`.claude/skills/build-audit/SKILL.md`, and a full audit replaces any rows those gates left in its ledgers.
 
 **An audit finds and records. It fixes nothing (owner, 2026-10-30).** No code, test, resource or build file changes
 during an audit, not even a one-line fix. Don't run a tool in a mode that applies changes (`simplify`,

@@ -110,8 +110,10 @@ Fix problems before pushing. Make sure nothing adds a keystore, secret or creden
   it, several at once, each state, late or refused). No test means it isn't done, and is reported as such.
 - **Sweep it:** search for the same pattern and concept on every other screen, fix them or file them, and list them in
   the commit.
-- **Audit it:** run `/function-audit changed` for the areas touched and update their ledgers. Check
-  `python .github/scripts/audit_coverage.py`.
+- **Audit it:** once your own review is done, run the gate on the whole build: invoke the `build-audit` skill with
+  `new`. Auditors check what this build changed, must-fix findings go back to the coding agent, the fixes are re-checked
+  (up to 3 rounds), and an item still failing is held back. Coding agents don't write ledgers. Check
+  `python .github/scripts/audit_coverage.py --findings`.
 - **Full audit:** if this build's version is at or past the next-due version in `CLAUDE.md` rule 8, run `/function-audit all` first.
 If the build added, moved or renamed a file or changed a pattern, check that `docs/CODEMAP.md` was updated (and its
 "Last updated" version). Check that the agents' notes in `.claude/agent-notes/` gained only short, true, public-safe
@@ -130,7 +132,8 @@ lines.
 
 ## 7. Watch the build
 - `gh run watch <id> --exit-status`. On failure, read `errors.txt` and `build-tail.log` from the `ci-logs` branch
-  (`git fetch origin ci-logs; git show origin/ci-logs:errors.txt`), fix, commit and push again.
+  (`git fetch origin ci-logs; git show origin/ci-logs:errors.txt`), fix, commit and push again. A fix that changes
+  behaviour gets a gate re-check first (`build-audit`, step 7), because a green push publishes straight away.
   After 3 failed attempts, stop and report the errors to the owner.
 - Confirm the release exists with its APK, source archives and `SHA256SUMS.txt`, and that the issues closed.
 - Now that the push has closed the issues, close their tracker items too: `shipped` for features, `done` for bugs.
@@ -139,4 +142,4 @@ lines.
 
 ## 8. Report to the owner
 Give the release name and link, the issues resolved (with links), anything deferred and why, what each item's proof
-is and what wasn't proved, and what to test on the phone.
+is and what wasn't proved, the audit gate's results (`build-audit`, step 8), and what to test on the phone.

@@ -1,6 +1,6 @@
 ---
 name: function-auditor
-description: Audits one area of FlexNotes for whether every function actually works, does what it says for a real person with any data, and meets the owner's imperatives. Changes no code; writes only its area's ledger in docs/audit/. Use it for /function-audit and whenever a review or audit of working order is asked for.
+description: Audits one area of FlexNotes for whether every function actually works, does what it says for a real person with any data, and meets the owner's imperatives. Changes no code; writes only its area's ledger in docs/audit/. Use it for /function-audit, a build's audit gate (build-audit), and whenever a review or audit of working order is asked for.
 ---
 
 You audit one area of FlexNotes, a native Android app (Kotlin, Jetpack Compose). Your question for everything you
@@ -101,6 +101,34 @@ Then return to the main session:
   should drive it;
 - what you marked `Not checked`, and what would settle it;
 - the functions most in need of a test that drives them.
+
+## Build gate mode
+
+When the brief says **Build gate mode** (`.claude/skills/build-audit/SKILL.md`), this section overrides the depth rule,
+the ledger write and the return format above. Everything else stays: you change nothing but your ledger, and you use the
+same questions, data matrix, imperatives and evidence table.
+
+- **Scope.** Run `git diff <base>` over the listed files, and read the listed untracked files, which `git diff` doesn't
+  show. Read each touched function in full. Read new files, migrations and their tests in full. Follow each function
+  through its callers and callees to its result, across files. Grep for the same concept elsewhere. Same method, narrower
+  scope: don't cut the checks to save effort.
+- **Reading.** `CLAUDE.md` in full, then `docs/audit/README.md`. Grep `docs/CODEMAP.md` rather than reading all of it.
+- **Judge against the items.** The brief gives each item's issue title and acceptance criteria. Ask whether a person can
+  reach it from an obvious control, and whether a test drives it and asserts the outcome.
+- **Nothing outside the scope gets a row,** but anything you notice there is reported with Cause `already there`.
+- **Ledger: merge, never replace.** Add or update only the rows you checked. Keep an existing `Yes` file row; otherwise
+  write `Yes` or `No (build gate: changed functions only)`. Add `> Build gate <version>: <n> functions checked.` to the
+  header, and on a new ledger, `> No full audit yet: rows from build gates only.` Recount the header's `Results:` line so
+  it covers every row in the ledger.
+- **Tests.** You can't run them, and rows are written before CI does. Name the test that drives the function: a green
+  release is what confirms `Proved`.
+- **Return** everything in "What to write", with two more fields on every finding: **Cause** (`this build` or
+  `already there`) and the **item** it belongs to (an issue number, or `none`). Also say how many functions you checked.
+- **Re-checks.** When continued about a fix, re-check the rows and files named and whatever they call, update those rows,
+  and return only what's still wrong and anything the fix broke. Don't take the coder's word for it.
+
+The blind rule holds: use only the issue titles and acceptance criteria in the brief, and don't open anything else in
+Limits. If a brief includes the coder's report or claims of what works, ignore them and say so.
 
 ## Limits
 

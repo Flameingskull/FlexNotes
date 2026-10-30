@@ -63,11 +63,20 @@ Apply these on top of every step below:
   what must ship) and **stretch** (built only if the core went smoothly and budget is still healthy). Each stage is a
   complete, working piece, never a half-built feature behind a switch. A database migration or new dependency goes in
   core and is reviewed twice.
-- **Checkpoint every stage.** After each stage is implemented and reviewed, commit it locally (not pushed) with its
-  `Fixes` / `Closes` / `Refs` lines. Then decide whether the next stage still fits. If it doesn't, stop adding stages
-  and go to release with what's committed.
-- **Keep a reserve.** Hold about a quarter of the budget for the whole-build review, release notes, README and code
-  map, and CI fixes. Never spend the reserve on extra features.
+- **Size each stage with its gate.** A stage is planned as implementation + audit gate + one fix round. The gate has a
+  floor, whatever the size of the change: rehearsed on a 2-file, 22-line fix, the two auditors took 43 and 51 tool calls
+  and about 1M cache-weighted tokens together (input + 0.1 x cache read + 1.25 x cache write + 5 x output), so a small
+  stage can cost more to gate than to build. That run restarted once after a usage limit, so it's on the high side, and
+  later stages continue the same auditors without a cold start. A fix round hasn't been measured yet: allow half a gate
+  until a real build gives a figure. This lowers how much fits in a build, on purpose.
+- **Checkpoint every stage.** After each stage is implemented, reviewed and through its audit gate, commit it locally
+  (not pushed) with its `Fixes` / `Closes` / `Refs` lines, so a committed stage has always passed and can ship as it is.
+  Then decide whether the next stage still fits: a stretch stage starts only if the budget covers all three parts. If it
+  doesn't, stop adding stages and go to release with what's committed.
+- **Cut stages, never the gate.** A stage that can't be gated doesn't ship. Auditors are never downgraded to save usage.
+- **Keep a reserve.** Hold about a quarter of the budget for the whole-build review, a final cross-stage check (only if
+  stages touched the same functions), release notes, README and code map, CI fixes and any CI re-check. Never spend the
+  reserve on extra features.
 - **Partly done issues** use `Refs #N` and get a progress comment. They stay open, with their tracker item open too.
 - **One push.** Every stage is committed locally. Push once at the end. One push is one release.
 - **Check risky changes on a draft PR first.** A toolchain, dependency or CI change can be pushed to a throwaway
@@ -117,7 +126,8 @@ in roadmap order. A `priority: high` bug may jump ahead of the next stage, and t
 Check `tracker_ready` before recommending: it won't offer anything still blocked. Within a stage, prefer an item that
 unblocks several others over an isolated one of equal priority.
 Fit the recommendation to **the budget**, favouring stages and items that touch the same files (each extra item then
-costs less). Lay the recommended set out as core and stretch stages, each with its issues, files and rough size.
+costs less). Lay the recommended set out as core and stretch stages, each with its issues, files and rough size, with
+the gate and one fix round included in the size.
 - No arguments: ask the owner with a multi-select question listing the recommended items (pre-described with
   size, stage and summary), plus "Everything recommended" as the first option. Build what they choose; if it's more
   than the budget allows, say which items become stretch.
@@ -137,8 +147,9 @@ agents edit code only. They don't commit, push or close issues.
 Set each chosen item to `in-progress` in the tracker as you hand it out, and `in-review` once its changes are in the
 working tree. Collect from each agent: `Fixes #N` / `Closes #N` lines, release-note lines, files changed, and test tips.
 
-After each stage: review its diff (step 5's checks) while it's fresh, commit it locally, and run the **checkpoint**
-from the budget rules before starting the next stage.
+After each stage: review its diff (step 5's checks) while it's fresh, invoke the `build-audit` skill with `safe` and the
+stage's base ref, commit it locally once it passes, and run the **checkpoint** from the budget rules before starting the
+next stage. The same auditors continue from stage to stage with `SendMessage`, with no new cold start.
 
 ## 5. Review
 Read the full diff since the last release (`git diff origin/main`). There's no Android SDK locally, so CI is the
@@ -153,8 +164,9 @@ Fix problems before pushing. Make sure nothing adds a keystore, secret or creden
   it, several at once, each state, late or refused). No test means it isn't done, and is reported as such.
 - **Sweep it:** search for the same pattern and concept on every other screen, fix them or file them, and list them in
   the commit.
-- **Audit it:** run `/function-audit changed` for the areas touched, within budget, and update their ledgers. If the budget
-  doesn't cover it, say so in the report. Check `python .github/scripts/audit_coverage.py`.
+- **Audit it:** every stage has been through the gate (`build-audit`, step 4 above), up to 2 fix rounds each. An item still
+  failing was held back. If stages touched the same functions, continue the auditors for a final cross-stage check from
+  the reserve. Coding agents don't write ledgers. Check `python .github/scripts/audit_coverage.py --findings`.
 - **Full audit:** if this build's version is at or past the next-due version in `CLAUDE.md` rule 8, run `/function-audit all` first.
 If the build added, moved or renamed a file or changed a pattern, check that `docs/CODEMAP.md` was updated (and its
 "Last updated" version). Check that the agents' notes in `.claude/agent-notes/` gained only short, true, public-safe
@@ -174,7 +186,8 @@ lines.
 
 ## 7. Watch the build
 - `gh run watch <id> --exit-status`. On failure, read `errors.txt` and `build-tail.log` from the `ci-logs` branch
-  (`git fetch origin ci-logs; git show origin/ci-logs:errors.txt`), fix, commit and push again.
+  (`git fetch origin ci-logs; git show origin/ci-logs:errors.txt`), fix, commit and push again. A fix that changes
+  behaviour gets a gate re-check first (`build-audit`, step 7), because a green push publishes straight away.
   After 3 failed attempts, or sooner if the reserve has run out, stop and report the errors to the owner. A failed
   run publishes nothing.
 - Confirm the release exists with its APK, source archives and `SHA256SUMS.txt`, and that the issues closed.
@@ -184,4 +197,5 @@ lines.
 
 ## 8. Report to the owner
 Give the release name and link, the issues resolved (with links), which stretch stages were built or skipped and
-why, anything deferred, what each item's proof is and what wasn't proved, and what to test on the phone.
+why, anything deferred, what each item's proof is and what wasn't proved, the audit gate's results (`build-audit`, step
+8), and what to test on the phone.

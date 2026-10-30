@@ -83,6 +83,22 @@ forward slashes.
 
 A `File` row uses the path from `areas.txt` or, for `tests` and `build-release`, from the repository root.
 
+## Build gates
+
+Every build runs a gate (`.claude/skills/build-audit/SKILL.md`) before it pushes: the same auditors and method, on only
+the functions that build touched. So a ledger can hold partial rows:
+
+- **Merge, never replace.** A gate adds or updates only the rows it checked, and keeps an existing `Yes` file row. A file
+  it didn't read in full says `No (build gate: changed functions only)`. Only a full audit replaces a ledger.
+- **Header.** Each gate adds `> Build gate <version>: <n> functions checked.`, and a ledger made by one starts with
+  `> No full audit yet: rows from build gates only.` The `Results:` line counts every row in the ledger. A row in such a
+  ledger says what was found about that function, and nothing about the rest of the area.
+- **Independent.** Coders never write ledgers. Rows are written before CI has run the tests they name, and a failed run
+  publishes nothing, so a green release is what confirms `Proved` and `Verified`.
+- **Checks.** `audit_coverage.py --findings` runs in every build: each finding in any existing ledger names its issue, or
+  is gone. It checks no file coverage, so partial ledgers pass it. They correctly keep failing `--ledgers` and
+  `--code-ledgers` until a full audit replaces them.
+
 ## Calibration
 
 Each audit records whether it independently found the defects known at the time, because an audit's only real measure

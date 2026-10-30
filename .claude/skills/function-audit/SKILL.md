@@ -1,6 +1,6 @@
 ---
 name: function-audit
-description: Owner-triggered function audit of FlexNotes. One function-auditor agent per area reads every source file in full, follows every function to its result against the data matrix and the owner's imperatives, and records it in the docs/audit ledgers. It changes no app code; it ends by putting every action needed to resolve its findings into GitHub issues, the tracker and the roadmap. Run it when the owner types /function-audit or asks for an audit of working order; builds run it as /function-audit changed.
+description: Owner-triggered function audit of FlexNotes. One function-auditor agent per area reads every source file in full, follows every function to its result against the data matrix and the owner's imperatives, and records it in the docs/audit ledgers. It changes no app code; it ends by putting every action needed to resolve its findings into GitHub issues, the tracker and the roadmap. Run it when the owner types /function-audit or asks for an audit of working order. Builds don't run this: they use the targeted build-audit gate.
 argument-hint: "[all | changed | area names, e.g. medications analysis]"
 ---
 
@@ -8,8 +8,11 @@ argument-hint: "[all | changed | area names, e.g. medications analysis]"
 
 Arguments: `$ARGUMENTS`
 - empty or `all`: every area in `docs/audit/areas.txt`;
-- `changed`: the areas holding files changed since the last audit, as a build runs it;
+- `changed`: the whole areas holding files changed since the last audit, as an option for the owner;
 - area names: those areas.
+
+Builds don't run this. They run `.claude/skills/build-audit/SKILL.md`, which checks only the functions a build changed.
+A full audit replaces any rows those gates left in its ledgers.
 
 An audit answers one question: does each function work, the way a person expects, with any data? The method is in
 `.claude/agents/function-auditor.md` and `docs/audit/README.md`, the same every run, so that a result means the same
