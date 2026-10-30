@@ -910,6 +910,7 @@ private fun CompareSheet(
 
 /** An exercise's history, newest day first, each day opening its log (#82's History tab). */
 @Composable
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 fun ExerciseHistoryPane(snap: Snapshot, nav: Nav, exId: Long) {
     val sets = snap.setsByExercise[exId] ?: emptyList()
     val byDate = remember(sets) { sets.groupBy { it.date }.toSortedMap() }
@@ -960,12 +961,15 @@ fun ExerciseHistoryPane(snap: Snapshot, nav: Nav, exId: Long) {
                         )
                     }
                     // FlexNotes's extras under the sets: the day's totals (#22) and Copy to today, with Undo.
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    androidx.compose.foundation.layout.FlowRow(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         Text(
                             dayTotals(res, snap, exId, l),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.align(Alignment.CenterVertically)
                         )
                         if (d.take(10) != Dates.today()) {
                             FitTextButton(onClick = { copyToToday(res, d, l.map { it.id }) }, modifier = Modifier.heightIn(min = 48.dp)) {
@@ -1075,6 +1079,7 @@ private fun recordLines(res: Resources, snap: Snapshot, sets: List<SetRow>, time
 }
 
 @Composable
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 internal fun RecordsTab(snap: Snapshot, allSets: List<SetRow>, timeBased: Boolean, onOpenDay: ((String) -> Unit)? = null) {
     val exId = allSets.firstOrNull()?.exerciseId
     val res = LocalContext.current.resources
@@ -1100,7 +1105,7 @@ internal fun RecordsTab(snap: Snapshot, allSets: List<SetRow>, timeBased: Boolea
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
         item {
             // FitNotes's TYPE and PERIOD rows (#142), as compact dropdowns.
-            Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.layout.FlowRow(Modifier.padding(horizontal = 4.dp)) {
                 if (!timeBased) {
                     DropdownPill(
                         stringResource(R.string.ex_record_type),

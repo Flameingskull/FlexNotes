@@ -160,7 +160,9 @@ fun ExerciseStatsTab(snap: Snapshot, nav: Nav, exId: Long, sets: List<SetRow>, t
         val last = shown.maxOf { it.date }
         tiles += StatItem(res.getString(R.string.st_first_logged), Dates.day(first), date = first)
         tiles += StatItem(res.getString(R.string.st_last_logged), Dates.day(last), date = last)
-        tiles.chunked(2).forEach { pair ->
+        // One tile per row at large fonts: two side by side broke labels mid-word and cut off figures on a small phone.
+        val perRow = if (androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.5f) 1 else 2
+        tiles.chunked(perRow).forEach { pair ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                 pair.forEach { t ->
                     val open = t.date?.let { d ->
@@ -168,7 +170,7 @@ fun ExerciseStatsTab(snap: Snapshot, nav: Nav, exId: Long, sets: List<SetRow>, t
                     } ?: Modifier
                     StatTile(label = t.label, value = t.value, modifier = Modifier.weight(1f).then(open), dateLine = t.line)
                 }
-                if (pair.size == 1) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                if (perRow == 2 && pair.size == 1) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
             }
         }
     }

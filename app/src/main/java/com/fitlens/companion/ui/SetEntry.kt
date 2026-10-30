@@ -621,7 +621,8 @@ fun SetEntryScreen(
         )
         val shown = TrackShown(showWeight, showReps, showDistance, showDuration, showMetric, isSession, isRounds)
         val setLayout = com.fitlens.companion.ui.design.rememberSetLayoutGroup()
-        HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { tab ->
+        // A short page starts at the top; a pager centres it otherwise, leaving a gap above the form.
+        HorizontalPager(state = pager, modifier = Modifier.weight(1f), verticalAlignment = Alignment.Top) { tab ->
         when (tab) {
         1 -> ExerciseHistoryPane(snap, nav, exerciseId)
         2 -> ExerciseGraphPane(snap, nav, exerciseId)

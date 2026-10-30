@@ -439,8 +439,13 @@ fun SetRow(
     val hasComment = !comment.isNullOrBlank()
     val align = if (framed || columns) Alignment.CenterVertically else Alignment.Top
 
+    // At large fonts the value column is too narrow for sentences (words broke mid-word on a small phone, #251), so a
+    // comment and effort line take the row's full width under it. TalkBack already reads both as part of the row.
+    val textUnder = LocalDensity.current.fontScale > 1.3f
+
     Box(modifier.fillMaxWidth().padding(setOuterPadding(framed))) {
-        Row(frame.then(click).padding(setInnerPadding(framed, onComment != null)), verticalAlignment = align) {
+        Column(frame.then(click).padding(setInnerPadding(framed, onComment != null))) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = align) {
             if (onComment != null) {
                 val label = if (hasComment) stringResource(R.string.sv_edit_comment, noun.lowercase(), index) else stringResource(R.string.sv_add_comment, noun.lowercase(), index)
                 IconButton(onClick = onComment, modifier = Modifier.size(Spacing.touch)) {
@@ -495,7 +500,7 @@ fun SetRow(
                 Column(Modifier.weight(1f)) {
                     if (cells != null) {
                         SetCells(cells, layoutGroup)
-                        if (effort != null) {
+                        if (effort != null && !textUnder) {
                             Text(
                                 effort,
                                 Modifier.fillMaxWidth(),
@@ -520,7 +525,7 @@ fun SetRow(
                             }
                         }
                     }
-                    if (hasComment) {
+                    if (hasComment && !textUnder) {
                         Text(
                             "“$comment”",
                             style = MaterialTheme.typography.bodySmall,
@@ -568,6 +573,18 @@ fun SetRow(
                     )
                 }
             }
+        }
+        if (textUnder && ((columns && effort != null) || hasComment)) {
+            val inset = Modifier.padding(start = if (onComment != null) Spacing.md else 0.dp, bottom = 4.dp).clearAndSetSemantics {}
+            Column(inset) {
+                if (columns && effort != null) {
+                    Text(effort, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (hasComment) {
+                    Text("“$comment”", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         }
     }
 }

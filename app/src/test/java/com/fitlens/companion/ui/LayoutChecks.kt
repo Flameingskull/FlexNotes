@@ -59,7 +59,7 @@ internal object LayoutChecks {
                 .filter { it.onScreen() }
                 .groupBy { it.rootNode().id }
                 .mapValues { it.value.last() }
-        fun SemanticsNode.seen(): Boolean = !scrollingScreen || (onScreen() && uncovered(panes))
+        fun SemanticsNode.seen(): Boolean = !scrollingScreen || (placed() && onScreen() && uncovered(panes))
         // What is drawn: on a whole screen only the part a parent doesn't clip, so text scrolled under a footer isn't
         // counted as touching it.
         fun SemanticsNode.area(): Rect = if (scrollingScreen) boundsInRoot else unclipped()
@@ -99,8 +99,9 @@ internal object LayoutChecks {
                     val both = ra.intersect(rb)
                     if (both.width < 2f * px || both.height < 2f * px) return@forEach
                     // A text field's own node covers its placeholder, label and typed text.
-                    if ((a.isTextField() && a.unclipped().encloses(b.unclipped())) ||
-                        (b.isTextField() && b.unclipped().encloses(a.unclipped()))
+                    // Its label floats on its top border, so only the width is compared.
+                    if ((a.isTextField() && a.unclipped().spans(b.unclipped())) ||
+                        (b.isTextField() && b.unclipped().spans(a.unclipped()))
                     ) return@forEach
                 } else if (!ra.overlaps(rb)) return@forEach
                 out += "$name: \"${a.label()}\" overlaps \"${b.label()}\""
@@ -112,6 +113,18 @@ internal object LayoutChecks {
             val layout = layouts.firstOrNull()
             if (layout != null && layout.lineCount > 0 && layout.isLineEllipsized(layout.lineCount - 1)) {
                 out += "$name: \"${node.label()}\" is cut short with an ellipsis"
+            }
+            // A column too narrow for its words: "Posi/tional sparr/ing". A single word too long for a whole line of
+            // the screen is the one case this can't be helped; none of the fixture's words are.
+            if (scrollingScreen && layout != null) {
+                val text = layout.layoutInput.text.text
+                for (line in 0 until layout.lineCount - 1) {
+                    val end = layout.getLineEnd(line)
+                    if (end in 1 until text.length && text[end - 1].isLetter() && text[end].isLetter()) {
+                        out += "$name: \"${node.label()}\" breaks a word across lines"
+                        break
+                    }
+                }
             }
             val r = node.unclipped()
             // Text in a row that scrolls sideways (a scrolling tab row) is meant to run past the edge. On a whole
@@ -137,6 +150,16 @@ internal object LayoutChecks {
     /** Whether [other] lies wholly inside this rectangle (a control nested in another, such as a row's switch). */
     private fun Rect.encloses(other: Rect) =
         left <= other.left + 0.5f && top <= other.top + 0.5f && right >= other.right - 0.5f && bottom >= other.bottom - 0.5f
+
+    /** Whether [other] lies within this rectangle's width. */
+    private fun Rect.spans(other: Rect) = left <= other.left + 0.5f && right >= other.right - 0.5f
+
+    /**
+     * Whether the node and everything above it were placed. A layout can measure a copy it never places, as `SetCells`
+     * does to choose between its sizes, and that copy isn't on the screen.
+     */
+    private fun SemanticsNode.placed(): Boolean =
+        generateSequence<androidx.compose.ui.layout.LayoutInfo>(layoutInfo) { it.parentInfo }.all { it.isPlaced }
 
     /** The top of the node's window: nodes in a sheet, menu or dialog have a different one from the screen's. */
     private fun SemanticsNode.rootNode(): SemanticsNode = generateSequence(this) { it.parent }.last()

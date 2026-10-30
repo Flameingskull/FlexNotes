@@ -201,7 +201,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
             selected = pager.currentPage,
             onSelect = { i -> scope.launch { pager.animateScrollToPage(i) } }
         )
-        HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { tab ->
+        HorizontalPager(state = pager, modifier = Modifier.weight(1f), verticalAlignment = androidx.compose.ui.Alignment.Top) { tab ->
             when (tab) {
                 1 -> BodyHistoryPane(snap, name, onDelete = { deleteBodyValue(res, it) }) { r -> historyOpen = r.id }
                 2 -> BodyGraphPane(snap, nav, name)

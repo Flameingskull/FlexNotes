@@ -76,8 +76,7 @@ fun StatTile(
             value,
             style = MaterialTheme.typography.headlineMedium,
             color = Brand.Gold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
             modifier = Modifier.padding(vertical = Spacing.xs)
         )
         if (!delta.isNullOrBlank()) {

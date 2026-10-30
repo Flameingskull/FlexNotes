@@ -198,7 +198,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                 selected = pager.currentPage,
                 onSelect = { i -> scope.launch { pager.animateScrollToPage(i) } }
             )
-            HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { pageIndex ->
+            HorizontalPager(state = pager, modifier = Modifier.weight(1f), verticalAlignment = Alignment.Top) { pageIndex ->
                 // The Body tracker's Track / History / Graph are Medications' pages 2–4.
                 val page = if (medications) pageIndex - MED_LIST_PAGE else pageIndex
                 when {
