@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
 import com.fitlens.companion.data.ReminderHarness
+import kotlinx.coroutines.awaitCancellation
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -36,14 +37,13 @@ class RestTimerAlarmTest {
     @Before
     fun setUp() {
         h = ReminderHarness.start(ApplicationProvider.getApplicationContext())
-        RestTimer.stop()
-        // An earlier test in this process may have just finished a rest.
-        RestTimer::class.java.getDeclaredField("lastFinish").apply { isAccessible = true }.setLong(null, 0L)
+        // An earlier test in this process may have just finished or stopped a rest.
+        RestTimer.resetForTests()
     }
 
     @After
     fun tearDown() {
-        RestTimer.stop()
+        RestTimer.resetForTests()
         h.stop()
     }
 
@@ -130,6 +130,28 @@ class RestTimerAlarmTest {
         h.settle()
         assertFalse(alertShown())
         assertFalse(state.active)
+    }
+
+    @Test
+    fun anAlarmArrivingAfterTheRestWasStoppedDoesNotAlert() {
+        RestTimer.start(h.app, 1)
+        RestTimer.stop()
+        // The alarm was already on its way when the person stopped the rest.
+        ring()
+        h.settle()
+        assertFalse(alertShown())
+        assertFalse(state.active)
+    }
+
+    @Test
+    fun anAlarmAlertsEvenWhenTheSettingsNeverLoad() {
+        // The process was started by the alarm and the settings do not load in time: the alert still comes, with defaults.
+        RestTimer.settingsTimeoutMs = 300
+        RestTimer.awaitSettings = { awaitCancellation() }
+        ring()
+        // The receiver waits on the main looper; let its wait pass.
+        ShadowLooper.idleMainLooper(1, TimeUnit.SECONDS)
+        h.waitUntil("the rest-over alert") { alertShown() }
     }
 
     @Test

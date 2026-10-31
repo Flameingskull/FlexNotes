@@ -13,6 +13,7 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.fitlens.companion.R
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -23,7 +24,6 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /** What a logging reminder (#219) is for. [key] is stored, so it never changes. */
@@ -98,8 +98,26 @@ object LogReminders {
     const val EXTRA_AT = "com.fitlens.companion.LOG_AT"
     /** On the notification's tap: the [LogKind.key] whose screen opens. */
     const val EXTRA_OPEN_LOG = "com.fitlens.companion.OPEN_LOG"
-    /** How long after an alarm could not finish it tries again. */
-    private const val RETRY_MS = 60_000L
+    /** On a retry alarm: how many times in a row the alarm could not finish, for the back-off ([ExactAlarms.retryDelayMs]). */
+    const val EXTRA_ATTEMPT = "com.fitlens.companion.LOG_ATTEMPT"
+
+    /** How long a receiver works before it gives up and sets a retry. A seam so a test can make the work overrun. */
+    @Volatile internal var workTimeoutMs = 25_000L
+
+    /** Tests only: work run inside the receiver's time limit, to make it overrun. */
+    @Volatile internal var overrun: (suspend () -> Unit)? = null
+
+    /** Tests only: whether no debounced re-arm is waiting or running. */
+    internal fun rearmIdle(): Boolean = pending?.isActive != true
+
+    /** Tests only: puts every seam back and forgets the application, so one test does not leak into the next. */
+    internal fun resetForTests() {
+        pending?.cancel()
+        pending = null
+        app = null
+        workTimeoutMs = 25_000L
+        overrun = null
+    }
     private val KEY: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
     private var app: Context? = null
@@ -188,22 +206,26 @@ object LogReminders {
             ExactAlarms.cancel(context, alarmIntent(context, null))
             return
         }
-        // At its exact minute (#346), through the one helper that sets alarms.
-        val at = ring.at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        ExactAlarms.set(context, at, alarmIntent(context, ring.key), ExactAlarms.showApp(context, "log"))
+        // At its exact minute (#346), through the one helper that sets alarms (which also settles a time that happens twice).
+        ExactAlarms.set(context, ExactAlarms.epochMillis(ring.at), alarmIntent(context, ring.key), ExactAlarms.showApp(context, "log"))
     }
 
     /** The one logging alarm. Same action and request code whatever the key, so setting it replaces and cancelling finds it. */
-    private fun alarmIntent(context: Context, key: String?): PendingIntent = PendingIntent.getBroadcast(
+    private fun alarmIntent(context: Context, key: String?, attempt: Int = 0): PendingIntent = PendingIntent.getBroadcast(
         context, 0,
-        Intent(context, LogAlarmReceiver::class.java).setAction(ACTION_ALARM).apply { key?.let { putExtra(EXTRA_AT, it) } },
+        Intent(context, LogAlarmReceiver::class.java).setAction(ACTION_ALARM).apply {
+            key?.let { putExtra(EXTRA_AT, it) }
+            if (attempt > 0) putExtra(EXTRA_ATTEMPT, attempt)
+        },
         PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
     )
 
-    /** For an alarm that rang but could not finish: rings again a minute later with the same key, so the chain is never lost. */
-    internal fun retryLater(context: Context, key: String?) {
-        val at = Dates.nowDateTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() + RETRY_MS
-        ExactAlarms.set(context, at, alarmIntent(context, key), ExactAlarms.showApp(context, "log"))
+    /**
+     * For an alarm that rang but could not finish: rings again later with the same key (1, 2, 4, 8 minutes, then every 15,
+     * by [attempt]), so the chain is never lost and a failing phone is not woken every minute for ever.
+     */
+    internal fun retryLater(context: Context, key: String?, attempt: Int = 1) {
+        ExactAlarms.set(context, ExactAlarms.retryAt(attempt), alarmIntent(context, key, attempt), ExactAlarms.showApp(context, "log"))
     }
 
     // ---------- The notification ----------
@@ -277,15 +299,24 @@ class LogAlarmReceiver : BroadcastReceiver() {
         if (intent.action != LogReminders.ACTION_ALARM) return
         val result = goAsync()
         val key = intent.getStringExtra(LogReminders.EXTRA_AT)
+        val attempt = intent.getIntExtra(LogReminders.EXTRA_ATTEMPT, 0)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                val finished = withTimeoutOrNull(25_000) {
-                    Settings.awaitLoaded()
-                    LogReminders.ring(context, key)
-                    true
+                val finished = try {
+                    withTimeoutOrNull(LogReminders.workTimeoutMs) {
+                        LogReminders.overrun?.invoke()
+                        Settings.awaitLoaded()
+                        LogReminders.ring(context, key)
+                        true
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // A failure must not end the chain or close the app.
+                    null
                 }
-                // It needs no data, but a settings load that never finishes must not end the chain either.
-                if (finished == null) LogReminders.retryLater(context, key)
+                // It needs no data, but a settings load that never finishes, or a failure, must not end the chain either.
+                if (finished == null) LogReminders.retryLater(context, key, attempt + 1)
             } finally {
                 result.finish()
             }

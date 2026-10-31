@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -275,7 +276,13 @@ fun SettingsScreen(snap: Snapshot, nav: Nav) {
     // The pages' settings as text for search: the entry, its title, then its search words and page.
     // "Reminders on the minute" is a row only where the user can still allow it (Android 12 and 12L, revoked), so search
     // lists it only then: it would otherwise lead to a page without the row.
-    val exactRow = Build.VERSION.SDK_INT >= 31 && !ExactAlarms.canExact(LocalContext.current)
+    val exactContext = LocalContext.current
+    var exactAllowed by remember { mutableStateOf(ExactAlarms.canExact(exactContext)) }
+    LifecycleResumeEffect(Unit) {
+        exactAllowed = ExactAlarms.canExact(exactContext)
+        onPauseOrDispose { }
+    }
+    val exactRow = Build.VERSION.SDK_INT >= 31 && !exactAllowed
     val catalogue = CATALOGUE.filter { exactRow || it.title != R.string.mr_exact }.map { e ->
         Triple(e, stringResource(e.title), "${stringResource(e.keywords)} ${pages.getValue(e.section)}")
     }

@@ -204,8 +204,27 @@ object RestTimer {
     fun stop() {
         job?.cancel()
         cancelAlarm()
+        // An alarm already on its way when the rest is stopped must not alert for it (see [alarmRang]).
+        lastFinish = now()
         _state.value = State()
         changed()
+    }
+
+    /** How long the alarm receiver waits for the settings before it alerts anyway, with the defaults. A seam for tests. */
+    @Volatile internal var settingsTimeoutMs = 10_000L
+
+    /** Waits for the settings to load. A seam so a test can make them never load. */
+    @Volatile internal var awaitSettings: suspend () -> Unit = { Settings.awaitLoaded() }
+
+    /** Tests only: puts every seam back and forgets any rest and the last finish, so one test does not leak into the next. */
+    internal fun resetForTests() {
+        job?.cancel()
+        cancelAlarm()
+        _state.value = State()
+        lastFinish = 0L
+        settingsTimeoutMs = 10_000L
+        awaitSettings = { Settings.awaitLoaded() }
+        appContext = null
     }
 
     private fun changed() {
@@ -232,12 +251,14 @@ object RestTimer {
         _state.value = State()
         changed()
         val ctx = appContext
-        val prefs = Settings.currentPortable()
-        if (ctx != null && prefs.restSound) RestSound.play(ctx, Settings.current().restSoundUri, prefs.restVolume)
+        // Read without waiting (the state flows hold the defaults until the settings load): an alarm that wakes a dead
+        // process must alert even when the settings have not loaded, and never block on them.
+        val prefs = Settings.portable.value
+        if (ctx != null && prefs.restSound) RestSound.play(ctx, Settings.device.value.restSoundUri, prefs.restVolume)
         // With notifications allowed, the "Rest over" alert vibrates and wakes the screen; otherwise vibrate here.
-        if (ctx != null && Settings.currentPortable().restVibrate && TimerService.canNotify(ctx)) {
+        if (ctx != null && prefs.restVibrate && TimerService.canNotify(ctx)) {
             TimerService.alertRestOver(ctx)
-        } else if (ctx != null && Settings.currentPortable().restVibrate) {
+        } else if (ctx != null && prefs.restVibrate) {
             try {
                 ctx.getSystemService(Vibrator::class.java)
                     ?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1))
@@ -256,10 +277,9 @@ class RestAlarmReceiver : BroadcastReceiver() {
         val result = goAsync()
         AppScope.scope.launch {
             try {
-                withTimeoutOrNull(10_000) {
-                    Settings.awaitLoaded()
-                    RestTimer.alarmRang(context)
-                }
+                // Settings that are not loaded in time do not stop the alert: it comes with the defaults.
+                withTimeoutOrNull(RestTimer.settingsTimeoutMs) { RestTimer.awaitSettings() }
+                RestTimer.alarmRang(context)
             } finally {
                 result.finish()
             }

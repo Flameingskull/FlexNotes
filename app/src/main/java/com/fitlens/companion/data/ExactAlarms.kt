@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
  * The one place an alarm is set (#346): medication reminders, snoozes, follow-ups, logging reminders and the rest
@@ -19,6 +21,34 @@ import android.os.Build
  * (a test reads the sources to be sure).
  */
 object ExactAlarms {
+    /** Android 12 and 12L send this when the user allows or revokes exact alarms: the alarms already set are set again. */
+    const val ACTION_PERMISSION_CHANGED = "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
+
+    /**
+     * The epoch time of [local] on the phone. When clocks go back, a local time such as 02:30 happens twice, and the
+     * default is the earlier of the two. If that instant has already passed ([nowMillis], by `Dates.clockSource`) while the
+     * clock is in the second pass, the alarm would fire at once and repeat until 02:30 comes round again; so the later
+     * offset is used, the 02:30 that is still to come.
+     */
+    fun epochMillis(local: LocalDateTime, zone: ZoneId = ZoneId.systemDefault(), nowMillis: Long = Dates.clockSource.millis()): Long {
+        val earlier = local.atZone(zone)
+        val earlierMs = earlier.toInstant().toEpochMilli()
+        if (earlierMs > nowMillis) return earlierMs
+        return maxOf(earlierMs, earlier.withLaterOffsetAtOverlap().toInstant().toEpochMilli())
+    }
+
+    /** How long after attempt number [attempt] (1 for the first) could not finish the alarm rings again: 1, 2, 4, 8, then every 15 minutes. */
+    fun retryDelayMs(attempt: Int): Long = when {
+        attempt <= 1 -> 60_000L
+        attempt == 2 -> 120_000L
+        attempt == 3 -> 240_000L
+        attempt == 4 -> 480_000L
+        else -> 900_000L
+    }
+
+    /** When the retry after attempt [attempt] rings, on the phone's clock. */
+    fun retryAt(attempt: Int): Long = epochMillis(Dates.nowDateTime().plusSeconds(retryDelayMs(attempt) / 1000))
+
     /** Whether Android lets FlexNotes ring at the exact minute: always before Android 12, and from Android 13 (granted at install). */
     fun canExact(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < 31) return true

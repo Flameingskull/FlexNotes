@@ -6,7 +6,6 @@ import android.app.Application
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Intent
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.shadows.ShadowAlarmManager
@@ -204,7 +203,10 @@ class ReminderHarness private constructor(val app: Application) {
         }
     }
 
-    /** Returns once what is posted and set has not changed for [QUIET_MS]. */
+    /**
+     * Returns once what is posted and set (titles included) has not changed for [QUIET_MS] and no debounced re-arm is
+     * waiting or running: a re-arm is a 300 ms delay on another thread, so a quiet spell alone could end before it.
+     */
     fun settle(timeoutMs: Long = TIMEOUT_MS) {
         val end = System.nanoTime() + timeoutMs * 1_000_000
         var last = fingerprint()
@@ -212,7 +214,7 @@ class ReminderHarness private constructor(val app: Application) {
         while (System.nanoTime() < end) {
             ShadowLooper.idleMainLooper()
             val now = fingerprint()
-            if (now != last) {
+            if (now != last || !rearmsIdle()) {
                 last = now
                 since = System.nanoTime()
             } else if ((System.nanoTime() - since) / 1_000_000 >= QUIET_MS) return
@@ -221,8 +223,18 @@ class ReminderHarness private constructor(val app: Application) {
         throw AssertionError("Posted notifications and set alarms kept changing. ${describe()}")
     }
 
+    private fun rearmsIdle(): Boolean = MedReminders.rearmIdle() && LogReminders.rearmIdle()
+
     private fun fingerprint(): List<Any?> =
-        listOf(notifications().map { Triple(it.id, it.tag, it.text) }, alarms().map { it.triggerAtMillis to it.key })
+        listOf(
+            notifications().map { listOf(it.id, it.tag, it.title, it.text) },
+            alarms().map { listOf(it.triggerAtMillis, it.key, it.receiver) }
+        )
+
+    /** Cancels every alarm that is set, as a restart that lost them would. */
+    fun cancelAllAlarms() {
+        shadowOf(alarmManager).scheduledAlarms.forEach { alarmManager.cancel(it.operation) }
+    }
 
     private fun describe(): String =
         "Posted: ${notifications().map { "${it.title} / ${it.text} ${it.actions}" }}. Alarms: ${alarms().map { "${it.receiver} at ${it.at} for ${it.key}" }}."
@@ -244,14 +256,11 @@ class ReminderHarness private constructor(val app: Application) {
 
     /** Puts every seam back and removes the database. Call it from `@After`. */
     fun stop() {
-        for (owner in listOf(MedReminders::class.java, LogReminders::class.java)) {
-            // A later test must not rearm against this test's application.
-            runCatching { (owner.getDeclaredField("pending").apply { isAccessible = true }.get(null) as? Job)?.cancel() }
-            runCatching { owner.getDeclaredField("app").apply { isAccessible = true }.set(null, null) }
-        }
+        // A later test must not rearm against this test's application, nor inherit its seams.
+        MedReminders.resetForTests()
+        LogReminders.resetForTests()
+        Settings.deviceWriteFault = null
         Dates.clockSource = Clock.systemDefaultZone()
-        MedReminders.raceHook = null
-        MedReminders.loadOverride = null
         runCatching { Store.db.close() }
         app.deleteDatabase(Db.NAME)
     }

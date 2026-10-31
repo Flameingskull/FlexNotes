@@ -1974,8 +1974,8 @@
     <string name="settings_meds_summary">Dose reminders and what the lock screen shows</string>
     <string name="mr_channel">Medication reminders</string>
     <string name="mr_channel_desc">A reminder when a scheduled dose is due, with Taken, Snooze and Skip.</string>
-    <string name="mr_title">Medication due at %1$s</string>
-    <string name="mr_title_again">Still due: medication at %1$s</string>
+    <string name="mr_title">Medication due %1$s</string>
+    <string name="mr_title_again">Medication still due %1$s</string>
     <string name="mr_public_title">Medication reminder</string>
     <string name="mr_public_text">Unlock to see which dose is due.</string>
     <string name="mr_taken_site">Taken · %1$s</string>

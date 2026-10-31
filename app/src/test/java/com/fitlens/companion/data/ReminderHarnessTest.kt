@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.test.core.app.ApplicationProvider
 import com.fitlens.companion.R
 import com.fitlens.companion.ui.LongHistoryFixture
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -102,8 +103,30 @@ class ReminderHarnessTest {
         val retry = h.nextAlarm()!!
         assertEquals("LogAlarmReceiver", retry.receiver)
         assertEquals(key, retry.key)
-        assertEquals(LocalDateTime.of(2026, 10, 30, 8, 1), retry.at)
+        // The test's clock reads 07:59, so a minute later is 08:00.
+        assertEquals(LocalDateTime.of(2026, 10, 30, 8, 0), retry.at)
         assertEquals(retry.triggerAtMillis, h.nextAlarmClock()!!.triggerTime)
+        assertEquals(1, retry.intent.getIntExtra(LogReminders.EXTRA_ATTEMPT, 0))
+    }
+
+    @Test
+    fun aLoggingAlarmThatOverrunsItsTimeSetsARetryAndTheGapGrows() {
+        h.setLogReminders(photosOnFridays())
+        LogReminders.workTimeoutMs = 300
+        LogReminders.overrun = { awaitCancellation() }
+        var at = LocalDateTime.of(2026, 10, 30, 7, 59)
+        var intent = h.logAlarm(key)
+        for (gap in listOf(1L, 2L, 4L, 8L, 15L)) {
+            val expected = at.plusMinutes(gap)
+            h.fire(intent) { h.nextAlarm()?.at == expected }
+            assertEquals(1, h.alarms().size)
+            assertEquals("LogAlarmReceiver", h.nextAlarm()!!.receiver)
+            at = expected
+            Dates.clockSource = f.clockAt("%02d:%02d".format(at.hour, at.minute))
+            intent = h.nextAlarm()!!.intent
+        }
+        assertEquals(key, h.nextAlarm()!!.key)
+        assertEquals(5, intent.getIntExtra(LogReminders.EXTRA_ATTEMPT, 0))
     }
 
     @Test

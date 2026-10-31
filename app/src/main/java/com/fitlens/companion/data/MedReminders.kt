@@ -16,15 +16,17 @@ import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.fitlens.companion.R
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 
@@ -42,7 +44,7 @@ import java.time.temporal.ChronoUnit
  * chain never ends.
  *
  * Catching up is only the backstop for a phone that was switched off, which can't ring (and for an alarm replaced the
- * moment it was due): [DeviceSettings.medRungThrough] is the time up to which first notifications have gone out, so a
+ * moment it was due), and never for a dose whose schedule just started, resumed, moved or came back ([planStamp]): [DeviceSettings.medRungThrough] is the time up to which first notifications have gone out, so a
  * dose due after it, at most [CATCH_UP_HOURS] hours ago, is notified as soon as the next alarm is set. It is not how
  * lateness is handled: alarms are not late. Names stay off the lock screen unless [DeviceSettings.medNamesOnLockScreen]
  * is on. Everything happens on the phone: no internet.
@@ -66,6 +68,8 @@ object MedReminders {
     const val EXTRA_NUDGE = "com.fitlens.companion.MED_NUDGE"
     /** On an alarm: it is a snooze coming back, which brings back only the snoozed doses. */
     const val EXTRA_SNOOZED = "com.fitlens.companion.MED_SNOOZED"
+    /** On a retry alarm: how many times in a row the alarm could not finish, for the back-off ([ExactAlarms.retryDelayMs]). */
+    const val EXTRA_ATTEMPT = "com.fitlens.companion.MED_ATTEMPT"
     /** On the notification's tap: open Medications. */
     const val EXTRA_OPEN_MEDICATIONS = "com.fitlens.companion.OPEN_MEDICATIONS"
     const val SNOOZE_MINUTES = 15L
@@ -77,8 +81,6 @@ object MedReminders {
     private const val LOOKAHEAD_DAYS = 62L
     /** A snooze that is still stored this long after it was due is dropped, whatever became of its dose. */
     private const val SNOOZE_KEEP_DAYS = 2L
-    /** How long after an alarm could not finish (the data did not load) it tries again. */
-    private const val RETRY_MS = 60_000L
     private val KEY: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
     private val HHMMSS: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss")
 
@@ -91,6 +93,33 @@ object MedReminders {
 
     /** Tests only: stands in for loading the data, to make that fail. */
     @Volatile internal var loadOverride: (suspend () -> Snapshot?)? = null
+
+    /** Tests only: a failure thrown just before a button's write, to prove the notification stays when the write fails. */
+    @Volatile internal var writeFault: Throwable? = null
+
+    /** How long a receiver works before it gives up and sets a retry. A seam so a test can make the work overrun. */
+    @Volatile internal var workTimeoutMs = 25_000L
+
+    /** Tests only: how many notifications [show] has posted, to prove each dose alerts once. */
+    @Volatile internal var posted = 0
+
+    /** One ring or arm at a time, so a debounced arm from a cold start cannot set a stale alarm over a ring's. */
+    private val chainLock = Mutex()
+
+    /** Tests only: whether no debounced re-arm is waiting or running. */
+    internal fun rearmIdle(): Boolean = pending?.isActive != true
+
+    /** Tests only: puts every seam back and forgets the application, so one test does not leak into the next. */
+    internal fun resetForTests() {
+        pending?.cancel()
+        pending = null
+        app = null
+        raceHook = null
+        loadOverride = null
+        writeFault = null
+        workTimeoutMs = 25_000L
+        posted = 0
+    }
 
     /** From `App.onCreate`: keeps the application context and sets the next reminder once the data has loaded. */
     fun init(context: Context) {
@@ -124,6 +153,9 @@ object MedReminders {
 
         /** Whether the dose [doseId] due at [key] is snoozed. */
         fun covers(doseId: Long, key: String): Boolean = until.containsKey(key) || until.containsKey(tokenOf(doseId, key))
+
+        /** Without those whose time has passed by [now]. */
+        fun future(now: LocalDateTime): Snoozes = Snoozes(until.filter { (_, v) -> parse(v)?.isAfter(now) == true })
 
         /** Without [entries] as they were read: one stored again for the same dose with another time since stays. */
         fun without(entries: List<SnoozeEntry>): Snoozes =
@@ -166,6 +198,29 @@ object MedReminders {
 
     /** The tag of the notification for one dose due at [key]: what tells three doses at one minute apart. */
     fun tagOf(doseId: Long, key: String): String = "$doseId@$key"
+
+    /**
+     * A fingerprint of what the schedules plan: each running schedule's phases, doses and times, and each run's start, end
+     * and pauses. Not skips or taken values. When it differs from the stored one (a schedule was started, a pause
+     * resumed, a dose time moved, an end undone, a restore) the doses already past are not owed a reminder.
+     */
+    fun planStamp(plan: MedPlan): String {
+        val text = buildString {
+            plan.activations.sortedBy { it.id }.forEach { a ->
+                append("A${a.id},${a.scheduleId},${a.start},${a.endedOn.orEmpty()},${MedActivation.encodePauses(a.pauses)}\n")
+            }
+            plan.activations.mapNotNull { plan.schedulesById[it.scheduleId] }.distinctBy { it.id }.sortedBy { it.id }.forEach { s ->
+                append("S${s.id},${s.repeats}\n")
+                s.phases.forEach { p ->
+                    append("P${p.id},${p.on},${p.length},${p.unit.name}\n")
+                    p.doses.forEach { d ->
+                        append("D${d.id},${d.medication},${d.amount},${d.unit},${d.time},${d.days.encode()},${d.step},${d.stepEvery},${d.stepLimit}\n")
+                    }
+                }
+            }
+        }
+        return text.hashCode().toString(16)
+    }
 
     /** The doses due at [key] that are neither taken nor skipped. */
     fun openAt(plan: MedPlan, records: List<MRecord>, key: String): List<DueDose> {
@@ -284,52 +339,88 @@ object MedReminders {
 
     /**
      * The one alarm of the chain. Every alarm has this action and request code (extras do not count), so setting it
-     * replaces the last one and cancelling finds it, whatever extras it carries.
+     * replaces the last one and cancelling finds it, whatever extras it carries. [attempt] counts the retries (0 for a
+     * normal alarm), for the back-off.
      */
-    private fun chainIntent(context: Context, key: String?, nudge: Boolean = false, snoozed: Boolean = false): PendingIntent =
-        PendingIntent.getBroadcast(
-            context, 0,
-            Intent(context, MedAlarmReceiver::class.java).setAction(ACTION_ALARM).apply {
-                if (key != null) putExtra(EXTRA_AT, key).putExtra(EXTRA_NUDGE, nudge).putExtra(EXTRA_SNOOZED, snoozed)
-            },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+    private fun chainIntent(
+        context: Context, key: String?, nudge: Boolean = false, snoozed: Boolean = false, attempt: Int = 0
+    ): PendingIntent = PendingIntent.getBroadcast(
+        context, 0,
+        Intent(context, MedAlarmReceiver::class.java).setAction(ACTION_ALARM).apply {
+            if (key != null) {
+                putExtra(EXTRA_AT, key)
+                putExtra(EXTRA_NUDGE, nudge)
+                putExtra(EXTRA_SNOOZED, snoozed)
+            }
+            if (attempt > 0) putExtra(EXTRA_ATTEMPT, attempt)
+        },
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
 
     /**
-     * Sets the alarm to ring again a minute from now with the same extras, for an alarm that rang but could not finish
-     * (the data did not load, or it timed out), so the chain is never lost. With no [key] it only runs the catch-up and
-     * sets the following alarm.
+     * Sets the alarm to ring again, for an alarm that rang but could not finish (the data did not load, it timed out, a
+     * write failed), with the same extras so nothing is lost. [attempt] (1 for the first retry) sets the wait: 1, 2, 4, 8
+     * minutes, then every 15 (see [ExactAlarms.retryDelayMs]), so a database that never opens does not wake the phone
+     * every minute for ever, and an alarm is always left set. With no [key] it only runs the catch-up and sets the
+     * following alarm.
      */
-    internal fun retryLater(context: Context, key: String? = null, nudge: Boolean = false, snoozed: Boolean = false) {
-        val at = Dates.nowDateTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() + RETRY_MS
-        ExactAlarms.set(context, at, chainIntent(context, key, nudge, snoozed), ExactAlarms.showMedications(context))
+    internal fun retryLater(context: Context, key: String? = null, nudge: Boolean = false, snoozed: Boolean = false, attempt: Int = 1) {
+        ExactAlarms.set(context, ExactAlarms.retryAt(attempt), chainIntent(context, key, nudge, snoozed, attempt), ExactAlarms.showMedications(context))
     }
 
-    /** What is stored for the snoozes and the time rung through, worked out from [d] as it is when written. */
-    private fun reconciled(d: DeviceSettings, now: LocalDateTime, isOpen: (Long?, String) -> Boolean): DeviceSettings {
-        val snoozes = Snoozes.decode(d.medSnoozes).pruned(now, isOpen)
+    private fun later(a: LocalDateTime?, b: LocalDateTime): LocalDateTime = if (a != null && a.isAfter(b)) a else b
+
+    /**
+     * What is stored for the snoozes, the time rung through and the plan's fingerprint, worked out from [d] as it is when
+     * written. When the plan changed ([planStamp] differs, or none was stored), when none was rung yet, or while reminders
+     * are off, the mark moves to now: a dose already past when its schedule started, resumed, moved or came back was never
+     * going to ring, so it must not ring now. The mark never moves backwards. While reminders are off a snooze whose time
+     * passed is dropped, so it does not ring the moment they are switched back on.
+     */
+    private fun reconciled(d: DeviceSettings, now: LocalDateTime, stamp: String, isOpen: (Long?, String) -> Boolean): DeviceSettings {
+        var snoozes = Snoozes.decode(d.medSnoozes).pruned(now, isOpen)
+        if (!d.medReminders) snoozes = snoozes.future(now)
         val stored = parse(d.medRungThrough.orEmpty())
         val minute = now.truncatedTo(ChronoUnit.MINUTES)
-        // First run after the update, or reminders off for a while: nothing old rings. The mark never moves backwards.
-        val mark = if (stored == null || (!d.medReminders && stored.isBefore(minute))) minute else stored
-        return d.copy(medSnoozes = snoozes.encode(), medRungThrough = mark.format(KEY))
+        val reset = stored == null || d.medPlanStamp != stamp || !d.medReminders
+        val mark = if (reset) later(stored, minute) else (stored ?: minute)
+        return d.copy(medSnoozes = snoozes.encode(), medRungThrough = mark.format(KEY), medPlanStamp = stamp)
+    }
+
+    /**
+     * A settings write that may fail (storage full): the change is already held in memory, which is what the alarm is set
+     * from, so a failure is not allowed to stop the chain. It is saved with the next write that works.
+     */
+    private suspend fun safeUpdate(change: (DeviceSettings) -> DeviceSettings) {
+        try {
+            Settings.updateDeviceNow(change)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Kept in memory; the alarm below is still set.
+        }
     }
 
     /** Sets the next alarm now, and clears reminders whose doses were all taken or skipped meanwhile. */
     internal suspend fun arm(context: Context) {
+        chainLock.withLock { armLocked(context) }
+    }
+
+    private suspend fun armLocked(context: Context) {
         app = app ?: context.applicationContext
         Settings.awaitLoaded()
         val snap = Store.snapshot.value ?: return
         clearStale(context, snap)
         val now = Dates.nowDateTime()
         val records = snap.medicationView.records
+        val stamp = planStamp(snap.medPlan)
         val isOpen: (Long?, String) -> Boolean = { id, key -> openAt(snap.medPlan, records, key).any { id == null || it.dose.id == id } }
         // Decided from what is stored now, but written from what is stored when it is written: a snooze another
         // receiver saved in between is kept (the lambda reads its own argument, not the earlier copy).
         val before = Settings.current()
-        if (reconciled(before, now, isOpen) != before) {
+        if (reconciled(before, now, stamp, isOpen) != before) {
             raceHook?.invoke()
-            Settings.updateDeviceNow { reconciled(it, now, isOpen) }
+            safeUpdate { reconciled(it, now, stamp, isOpen) }
         }
         val device = Settings.current()
         val snoozes = Snoozes.decode(device.medSnoozes)
@@ -339,8 +430,7 @@ object MedReminders {
             ExactAlarms.cancel(context, chainIntent(context, null))
             return
         }
-        val at = ring.at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        ExactAlarms.set(context, at, chainIntent(context, ring.key, ring.nudge, ring.snoozed), ExactAlarms.showMedications(context))
+        ExactAlarms.set(context, ExactAlarms.epochMillis(ring.at), chainIntent(context, ring.key, ring.nudge, ring.snoozed), ExactAlarms.showMedications(context))
     }
 
     // ---------- The notifications ----------
@@ -358,11 +448,18 @@ object MedReminders {
     private fun clearStale(context: Context, snap: Snapshot) {
         val nm = context.getSystemService(NotificationManager::class.java) ?: return
         val records = snap.medicationView.records
+        val oldest = Dates.nowDateTime().toLocalDate().minusDays(1).format(Dates.ISO)
         runCatching { nm.activeNotifications }.getOrNull().orEmpty()
             .filter { it.notification.channelId == CHANNEL }
             .forEach { sbn ->
                 val extras = sbn.notification.extras
                 val key = extras.getString(EXTRA_AT) ?: return@forEach
+                // An unanswered reminder is not kept for ever (Android holds 50 per app): once its dose was due before
+                // yesterday it goes, and the dose stays on Medications.
+                if (key.take(10) < oldest) {
+                    nm.cancel(sbn.tag, sbn.id)
+                    return@forEach
+                }
                 val open = openAt(snap.medPlan, records, key)
                 if (!extras.containsKey(EXTRA_DOSE)) {
                     nm.cancel(sbn.tag, sbn.id)
@@ -406,9 +503,10 @@ object MedReminders {
         // Lock Medications (#214): the notification itself names nothing, not only its lock-screen version.
         val locked = device.medLock
         val ordered = doses.sortedWith(compareBy({ it.dose.due }, { it.dose.dose.medication.lowercase() }, { it.dose.dose.id }))
-        // An injected dose taken from here goes to the suggested next site (#224). Worked out over every dose shown
-        // together, so two doses of one medication name different sites, and each button says its own.
-        val sites = sitesFor(snap.medPlan, snap.medicationView.records, ordered.map { it.dose })
+        // An injected dose taken from here goes to the suggested next site (#224). Worked out by [siteFor] over that
+        // medication's open doses of today and yesterday, so two doses of one medication name different sites however
+        // they are shown (together, one snoozed, or one left unanswered from yesterday), and each button says its own.
+        val now = Dates.nowDateTime()
         // What the lock screen shows when names are kept private: no medication, no amount.
         val public = NotificationCompat.Builder(context, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_medication)
@@ -417,12 +515,13 @@ object MedReminders {
             .setContentText(context.getString(R.string.mr_public_text))
             .build()
         val icon = BitmapFactory.decodeResource(context.resources, R.drawable.notification_character)
-        ordered.forEachIndexed { i, shown ->
+        ordered.forEach { shown ->
             val d = shown.dose
             val key = d.due
-            val site = sites[i]
-            val time = Dates.time(context, d.time)
-            val title = context.getString(if (shown.again) R.string.mr_title_again else R.string.mr_title, time)
+            val site = siteFor(snap.medPlan, snap.medicationView.records, d, now)
+            // The day and the time, always laid out the same ("Fri 30 Oct, 8:00 AM"), so yesterday's and today's read alike.
+            val dayAndTime = "${Dates.day(d.date)}, ${Dates.time(context, d.time)}"
+            val title = context.getString(if (shown.again) R.string.mr_title_again else R.string.mr_title, dayAndTime)
             val text = if (locked) context.getString(R.string.ml_notification_text)
                 else "${d.dose.medication} ${fmtNum(d.amount)} ${d.dose.unit}".trim()
             val takeLabel = site?.takeIf { !locked }?.let { context.getString(R.string.mr_taken_site, siteName(context.resources, it)) }
@@ -458,8 +557,8 @@ object MedReminders {
                 .setPublicVersion(public)
                 .setContentIntent(tap)
                 .setAutoCancel(true)
-                // A stable order in the shade: by time, then medication.
-                .setSortKey("$key ${d.dose.medication.lowercase()} ${d.dose.id}")
+                // A stable order in the shade: by time, then medication (never the name while Lock Medications is on).
+                .setSortKey(if (locked) "$key ${d.dose.id}" else "$key ${d.dose.medication.lowercase()} ${d.dose.id}")
                 .addExtras(Bundle().apply {
                     putString(EXTRA_AT, key)
                     putLong(EXTRA_DOSE, d.dose.id)
@@ -470,6 +569,7 @@ object MedReminders {
                 .build()
             try {
                 nm.notify(tagOf(d.dose.id, key), NOTIFICATION_ID, n)
+                posted++
             } catch (e: SecurityException) {
                 // Notifications were switched off meanwhile; the doses still show on Medications.
             }
@@ -493,38 +593,62 @@ object MedReminders {
     }
 
     /**
+     * The injection site [dose] goes to when taken from a notification or the widget (#224): worked out in a stable order
+     * (due time, then dose id) across that medication's open doses due today or yesterday up to [now], plus [dose]
+     * itself, and [dose]'s share returned. So two doses of one medication never name the same site, whichever is shown
+     * first, snoozed, left unanswered from yesterday, or taken alone. Null for a medication that isn't injected. A button
+     * records the site it said, not a fresh answer.
+     */
+    fun siteFor(plan: MedPlan, records: List<MRecord>, dose: DueDose, now: LocalDateTime = Dates.nowDateTime()): InjectionSite? {
+        if (!plan.infoOf(dose.dose.medication).injected) return null
+        val group = LinkedHashMap<Pair<Long, String>, DueDose>()
+        for (day in listOf(now.toLocalDate().minusDays(1), now.toLocalDate())) {
+            MedSchedules.dueOn(plan, day.format(Dates.ISO)).forEach { d ->
+                val at = parse(d.due)
+                if (d.dose.medication == dose.dose.medication && at != null && !at.isAfter(now) &&
+                    MedSchedules.takenRecord(records, d) == null && !plan.isSkipped(d.dose.id, d.due)
+                ) group[d.dose.id to d.due] = d
+            }
+        }
+        group[dose.dose.id to dose.due] = dose
+        val ordered = group.values.sortedWith(compareBy({ it.due }, { it.dose.id }))
+        return sitesFor(plan, records, ordered)[ordered.indexOfFirst { it.dose.id == dose.dose.id && it.due == dose.due }]
+    }
+
+    /**
      * Taken, Snooze or Skip from the notification, with no screen open, for the one dose [doseId] due at [key] if it is
      * still open (a press on a dose already taken or skipped records nothing more). [site] is what the Taken button said.
      * With no [doseId], a notification the old version left behind, it acts on every open dose due at [key] as it did.
+     * The notification is taken down after the write, so a write that fails leaves the reminder to press again.
      */
     internal suspend fun handle(context: Context, action: String, key: String, doseId: Long? = null, site: String? = null) {
         val snap = ensureLoaded() ?: return
         val nm = context.getSystemService(NotificationManager::class.java)
-        if (doseId != null) nm?.cancel(tagOf(doseId, key), NOTIFICATION_ID) else nm?.cancel(legacyNotificationId(key))
         val records = snap.medicationView.records
         val open = openAt(snap.medPlan, records, key)
         val targets = if (doseId == null) open else open.filter { it.dose.id == doseId }
+        writeFault?.let { throw it }
         when (action) {
             ACTION_TAKEN -> {
                 val today = Dates.today()
                 val now = Dates.nowDateTime().toLocalTime().format(HHMMSS)
                 val named = if (doseId != null) InjectionSite.of(site) else null
-                val computed = sitesFor(snap.medPlan, records, targets)
-                targets.forEachIndexed { i, d ->
+                targets.forEach { d ->
                     // What the button said; worked out afresh when it didn't carry one, and never for a medication that isn't injected.
-                    val chosen = if (named != null && snap.medPlan.infoOf(d.dose.medication).injected) named else computed[i]
+                    val chosen = if (named != null && snap.medPlan.infoOf(d.dose.medication).injected) named else siteFor(snap.medPlan, records, d)
                     MedSchedules.take(d, if (d.date == today) now else d.time + ":00", site = chosen)
                 }
             }
             ACTION_SKIP -> targets.forEach { MedSchedules.skip(it) }
             ACTION_SNOOZE -> if (targets.isNotEmpty()) {
                 val at = Dates.nowDateTime().plusMinutes(SNOOZE_MINUTES)
-                Settings.updateDeviceNow { d ->
+                safeUpdate { d ->
                     val current = Snoozes.decode(d.medSnoozes)
                     d.copy(medSnoozes = (if (doseId == null) current.with(key, at) else current.with(doseId, key, at)).encode())
                 }
             }
         }
+        if (doseId != null) nm?.cancel(tagOf(doseId, key), NOTIFICATION_ID) else nm?.cancel(legacyNotificationId(key))
         arm(context)
     }
 
@@ -534,45 +658,68 @@ object MedReminders {
      * notification ([catchUp]) and every snooze whose time has come, each once. A [nudge] says "Still due" for the doses at
      * [key]; every follow-up that came due ([followUps]) says so too, and everything else is a first reminder. The time
      * rung through moves to now even when nothing could be posted, so a refused permission never rings the same doses
-     * again and again. When the data cannot load the alarm is set again a minute later with the same extras.
+     * again and again. When the data cannot load the alarm is set again later with the same extras ([attempt] counts the
+     * retries). A plan that changed since the last ring owes nothing already past ([reconciled]). It runs alone
+     * ([chainLock]) and cancels the pending debounced arm, so a cold start's own arm cannot ring the same doses again.
      */
-    internal suspend fun ring(context: Context, key: String?, nudge: Boolean = false, snoozed: Boolean = false) {
+    internal suspend fun ring(context: Context, key: String?, nudge: Boolean = false, snoozed: Boolean = false, attempt: Int = 0) {
+        pending?.cancel()
         val snap = ensureLoaded()
         if (snap == null) {
-            retryLater(context, key, nudge, snoozed)
+            retryLater(context, key, nudge, snoozed, attempt + 1)
             return
         }
-        val device = Settings.current()
-        val now = Dates.nowDateTime()
-        val records = snap.medicationView.records
-        val plan = snap.medPlan
-        val snoozes = Snoozes.decode(device.medSnoozes)
-        clearStale(context, snap)
-        val shown = LinkedHashMap<Pair<Long, String>, Shown>()
-        fun add(d: DueDose, again: Boolean) { shown.putIfAbsent(d.dose.id to d.due, Shown(d, again)) }
-        if (key != null && !snoozed) {
-            openAt(plan, records, key).filter { !snoozes.covers(it.dose.id, key) }.forEach { add(it, nudge) }
+        chainLock.withLock {
+            val device = Settings.current()
+            val now = Dates.nowDateTime()
+            val records = snap.medicationView.records
+            val plan = snap.medPlan
+            val stamp = planStamp(plan)
+            val isOpen: (Long?, String) -> Boolean = { id, k -> openAt(plan, records, k).any { id == null || it.dose.id == id } }
+            // As it will be stored: a changed plan has moved the mark to now, so nothing already past is owed.
+            val view = reconciled(device, now, stamp, isOpen)
+            val snoozes = Snoozes.decode(view.medSnoozes)
+            clearStale(context, snap)
+            val shown = LinkedHashMap<Pair<Long, String>, Shown>()
+            fun add(d: DueDose, again: Boolean) { shown.putIfAbsent(d.dose.id to d.due, Shown(d, again)) }
+            if (key != null && !snoozed) {
+                openAt(plan, records, key).filter { !snoozes.covers(it.dose.id, key) }.forEach { add(it, nudge) }
+            }
+            val mark = parse(view.medRungThrough.orEmpty())
+            if (mark != null) {
+                catchUp(plan, records, now, mark, snoozes).forEach { add(it, false) }
+                followUps(plan, records, now, mark, device.medNudgeMinutes, snoozes).forEach { add(it, true) }
+            }
+            val rung = snoozes.entries().filter { !it.at.isAfter(now) }
+            rung.forEach { e -> openAt(plan, records, e.key).filter { e.doseId == null || it.dose.id == e.doseId }.forEach { add(it, false) } }
+            if (device.medReminders) show(context, snap, shown.values.toList())
+            val minute = now.truncatedTo(ChronoUnit.MINUTES)
+            pending?.cancel()
+            raceHook?.invoke()
+            // From what is stored when it is written: a snooze saved meanwhile stays, and the mark never goes backwards.
+            safeUpdate { d ->
+                val r = reconciled(d, now, stamp, isOpen)
+                r.copy(
+                    medSnoozes = Snoozes.decode(r.medSnoozes).without(rung).encode(),
+                    medRungThrough = later(parse(r.medRungThrough.orEmpty()), minute).format(KEY)
+                )
+            }
+            armLocked(context)
         }
-        // With no mark yet (an alarm before the first arm), the doses from this alarm's own time on are still owed.
-        val mark = parse(device.medRungThrough.orEmpty()) ?: key?.let { parse(it) }?.minusMinutes(1)
-        if (mark != null) {
-            catchUp(plan, records, now, mark, snoozes).forEach { add(it, false) }
-            followUps(plan, records, now, mark, device.medNudgeMinutes, snoozes).forEach { add(it, true) }
+    }
+
+    /**
+     * The clock or time zone was changed: a mark left ahead of the clock (set wrongly ahead and corrected, or travel west)
+     * would stop catching up and following up until the clock caught up, so it is reset to now. The one case where the
+     * mark moves backwards.
+     */
+    internal suspend fun clockChanged() {
+        Settings.awaitLoaded()
+        val now = Dates.nowDateTime().truncatedTo(ChronoUnit.MINUTES)
+        safeUpdate { d ->
+            val mark = parse(d.medRungThrough.orEmpty())
+            if (mark != null && mark.isAfter(now)) d.copy(medRungThrough = now.format(KEY)) else d
         }
-        val rung = snoozes.entries().filter { !it.at.isAfter(now) }
-        rung.forEach { e -> openAt(plan, records, e.key).filter { e.doseId == null || it.dose.id == e.doseId }.forEach { add(it, false) } }
-        if (device.medReminders) show(context, snap, shown.values.toList())
-        val minute = now.truncatedTo(ChronoUnit.MINUTES)
-        raceHook?.invoke()
-        // From what is stored when it is written: a snooze saved meanwhile stays, and the mark never goes backwards.
-        Settings.updateDeviceNow { d ->
-            val old = parse(d.medRungThrough.orEmpty())
-            d.copy(
-                medSnoozes = Snoozes.decode(d.medSnoozes).without(rung).encode(),
-                medRungThrough = (if (old != null && old.isAfter(minute)) old else minute).format(KEY)
-            )
-        }
-        arm(context)
     }
 }
 
@@ -586,18 +733,26 @@ class MedAlarmReceiver : BroadcastReceiver() {
         val site = intent.getStringExtra(MedReminders.EXTRA_SITE)
         val nudge = intent.getBooleanExtra(MedReminders.EXTRA_NUDGE, false)
         val snoozed = intent.getBooleanExtra(MedReminders.EXTRA_SNOOZED, false)
+        val attempt = intent.getIntExtra(MedReminders.EXTRA_ATTEMPT, 0)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                val finished = withTimeoutOrNull(25_000) {
-                    when (action) {
-                        MedReminders.ACTION_ALARM -> MedReminders.ring(context, key, nudge, snoozed)
-                        MedReminders.ACTION_TAKEN, MedReminders.ACTION_SNOOZE, MedReminders.ACTION_SKIP ->
-                            if (key != null) MedReminders.handle(context, action, key, doseId, site)
+                val finished = try {
+                    withTimeoutOrNull(MedReminders.workTimeoutMs) {
+                        when (action) {
+                            MedReminders.ACTION_ALARM -> MedReminders.ring(context, key, nudge, snoozed, attempt)
+                            MedReminders.ACTION_TAKEN, MedReminders.ACTION_SNOOZE, MedReminders.ACTION_SKIP ->
+                                if (key != null) MedReminders.handle(context, action, key, doseId, site)
+                        }
+                        true
                     }
-                    true
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // A failure (a full disk, a database that would not open) must not end the chain or close the app.
+                    null
                 }
-                // An alarm that timed out before it finished must not end the chain.
-                if (finished == null && action == MedReminders.ACTION_ALARM) MedReminders.retryLater(context, key, nudge, snoozed)
+                // An alarm that timed out or failed before it finished must not end the chain; a button pressed again by the person can retry itself.
+                if (finished == null && action == MedReminders.ACTION_ALARM) MedReminders.retryLater(context, key, nudge, snoozed, attempt + 1)
             } finally {
                 result.finish()
             }
@@ -605,25 +760,51 @@ class MedAlarmReceiver : BroadcastReceiver() {
     }
 }
 
-/** Sets the next reminder again after a reboot, a time or time-zone change, or an app update (#203), the logging ones too (#219). */
+/**
+ * Sets the next reminder again after a reboot, a time or time-zone change, an app update (#203), the logging ones too
+ * (#219), or when Android 12 or 12L tells us exact alarms were allowed or revoked (#346), so an alarm set while it was
+ * inexact becomes exact. A clock or zone change also resets a mark left ahead of the clock.
+ */
 class MedBootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
+        val action = intent.action
+        when (action) {
             Intent.ACTION_BOOT_COMPLETED, Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED,
-            Intent.ACTION_MY_PACKAGE_REPLACED -> Unit
+            Intent.ACTION_MY_PACKAGE_REPLACED, ExactAlarms.ACTION_PERMISSION_CHANGED -> Unit
             else -> return
         }
         val result = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                val finished = withTimeoutOrNull(25_000) {
+                var failed = false
+                suspend fun step(work: suspend () -> Unit) {
+                    try {
+                        work()
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        failed = true
+                    }
+                }
+                val finished = withTimeoutOrNull(MedReminders.workTimeoutMs) {
+                    if (action == Intent.ACTION_TIME_CHANGED || action == Intent.ACTION_TIMEZONE_CHANGED) step { MedReminders.clockChanged() }
                     // The logging reminders (#219) are set again with them, and need no data.
-                    LogReminders.arm(context)
-                    // With no data the alarm is not left unset: it rings in a minute and tries again.
-                    if (MedReminders.ensureLoaded() == null) MedReminders.retryLater(context) else MedReminders.arm(context)
+                    step { LogReminders.arm(context) }
+                    // With no data the alarm is not left unset: it rings later and tries again.
+                    step {
+                        if (MedReminders.ensureLoaded() == null) {
+                            failed = true
+                        } else {
+                            MedReminders.arm(context)
+                        }
+                    }
                     true
                 }
-                if (finished == null) MedReminders.retryLater(context)
+                // Whatever did not finish leaves both chains an alarm to try again, so the person is never left with none.
+                if (finished == null || failed) {
+                    MedReminders.retryLater(context)
+                    LogReminders.retryLater(context, null)
+                }
             } finally {
                 result.finish()
             }

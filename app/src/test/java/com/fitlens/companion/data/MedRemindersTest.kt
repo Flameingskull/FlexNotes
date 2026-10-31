@@ -4,14 +4,17 @@ import android.app.Application
 import com.fitlens.companion.ui.LongHistoryFixture
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
  * Medication reminders (#203, #327): which reminder is set next, follow-ups, snoozes per dose, doses owed a late
@@ -187,6 +190,42 @@ class MedRemindersTest {
         val ring = MedReminders.next(plan(), emptyList(), at("2026-10-22T08:31"), 30, rungThrough = mark)!!
         assertEquals(at("2026-10-22T08:31"), ring.at)
         assertTrue(ring.nudge)
+    }
+
+    @Test
+    fun theFingerprintOfThePlanChangesWithWhatIsScheduledAndNotWithWhatWasTaken() {
+        val base = MedReminders.planStamp(plan())
+        // The same plan gives the same text, whatever the order it was built in.
+        val twoRuns = MedPlan(listOf(schedule), listOf(MedActivation(2, 1, "2026-10-05"), MedActivation(1, 1, "2026-10-01")))
+        assertEquals(MedReminders.planStamp(twoRuns), MedReminders.planStamp(MedPlan(listOf(schedule), twoRuns.activations.reversed())))
+        // Skips are not part of it.
+        assertEquals(base, MedReminders.planStamp(plan(skipped = mapOf(1L to setOf("2026-10-22 08:00")))))
+        // A run ended, a pause, a dose time moved, a new run: each changes it.
+        assertNotEquals(base, MedReminders.planStamp(plan(ended = "2026-10-30")))
+        val paused = MedPlan(listOf(schedule), listOf(MedActivation(1, 1, "2026-10-01", pauses = listOf(MedPause("2026-10-10", null)))))
+        assertNotEquals(base, MedReminders.planStamp(paused))
+        val phase = schedule.phases.first()
+        val moved = schedule.copy(phases = listOf(phase.copy(doses = phase.doses.map { if (it.id == 2L) it.copy(time = "09:00") else it })))
+        assertNotEquals(base, MedReminders.planStamp(MedPlan(listOf(moved), listOf(MedActivation(1, 1, "2026-10-01")))))
+        assertNotEquals(base, MedReminders.planStamp(twoRuns))
+        // A schedule nobody runs does not matter.
+        assertEquals(base, MedReminders.planStamp(MedPlan(listOf(schedule, moved.copy(id = 9)), listOf(MedActivation(1, 1, "2026-10-01")))))
+    }
+
+    @Test
+    fun aTimeThatHappensTwiceTakesTheOneStillToCome() {
+        val ny = ZoneId.of("America/New_York")
+        val local = LocalDateTime.of(2026, 11, 1, 1, 30)
+        val firstPass = Instant.parse("2026-11-01T05:30:00Z").toEpochMilli()
+        val secondPass = Instant.parse("2026-11-01T06:30:00Z").toEpochMilli()
+        // Before the clocks go back (01:10 EDT) the first 01:30 is still to come; in the second pass (01:10 EST) it has gone.
+        assertEquals(firstPass, ExactAlarms.epochMillis(local, ny, Instant.parse("2026-11-01T05:10:00Z").toEpochMilli()))
+        assertEquals(secondPass, ExactAlarms.epochMillis(local, ny, Instant.parse("2026-11-01T06:10:00Z").toEpochMilli()))
+        // A time that happens once is unchanged either way.
+        val once = LocalDateTime.of(2026, 11, 1, 3, 30)
+        assertEquals(once.atZone(ny).toInstant().toEpochMilli(), ExactAlarms.epochMillis(once, ny, Instant.parse("2026-11-01T06:10:00Z").toEpochMilli()))
+        // The retry waits grow: 1, 2, 4, 8, then 15 minutes.
+        assertEquals(listOf(1L, 2L, 4L, 8L, 15L, 15L), (1..6).map { ExactAlarms.retryDelayMs(it) / 60_000L })
     }
 
     @Test
