@@ -9,6 +9,7 @@ import android.content.Intent
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import org.robolectric.Shadows.shadowOf
+import org.robolectric.shadows.ShadowAlarmManager
 import org.robolectric.shadows.ShadowLooper
 import java.time.Clock
 import java.time.Instant
@@ -238,7 +239,7 @@ class ReminderHarness private constructor(val app: Application) {
         Dates.clockSource = clock
         allowNotifications(true)
         // Android 13 and later grant USE_EXACT_ALARM at install.
-        shadowOf(alarmManager).setCanScheduleExactAlarms(true)
+        ShadowAlarmManager.setCanScheduleExactAlarms(true)
     }
 
     /** Puts every seam back and removes the database. Call it from `@After`. */
