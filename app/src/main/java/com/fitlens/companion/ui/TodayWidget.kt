@@ -34,7 +34,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -202,7 +201,7 @@ object TodayWidgets {
         val snap = MedReminders.ensureLoaded() ?: return
         val records = snap.medicationView.records
         val today = Dates.today()
-        val now = LocalTime.now().format(HHMMSS)
+        val now = Dates.nowDateTime().toLocalTime().format(HHMMSS)
         when (intent.action) {
             ACTION_TAKE -> {
                 val key = intent.getStringExtra(EXTRA_AT) ?: return

@@ -99,6 +99,7 @@ video/VideoExporter.kt
 data/EmergencyCard.kt
 data/MedExtras.kt
 data/MedReminders.kt
+data/ExactAlarms.kt
 data/MedSchedules.kt
 data/Medications.kt
 report/EmergencyCardPdf.kt

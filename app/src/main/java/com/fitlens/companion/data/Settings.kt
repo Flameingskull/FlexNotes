@@ -86,6 +86,9 @@ data class DeviceSettings(
     val medNudgeMinutes: Int = 30,
     /** Snoozed reminders (#203), `MedReminders.Snoozes.encode`: due time to when it rings again. Phone state. */
     val medSnoozes: String? = null,
+    /** Medication reminders (#327): the time (`yyyy-MM-dd HH:mm`) up to which first notifications have gone out. A dose due
+     *  after it that is still open is owed one, however late. Phone state, like [medSnoozes]. */
+    val medRungThrough: String? = null,
     /** Reminders for other logging (#219), `LogReminderSet.encode`: weigh-ins, measurements, photos, workout days. */
     val logReminders: String? = null,
     /** The camera's last photo behind the body outline (#230): its opacity in percent, 0 to 60. */
@@ -546,6 +549,7 @@ object Settings {
     private const val D_MED_CALENDAR = "med_calendar"
     private const val D_MED_NUDGE = "med_nudge_minutes"
     private const val D_MED_SNOOZES = "med_snoozes"
+    private const val D_MED_RUNG_THROUGH = "med_rung_through"
     private const val D_LOG_REMINDERS = "log_reminders"
     private const val D_CAM_OPACITY = "camera_photo_opacity"
     private const val D_CAM_LINE = "camera_outline_line"
@@ -673,6 +677,7 @@ object Settings {
         medCalendar = get(D_MED_CALENDAR)?.toIntOrNull()?.coerceIn(MED_CAL_HIDE, MED_CAL_FULL) ?: MED_CAL_HIDE,
         medNudgeMinutes = get(D_MED_NUDGE)?.toIntOrNull()?.coerceIn(0, 240) ?: 30,
         medSnoozes = get(D_MED_SNOOZES),
+        medRungThrough = get(D_MED_RUNG_THROUGH),
         logReminders = get(D_LOG_REMINDERS),
         cameraPhotoOpacity = get(D_CAM_OPACITY)?.toIntOrNull()?.coerceIn(0, 60) ?: 30,
         cameraOutlineLine = get(D_CAM_LINE)?.toIntOrNull()?.takeIf { it in BodyOutline.THIN..BodyOutline.BOLD } ?: BodyOutline.BOLD,
@@ -713,6 +718,7 @@ object Settings {
         D_MED_CALENDAR to medCalendar.takeIf { it != MED_CAL_HIDE }?.toString(),
         D_MED_NUDGE to medNudgeMinutes.takeIf { it != 30 }?.toString(),
         D_MED_SNOOZES to medSnoozes,
+        D_MED_RUNG_THROUGH to medRungThrough,
         D_LOG_REMINDERS to logReminders,
         D_CAM_OPACITY to cameraPhotoOpacity.takeIf { it != 30 }?.toString(),
         D_CAM_LINE to cameraOutlineLine.takeIf { it != BodyOutline.BOLD }?.toString(),

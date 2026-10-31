@@ -1,7 +1,6 @@
 package com.fitlens.companion.data
 
 import android.Manifest
-import android.app.AlarmManager
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -99,7 +98,8 @@ object LogReminders {
     const val EXTRA_AT = "com.fitlens.companion.LOG_AT"
     /** On the notification's tap: the [LogKind.key] whose screen opens. */
     const val EXTRA_OPEN_LOG = "com.fitlens.companion.OPEN_LOG"
-    private const val WINDOW_MS = 10 * 60_000L
+    /** How long after an alarm could not finish it tries again. */
+    private const val RETRY_MS = 60_000L
     private val KEY: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
     private var app: Context? = null
@@ -183,24 +183,27 @@ object LogReminders {
     internal suspend fun arm(context: Context) {
         app = app ?: context.applicationContext
         Settings.awaitLoaded()
-        val am = context.getSystemService(AlarmManager::class.java) ?: return
-        val ring = next(LogReminderSet.decode(Settings.current().logReminders), LocalDateTime.now())
-        val intent = PendingIntent.getBroadcast(
-            context, 0,
-            Intent(context, LogAlarmReceiver::class.java).setAction(ACTION_ALARM).apply { ring?.let { putExtra(EXTRA_AT, it.key) } },
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
-        )
+        val ring = next(LogReminderSet.decode(Settings.current().logReminders), Dates.nowDateTime())
         if (ring == null) {
-            am.cancel(intent)
+            ExactAlarms.cancel(context, alarmIntent(context, null))
             return
         }
+        // At its exact minute (#346), through the one helper that sets alarms.
         val at = ring.at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        try {
-            if (MedReminders.canExact(context)) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, intent)
-            else am.setWindow(AlarmManager.RTC_WAKEUP, at, WINDOW_MS, intent)
-        } catch (e: SecurityException) {
-            am.setWindow(AlarmManager.RTC_WAKEUP, at, WINDOW_MS, intent)
-        }
+        ExactAlarms.set(context, at, alarmIntent(context, ring.key), ExactAlarms.showApp(context, "log"))
+    }
+
+    /** The one logging alarm. Same action and request code whatever the key, so setting it replaces and cancelling finds it. */
+    private fun alarmIntent(context: Context, key: String?): PendingIntent = PendingIntent.getBroadcast(
+        context, 0,
+        Intent(context, LogAlarmReceiver::class.java).setAction(ACTION_ALARM).apply { key?.let { putExtra(EXTRA_AT, it) } },
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+    /** For an alarm that rang but could not finish: rings again a minute later with the same key, so the chain is never lost. */
+    internal fun retryLater(context: Context, key: String?) {
+        val at = Dates.nowDateTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() + RETRY_MS
+        ExactAlarms.set(context, at, alarmIntent(context, key), ExactAlarms.showApp(context, "log"))
     }
 
     // ---------- The notification ----------
@@ -276,10 +279,13 @@ class LogAlarmReceiver : BroadcastReceiver() {
         val key = intent.getStringExtra(LogReminders.EXTRA_AT)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                withTimeoutOrNull(25_000) {
+                val finished = withTimeoutOrNull(25_000) {
                     Settings.awaitLoaded()
                     LogReminders.ring(context, key)
+                    true
                 }
+                // It needs no data, but a settings load that never finishes must not end the chain either.
+                if (finished == null) LogReminders.retryLater(context, key)
             } finally {
                 result.finish()
             }
