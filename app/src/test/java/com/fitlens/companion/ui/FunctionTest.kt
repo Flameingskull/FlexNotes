@@ -12,12 +12,14 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollToNodeAction
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
 import androidx.test.core.app.ApplicationProvider
@@ -141,6 +143,19 @@ abstract class FunctionTest {
         val matches = compose.onAllNodes(control(label, substring))
         if (matches.fetchSemanticsNodes().isEmpty()) throw AssertionError("No control \"$label\" to press. ${onScreen()}")
         matches[0].performTouchInput { longClick() }
+        compose.waitForIdle()
+    }
+
+    /**
+     * Scrolls the list holding [text] to it, for a row a long list hasn't drawn yet. Innermost list first, so a screen's
+     * tabs don't turn while its list is searched.
+     */
+    protected fun scrollTo(text: String, substring: Boolean = false) {
+        val lists = compose.onAllNodes(hasScrollToNodeAction())
+        val found = lists.fetchSemanticsNodes().indices.reversed().any { i ->
+            runCatching { lists[i].performScrollToNode(hasText(text, substring, true)) }.isSuccess
+        }
+        if (!found) throw AssertionError("No list holds \"$text\". ${onScreen()}")
         compose.waitForIdle()
     }
 

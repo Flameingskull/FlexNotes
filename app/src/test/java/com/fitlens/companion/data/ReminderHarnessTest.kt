@@ -97,6 +97,7 @@ class ReminderHarnessTest {
     @Test
     fun aLoggingAlarmThatCannotFinishRingsAgainAMinuteLaterWithTheSameKey() {
         // The receiver sets this when it runs out of time (#346), so the chain is never lost.
+        Dates.clockSource = f.clockAt("08:00")
         LogReminders.retryLater(h.app, key)
         val retry = h.nextAlarm()!!
         assertEquals("LogAlarmReceiver", retry.receiver)

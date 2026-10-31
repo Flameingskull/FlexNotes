@@ -53,11 +53,13 @@ class FunctionHelpersTest : FunctionTest() {
     fun aScreenOnTheFixtureShowsAValueFromItsOldestYearAfterTappingThroughToIt() {
         openScreen(f.snapshot()) { snap -> SetEntryScreen(snap, nav, f.END, f.EX_SQUAT) }
         tap(app.getString(R.string.set_tab_history))
-        // The squat's first and last days, two years and more before the end, each with the note written that day.
-        assertShows(historyDay(f.START))
-        assertShows(f.OLD_FIRST_NOTE, substring = true)
+        // The squat's last and first days, two years and more before the end, each with the note written that day. The
+        // newest is at the top, and the oldest is only drawn once the list has scrolled to it.
         assertShows(historyDay(f.OLD_LAST))
         assertShows(f.OLD_LAST_NOTE, substring = true)
+        scrollTo(historyDay(f.START))
+        assertShows(historyDay(f.START))
+        assertShows(f.OLD_FIRST_NOTE, substring = true)
         // The screen is drawn from the snapshot it was given; the database behind it is empty, and stored() says so.
         assertTrue(stored().sets.isEmpty())
     }
