@@ -1,0 +1,19 @@
+# Extra areas for /code-audit, beyond the areas in areas.txt. Paths and globs are relative to the repository root.
+# audit_coverage.py expands each one, and each must match at least one file.
+
+[tests]
+app/src/test/**/*.kt
+
+[build-release]
+build.gradle.kts
+settings.gradle.kts
+gradle.properties
+gradle/wrapper/gradle-wrapper.properties
+app/build.gradle.kts
+.github/workflows/*.yml
+.github/scripts/*.py
+.github/dependabot.yml
+app/src/main/AndroidManifest.xml
+app/src/main/res/xml/*.xml
+app/src/main/res/layout/*.xml
+app/src/main/res/values/*.xml

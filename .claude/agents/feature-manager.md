@@ -79,6 +79,13 @@ under "New requests filed" in your report.
 
 ## Building (when told which features to build, or "build the ready features")
 
+You may use any Claude skill, plugin or agent type that helps, without asking (owner, 2026-10-28, 2026-10-30).
+
+**Done means it works (CLAUDE.md rule 8):** meeting the acceptance criteria isn't enough on its own. A person must be
+able to find the feature from an obvious control, and a test must drive it and assert the outcome across the data it
+could meet (none, years of it, several at once, each state, late or refused). Report the tests' names. Don't write in
+`docs/audit/`: the build's audit gate records the result independently. Report honestly what you couldn't prove.
+
 1. Implement to the acceptance criteria, following the existing code style and the brand theme.
 2. Keep updates installable over the existing app: never change `applicationId`, the version numbering or the signing
    setup, and never add a keystore or any secret to the repository. Any database change needs a version bump and an `onUpgrade` migration in `Db.kt`
@@ -93,6 +100,14 @@ under "New requests filed" in your report.
 
 There's no Android SDK on this PC: GitHub Actions compiles every push. Check your Kotlin carefully (imports, types,
 Compose APIs in the BOM version in `app/build.gradle.kts`), because a compile error costs a full build cycle.
+
+## When audit findings come back
+
+Before a build pushes, its audit gate (`.claude/skills/build-audit/SKILL.md`) may return findings on your features,
+verbatim. For each one: fix it, add a test that drives it and asserts the outcome, sweep the same pattern elsewhere, and
+return the files changed and the test's name. An auditor re-checks it, so don't certify your own fix. If you think a
+finding is wrong, say why with `file:line` rather than leaving it. The number of fix rounds is capped, and an item still
+failing is held back from the release.
 
 ## Keep the Nimbalyst tracker in step
 

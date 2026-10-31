@@ -4,6 +4,7 @@ import com.fitlens.companion.data.poseText
 import com.fitlens.companion.ui.design.SearchFieldIcon
 
 import android.content.res.Resources
+import android.os.Build
 import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
@@ -35,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.fitlens.companion.R
 import com.fitlens.companion.data.AutoBackup
 import com.fitlens.companion.data.Dates
+import com.fitlens.companion.data.ExactAlarms
 import com.fitlens.companion.data.DeviceSettings
 import com.fitlens.companion.data.DistanceUnits
 import com.fitlens.companion.data.WeightUnits
@@ -271,7 +274,16 @@ fun SettingsScreen(snap: Snapshot, nav: Nav) {
     val headings = SettingsHeading.entries.associateWith { stringResource(it.title) }
     val pages = SettingsSection.entries.associateWith { stringResource(it.title) }
     // The pages' settings as text for search: the entry, its title, then its search words and page.
-    val catalogue = CATALOGUE.map { e ->
+    // "Reminders on the minute" is a row only where the user can still allow it (Android 12 and 12L, revoked), so search
+    // lists it only then: it would otherwise lead to a page without the row.
+    val exactContext = LocalContext.current
+    var exactAllowed by remember { mutableStateOf(ExactAlarms.canExact(exactContext)) }
+    LifecycleResumeEffect(Unit) {
+        exactAllowed = ExactAlarms.canExact(exactContext)
+        onPauseOrDispose { }
+    }
+    val exactRow = Build.VERSION.SDK_INT >= 31 && !exactAllowed
+    val catalogue = CATALOGUE.filter { exactRow || it.title != R.string.mr_exact }.map { e ->
         Triple(e, stringResource(e.title), "${stringResource(e.keywords)} ${pages.getValue(e.section)}")
     }
     val prefs by Settings.portable.collectAsState()

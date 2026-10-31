@@ -34,7 +34,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -202,7 +201,7 @@ object TodayWidgets {
         val snap = MedReminders.ensureLoaded() ?: return
         val records = snap.medicationView.records
         val today = Dates.today()
-        val now = LocalTime.now().format(HHMMSS)
+        val now = Dates.nowDateTime().toLocalTime().format(HHMMSS)
         when (intent.action) {
             ACTION_TAKE -> {
                 val key = intent.getStringExtra(EXTRA_AT) ?: return
@@ -210,7 +209,8 @@ object TodayWidgets {
                 val d = MedReminders.openAt(snap.medPlan, records, key).firstOrNull { it.dose.id == id }
                 if (d != null) {
                     // An injected dose goes to the suggested next site (#224), as from the reminder.
-                    val site = MedReminders.sitesFor(snap.medPlan, records, listOf(d)).first()
+                    // Worked out across that medication's open doses of today and yesterday, so it never repeats another dose's site.
+                    val site = MedReminders.siteFor(snap.medPlan, records, d)
                     MedSchedules.take(d, if (d.date == today) now else d.time + ":00", site = site)
                     confirm(context, "${d.dose.medication} ${fmtNum(d.amount)} ${d.dose.unit}".trim(), if (d.date == today) now.take(5) else d.time)
                 }
