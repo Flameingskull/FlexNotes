@@ -11,10 +11,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
+import java.util.TimeZone
 
 /**
  * Medication reminders (#203, #327): which reminder is set next, follow-ups, snoozes per dose, doses owed a late
@@ -210,6 +212,24 @@ class MedRemindersTest {
         assertNotEquals(base, MedReminders.planStamp(twoRuns))
         // A schedule nobody runs does not matter.
         assertEquals(base, MedReminders.planStamp(MedPlan(listOf(schedule, moved.copy(id = 9)), listOf(MedActivation(1, 1, "2026-10-01")))))
+    }
+
+    @Test
+    fun theDefaultClockFollowsTheZoneThePhoneIsInNow() {
+        val original = TimeZone.getDefault()
+        try {
+            // The default clock, in a running app: the zone is read each time, not kept from when it was created.
+            Dates.clockSource = LiveClock
+            TimeZone.setDefault(TimeZone.getTimeZone("GMT-10:00"))
+            val west = Dates.nowDateTime()
+            TimeZone.setDefault(TimeZone.getTimeZone("GMT+13:00"))
+            val east = Dates.nowDateTime()
+            val gap = Duration.between(west, east).toMinutes()
+            assertTrue("The zones are 23 hours apart, not $gap minutes", gap in 1379L..1381L)
+        } finally {
+            TimeZone.setDefault(original)
+            Dates.clockSource = LiveClock
+        }
     }
 
     @Test

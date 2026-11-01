@@ -260,7 +260,7 @@ class ReminderHarness private constructor(val app: Application) {
         MedReminders.resetForTests()
         LogReminders.resetForTests()
         Settings.deviceWriteFault = null
-        Dates.clockSource = Clock.systemDefaultZone()
+        Dates.clockSource = LiveClock
         runCatching { Store.db.close() }
         app.deleteDatabase(Db.NAME)
     }
@@ -272,7 +272,7 @@ class ReminderHarness private constructor(val app: Application) {
         private const val POLL_MS = 25L
 
         /** Starts from an empty database, default settings, notifications allowed and `Dates.clockSource` set to [clock]. */
-        fun start(app: Application, clock: Clock = Clock.systemDefaultZone()): ReminderHarness =
+        fun start(app: Application, clock: Clock = LiveClock): ReminderHarness =
             ReminderHarness(app).also { it.begin(clock) }
     }
 }

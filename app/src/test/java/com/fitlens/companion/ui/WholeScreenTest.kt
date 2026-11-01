@@ -28,6 +28,7 @@ import androidx.test.core.app.ApplicationProvider
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Db
 import com.fitlens.companion.data.Dates
+import com.fitlens.companion.data.LiveClock
 import com.fitlens.companion.data.PortableSettings
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
@@ -96,7 +97,7 @@ abstract class WholeScreenChecks(private val width: Int) {
 
     @After
     fun tearDown() {
-        Dates.clockSource = java.time.Clock.systemDefaultZone()
+        Dates.clockSource = LiveClock
         RestTimer.stop()
         Settings.showWith(PortableSettings())
         Store.db.close()

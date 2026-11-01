@@ -26,6 +26,8 @@ import androidx.test.core.app.ApplicationProvider
 import com.fitlens.companion.data.Area
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Db
+import com.fitlens.companion.data.DeviceSettings
+import com.fitlens.companion.data.LiveClock
 import com.fitlens.companion.data.PortableSettings
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
@@ -87,9 +89,11 @@ abstract class FunctionTest {
 
     @After
     fun closeSeams() {
-        Dates.clockSource = Clock.systemDefaultZone()
+        Dates.clockSource = LiveClock
         RestTimer.stop()
         Settings.showWith(PortableSettings())
+        // Phone settings a test set (a reminder, a lock) must not reach the next test.
+        runBlocking { Settings.updateDeviceNow { DeviceSettings() } }
         Store.db.close()
         app.deleteDatabase(Db.NAME)
     }

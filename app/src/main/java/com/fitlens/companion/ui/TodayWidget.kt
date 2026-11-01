@@ -210,7 +210,7 @@ object TodayWidgets {
                 if (d != null) {
                     // An injected dose goes to the suggested next site (#224), as from the reminder.
                     // Worked out across that medication's open doses of today and yesterday, so it never repeats another dose's site.
-                    val site = MedReminders.siteFor(snap.medPlan, records, d)
+                    val site = MedReminders.siteFor(snap.medPlan, records, d, shown = MedReminders.shownSites(context))
                     MedSchedules.take(d, if (d.date == today) now else d.time + ":00", site = site)
                     confirm(context, "${d.dose.medication} ${fmtNum(d.amount)} ${d.dose.unit}".trim(), if (d.date == today) now.take(5) else d.time)
                 }

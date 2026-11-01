@@ -18,6 +18,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -118,6 +119,16 @@ class MedReminderNotificationsTest {
     private fun loadMorningOnly() {
         load()
         h.take(f.KEY_0805)
+        planSettled()
+    }
+
+    /**
+     * The plan counts as unchanged since long ago (its fingerprint is stored, and it last changed on 1 Oct), so today's
+     * doses are followed up with "Still due". A plan changed just now is not followed up for what is already past.
+     */
+    private fun planSettled() {
+        val stamp = stampNow()
+        h.setDevice { it.copy(medPlanStamp = stamp, medPlanChangedAt = "2026-10-01 00:00") }
     }
 
     // ---- one notification per dose ----------------------------------------------------------------------------
@@ -365,10 +376,11 @@ class MedReminderNotificationsTest {
 
         assertEquals("${f.END} 08:30", Settings.current().medRungThrough)
         assertTrue(h.notifications().isEmpty())
-        // Only the follow-up for 08:05 (at 08:35) is next: updating the app doesn't produce a burst.
+        // Nothing old is rung or chased with "Still due" (the plan counts as changed now): the next alarm is tomorrow's first dose.
         val alarm = h.nextAlarm()!!
-        assertEquals(dt(8, 35), alarm.at)
-        assertTrue(alarm.intent.getBooleanExtra(MedReminders.EXTRA_NUDGE, false))
+        assertEquals(dt(8, 0, "2026-10-31"), alarm.at)
+        assertEquals("2026-10-31 08:00", alarm.key)
+        assertFalse(alarm.intent.getBooleanExtra(MedReminders.EXTRA_NUDGE, false))
     }
 
     @Test
@@ -394,6 +406,7 @@ class MedReminderNotificationsTest {
     @Test
     fun withTheReminderOffNothingIsOwedWhenItIsSwitchedBackOn() {
         load()
+        planSettled()
         h.setDevice { it.copy(medReminders = false, medRungThrough = "${f.END} 06:00") }
         clock("08:30")
         arm()
@@ -487,7 +500,9 @@ class MedReminderNotificationsTest {
         clock("08:01")
         h.fire(retry.intent) { h.notifications().size == 3 }
         h.settle()
-        h.waitUntil("the chain set again") { h.nextAlarmClock()?.triggerTime == millis(dt(8, 5)) }
+        h.waitUntil("the chain set again") { h.alarms().any { it.receiver == "MedAlarmReceiver" && it.at == dt(8, 5) } }
+        // No logging reminders are on, so no stray logging alarm is left to come before it.
+        assertEquals(millis(dt(8, 5)), h.nextAlarmClock()!!.triggerTime)
     }
 
     @Test
@@ -561,6 +576,7 @@ class MedReminderNotificationsTest {
     @Test
     fun aFollowUpAndAFirstReminderDueInTheSameMinuteBothRing() {
         h.loadPlan(pairRuns)
+        planSettled()
         ring("${f.END} 08:00", 1)
         // 08:30: Bravo is due for the first time and Alpha's follow-up (30 minutes) is due.
         clock("08:30")
@@ -572,6 +588,7 @@ class MedReminderNotificationsTest {
     @Test
     fun whicheverOfTheTwoAlarmsIsSetBringsBothReminders() {
         h.loadPlan(pairRuns)
+        planSettled()
         ring("${f.END} 08:00", 1)
         h.waitUntil("the 08:30 alarm clock") { h.nextAlarmClock()?.triggerTime == millis(dt(8, 30)) }
         clock("08:30")
@@ -583,6 +600,7 @@ class MedReminderNotificationsTest {
     @Test
     fun aSnoozeComingBackInTheSameMinuteAsAFollowUpBringsBoth() {
         h.loadPlan(sameTimeRuns)
+        planSettled()
         h.setDevice { it.copy(medNudgeMinutes = 15) }
         ring("${f.END} 08:00", 2)
         // Bravo is snoozed for 15 minutes, which is also when Alpha's follow-up is due.
@@ -892,6 +910,31 @@ class MedReminderNotificationsTest {
         assertNothingOwedAtTwenty()
     }
 
+    private val lateRuns = listOf(
+        MedRun(
+            MedSchedule(1, "Late", phases = listOf(MedPhase(1, true, 1, PhaseUnit.ONGOING, listOf(
+                MedDose(1, "Alpha", 1.0, "mg", "17:00"),
+                MedDose(2, "Bravo", 2.0, "mg", "19:00")
+            )))),
+            "2026-10-01"
+        )
+    )
+
+    @Test
+    fun aScheduleStartedAtEightPmIsNotChasedWithStillDueForDosesBeforeIt() {
+        // Remind again after 240 minutes: 17:00 would be chased at 21:00 and 19:00 at 23:00, though neither ever rang.
+        h.setDevice { it.copy(medNudgeMinutes = 240, medRungThrough = "${f.END} 07:00", medPlanStamp = "before-the-schedule") }
+        clock("20:00")
+        h.loadPlan(lateRuns)
+        arm()
+        h.settle()
+        assertTrue(h.notifications().isEmpty())
+        assertEquals(millis(dt(17, 0, "2026-10-31")), h.nextAlarmClock()!!.triggerTime)
+        assertEquals("2026-10-31 17:00", h.nextAlarm()!!.key)
+        assertFalse(h.nextAlarm()!!.intent.getBooleanExtra(MedReminders.EXTRA_NUDGE, false))
+        assertEquals("${f.END} 20:00", Settings.current().medPlanChangedAt)
+    }
+
     @Test
     fun aRingAfterThePlanChangedOwesNothingAlreadyPast() {
         clock("20:00")
@@ -1015,6 +1058,38 @@ class MedReminderNotificationsTest {
         }
     }
 
+    @Test
+    fun afterATimeZoneChangeInARunningAppNoAlarmIsSetInThePastAndOneRingDoesNotRefire() {
+        val original = TimeZone.getDefault()
+        try {
+            // The phone is in a zone where it is mid-afternoon, having come from one three hours behind (a running app).
+            val now = Instant.now()
+            val k = (-11..14).first { hours -> now.plusSeconds(hours * 3600L).atZone(java.time.ZoneOffset.UTC).hour in 6..21 }
+            fun zone(hours: Int) = TimeZone.getTimeZone("GMT%+03d:00".format(hours))
+            TimeZone.setDefault(zone(k - 3))
+            Dates.clockSource = LiveClock
+            // A dose half an hour ago in the new zone, but still ahead on the zone the app started in.
+            val doseTime = now.atOffset(java.time.ZoneOffset.ofHours(k)).toLocalTime().minusMinutes(30).let { "%02d:%02d".format(it.hour, it.minute) }
+            h.loadPlan(listOf(MedRun(MedSchedule(1, "Zone", phases = listOf(MedPhase(1, true, 1, PhaseUnit.ONGOING, listOf(MedDose(1, "Zonal", 1.0, "mg", doseTime))))), "2026-10-01")))
+            TimeZone.setDefault(zone(k))
+            arm()
+            h.settle()
+            // Not an alarm already past (it would fire at once and repeat): tomorrow's dose, in the new zone.
+            assertTrue(h.nextAlarmClock()!!.triggerTime > System.currentTimeMillis())
+            assertEquals(java.time.LocalDate.now(ZoneId.systemDefault()).plusDays(1), h.nextAlarm()!!.at.toLocalDate())
+            assertTrue(h.notifications().isEmpty())
+
+            // One ring for that alarm: shown once, and the next alarm is still ahead of the real now.
+            h.fire(h.nextAlarm()!!.intent) { MedReminders.posted >= 1 }
+            h.settle()
+            assertEquals(1, MedReminders.posted)
+            assertTrue(h.nextAlarmClock()!!.triggerTime > System.currentTimeMillis())
+            assertEquals(1, h.alarms().size)
+        } finally {
+            TimeZone.setDefault(original)
+        }
+    }
+
     // ---- locked: the order key names nothing (see the locked test above) -------------------------------------------
 
     // ---- reminders off ----------------------------------------------------------------------------------------------
@@ -1118,6 +1193,35 @@ class MedReminderNotificationsTest {
     @Test
     fun yesterdaysUnansweredDoseAndTodaysNameDifferentSitesTakenTodaysFirst() = thursdayAndFriday(false)
 
+    private fun fridayAndSaturdayUnanswered(saturdayFirst: Boolean) {
+        thursdayLeftUnanswered()
+        ring(key0900, 2)
+        val saturday = "2026-10-31 09:00"
+        clock("09:00", "2026-10-31")
+        // Saturday: Thursday's reminder has gone (older than yesterday); Friday's is still showing and keeps the site it named.
+        h.fire(h.medAlarm(saturday)) { h.notifications().size == 2 && h.notifications().none { it.notification.extras.getString(MedReminders.EXTRA_AT) == thursday } }
+        h.settle()
+        val fri = h.notifications().first { it.notification.extras.getString(MedReminders.EXTRA_AT) == key0900 }
+        val sat = h.notifications().first { it.notification.extras.getString(MedReminders.EXTRA_AT) == saturday }
+        val right = siteName(h.app.resources, InjectionSite.ABDOMEN_UPPER_RIGHT)
+        assertEquals(str(R.string.mr_taken_site, right), fri.actions.first())
+        assertNotEquals(fri.actions.first(), sat.actions.first())
+        for (p in if (saturdayFirst) listOf(sat, fri) else listOf(fri, sat)) {
+            val before = h.snapshot().medicationView.records.size
+            h.press(p, p.actions.first()) { h.snapshot().medicationView.records.size == before + 1 }
+        }
+        val friday = recordsOf(1L).first { it.due == key0900 }.site
+        val sat2 = recordsOf(1L).first { it.due == saturday }.site
+        assertEquals(InjectionSite.ABDOMEN_UPPER_RIGHT.key, friday)
+        assertNotEquals(friday, sat2)
+    }
+
+    @Test
+    fun threeUnansweredDaysNeverRepeatASite() = fridayAndSaturdayUnanswered(true)
+
+    @Test
+    fun threeUnansweredDaysNeverRepeatASiteTakenFridaysFirst() = fridayAndSaturdayUnanswered(false)
+
     @Test
     fun theWidgetsTakenButtonDoesNotRepeatYesterdaysUnansweredDosesSite() {
         thursdayLeftUnanswered()
@@ -1170,6 +1274,15 @@ class MedReminderNotificationsTest {
     }
 
     @Test
+    fun aCancellationFromInsideTheWorkIsAFailureWithARetryNotTheEndOfTheChain() {
+        load()
+        MedReminders.loadOverride = { throw kotlinx.coroutines.CancellationException("from inside the work") }
+        h.fire(h.medAlarm(f.KEY_0800)) { h.nextAlarm()?.at == dt(8, 1) }
+        assertEquals(f.KEY_0800, h.nextAlarm()!!.key)
+        assertEquals(1, h.nextAlarm()!!.intent.getIntExtra(MedReminders.EXTRA_ATTEMPT, 0))
+    }
+
+    @Test
     fun anAlarmThatOverrunsItsTimeSetsARetry() {
         load()
         MedReminders.workTimeoutMs = 300
@@ -1182,22 +1295,42 @@ class MedReminderNotificationsTest {
     }
 
     @Test
-    fun aBootThatOverrunsItsTimeLeavesBothChainsAnAlarm() {
+    fun aBootWhoseMedicationStepOverrunsRetriesOnlyThatChain() {
         load()
         h.setLogReminders(LogReminderSet().with(LogReminder(LogKind.PHOTOS, true, "08:00", setOf(5))))
         MedReminders.workTimeoutMs = 300
         MedReminders.loadOverride = { awaitCancellation() }
         h.fire(Intent(h.app, MedBootReceiver::class.java).setAction(Intent.ACTION_BOOT_COMPLETED)) {
-            h.alarms().any { it.receiver == "MedAlarmReceiver" && it.at == dt(8, 1) } &&
-                h.alarms().any { it.receiver == "LogAlarmReceiver" && it.at == dt(8, 1) }
+            h.alarms().any { it.receiver == "MedAlarmReceiver" && it.at == dt(8, 1) }
         }
+        h.settle()
+        // The logging alarm was set before the medication step hung, and is left alone (next Friday's photos).
+        val log = h.alarms().single { it.receiver == "LogAlarmReceiver" }
+        assertEquals(dt(8, 0, "2026-11-06"), log.at)
     }
 
     @Test
-    fun aBootWithoutDataSetsBothChainsToTryAgain() {
+    fun aBootWithoutMedicationDataKeepsTheLoggingReminderItJustSet() {
+        load()
+        // A weigh-in is due in a minute (08:01); the medication data does not load.
+        h.setLogReminders(LogReminderSet().with(LogReminder(LogKind.WEIGH_IN, true, "08:01", setOf(5))))
+        MedReminders.loadOverride = { null }
+        h.fire(Intent(h.app, MedBootReceiver::class.java).setAction(Intent.ACTION_BOOT_COMPLETED)) {
+            h.alarms().any { it.receiver == "MedAlarmReceiver" && it.at == dt(8, 1) }
+        }
+        h.settle()
+        // Only the medication chain got a retry; the logging alarm keeps its time and its key.
+        val log = h.alarms().single { it.receiver == "LogAlarmReceiver" }
+        assertEquals(dt(8, 1), log.at)
+        assertEquals("${f.END} 08:01", log.key)
+    }
+
+    @Test
+    fun aBootWhoseLoggingStepOverrunsRetriesBothChains() {
         load()
         h.setLogReminders(LogReminderSet().with(LogReminder(LogKind.PHOTOS, true, "08:00", setOf(5))))
-        MedReminders.loadOverride = { null }
+        MedReminders.workTimeoutMs = 300
+        LogReminders.armOverrun = { awaitCancellation() }
         h.fire(Intent(h.app, MedBootReceiver::class.java).setAction(Intent.ACTION_BOOT_COMPLETED)) {
             h.alarms().any { it.receiver == "MedAlarmReceiver" && it.at == dt(8, 1) } &&
                 h.alarms().any { it.receiver == "LogAlarmReceiver" && it.at == dt(8, 1) }

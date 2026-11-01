@@ -1,9 +1,9 @@
 # Code audit: build-release
 
 > No full audit yet: rows from build gates only.
-> Build gate 1.0.198: 5 functions checked.
+> Build gate 1.0.198: 6 functions checked, re-checked after fix round 1.
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 0 of 2 in scope; the rest of the area was not read.
-> Results: 0 Verified, 3 Read OK, 0 Defect, 1 Risk, 0 Improve, 1 Not checked.
+> Results: 0 Verified, 4 Read OK, 0 Defect, 1 Risk, 0 Improve, 1 Not checked.
 
 ## Files
 
@@ -21,3 +21,4 @@
 | RestAlarmReceiver in the manifest | Security | AndroidManifest.xml:153 | Read OK | Not exported, no filter. RestTimerAlarmTest would fail if it were missing | #342 |
 | Strings removed and changed | Project rules | strings.xml:1979 | Read OK | mr_exact_allowed and mr_taken_sites have no references left in app/src; only values/ exists; no golden covers these pages. "Ten minutes" appears nowhere in app/src/main. No BUILD_OFFSET, applicationId, signing or Db.VERSION change in this diff | #346 |
 | Merged manifest | Build | Build output | Not checked | A library could declare the exact-alarm permission without the cap. Needs a build | #346 |
+| Exact-alarm permission-state action | Lifecycle | AndroidManifest.xml:181 | Read OK | Same string as AlarmManager's constant; on the existing boot receiver, which system broadcasts already reach | #346 |

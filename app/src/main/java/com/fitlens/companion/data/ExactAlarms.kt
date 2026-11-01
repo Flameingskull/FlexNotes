@@ -20,6 +20,18 @@ import java.time.ZoneId
  * Nothing else under `app/src/main` may call `setWindow`, `setExact*`, `setAndAllowWhileIdle` or `setAlarmClock`
  * (a test reads the sources to be sure).
  */
+/**
+ * The phone's own clock, with its zone read every time. `Clock.systemDefaultZone()` keeps the zone it was created with,
+ * so after a time-zone change in a running app `Dates.nowDateTime()` would stay in the old zone while an alarm's local
+ * time is converted in the new one: an alarm already past (an alert loop going east) or a dose counted as past (missed
+ * going west). This one follows the phone.
+ */
+internal object LiveClock : java.time.Clock() {
+    override fun getZone(): ZoneId = ZoneId.systemDefault()
+    override fun withZone(zone: ZoneId): java.time.Clock = java.time.Clock.system(zone)
+    override fun instant(): java.time.Instant = java.time.Instant.now()
+}
+
 object ExactAlarms {
     /** Android 12 and 12L send this when the user allows or revokes exact alarms: the alarms already set are set again. */
     const val ACTION_PERMISSION_CHANGED = "android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED"
@@ -58,10 +70,15 @@ object ExactAlarms {
     /** Sets (or replaces: same [operation] identity) an alarm for [atMillis]; [show] is what tapping the alarm icon opens. */
     fun set(context: Context, atMillis: Long, operation: PendingIntent, show: PendingIntent) {
         val am = context.getSystemService(AlarmManager::class.java) ?: return
+        // Android 12 or 12L with the exact-alarm permission revoked: the best that is left is an inexact alarm, and
+        // Settings says so. Checked first; the catch below is for a permission withdrawn between the check and the call.
+        if (!canExact(context)) {
+            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
+            return
+        }
         try {
             am.setAlarmClock(AlarmManager.AlarmClockInfo(atMillis, show), operation)
         } catch (e: SecurityException) {
-            // Android 12 or 12L with the exact-alarm permission revoked: the best that is left, and Settings says so.
             am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
         }
     }

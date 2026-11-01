@@ -103,10 +103,20 @@ class ReminderHarnessTest {
         val retry = h.nextAlarm()!!
         assertEquals("LogAlarmReceiver", retry.receiver)
         assertEquals(key, retry.key)
-        // The test's clock reads 07:59, so a minute later is 08:00.
-        assertEquals(LocalDateTime.of(2026, 10, 30, 8, 0), retry.at)
+        // The clock reads 08:00 (set above), so a minute later is 08:01.
+        assertEquals(LocalDateTime.of(2026, 10, 30, 8, 1), retry.at)
         assertEquals(retry.triggerAtMillis, h.nextAlarmClock()!!.triggerTime)
         assertEquals(1, retry.intent.getIntExtra(LogReminders.EXTRA_ATTEMPT, 0))
+    }
+
+    @Test
+    fun aCancellationFromInsideALoggingAlarmsWorkIsAFailureWithARetry() {
+        h.setLogReminders(photosOnFridays())
+        LogReminders.overrun = { throw kotlinx.coroutines.CancellationException("from inside the work") }
+        h.fire(h.logAlarm(key)) { h.nextAlarm()?.at == LocalDateTime.of(2026, 10, 30, 8, 0) }
+        assertEquals("LogAlarmReceiver", h.nextAlarm()!!.receiver)
+        assertEquals(key, h.nextAlarm()!!.key)
+        assertEquals(1, h.nextAlarm()!!.intent.getIntExtra(LogReminders.EXTRA_ATTEMPT, 0))
     }
 
     @Test

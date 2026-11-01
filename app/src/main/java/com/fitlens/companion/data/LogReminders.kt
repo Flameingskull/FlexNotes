@@ -13,7 +13,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.fitlens.companion.R
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -107,6 +106,9 @@ object LogReminders {
     /** Tests only: work run inside the receiver's time limit, to make it overrun. */
     @Volatile internal var overrun: (suspend () -> Unit)? = null
 
+    /** Tests only: work run when the alarm is set, to make the boot's logging step overrun. */
+    @Volatile internal var armOverrun: (suspend () -> Unit)? = null
+
     /** Tests only: whether no debounced re-arm is waiting or running. */
     internal fun rearmIdle(): Boolean = pending?.isActive != true
 
@@ -117,6 +119,7 @@ object LogReminders {
         app = null
         workTimeoutMs = 25_000L
         overrun = null
+        armOverrun = null
     }
     private val KEY: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
@@ -200,6 +203,7 @@ object LogReminders {
 
     internal suspend fun arm(context: Context) {
         app = app ?: context.applicationContext
+        armOverrun?.invoke()
         Settings.awaitLoaded()
         val ring = next(LogReminderSet.decode(Settings.current().logReminders), Dates.nowDateTime())
         if (ring == null) {
@@ -309,10 +313,9 @@ class LogAlarmReceiver : BroadcastReceiver() {
                         LogReminders.ring(context, key)
                         true
                     }
-                } catch (e: CancellationException) {
-                    throw e
                 } catch (e: Exception) {
-                    // A failure must not end the chain or close the app.
+                    // A failure, even a cancellation from inside the work (the receiver's own scope is never cancelled),
+                    // must not end the chain or close the app.
                     null
                 }
                 // It needs no data, but a settings load that never finishes, or a failure, must not end the chain either.

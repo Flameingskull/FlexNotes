@@ -532,7 +532,7 @@ object Dates {
      * whole-screen layout tests (#323) set a fixed one, so a golden image never changes with the real date.
      */
     @Volatile
-    internal var clockSource: java.time.Clock = java.time.Clock.systemDefaultZone()
+    internal var clockSource: java.time.Clock = LiveClock
     internal fun todayDate(): LocalDate = LocalDate.now(clockSource)
     internal fun nowDateTime(): LocalDateTime = LocalDateTime.now(clockSource)
     fun today(): String = todayDate().format(ISO)

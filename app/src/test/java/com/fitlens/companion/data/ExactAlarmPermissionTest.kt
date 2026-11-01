@@ -8,6 +8,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -47,9 +48,10 @@ class ExactAlarmPermissionTest {
         allowExact(false)
         assertFalse(ExactAlarms.canExact(h.app))
         runBlocking { MedReminders.arm(h.app) }
-        // Through the fallback, still for 08:00: the chain is not lost, only no longer exact.
+        // Through the inexact fallback, still for 08:00: the chain is not lost, only no longer an exact alarm clock.
         assertEquals(LocalDateTime.of(2026, 10, 30, 8, 0), h.nextAlarm()!!.at)
         assertEquals(f.KEY_0800, h.nextAlarm()!!.key)
+        assertNull(h.nextAlarmClock())
     }
 
     @Test
