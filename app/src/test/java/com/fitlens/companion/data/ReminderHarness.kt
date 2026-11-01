@@ -233,7 +233,7 @@ class ReminderHarness private constructor(val app: Application) {
 
     /** Cancels every alarm that is set, as a restart that lost them would. */
     fun cancelAllAlarms() {
-        shadowOf(alarmManager).scheduledAlarms.forEach { alarmManager.cancel(it.operation) }
+        shadowOf(alarmManager).scheduledAlarms.forEach { alarm -> alarm.operation?.let { alarmManager.cancel(it) } }
     }
 
     private fun describe(): String =

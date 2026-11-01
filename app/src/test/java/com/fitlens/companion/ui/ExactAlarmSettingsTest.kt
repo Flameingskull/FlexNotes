@@ -1,6 +1,5 @@
 package com.fitlens.companion.ui
 
-import android.app.AlarmManager
 import android.app.Application
 import androidx.compose.foundation.layout.Column
 import com.fitlens.companion.R
@@ -12,9 +11,9 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowAlarmManager
 
 /**
  * #346's Settings criterion, drawn the way a person sees it: on Android 13 and later exact alarms are granted at install,
@@ -28,7 +27,7 @@ class ExactAlarmSettingsAndroid13Test : FunctionTest() {
 
     private val f = LongHistoryFixture
 
-    private fun granted() = shadowOf(app.getSystemService(AlarmManager::class.java)).setCanScheduleExactAlarms(true)
+    private fun granted() = ShadowAlarmManager.setCanScheduleExactAlarms(true)
 
     private fun exactRow() = app.getString(R.string.mr_exact)
 
@@ -71,7 +70,7 @@ class ExactAlarmSettingsAndroid12Test : FunctionTest() {
 
     private val f = LongHistoryFixture
 
-    private fun revoked() = shadowOf(app.getSystemService(AlarmManager::class.java)).setCanScheduleExactAlarms(false)
+    private fun revoked() = ShadowAlarmManager.setCanScheduleExactAlarms(false)
 
     private fun exactRow() = app.getString(R.string.mr_exact)
 

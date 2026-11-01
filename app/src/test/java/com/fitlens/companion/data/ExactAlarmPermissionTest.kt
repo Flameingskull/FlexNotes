@@ -1,6 +1,5 @@
 package com.fitlens.companion.data
 
-import android.app.AlarmManager
 import android.app.Application
 import android.content.Intent
 import androidx.test.core.app.ApplicationProvider
@@ -13,8 +12,8 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowAlarmManager
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -38,7 +37,7 @@ class ExactAlarmPermissionTest {
     fun tearDown() = h.stop()
 
     private fun allowExact(allowed: Boolean) =
-        shadowOf(h.app.getSystemService(AlarmManager::class.java)).setCanScheduleExactAlarms(allowed)
+        ShadowAlarmManager.setCanScheduleExactAlarms(allowed)
 
     private fun millis(at: LocalDateTime) = at.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
