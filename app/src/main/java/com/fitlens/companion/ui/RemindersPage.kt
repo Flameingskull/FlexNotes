@@ -31,7 +31,7 @@ import com.fitlens.companion.data.LogKind
 import com.fitlens.companion.data.LogReminder
 import com.fitlens.companion.data.LogReminderSet
 import com.fitlens.companion.data.LogReminders
-import com.fitlens.companion.data.MedReminders
+import com.fitlens.companion.data.ExactAlarms
 import com.fitlens.companion.data.MedSchedules
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.ui.design.FitSheet
@@ -54,9 +54,9 @@ internal fun RemindersPage() {
     val device by Settings.device.collectAsState()
     val prefs by Settings.portable.collectAsState()
     val notify = rememberNotificationAccess()
-    var exact by remember { mutableStateOf(MedReminders.canExact(ctx)) }
+    var exact by remember { mutableStateOf(ExactAlarms.canExact(ctx)) }
     LifecycleResumeEffect(Unit) {
-        exact = MedReminders.canExact(ctx)
+        exact = ExactAlarms.canExact(ctx)
         onPauseOrDispose { }
     }
     val set = LogReminderSet.decode(device.logReminders)

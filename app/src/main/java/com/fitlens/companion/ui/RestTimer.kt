@@ -7,7 +7,9 @@ import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.GoldButton
 import android.Manifest
 import android.app.Activity
+import android.app.PendingIntent
 import android.content.ActivityNotFoundException
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
@@ -34,6 +36,7 @@ import com.fitlens.companion.R
 import com.fitlens.companion.ui.design.SettingsActionRow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.fitlens.companion.data.ExactAlarms
 import com.fitlens.companion.data.Workouts
 import com.fitlens.companion.ui.design.FitIcons
 import com.fitlens.companion.ui.design.StepperField
@@ -75,6 +78,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import com.fitlens.companion.ui.design.FitSlider
 import com.fitlens.companion.ui.design.FitLinearProgress
 import com.fitlens.companion.ui.design.FitFilterChip
@@ -84,6 +88,11 @@ import com.fitlens.companion.ui.design.FitTextButton
  * The rest timer (#20), shared by every exercise screen so it keeps counting as you move between exercises. While it
  * runs, [TimerService] keeps it going with the screen off and shows it in a notification. When it ends it alerts
  * (a sound and vibration, each a setting) and says so.
+ *
+ * The end is also an alarm clock set at [State.endAt] through [ExactAlarms] (#342, #346), so it rings on time with
+ * the screen off or after the app was closed. The in-process `delay` still ends it first when the app is awake; whichever
+ * comes first alerts, and [finish] cancels the other. The alarm is set by every [schedule] (start, adjust, set length,
+ * resume) and cancelled by [pause], [stop] and [finish]. [RestAlarmReceiver] calls [alarmRang].
  */
 object RestTimer {
     /** [endAt] is the wall-clock end in ms while running; [pausedLeft] the seconds left while paused. */
@@ -96,8 +105,47 @@ object RestTimer {
     val state: StateFlow<State> = _state
     private var job: Job? = null
     private var appContext: Context? = null
+    /** When the last rest ended here, so an alarm arriving just after the in-process timer already alerted is ignored. */
+    @Volatile private var lastFinish = 0L
+
+    /** The rest alarm's action, for [RestAlarmReceiver]. */
+    internal const val ALARM_ACTION = "com.fitlens.companion.REST_ALARM"
 
     private fun now() = System.currentTimeMillis()
+
+    /** The rest alarm. One at a time: setting it replaces the last, cancelling finds it. */
+    private fun alarmIntent(context: Context): PendingIntent = PendingIntent.getBroadcast(
+        context, 0,
+        Intent(context, RestAlarmReceiver::class.java).setAction(ALARM_ACTION),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
+    )
+
+    private fun setAlarm(endAt: Long) {
+        val context = appContext ?: return
+        ExactAlarms.set(context, endAt, alarmIntent(context), ExactAlarms.showApp(context, "rest"))
+    }
+
+    private fun cancelAlarm() {
+        val context = appContext ?: return
+        ExactAlarms.cancel(context, alarmIntent(context))
+    }
+
+    /**
+     * The rest alarm rang. A rest still running that ends more than a second from now is a stale alarm (it was moved,
+     * and an old one arrived): ignored, as is one for a paused rest. A rest that has ended, or one this process no longer
+     * knows (it was killed during the rest), alerts, unless the in-process timer just did.
+     */
+    fun alarmRang(context: Context) {
+        appContext = context.applicationContext
+        val s = _state.value
+        if (s.paused) return
+        if (s.active) {
+            if (s.endAt - now() > 1000L) return
+        } else if (now() - lastFinish < 5000L) {
+            return
+        }
+        finish()
+    }
 
     fun left(s: State, at: Long = now()): Int = s.pausedLeft ?: max(0, ((s.endAt - at + 999) / 1000).toInt())
 
@@ -112,6 +160,7 @@ object RestTimer {
         if (!s.active) return
         val p = s.pausedLeft
         if (p != null) {
+            // Paused: no alarm is set (pause cancelled it), and none is set here.
             _state.value = s.copy(pausedLeft = max(0, p + seconds), total = max(s.total, p + seconds))
             changed()
         } else {
@@ -141,6 +190,7 @@ object RestTimer {
         val s = _state.value
         if (!s.active || s.paused) return
         job?.cancel()
+        cancelAlarm()
         _state.value = s.copy(endAt = 0L, pausedLeft = left(s))
         changed()
     }
@@ -153,8 +203,28 @@ object RestTimer {
 
     fun stop() {
         job?.cancel()
+        cancelAlarm()
+        // An alarm already on its way when the rest is stopped must not alert for it (see [alarmRang]).
+        lastFinish = now()
         _state.value = State()
         changed()
+    }
+
+    /** How long the alarm receiver waits for the settings before it alerts anyway, with the defaults. A seam for tests. */
+    @Volatile internal var settingsTimeoutMs = 10_000L
+
+    /** Waits for the settings to load. A seam so a test can make them never load. */
+    @Volatile internal var awaitSettings: suspend () -> Unit = { Settings.awaitLoaded() }
+
+    /** Tests only: puts every seam back and forgets any rest and the last finish, so one test does not leak into the next. */
+    internal fun resetForTests() {
+        job?.cancel()
+        cancelAlarm()
+        _state.value = State()
+        lastFinish = 0L
+        settingsTimeoutMs = 10_000L
+        awaitSettings = { Settings.awaitLoaded() }
+        appContext = null
     }
 
     private fun changed() {
@@ -166,21 +236,29 @@ object RestTimer {
         job?.cancel()
         job = AppScope.scope.launch {
             delay(max(0L, s.endAt - now()))
-            finish()
+            // Unless the alarm got there first, or the rest was moved, paused or stopped meanwhile.
+            if (_state.value.endAt == s.endAt) finish()
         }
+        setAlarm(s.endAt)
         changed()
     }
 
+    /** The rest is over: alerts once, whichever of the delay and the alarm came first. */
     private fun finish() {
+        job?.cancel()
+        cancelAlarm()
+        lastFinish = now()
         _state.value = State()
         changed()
         val ctx = appContext
-        val prefs = Settings.currentPortable()
-        if (ctx != null && prefs.restSound) RestSound.play(ctx, Settings.current().restSoundUri, prefs.restVolume)
+        // Read without waiting (the state flows hold the defaults until the settings load): an alarm that wakes a dead
+        // process must alert even when the settings have not loaded, and never block on them.
+        val prefs = Settings.portable.value
+        if (ctx != null && prefs.restSound) RestSound.play(ctx, Settings.device.value.restSoundUri, prefs.restVolume)
         // With notifications allowed, the "Rest over" alert vibrates and wakes the screen; otherwise vibrate here.
-        if (ctx != null && Settings.currentPortable().restVibrate && TimerService.canNotify(ctx)) {
+        if (ctx != null && prefs.restVibrate && TimerService.canNotify(ctx)) {
             TimerService.alertRestOver(ctx)
-        } else if (ctx != null && Settings.currentPortable().restVibrate) {
+        } else if (ctx != null && prefs.restVibrate) {
             try {
                 ctx.getSystemService(Vibrator::class.java)
                     ?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1))
@@ -189,6 +267,23 @@ object RestTimer {
             }
         }
         ctx?.let { UiEvents.show(it.getString(R.string.rt_over)) }
+    }
+}
+
+/** The rest timer's alarm (#342): the rest is over, even with the screen off. Explicit intents only, so it isn't exported. */
+class RestAlarmReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != RestTimer.ALARM_ACTION) return
+        val result = goAsync()
+        AppScope.scope.launch {
+            try {
+                // Settings that are not loaded in time do not stop the alert: it comes with the defaults.
+                withTimeoutOrNull(RestTimer.settingsTimeoutMs) { RestTimer.awaitSettings() }
+                RestTimer.alarmRang(context)
+            } finally {
+                result.finish()
+            }
+        }
     }
 }
 

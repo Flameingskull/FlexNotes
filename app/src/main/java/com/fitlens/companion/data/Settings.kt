@@ -84,8 +84,25 @@ data class DeviceSettings(
     val medCalendar: Int = MED_CAL_HIDE,
     /** Minutes after a dose is due to remind again while it isn't taken or skipped (#203); 0 for no follow-up. */
     val medNudgeMinutes: Int = 30,
-    /** Snoozed reminders (#203), `MedReminders.Snoozes.encode`: due time to when it rings again. Phone state. */
+    /** Snoozed reminders (#203, #327), `MedReminders.Snoozes.encode`: a token to when it rings again. The token is
+     *  "doseId@due time" for one dose, or just the due time as older versions stored it (every open dose then). Phone state. */
     val medSnoozes: String? = null,
+    /** Medication reminders (#327): the time (`yyyy-MM-dd HH:mm`) up to which first notifications have gone out. A dose due
+     *  after it that is still open, at most 12 hours ago, is owed one: the backstop for a phone that was switched off.
+     *  Phone state, like [medSnoozes]. */
+    val medRungThrough: String? = null,
+    /** Medication reminders (#327): a fingerprint of what the schedules plan (`MedReminders.planStamp`). When it changes
+     *  (a schedule started, a pause resumed, a time moved, an end undone) nothing already past is owed a reminder.
+     *  Phone state, like [medSnoozes]. */
+    val medPlanStamp: String? = null,
+    /** Medication reminders (#327): when (`yyyy-MM-dd HH:mm`) [medPlanStamp] last changed. A follow-up ("Still due") is
+     *  only for a dose due after it, so starting a schedule at 20:00 does not chase the 17:00 and 19:00 doses at 21:00.
+     *  Phone state, like [medSnoozes]. */
+    val medPlanChangedAt: String? = null,
+    /** Medication reminders (#327): the time rung through as it was just before [medPlanChangedAt]. A follow-up skips only
+     *  doses due after this and up to the change (past but never reminded); one due at or before it had its reminder and
+     *  keeps its follow-up. Null before the first change. Phone state, like [medSnoozes]. */
+    val medPlanOldMark: String? = null,
     /** Reminders for other logging (#219), `LogReminderSet.encode`: weigh-ins, measurements, photos, workout days. */
     val logReminders: String? = null,
     /** The camera's last photo behind the body outline (#230): its opacity in percent, 0 to 60. */
@@ -419,7 +436,11 @@ object Settings {
         if (deviceStoreReady) Store.db.deleteMeta(DEVICE_KEYS)
     }
 
+    /** Tests only: a failure thrown by the next phone-settings writes, to prove a failed write does not end the reminders. */
+    @Volatile internal var deviceWriteFault: Throwable? = null
+
     private suspend fun saveDevice() = writeLock.withLock {
+        deviceWriteFault?.let { throw it }
         val values = _device.value.toMap()
         store.edit { p ->
             values.forEach { (k, v) ->
@@ -546,6 +567,10 @@ object Settings {
     private const val D_MED_CALENDAR = "med_calendar"
     private const val D_MED_NUDGE = "med_nudge_minutes"
     private const val D_MED_SNOOZES = "med_snoozes"
+    private const val D_MED_RUNG_THROUGH = "med_rung_through"
+    private const val D_MED_PLAN_STAMP = "med_plan_stamp"
+    private const val D_MED_PLAN_CHANGED = "med_plan_changed_at"
+    private const val D_MED_PLAN_OLD_MARK = "med_plan_old_mark"
     private const val D_LOG_REMINDERS = "log_reminders"
     private const val D_CAM_OPACITY = "camera_photo_opacity"
     private const val D_CAM_LINE = "camera_outline_line"
@@ -673,6 +698,10 @@ object Settings {
         medCalendar = get(D_MED_CALENDAR)?.toIntOrNull()?.coerceIn(MED_CAL_HIDE, MED_CAL_FULL) ?: MED_CAL_HIDE,
         medNudgeMinutes = get(D_MED_NUDGE)?.toIntOrNull()?.coerceIn(0, 240) ?: 30,
         medSnoozes = get(D_MED_SNOOZES),
+        medRungThrough = get(D_MED_RUNG_THROUGH),
+        medPlanStamp = get(D_MED_PLAN_STAMP),
+        medPlanChangedAt = get(D_MED_PLAN_CHANGED),
+        medPlanOldMark = get(D_MED_PLAN_OLD_MARK),
         logReminders = get(D_LOG_REMINDERS),
         cameraPhotoOpacity = get(D_CAM_OPACITY)?.toIntOrNull()?.coerceIn(0, 60) ?: 30,
         cameraOutlineLine = get(D_CAM_LINE)?.toIntOrNull()?.takeIf { it in BodyOutline.THIN..BodyOutline.BOLD } ?: BodyOutline.BOLD,
@@ -713,6 +742,10 @@ object Settings {
         D_MED_CALENDAR to medCalendar.takeIf { it != MED_CAL_HIDE }?.toString(),
         D_MED_NUDGE to medNudgeMinutes.takeIf { it != 30 }?.toString(),
         D_MED_SNOOZES to medSnoozes,
+        D_MED_RUNG_THROUGH to medRungThrough,
+        D_MED_PLAN_STAMP to medPlanStamp,
+        D_MED_PLAN_CHANGED to medPlanChangedAt,
+        D_MED_PLAN_OLD_MARK to medPlanOldMark,
         D_LOG_REMINDERS to logReminders,
         D_CAM_OPACITY to cameraPhotoOpacity.takeIf { it != 30 }?.toString(),
         D_CAM_LINE to cameraOutlineLine.takeIf { it != BodyOutline.BOLD }?.toString(),

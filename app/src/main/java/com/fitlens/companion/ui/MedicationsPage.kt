@@ -15,6 +15,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.fitlens.companion.R
+import com.fitlens.companion.data.ExactAlarms
 import com.fitlens.companion.data.MedReminders
 import com.fitlens.companion.data.MedSchedules
 import com.fitlens.companion.data.Settings
@@ -26,8 +27,8 @@ import com.fitlens.companion.ui.design.SettingsNumberRow
 import com.fitlens.companion.ui.design.SettingsSwitchRow
 
 /**
- * Settings › Medications (#203): reminders on or off (asking for notifications when switched on), exact alarms on
- * Android 12 and later, the follow-up reminder, and whether medication names show on the lock screen (off by
+ * Settings › Medications (#203): reminders on or off (asking for notifications when switched on), the exact-alarm
+ * permission (a row only on Android 12 and 12L where it was revoked; Android 13 and later grant it at install, #346), the follow-up reminder, and whether medication names show on the lock screen (off by
  * default). Each change sets the next reminder again. Lock Medications (#214) asks for the phone's prompt to switch it on
  * or off; while it's on, names never show on the lock screen.
  */
@@ -37,9 +38,9 @@ internal fun MedicationsPage() {
     val device by Settings.device.collectAsState()
     val prefs by Settings.portable.collectAsState()
     val notify = rememberNotificationAccess()
-    var exact by remember { mutableStateOf(MedReminders.canExact(ctx)) }
+    var exact by remember { mutableStateOf(ExactAlarms.canExact(ctx)) }
     LifecycleResumeEffect(Unit) {
-        exact = MedReminders.canExact(ctx)
+        exact = ExactAlarms.canExact(ctx)
         MedReminders.rearm()
         onPauseOrDispose { }
     }
@@ -52,14 +53,15 @@ internal fun MedicationsPage() {
         MedReminders.rearm()
     }
     NotificationsOffNote(notify, device.medReminders)
-    if (Build.VERSION.SDK_INT >= 31) {
+    // Only where the user can still allow it (Android 12 and 12L, permission revoked): from Android 13 it is granted at install.
+    if (Build.VERSION.SDK_INT >= 31 && !exact) {
         SettingsActionRow(
             stringResource(R.string.mr_exact),
             stringResource(R.string.mr_exact_summary),
-            value = stringResource(if (exact) R.string.mr_exact_allowed else R.string.mr_exact_not_allowed),
+            value = stringResource(R.string.mr_exact_not_allowed),
             enabled = device.medReminders,
             disabledReason = stringResource(R.string.mr_needs_reminders),
-            warning = if (!exact && device.medReminders) stringResource(R.string.mr_exact_warning) else null
+            warning = if (device.medReminders) stringResource(R.string.mr_exact_warning) else null
         ) {
             val intent = Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)

@@ -1,24 +1,30 @@
-# FlexNotes 1.0.197
+# FlexNotes 1.0.198
 
 ## Overview
 
-This update makes logging easier on small phones and at large font sizes. Every day log and exercise screen is now drawn and checked automatically at the width of a small and a large phone, at normal and 200% font, and this release fixes what those checks found. The biggest change is on the exercise screen: the Track form now starts straight under the tabs.
+This update is about reminders you can rely on. Medication reminders now arrive as one notification per dose, each with its own Taken, Snooze and Skip. Every alarm in the app, for doses, logging and the rest timer, now rings at the minute it's set for, even when the phone is locked or idle.
+
+## What's new
+
+- **One reminder per dose:** three medications due at the same time give three notifications, each showing its own name and amount in full. Before, they were squeezed into one, and some names could be cut off.
+- **Taken, Snooze and Skip for that dose only:** logging one dose from a reminder no longer marks the others as taken. The others stay open until you answer them.
+- **Reminders name the day:** a reminder reads, for example, "Medication due Fri 30 Oct, 8:00". One left unanswered for more than a day is cleared, and the dose stays on Medications.
 
 ## Improved
 
-- **Track form at the top:** on the exercise screen, and on the Body tracker and Medications tabs, a short page now starts at the top. Before, an exercise with few sets showed its form lower down the screen, with a gap above it.
-- **Long names in full:** long exercise, measurement and workout day names wrap instead of being cut short, on the day log, in the exercise library, in a workout's days and in the workout drawer.
-- **Every figure shown:** a body value's change and a workout day's sets and rest now show in full at any font size, instead of ending in "...".
-- **Comments in full:** set comments and an exercise's earlier notes are shown whole. At large fonts a set's comment and effort use the row's full width, so words no longer break in the middle.
-- **Exercise stats at large fonts:** tiles go one per row, so labels stay whole and a figure such as 2425 kg keeps its unit.
-- **Rest timer:** Pause and Resume have a row of their own, so they are easy to hit between sets. The rest length chips are bigger.
-- **Easier to tap:** the comment, superset options and graph buttons are now the full 48dp size.
+- **Alarms on the minute:** medication reminders, their snoozes and follow-ups, logging reminders and the rest timer now use the phone's alarm-clock alarms, which ring on time even when the phone is idle. Android shows its alarm icon in the status bar while one is set, and some lock screens show the next alarm's time. No medication name is shown there.
+- **Nothing to allow on Android 13 and later:** FlexNotes can ring at exact times without asking. On Android 12, Settings still offers to allow it if it has been switched off.
+- **Rest timer with the screen off:** a rest now ends on a real alarm, so its sound and vibration come on time even if the phone has gone to sleep.
+- **Injection sites:** each Taken button names the site it will record, and two doses of the same injected medication always suggest different sites, including after a snooze, for a dose left from yesterday, and from the home-screen widget.
 
 ## Fixed
 
-- **Records filter:** at large fonts on a small phone, the period choice on the Records tab was squeezed away and could not be reached. It now moves to its own line.
-- **Exercise history:** a day's totals and Copy to today no longer squeeze each other into a narrow column.
-- **Choices on two lines:** a long choice, such as a Session's intensity, no longer loses the corner of its text.
+- **No reminders for times already past:** starting, resuming, editing or restoring a schedule no longer sends reminders for doses whose time had already passed that day.
+- **Reminders aren't lost:** a reminder that comes while FlexNotes can't load or save its data tries again shortly afterwards, and the next reminder is always set. A reminder missed while the phone was switched off appears when it's switched back on, if it's within 12 hours.
+- **Two reminders in the same minute,** such as a follow-up and a new dose, now both appear.
+- **Snoozing several at once** brings each one back at the time you chose.
+- **Clock and time zone changes:** reminders set in the hour when clocks go back no longer repeat, and a time zone change while the app is open no longer makes a reminder ring too early or not at all.
+- **If saving fails,** a reminder's Taken, Snooze or Skip keeps the reminder showing so you can try again.
 
 ## Your data
 
@@ -26,6 +32,8 @@ This update makes logging easier on small phones and at large font sizes. Every 
 
 ## Known limitations
 
-- The title at the top of the exercise screen and the library is still cut short when it's long. It's the next fix (#325).
-- Set rows on the History tab are smaller than the 48dp touch size. A choice between Compact and Comfortable rows is planned (#326).
-- These checks cover the day log, the exercise screen and the library so far. Workouts, Analysis, Body, Photos, Medications and Settings follow in the next builds, and the review (#251 to #258) closes after a short check on a real phone.
+- Do Not Disturb and silent mode can still silence a reminder that rings on time. A choice to let dose reminders sound through is planned (#347).
+- A switched-off phone can't ring. A dose whose time passed while it was off is reminded when the phone is back on, if it's within 12 hours.
+- On the night clocks go back, a snooze or follow-up that crosses the end of the repeated hour can ring up to an hour late (#352).
+- If you change a schedule twice in a row just after one of its dose times has passed, that dose can get a "still due" reminder although it had no first one (#355).
+- Switching on Lock Medications while reminders are showing leaves their names visible until each is answered (#350).
