@@ -16,4 +16,4 @@
 | Function, class or concern | Check | Where | Result | Evidence | Issue |
 | --- | --- | --- | --- | --- | --- |
 | TodayWidgetActions.handle: time from the shared clock | Dates and time | TodayWidget.kt:204 | Read OK | Same value, now through the seam; ends in MedReminders.arm, whose clearStale removes the dose's notification. No test presses the widget | |
-| TodayWidgetActions: no catch around the work | Failure | TodayWidget.kt:258 | Risk | Already there, not in this round. An exception in handle (a full disk on take) is uncaught in a plain CoroutineScope, so the process closes with no message. The receivers changed in this build now catch theirs |  |
+| TodayWidgetActions: no catch around the work | Failure | TodayWidget.kt:258 | Risk | Already there, not in this round. An exception in handle (a full disk on take) is uncaught in a plain CoroutineScope, so the process closes with no message. The receivers changed in this build now catch theirs | #354 |
