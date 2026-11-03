@@ -1,7 +1,7 @@
 # Function audit: calendar-shell
 
 > No full audit yet: rows from build gates only.
-> Build gate 1.0.198: 3 functions checked (re-checked after fix round 1).
+> Build gate 1.0.198: 3 functions checked (re-checked after fix round 2).
 > Audited 2026-10-31 against 1.0.198 (working tree over 830f7e1, before CI ran the tests named). Files read in full: 3 of the 3 this gate needed; not the area.
 > Results: 1 Proved, 2 Read OK, 0 Fails, 0 Gap, 0 Not checked.
 

@@ -1,10 +1,10 @@
 # Code audit: logging
 
 > No full audit yet: rows from build gates only.
-> Build gate 1.0.198: 11 functions checked, re-checked after fix round 1.
+> Build gate 1.0.198: 11 functions checked, re-checked after fix rounds 1 and 2.
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 0 of 1 in scope; the rest of the area was not read.
 > Results: 8 Verified, 0 Read OK, 0 Defect, 1 Risk, 0 Improve, 2 Not checked.
-> `Verified` names a test that would fail if this broke. The tests have not run yet (no SDK here): a green release confirms those rows.
+> `Verified` names a test that would fail if this broke. CI run 41336801625 ran this code: every reminder, alarm and rest test passed.
 
 ## Files
 

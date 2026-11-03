@@ -99,6 +99,10 @@ data class DeviceSettings(
      *  only for a dose due after it, so starting a schedule at 20:00 does not chase the 17:00 and 19:00 doses at 21:00.
      *  Phone state, like [medSnoozes]. */
     val medPlanChangedAt: String? = null,
+    /** Medication reminders (#327): the time rung through as it was just before [medPlanChangedAt]. A follow-up skips only
+     *  doses due after this and up to the change (past but never reminded); one due at or before it had its reminder and
+     *  keeps its follow-up. Null before the first change. Phone state, like [medSnoozes]. */
+    val medPlanOldMark: String? = null,
     /** Reminders for other logging (#219), `LogReminderSet.encode`: weigh-ins, measurements, photos, workout days. */
     val logReminders: String? = null,
     /** The camera's last photo behind the body outline (#230): its opacity in percent, 0 to 60. */
@@ -566,6 +570,7 @@ object Settings {
     private const val D_MED_RUNG_THROUGH = "med_rung_through"
     private const val D_MED_PLAN_STAMP = "med_plan_stamp"
     private const val D_MED_PLAN_CHANGED = "med_plan_changed_at"
+    private const val D_MED_PLAN_OLD_MARK = "med_plan_old_mark"
     private const val D_LOG_REMINDERS = "log_reminders"
     private const val D_CAM_OPACITY = "camera_photo_opacity"
     private const val D_CAM_LINE = "camera_outline_line"
@@ -696,6 +701,7 @@ object Settings {
         medRungThrough = get(D_MED_RUNG_THROUGH),
         medPlanStamp = get(D_MED_PLAN_STAMP),
         medPlanChangedAt = get(D_MED_PLAN_CHANGED),
+        medPlanOldMark = get(D_MED_PLAN_OLD_MARK),
         logReminders = get(D_LOG_REMINDERS),
         cameraPhotoOpacity = get(D_CAM_OPACITY)?.toIntOrNull()?.coerceIn(0, 60) ?: 30,
         cameraOutlineLine = get(D_CAM_LINE)?.toIntOrNull()?.takeIf { it in BodyOutline.THIN..BodyOutline.BOLD } ?: BodyOutline.BOLD,
@@ -739,6 +745,7 @@ object Settings {
         D_MED_RUNG_THROUGH to medRungThrough,
         D_MED_PLAN_STAMP to medPlanStamp,
         D_MED_PLAN_CHANGED to medPlanChangedAt,
+        D_MED_PLAN_OLD_MARK to medPlanOldMark,
         D_LOG_REMINDERS to logReminders,
         D_CAM_OPACITY to cameraPhotoOpacity.takeIf { it != 30 }?.toString(),
         D_CAM_LINE to cameraOutlineLine.takeIf { it != BodyOutline.BOLD }?.toString(),

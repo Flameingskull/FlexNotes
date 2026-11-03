@@ -249,6 +249,24 @@ class MedRemindersTest {
     }
 
     @Test
+    fun aFollowUpSkipsOnlyDosesThatWerePastAndNeverRemindedWhenThePlanChanged() {
+        // Rung through 08:00; the plan changed at 08:10. The 08:00 doses rang and keep their 08:30 follow-up.
+        val oldMark = at("2026-10-22T08:00")
+        val changed = at("2026-10-22T08:10")
+        val ring = MedReminders.next(plan(), emptyList(), at("2026-10-22T08:10"), 30, rungThrough = changed, followUpsAfter = changed, oldMark = oldMark)!!
+        assertEquals(at("2026-10-22T08:30"), ring.at)
+        assertTrue(ring.nudge)
+        // A dose due 08:05 would have been past (after the old mark, up to the change): never reminded, never followed up.
+        val shifted = MedReminders.next(plan(), emptyList(), at("2026-10-22T08:10"), 30, rungThrough = changed, followUpsAfter = changed, oldMark = at("2026-10-22T07:00"))!!
+        assertEquals(at("2026-10-22T21:00"), shifted.at)
+        // No old mark (first run after the update): everything up to the change is left alone, as before.
+        assertEquals(at("2026-10-22T21:00"), MedReminders.next(plan(), emptyList(), at("2026-10-22T08:10"), 30, rungThrough = changed, followUpsAfter = changed)!!.at)
+        // And the owed follow-ups agree.
+        assertEquals(2, MedReminders.followUps(plan(), emptyList(), at("2026-10-22T08:30"), changed, 30, after = changed, oldMark = oldMark).size)
+        assertTrue(MedReminders.followUps(plan(), emptyList(), at("2026-10-22T08:30"), changed, 30, after = changed, oldMark = at("2026-10-22T07:00")).isEmpty())
+    }
+
+    @Test
     fun aDoseDueRightNowIsOwedItsNotificationNotPassedOver() {
         // The alarm for 08:00 is not yet delivered when the alarm is set again at 08:00:20.
         val now = at("2026-10-22T08:00:20")

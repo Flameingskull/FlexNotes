@@ -936,6 +936,54 @@ class MedReminderNotificationsTest {
     }
 
     @Test
+    fun editingAnotherScheduleAfterADoseRangKeepsItsStillDueFollowUp() {
+        loadMorningOnly()
+        ring(f.KEY_0800, 3)
+        assertEquals(List(3) { dueTitle("08:00") }, h.notifications().map { it.title })
+        // At 08:10, with the 08:00 doses unanswered, another schedule is saved: the plan's fingerprint changes.
+        clock("08:10")
+        h.loadPlan(listOf(MedRun(
+            MedSchedule(2, "Evening", phases = listOf(MedPhase(2, true, 1, PhaseUnit.ONGOING, listOf(MedDose(9, "Evening dose", 1.0, "mg", "21:00"))))),
+            "2026-10-01"
+        )))
+        arm()
+        h.settle()
+        assertEquals("${f.END} 08:10", Settings.current().medPlanChangedAt)
+        assertEquals("${f.END} 08:00", Settings.current().medPlanOldMark)
+        // The 08:00 doses already rang, so their follow-up at 08:30 is still set, as a follow-up.
+        val alarm = h.nextAlarm()!!
+        assertEquals(dt(8, 30), alarm.at)
+        assertEquals(f.KEY_0800, alarm.key)
+        assertTrue(alarm.intent.getBooleanExtra(MedReminders.EXTRA_NUDGE, false))
+        assertEquals(millis(dt(8, 30)), h.nextAlarmClock()!!.triggerTime)
+
+        clock("08:30")
+        h.fire(alarm.intent) { h.notifications().size == 3 && h.notifications().all { it.title == againTitle("08:00") } }
+        h.settle()
+        assertEquals(6, MedReminders.posted)
+    }
+
+    @Test
+    fun aMarkAChangeTimeAndAnOldMarkAheadOfTheClockAreAllBroughtBackWhenTheClockGoesWest() {
+        load()
+        // After a plan edit at 20:00 in a zone ahead, the phone moves west: it is 08:00 here now.
+        h.setDevice { it.copy(medRungThrough = "2026-10-31 20:00", medPlanChangedAt = "2026-10-31 20:00", medPlanOldMark = "2026-10-31 19:00") }
+        h.fire(Intent(h.app, MedBootReceiver::class.java).setAction(Intent.ACTION_TIMEZONE_CHANGED)) {
+            Settings.current().medPlanOldMark == "${f.END} 08:00"
+        }
+        h.settle()
+        assertEquals("${f.END} 08:00", Settings.current().medRungThrough)
+        assertEquals("${f.END} 08:00", Settings.current().medPlanChangedAt)
+        assertEquals("${f.END} 08:00", Settings.current().medPlanOldMark)
+        // One not ahead of the clock is left alone.
+        h.setDevice { it.copy(medRungThrough = "${f.END} 07:00", medPlanChangedAt = "${f.END} 06:00", medPlanOldMark = "${f.END} 05:00") }
+        h.fire(Intent(h.app, MedBootReceiver::class.java).setAction(Intent.ACTION_TIME_CHANGED)) { h.nextAlarm() != null }
+        h.settle()
+        assertEquals("${f.END} 05:00", Settings.current().medPlanOldMark)
+        assertEquals("${f.END} 06:00", Settings.current().medPlanChangedAt)
+    }
+
+    @Test
     fun aRingAfterThePlanChangedOwesNothingAlreadyPast() {
         clock("20:00")
         h.loadPlan(dayRuns)

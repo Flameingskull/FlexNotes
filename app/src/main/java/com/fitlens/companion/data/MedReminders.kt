@@ -252,6 +252,15 @@ object MedReminders {
     }
 
     /**
+     * Whether a dose due at [at] may be followed up with "Still due": not one that was past when the plan last changed
+     * ([changedAt]) and was never reminded, which is one due after the time rung through just before that change
+     * ([oldMark]). A dose due at or before [oldMark] had its reminder and keeps its follow-up. With no [oldMark] (the first
+     * run after the update) every dose up to the change is left alone.
+     */
+    private fun chased(at: LocalDateTime, changedAt: LocalDateTime?, oldMark: LocalDateTime?): Boolean =
+        changedAt == null || at.isAfter(changedAt) || (oldMark != null && !at.isAfter(oldMark))
+
+    /**
      * The open, unsnoozed doses whose follow-up ("Still due") falls after [rungThrough] and not after [now], no more than
      * [CATCH_UP_HOURS] hours after the dose was due: follow-ups that came due since the last ring. Empty with no follow-up
      * ([nudgeMinutes] 0). A ring shows these with the others, so a follow-up and another reminder due in one minute both
@@ -259,7 +268,7 @@ object MedReminders {
      */
     fun followUps(
         plan: MedPlan, records: List<MRecord>, now: LocalDateTime, rungThrough: LocalDateTime, nudgeMinutes: Int,
-        snoozes: Snoozes = Snoozes(), after: LocalDateTime? = null
+        snoozes: Snoozes = Snoozes(), after: LocalDateTime? = null, oldMark: LocalDateTime? = null
     ): List<DueDose> {
         if (nudgeMinutes <= 0) return emptyList()
         val oldest = now.minusHours(CATCH_UP_HOURS)
@@ -269,7 +278,7 @@ object MedReminders {
             MedSchedules.dueOn(plan, day.format(Dates.ISO)).forEach { d ->
                 val at = parse(d.due) ?: return@forEach
                 val again = at.plusMinutes(nudgeMinutes.toLong())
-                if (again.isAfter(rungThrough) && !again.isAfter(now) && !at.isBefore(oldest) && (after == null || at.isAfter(after)) &&
+                if (again.isAfter(rungThrough) && !again.isAfter(now) && !at.isBefore(oldest) && chased(at, after, oldMark) &&
                     MedSchedules.takenRecord(records, d) == null && !plan.isSkipped(d.dose.id, d.due) &&
                     !snoozes.covers(d.dose.id, d.due)
                 ) out += d
@@ -287,7 +296,8 @@ object MedReminders {
      */
     fun next(
         plan: MedPlan, records: List<MRecord>, now: LocalDateTime, nudgeMinutes: Int,
-        snoozes: Snoozes = Snoozes(), rungThrough: LocalDateTime? = null, followUpsAfter: LocalDateTime? = null
+        snoozes: Snoozes = Snoozes(), rungThrough: LocalDateTime? = null, followUpsAfter: LocalDateTime? = null,
+        oldMark: LocalDateTime? = null
     ): Ring? {
         if (plan.activations.isEmpty()) return null
         val candidates = ArrayList<Ring>()
@@ -298,7 +308,7 @@ object MedReminders {
         val owed = if (rungThrough != null) catchUp(plan, records, now, rungThrough, snoozes) else emptyList()
         owed.firstOrNull()?.let { candidates += Ring(now, it.due) }
         if (rungThrough != null) {
-            followUps(plan, records, now, rungThrough, nudgeMinutes, snoozes, followUpsAfter).firstOrNull()?.let { candidates += Ring(now, it.due, nudge = true) }
+            followUps(plan, records, now, rungThrough, nudgeMinutes, snoozes, followUpsAfter, oldMark).firstOrNull()?.let { candidates += Ring(now, it.due, nudge = true) }
         }
         val owedKeys = owed.map { it.due }.toSet()
         // Yesterday too, for a follow-up of a dose due just before midnight.
@@ -313,7 +323,7 @@ object MedReminders {
                 .forEach { key ->
                     val at = parse(key) ?: return@forEach
                     if (at.isAfter(now)) candidates += Ring(at, key)
-                    else if (nudgeMinutes > 0 && key !in owedKeys && (followUpsAfter == null || at.isAfter(followUpsAfter))) {
+                    else if (nudgeMinutes > 0 && key !in owedKeys && chased(at, followUpsAfter, oldMark)) {
                         val nudge = at.plusMinutes(nudgeMinutes.toLong())
                         if (nudge.isAfter(now)) candidates += Ring(nudge, key, nudge = true)
                     }
@@ -384,9 +394,14 @@ object MedReminders {
         val minute = now.truncatedTo(ChronoUnit.MINUTES)
         val reset = stored == null || d.medPlanStamp != stamp || !d.medReminders
         val mark = if (reset) later(stored, minute) else (stored ?: minute)
-        // When the plan changed, nothing due before now is chased with "Still due" either.
-        val changedAt = if (d.medPlanStamp != stamp) minute.format(KEY) else d.medPlanChangedAt
-        return d.copy(medSnoozes = snoozes.encode(), medRungThrough = mark.format(KEY), medPlanStamp = stamp, medPlanChangedAt = changedAt)
+        // When the plan changed, a dose that was past and never reminded is not chased with "Still due" either: the change
+        // time and the mark as it was just before it say which. One already reminded keeps its follow-up.
+        val changed = d.medPlanStamp != stamp
+        return d.copy(
+            medSnoozes = snoozes.encode(), medRungThrough = mark.format(KEY), medPlanStamp = stamp,
+            medPlanChangedAt = if (changed) minute.format(KEY) else d.medPlanChangedAt,
+            medPlanOldMark = if (changed) d.medRungThrough else d.medPlanOldMark
+        )
     }
 
     /**
@@ -428,7 +443,8 @@ object MedReminders {
         val snoozes = Snoozes.decode(device.medSnoozes)
         val mark = parse(device.medRungThrough.orEmpty())
         val changedAt = parse(device.medPlanChangedAt.orEmpty())
-        val ring = if (device.medReminders) next(snap.medPlan, records, now, device.medNudgeMinutes, snoozes, mark, changedAt) else null
+        val oldMark = parse(device.medPlanOldMark.orEmpty())
+        val ring = if (device.medReminders) next(snap.medPlan, records, now, device.medNudgeMinutes, snoozes, mark, changedAt, oldMark) else null
         if (ring == null) {
             ExactAlarms.cancel(context, chainIntent(context, null))
             return
@@ -720,7 +736,7 @@ object MedReminders {
             val mark = parse(view.medRungThrough.orEmpty())
             if (mark != null) {
                 catchUp(plan, records, now, mark, snoozes).forEach { add(it, false) }
-                followUps(plan, records, now, mark, device.medNudgeMinutes, snoozes, parse(view.medPlanChangedAt.orEmpty())).forEach { add(it, true) }
+                followUps(plan, records, now, mark, device.medNudgeMinutes, snoozes, parse(view.medPlanChangedAt.orEmpty()), parse(view.medPlanOldMark.orEmpty())).forEach { add(it, true) }
             }
             val rung = snoozes.entries().filter { !it.at.isAfter(now) }
             rung.forEach { e -> openAt(plan, records, e.key).filter { e.doseId == null || it.dose.id == e.doseId }.forEach { add(it, false) } }
@@ -749,8 +765,9 @@ object MedReminders {
         Settings.awaitLoaded()
         val now = Dates.nowDateTime().truncatedTo(ChronoUnit.MINUTES)
         safeUpdate { d ->
-            val mark = parse(d.medRungThrough.orEmpty())
-            if (mark != null && mark.isAfter(now)) d.copy(medRungThrough = now.format(KEY)) else d
+            // Each is brought back to now when it is ahead of the clock.
+            fun back(text: String?): String? = text?.takeIf { parse(it)?.isAfter(now) == true }?.let { now.format(KEY) } ?: text
+            d.copy(medRungThrough = back(d.medRungThrough), medPlanChangedAt = back(d.medPlanChangedAt), medPlanOldMark = back(d.medPlanOldMark))
         }
     }
 }

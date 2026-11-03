@@ -1,7 +1,7 @@
 # Function audit: logging
 
 > No full audit yet: rows from build gates only.
-> Build gate 1.0.198: 13 functions checked (re-checked after fix round 1).
+> Build gate 1.0.198: 13 functions checked (re-checked after fix round 2).
 > Audited 2026-10-31 against 1.0.198 (working tree over 830f7e1, before CI ran the tests named). Files read in full: 2 of the 2 this gate needed; not the area.
 > Results: 9 Proved, 3 Read OK, 0 Fails, 0 Gap, 1 Not checked.
 
