@@ -3,7 +3,7 @@ package com.fitlens.companion.ui
 import android.app.Application
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
-import com.fitlens.companion.ui.fixture.LongHistoryFixture
+
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
