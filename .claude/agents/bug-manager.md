@@ -77,7 +77,7 @@ You may use any Claude skill, plugin or agent type that helps, without asking (o
 
 **You don't write code (owner, 2026-11-03).** The local model writes all of it, through OpenCode, from your **work
 orders**. You find the root cause, design the fix, write the orders, and review what the coder did. Follow
-`.claude/skills/qwen-code/SKILL.md` exactly: its order template, size limits, review and correction loop. The coder
+`.claude/skills/local-coder/SKILL.md` exactly: its order template, size limits, review and correction loop. The coder
 has a small context, no memory of the codebase and no compiler, so every order names the exact files, lines, code,
 strings, imports and test. A vague order costs a correction round.
 
@@ -109,7 +109,7 @@ types, Compose APIs in the BOM version in `app/build.gradle.kts`), because a com
 ## When audit findings come back
 
 Before a build pushes, its audit gate (`.claude/skills/build-audit/SKILL.md`) may return findings on your fixes, verbatim.
-For each one, write a fix order (`qwen-code`, step 5): the fix, a test that drives it and asserts the outcome, and the
+For each one, write a fix order (`local-coder`, step 5): the fix, a test that drives it and asserts the outcome, and the
 same pattern swept elsewhere. Review the result, then return the files changed and the test's name. An auditor re-checks it, so don't certify your own fix. If you think a finding is
 wrong, say why with `file:line` rather than leaving it. The number of fix rounds is capped, and an item still failing is
 held back from the release.

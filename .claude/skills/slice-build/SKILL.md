@@ -43,8 +43,8 @@ them. Apply them at triage, at the choice of items, in every brief given to an a
    issue's fix picks one behaviour where others are reasonable, build the choice instead, and say so in its brief.
 
 **The local coder writes all code (owner, 2026-11-03).** Every code change in this build, including tests, the audit
-fix and CI fixes, is written by the model Unsloth Studio has loaded, through OpenCode, from a work order. Here the main
-session writes the orders and reviews the result, and never edits code itself. Follow `.claude/skills/qwen-code/SKILL.md`.
+fix and CI fixes, is written by whichever model OpenCode is set to use, from a work order. Here the main
+session writes the orders and reviews the result, and never edits code itself. Follow `.claude/skills/local-coder/SKILL.md`.
 The coder isn't a Claude agent, so it doesn't break the no-agents rule below.
 
 **Before saying there's nothing to build,** compare the shipped app with the owner's instructions (the roadmap's
@@ -78,8 +78,8 @@ the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap
   release, and set the plan item's `progress`; mark it `completed` only when every issue it depends on has shipped.
 - Work in the repository root. `git status` must be clean; if it isn't, stop and show the owner what's uncommitted.
 - `git pull --ff-only origin main`, and check `gh auth status`.
-- **Coder check** (`qwen-code`, step 1): a model is loaded in Unsloth Studio; note its context size. If none is, ask the
-  owner to load one. Never load or switch one yourself.
+- **Coder check** (`local-coder`, step 1): OpenCode has a coding model and it answers; note its context size. If not,
+  ask the owner. Never load, switch or unload a model yourself.
 - **Tracker parity check** (CLAUDE.md, "Parity rule"): list open issues and open tracker `bug`/`feature` items;
   import any issue without an item, archive duplicates (keep the `Flameingskull/FlexNotes#N` origin), set items whose
   issue closed to `shipped`/`done`, and file an issue for any tracker-only item. Run it again just before the push.
@@ -101,8 +101,8 @@ the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap
 
 ## 3. Implement: work orders, the local coder, review
 - Set the tracker item to `in-progress`. Design the change yourself from the code around it, then write it as work
-  orders (`qwen-code`, step 2), test included. Run each in the background with `.claude/scripts/qwen-code.ps1`, review
-  its diff, and accept it or send a correction order (`qwen-code`, steps 3–4). Never edit the code yourself.
+  orders (`local-coder`, step 2), test included. Run each in the background with `.claude/scripts/local-coder.ps1`, review
+  its diff, and accept it or send a correction order (`local-coder`, steps 3–4). Never edit the code yourself.
 - Put standing rule 1 in every order it applies to: never touch `applicationId`, signing or `BUILD_OFFSET`, and any
   database change bumps `Db.VERSION` and adds an `onUpgrade` step that keeps existing rows.
 - The order names the `Brand` colours and `ui/Theme.kt` components to use. No hard-coded colours.

@@ -1,13 +1,17 @@
 ---
-name: qwen-code
-description: How every FlexNotes build hands code to the local coder (OpenCode on the model Unsloth Studio has loaded). Claude agents plan, write work orders, review and audit; the local model writes all code. /new-build, /safe-build, /slice-build and build-audit follow it. Not a build on its own.
+name: local-coder
+description: How every FlexNotes build hands code to the coder (OpenCode, headless, on whichever model OpenCode is set to use). Claude agents plan, write work orders, review and audit; the coder writes all code. /new-build, /safe-build, /slice-build and build-audit follow it. Not a build on its own.
 ---
 
 # Handing code to the local coder
 
-**Owner, 2026-11-03:** all code is written by the locally loaded model through OpenCode. Claude agents (the main
-session, `bug-manager`, `feature-manager`) never edit code, not even one line: they triage, write **work orders**,
-review the result and send corrections. Auditors still change nothing.
+**Owner, 2026-11-03:** all code is written by a model run through OpenCode. Claude agents (the main session,
+`bug-manager`, `feature-manager`) never edit code, not even one line: they triage, write **work orders**, review the
+result and send corrections. Auditors still change nothing.
+
+**Model-agnostic (owner, 2026-11-04):** the coder is whichever model OpenCode is set to use. The owner may swap models
+or servers at any time (today local models served by Unsloth Studio). Never name a model, server or port in a skill,
+agent or order, and never write instructions that only one model would follow. Write for any capable coding model.
 
 **Code** is anything a build compiles, runs or packages: everything under `app/` (Kotlin, tests, resources,
 `strings.xml`, schemas), Gradle files, `.github/scripts/`, and workflows other than `build.yml`. Claude still writes
@@ -19,19 +23,24 @@ The coder's standing rules are in `AGENTS.md` (OpenCode loads it into every run)
 
 ## 1. Check the model first
 
-At the build's preflight, check that a model is loaded and note its context size:
+At the build's preflight, find which model the coder will use. In order: `$env:FLEXNOTES_CODER_MODEL`, then the
+`model` in OpenCode's settings:
 
 ```powershell
-$cfg = Get-Content "$HOME\.unsloth\studio\auth\agents\opencode\opencode.json" -Raw | ConvertFrom-Json
-(Invoke-RestMethod http://127.0.0.1:8888/v1/models -Headers @{ Authorization = "Bearer $($cfg.provider.'unsloth-studio'.options.apiKey)" }).data | Select-Object id, quant, context_length, loaded
+opencode models                               # every model OpenCode can use, as provider/model
+(opencode debug config | ConvertFrom-Json).model   # OpenCode's chosen model, if set
 ```
 
-Never load, switch or unload a model, and never force-cancel a chat: the owner chooses what runs. If nothing is
-loaded, stop and ask the owner to load one. Size orders to `context_length` (step 2).
+- **One is chosen:** use it. Note its context size if `opencode models --verbose` shows one; otherwise assume 32K.
+- **None is chosen:** ask the owner once which listed model to use for this build (the question tool, the listed
+  models as options), then pass it to every run as `-Model provider/model`. Don't guess.
+
+Never load, switch or unload a model, and never force-cancel a chat: the owner chooses what runs. If the first run
+exits 3 (no model, or it can't be reached), stop and ask the owner. Size orders to the context (step 2).
 
 ## 2. Write the work order
 
-The coder is a mid-sized local model with a small context, no memory of the codebase and no way to compile. It does
+Assume the coder is a mid-sized model with a small context, no memory of the codebase and no way to compile. It does
 well with a precise, self-contained order and badly with a vague one. **Everything it needs is in the order.** Work
 out the design yourself (from `docs/CODEMAP.md`, `grep` and targeted reads), then write it down so the coder only has
 to type it in correctly.
@@ -40,7 +49,7 @@ to type it in correctly.
 - at most 3 files changed and about 150 lines written;
 - the order itself under about 6,000 tokens (roughly 400 lines of Markdown);
 - what it has to read (the order, the files at the line ranges given, and the pattern to copy) fits in about half of
-  `context_length`; at about 50K tokens, that's roughly 1,200 lines of Kotlin. Name line ranges in large files.
+  the model's context; at about 50K tokens, that's roughly 1,200 lines of Kotlin. Name line ranges in large files.
 - Split anything bigger into a sequence of orders, each leaving the code consistent (it compiles after every order).
   A typical item: data or logic → screen → strings → test. A test can be its own order.
 
@@ -110,10 +119,10 @@ The **main session** runs orders, one at a time, in order (one model; later orde
 the background and wait for the notification; don't poll:
 
 ```powershell
-pwsh -NoProfile -File .claude/scripts/qwen-code.ps1 -Order nimbalyst-local/work-orders/<version>/<issue>-<n>.md
+pwsh -NoProfile -File .claude/scripts/local-coder.ps1 -Order nimbalyst-local/work-orders/<version>/<issue>-<n>.md
 ```
 
-Options: `-Effort low|medium|high|xhigh` (default `medium`; use `high` for tricky logic), `-TimeoutMinutes` (default 60).
+Options: `-Model provider/model` (when OpenCode has none chosen, step 1), `-Variant <level>` (the model's own reasoning level, such as `high`, for tricky logic; only if the model has levels), `-TimeoutMinutes` (default 60).
 It writes `<order>.result.md` (model, time, files changed, diff stat, the coder's report) and `<order>.log` (the full
 transcript, for when the result isn't clear). Exit codes: 0 done; 1 failed or timed out; 2 it changed files outside
 the order, which were put back; 3 no model (ask the owner); 4 the order is malformed.

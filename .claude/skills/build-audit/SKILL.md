@@ -15,7 +15,7 @@ build touched rather than every function in an area. It doesn't replace them: th
 gate is never reported as an audit of an area.
 
 **Auditors fix nothing (owner, 2026-10-30).** They only write ledgers. The local coder fixes, from a fix order written
-by the item's owner (`.claude/skills/qwen-code/SKILL.md`, owner 2026-11-03), and the main session routes findings and
+by the item's owner (`.claude/skills/local-coder/SKILL.md`, owner 2026-11-03), and the main session routes findings and
 files what's left.
 
 ```mermaid
@@ -84,7 +84,7 @@ Rounds are capped by the build type: `new` 3, `safe` 2, `slice` 1.
 
 1. **Route.** Send each must-fix finding, verbatim, to the agent that owns the item, with `SendMessage` so it keeps its
    context. In `/slice-build`, the main session owns it.
-2. **Fix.** The owner writes a fix order (`qwen-code`, step 5): the finding restated, the exact fix, a test that drives
+2. **Fix.** The owner writes a fix order (`local-coder`, step 5): the finding restated, the exact fix, a test that drives
    it, and the same pattern swept elsewhere. The main session runs it, and the owner reviews the diff and returns the
    files changed. Neither certifies the fix nor edits a ledger.
 3. **Re-check.** Continue the same auditor with `SendMessage`: name the rows and the files just changed, and nothing the

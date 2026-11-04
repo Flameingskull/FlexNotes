@@ -50,8 +50,8 @@ them. Apply them at triage, at the choice of items, in every brief given to an a
    issue's fix picks one behaviour where others are reasonable, build the choice instead, and say so in its brief.
 
 **The local coder writes all code (owner, 2026-11-03).** Every code change in this build, including tests, audit fixes
-and CI fixes, is written by the model Unsloth Studio has loaded, through OpenCode, from a work order. Claude agents
-plan, write the orders, review and audit, and never edit code themselves. Follow `.claude/skills/qwen-code/SKILL.md`.
+and CI fixes, is written by whichever model OpenCode is set to use, from a work order. Claude agents
+plan, write the orders, review and audit, and never edit code themselves. Follow `.claude/skills/local-coder/SKILL.md`.
 
 **Before saying there's nothing to build,** compare the shipped app with the owner's instructions (the roadmap's
 specs, the owner decisions in `CLAUDE.md` and recent chat requests), not only with the open issues. Any instruction
@@ -101,8 +101,8 @@ Apply these on top of every step below:
 - Work in the repository root. `git status` must be clean (local commits not yet pushed are fine); if not, stop and
   show the owner what's uncommitted.
 - `git pull --ff-only origin main`, and check `gh auth status`.
-- **Coder check** (`qwen-code`, step 1): a model is loaded in Unsloth Studio; note its context size. If none is, ask the
-  owner to load one. Never load or switch one yourself.
+- **Coder check** (`local-coder`, step 1): OpenCode has a coding model and it answers; note its context size. If not,
+  ask the owner. Never load, switch or unload a model yourself.
 - **Tracker parity check** (CLAUDE.md, "Parity rule"): list open issues and open tracker `bug`/`feature` items;
   import any issue without an item, archive duplicates (keep the `Flameingskull/FlexNotes#N` origin), set items whose
   issue closed to `shipped`/`done`, and file an issue for any tracker-only item. Run it again just before the push.
@@ -145,7 +145,7 @@ the gate and one fix round included in the size.
 
 ## 4. Implement, stage by stage: work orders, the local coder, review
 For each stage, in order, the owning agent designs its issues and writes them as **work orders**, the local coder
-writes the code, and the agent reviews it (`qwen-code`, steps 2–4). Continue the triage agents with `SendMessage` if
+writes the code, and the agent reviews it (`local-coder`, steps 2–4). Continue the triage agents with `SendMessage` if
 they're still available; a new `Agent` call starts from nothing. Give each a **precise brief**, because what you know
 already saves the agent from re-exploring:
 - the issue numbers, and the acceptance criteria that apply (a slice says which ones);
@@ -158,7 +158,7 @@ already saves the agent from re-exploring:
 The loop, per item, bug fixes first, then features:
 1. The agent writes the item's orders (`nimbalyst-local/work-orders/<version>/<issue>-<n>.md`) and returns their paths
    in the order they run. Agents can write orders in parallel; the coder runs them one at a time.
-2. You run each order with `.claude/scripts/qwen-code.ps1` in the background, and give the agent only the result
+2. You run each order with `.claude/scripts/local-coder.ps1` in the background, and give the agent only the result
    file's path and exit code. Exit 3 means no model: stop and ask the owner.
 3. The agent reviews the diff and accepts it or returns a correction order, which you run the same way (at most 2 per
    order). An item the coder can't get right is held back, never finished by Claude.
@@ -176,7 +176,7 @@ Read the full diff since the last release (`git diff origin/main`). There's no A
 compiler. Check imports, types, nullability, named arguments, `when` exhaustiveness, Compose API usage and `@OptIn`s,
 database migrations (`Db.VERSION` bump plus `onUpgrade` that keeps data, migration test, exported schema), and the
 brand theme. Check that the stages fit together: nothing duplicated, no conflicting edits.
-Get problems fixed before pushing, through correction orders to the coder (`qwen-code`, step 4), never by editing the
+Get problems fixed before pushing, through correction orders to the coder (`local-coder`, step 4), never by editing the
 code yourself. Make sure nothing adds a keystore, secret or credential.
 
 **Does it work? (CLAUDE.md rule 8, owner 2026-10-30.)** A compiling diff isn't a working function. For each item:
@@ -208,7 +208,7 @@ lines.
 ## 7. Watch the build
 - `gh run watch <id> --exit-status`. On failure, read `errors.txt` and `build-tail.log` from the `ci-logs` branch
   (`git fetch origin ci-logs; git show origin/ci-logs:errors.txt`), have the coder fix it from a fix order that quotes
-  each error (`qwen-code`, step 5), review it, then commit and push again. A fix that changes
+  each error (`local-coder`, step 5), review it, then commit and push again. A fix that changes
   behaviour gets a gate re-check first (`build-audit`, step 7), because a green push publishes straight away.
   After 3 failed attempts, or sooner if the reserve has run out, stop and report the errors to the owner. A failed
   run publishes nothing.

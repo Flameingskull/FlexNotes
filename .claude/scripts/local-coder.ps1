@@ -1,27 +1,31 @@
 <#
 .SYNOPSIS
-  Runs one work order through the local coder: OpenCode on the model Unsloth Studio has loaded.
+  Runs one work order through the coder: OpenCode, headless, on whichever model OpenCode is set to use.
 
 .DESCRIPTION
-  All FlexNotes code is written by the local model (owner, 2026-11-03). Claude writes a work order
-  (.claude/skills/qwen-code/SKILL.md), and this script runs it headlessly and reports what changed.
-  - It never loads or switches a model. If Unsloth Studio isn't running or has no model loaded, it stops (exit 3), so
-    the owner's own chats are never cut off.
+  All FlexNotes code is written by the coder (owner, 2026-11-03), and the coder is model-agnostic (owner, 2026-11-04):
+  this script knows nothing about any model or server. Claude writes a work order (.claude/skills/local-coder/SKILL.md),
+  and this runs it and reports what changed.
+  - The model, in order: -Model, $env:FLEXNOTES_CODER_MODEL, then the `model` set in OpenCode's own settings. It never
+    falls back to OpenCode's built-in default, and never loads, switches or unloads a model. No model, a model OpenCode
+    doesn't list, or one that can't be reached stops the run (exit 3), so the owner can choose.
   - Only the files listed under "## Files you may change" may change. Any other file the coder changed is put back
     exactly as it was before the run (exit 2), unless -KeepStray.
   - One order at a time: a second run while one is going stops at once.
   - Writes <order>.log (the coder's transcript) and <order>.result.md (what changed) beside the order.
 
   Exit codes: 0 ran, changed only listed files; 1 the coder failed, timed out or another run is going; 2 it changed files
-  outside the order (put back); 3 no model to run on; 4 bad order.
+  outside the order (put back); 3 no usable model (ask the owner); 4 bad order.
 
 .EXAMPLE
-  pwsh -NoProfile -File .claude/scripts/qwen-code.ps1 -Order nimbalyst-local/work-orders/1.0.200/312-1.md
+  pwsh -NoProfile -File .claude/scripts/local-coder.ps1 -Order nimbalyst-local/work-orders/1.0.200/312-1.md
+  pwsh -NoProfile -File .claude/scripts/local-coder.ps1 -Order <order> -Model provider/model -Variant high
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)] [string] $Order,
-    [ValidateSet('low', 'medium', 'high', 'xhigh')] [string] $Effort = 'medium',
+    [string] $Model = $env:FLEXNOTES_CODER_MODEL,
+    [string] $Variant,
     [int] $TimeoutMinutes = 60,
     [switch] $KeepStray
 )
@@ -31,7 +35,7 @@ $repo = (git rev-parse --show-toplevel).Trim()
 Set-Location -LiteralPath $repo
 
 function Stop-Order([int] $code, [string] $message) {
-    Write-Output "QWEN-CODE: $message"
+    Write-Output "LOCAL-CODER: $message"
     exit $code
 }
 
@@ -48,48 +52,26 @@ foreach ($line in (Get-Content -LiteralPath $orderPath)) {
 }
 if ($allowed.Count -eq 0) { Stop-Order 4 'the order has no "## Files you may change" list of `path` bullets' }
 
-# The model: whatever Unsloth Studio has loaded. Never load or switch one here.
-$unsloth = (Get-Command unsloth -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1)?.Source
-if (-not $unsloth) { $unsloth = Join-Path $HOME '.unsloth\studio\bin\unsloth.exe' }
+# The model: whatever OpenCode is set to use. Never OpenCode's built-in fallback.
 $opencode = (Get-Command opencode -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1)?.Source
 if (-not $opencode) { Stop-Order 3 'OpenCode is not installed (npm i -g opencode-ai).' }
-$base = 'http://127.0.0.1:8888'
-$cfgPath = Join-Path $HOME '.unsloth\studio\auth\agents\opencode\opencode.json'
-
-try { Invoke-RestMethod "$base/api/health" -TimeoutSec 5 | Out-Null }
-catch { if (-not $_.Exception.Response) { Stop-Order 3 'Unsloth Studio is not running. Start it and load a model, then run the order again.' } }
-
-function Get-LoadedModel {
-    $headers = @{}
-    if (Test-Path -LiteralPath $cfgPath) {
-        $key = (Get-Content -LiteralPath $cfgPath -Raw | ConvertFrom-Json).provider.'unsloth-studio'.options.apiKey
-        if ($key) { $headers.Authorization = "Bearer $key" }
-    }
-    try { $r = Invoke-RestMethod "$base/v1/models" -Headers $headers -TimeoutSec 10 }
-    catch { return 'unauthorised' }
-    $m = @($r.data | Where-Object { $_.loaded }) | Select-Object -First 1
-    if ($m) { return $m } else { return 'none' }
-}
-
-$model = Get-LoadedModel
-if ($model -is [string] -and $model -eq 'none') { Stop-Order 3 'Unsloth Studio has no model loaded. Load one in Studio, then run the order again.' }
-# Refresh OpenCode's key and reasoning effort for the loaded model. --no-serve: never start a server.
-$refresh = & $unsloth start opencode --reasoning-effort $Effort --no-serve --no-launch 2>&1 | Out-String
-if ($LASTEXITCODE -ne 0) { Stop-Order 3 "Unsloth couldn't prepare OpenCode: $($refresh.Trim())" }
-$model = Get-LoadedModel
-if ($model -is [string]) { Stop-Order 3 "Unsloth Studio has no model ready for OpenCode ($model)." }
-
-$modelRef = "unsloth-studio/$($model.id)"
-$env:OPENCODE_CONFIG = $cfgPath
-$env:OPENCODE_CONFIG_CONTENT = @{
-    model = $modelRef; small_model = $modelRef; enabled_providers = @('unsloth-studio'); disabled_providers = @()
-} | ConvertTo-Json -Compress
-$env:OPENCODE_DISABLE_CLAUDE_CODE = '1'   # AGENTS.md, not CLAUDE.md: the coder's context is small
+$env:OPENCODE_DISABLE_CLAUDE_CODE = '1'   # AGENTS.md, not CLAUDE.md: the coder's context may be small
 $env:OPENCODE_DISABLE_AUTOUPDATE = '1'
 $env:NO_COLOR = '1'
+$listed = @(& $opencode models 2>$null | ForEach-Object { "$_".Trim() } | Where-Object { $_ -match '^\S+/\S+$' })
+if (-not $Model) {
+    try { $Model = ((& $opencode debug config 2>$null | Out-String) | ConvertFrom-Json).model } catch { }
+}
+if (-not $Model) {
+    Stop-Order 3 ("no coding model chosen. Set `"model`" in OpenCode's settings, or pass -Model / FLEXNOTES_CODER_MODEL. " +
+        "OpenCode lists: $(if ($listed) { $listed -join ', ' } else { 'nothing' })")
+}
+if ($listed -notcontains $Model) {
+    Stop-Order 3 "OpenCode doesn't list the model $Model. It lists: $(if ($listed) { $listed -join ', ' } else { 'nothing' })"
+}
 
 # One order at a time.
-$lock = Join-Path $repo '.git\qwen-code.lock'
+$lock = Join-Path $repo '.git\local-coder.lock'
 if (Test-Path -LiteralPath $lock) {
     $other = Get-Content -LiteralPath $lock -ErrorAction SilentlyContinue
     if ($other -and (Get-Process -Id $other -ErrorAction SilentlyContinue)) { Stop-Order 1 "another work order is running (pid $other)." }
@@ -100,7 +82,7 @@ function Get-DirtyFiles {
     git status --porcelain=v1 -uall --no-renames | ForEach-Object { $_.Substring(3).Trim('"') }
 }
 
-$stash = Join-Path ([IO.Path]::GetTempPath()) "qwen-code-$([guid]::NewGuid())"
+$stash = Join-Path ([IO.Path]::GetTempPath()) "local-coder-$([guid]::NewGuid())"
 $exitCode = 0
 try {
     # Remember every file that's already changed, so the coder's stray edits can be put back exactly.
@@ -118,17 +100,37 @@ try {
     $dir = Split-Path $orderPath
     $log = Join-Path $dir "$name.log"
     $message = "Carry out the attached work order ($name) exactly, following AGENTS.md. Finish with the REPORT block."
+    $runArgs = @('run', "`"$message`"", '--model', $Model, '--dir', "`"$repo`"", '--title', "`"work order $name`"", '--file', "`"$orderPath`"")
+    if ($Variant) { $runArgs += @('--variant', $Variant) }
+    # OpenCode's own log shows provider errors that it otherwise retries silently.
+    $ocLog = Join-Path $HOME '.local\share\opencode\log\opencode.log'
+    $ocLogStart = if (Test-Path -LiteralPath $ocLog) { (Get-Item -LiteralPath $ocLog).Length } else { 0 }
     $started = Get-Date
-    Write-Output "QWEN-CODE: running $name on $($model.id) $($model.quant) ($($model.context_length) tokens, effort $Effort)"
-    $p = Start-Process -FilePath $opencode -NoNewWindow -PassThru `
-        -ArgumentList @('run', "`"$message`"", '--dir', "`"$repo`"", '--title', "`"work order $name`"", '--file', "`"$orderPath`"") `
+    Write-Output "LOCAL-CODER: running $name on $Model$(if ($Variant) { " ($Variant)" })"
+    $p = Start-Process -FilePath $opencode -NoNewWindow -PassThru -ArgumentList $runArgs `
         -RedirectStandardOutput $log -RedirectStandardError "$log.err"
     $null = $p.Handle   # keeps ExitCode readable after the process ends
+
     $status = 'finished'
-    if (-not $p.WaitForExit($TimeoutMinutes * 60 * 1000)) {
-        taskkill /PID $p.Id /T /F | Out-Null
-        $status = "timed out after $TimeoutMinutes min"
-    } elseif ($p.ExitCode -ne 0) { $status = "failed (exit $($p.ExitCode))" }
+    $modelError = $null
+    $deadline = $started.AddMinutes($TimeoutMinutes)
+    while (-not $p.WaitForExit(5000)) {
+        if ((Get-Date) -gt $deadline) { $status = "timed out after $TimeoutMinutes min"; break }
+        if (Test-Path -LiteralPath $ocLog) {
+            $fs = [IO.File]::Open($ocLog, 'Open', 'Read', 'ReadWrite')
+            try {
+                if ($fs.Length -gt $ocLogStart) {
+                    $fs.Seek($ocLogStart, 'Begin') | Out-Null
+                    $new = (New-Object IO.StreamReader($fs)).ReadToEnd()
+                    $errors = @([regex]::Matches($new, 'message="stream error".*?error\.error="([^"]{0,200})'))
+                    if ($errors.Count -ge 3) { $modelError = $errors[-1].Groups[1].Value; break }
+                }
+            } finally { $fs.Dispose() }
+        }
+    }
+    if (-not $p.HasExited) { taskkill /PID $p.Id /T /F | Out-Null; $p.WaitForExit(10000) | Out-Null }
+    if ($modelError) { $status = "stopped: the model can't be reached ($modelError)" }
+    elseif ($status -eq 'finished' -and $p.ExitCode -ne 0) { $status = "failed (exit $($p.ExitCode))" }
     $errText = Get-Content -LiteralPath "$log.err" -Raw -ErrorAction SilentlyContinue
     if ($errText) { Add-Content -LiteralPath $log "`n--- stderr ---`n$errText" }
     Remove-Item -LiteralPath "$log.err" -ErrorAction SilentlyContinue
@@ -168,7 +170,7 @@ try {
     $result = @(
         "# Result: $name"
         ''
-        "- Model: $($model.id) $($model.quant), $($model.context_length) tokens, effort $Effort"
+        "- Model: $Model$(if ($Variant) { " ($Variant)" })"
         "- Run: $status, $minutes min"
         "- Changed (in the order): $(if ($kept) { $kept -join ', ' } else { 'nothing' })"
         "- Outside the order: $(if ($stray) { ($stray -join ', ') + $(if ($KeepStray) { ' (kept)' } else { ' (put back)' }) } else { 'nothing' })"
@@ -189,9 +191,10 @@ try {
     $resultPath = Join-Path $dir "$name.result.md"
     Set-Content -LiteralPath $resultPath $result
     Write-Output $result
-    Write-Output "QWEN-CODE: result written to $resultPath"
+    Write-Output "LOCAL-CODER: result written to $resultPath"
 
-    if ($status -ne 'finished') { $exitCode = 1 }
+    if ($modelError) { $exitCode = 3 }
+    elseif ($status -ne 'finished') { $exitCode = 1 }
     elseif ($stray.Count -gt 0) { $exitCode = 2 }
 } finally {
     Remove-Item -LiteralPath $stash -Recurse -Force -ErrorAction SilentlyContinue
