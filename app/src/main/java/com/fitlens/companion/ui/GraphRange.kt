@@ -4,7 +4,7 @@ import com.fitlens.companion.data.Dates
 import java.time.LocalDate
 
 /** The first and last day (epoch days, both included) a graph's time axis covers (#328). */
-internal data class ChartPeriod(val from: Long, val to: Long)
+data class ChartPeriod(val from: Long, val to: Long)
 
 /** The graph range menu's last entry, All time. Entries 0 to 3 are 1, 3, 6 and 12 calendar months (`RANGES`' order). */
 internal const val RANGE_ALL = 4
