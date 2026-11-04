@@ -42,13 +42,18 @@ them. Apply them at triage, at the choice of items, in every brief given to an a
    what only some would want; the default is a starting point, not a lock. Skip choices nobody would change. When an
    issue's fix picks one behaviour where others are reasonable, build the choice instead, and say so in its brief.
 
+**The local coder writes all code (owner, 2026-11-03).** Every code change in this build, including tests, the audit
+fix and CI fixes, is written by the model Unsloth Studio has loaded, through OpenCode, from a work order. Here the main
+session writes the orders and reviews the result, and never edits code itself. Follow `.claude/skills/qwen-code/SKILL.md`.
+The coder isn't a Claude agent, so it doesn't break the no-agents rule below.
+
 **Before saying there's nothing to build,** compare the shipped app with the owner's instructions (the roadmap's
 specs, the owner decisions in `CLAUDE.md` and recent chat requests), not only with the open issues. Any instruction
 the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap.
 
 ## Budget rules (what keeps it small)
 - **No backlog agents.** Don't launch `bug-manager`, `feature-manager` or any other agent, because each one starts cold
-  and re-reads the codebase. The main session does triage, implementation and review itself. The one exception is the
+  and re-reads the codebase. The main session does triage, the work orders and review itself. The one exception is the
   audit gate's read-only `function-auditor` and `code-auditor` (step 4): someone other than the coder has to check.
 - **One item per build**: one issue, or one slice of an issue. A slice has to be a complete, working piece that users
   can see or that removes a real risk. It's never a half-built feature behind a switch.
@@ -56,6 +61,7 @@ the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap
   schema change unless the item can't work without one. If the item needs more, slice it or choose another item.
 - **Leave room when choosing.** Choose at about 4 files and 250 lines, preferring items in one or two audit areas
   (`docs/audit/areas.txt`), so the driving test and a fix round still fit the cap.
+- **Few orders.** A slice is at most about 3 work orders (each up to 3 files), plus up to 2 correction orders each.
 - **One fix round.** If the gate's fix would break the cap, or the item still fails after it, the item is held back
   (`build-audit`, step 5), not shipped.
 - **Read only what you need.** Start from `docs/CODEMAP.md` and the notes in `.claude/agent-notes/`, then `grep` for
@@ -72,6 +78,8 @@ the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap
   release, and set the plan item's `progress`; mark it `completed` only when every issue it depends on has shipped.
 - Work in the repository root. `git status` must be clean; if it isn't, stop and show the owner what's uncommitted.
 - `git pull --ff-only origin main`, and check `gh auth status`.
+- **Coder check** (`qwen-code`, step 1): a model is loaded in Unsloth Studio; note its context size. If none is, ask the
+  owner to load one. Never load or switch one yourself.
 - **Tracker parity check** (CLAUDE.md, "Parity rule"): list open issues and open tracker `bug`/`feature` items;
   import any issue without an item, archive duplicates (keep the `Flameingskull/FlexNotes#N` origin), set items whose
   issue closed to `shipped`/`done`, and file an issue for any tracker-only item. Run it again just before the push.
@@ -91,11 +99,13 @@ the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap
 - No arguments: ask the owner once, recommending the item or slice plus one or two alternatives, each with its size.
   `auto` or an issue number: don't ask.
 
-## 3. Implement
-- Set the tracker item to `in-progress`. Make the change yourself, following the code around it.
-- Keep standing rule 1: never touch `applicationId`, signing or `BUILD_OFFSET`. Any database change bumps `Db.VERSION`
-  and adds an `onUpgrade` step that keeps existing rows.
-- Use the `Brand` colours and `ui/Theme.kt`. Don't hard-code colours.
+## 3. Implement: work orders, the local coder, review
+- Set the tracker item to `in-progress`. Design the change yourself from the code around it, then write it as work
+  orders (`qwen-code`, step 2), test included. Run each in the background with `.claude/scripts/qwen-code.ps1`, review
+  its diff, and accept it or send a correction order (`qwen-code`, steps 3–4). Never edit the code yourself.
+- Put standing rule 1 in every order it applies to: never touch `applicationId`, signing or `BUILD_OFFSET`, and any
+  database change bumps `Db.VERSION` and adds an `onUpgrade` step that keeps existing rows.
+- The order names the `Brand` colours and `ui/Theme.kt` components to use. No hard-coded colours.
 - File any significant gap you find as an issue (standing rule 5), but don't fix it in this build.
 
 ## 4. Review
@@ -108,8 +118,8 @@ drives it and asserts the outcome, across the data it could meet. No test means 
 pattern and concept on other screens, and list them in the commit: fix them if they fit the size cap, or file them.
 Don't write in `docs/audit/`: the gate does that.
 
-**Audit gate:** invoke the `build-audit` skill with `slice`. Its auditors check what this slice changed, you fix any
-must-fix finding, and they re-check it, one round only. Check `python .github/scripts/audit_coverage.py --findings`.
+**Audit gate:** invoke the `build-audit` skill with `slice`. Its auditors check what this slice changed, you turn any
+must-fix finding into a fix order for the coder, and they re-check it, one round only. Check `python .github/scripts/audit_coverage.py --findings`.
 A full `/function-audit` that's due (rule 8) is never run from here: say so in the report, so the owner can run it.
 
 ## 5. Release notes, README, commit
@@ -126,7 +136,8 @@ A full `/function-audit` that's due (rule 8) is never run from here: say so in t
 
 ## 6. Watch the build
 - `gh run watch <id> --exit-status`. On failure, read `git show origin/ci-logs:errors.txt` (after
-  `git fetch origin ci-logs`), fix, commit and push again. That's two attempts at most (see Budget rules). A fix that
+  `git fetch origin ci-logs`), have the coder fix it from a fix order that quotes each error, review it, commit and
+  push again. That's two attempts at most (see Budget rules). A fix that
   changes behaviour gets a gate re-check first (`build-audit`, step 7), because a green push publishes straight away.
 - Confirm the release has its APK, source archives and `SHA256SUMS.txt`. For a full item, confirm the issue closed
   and set its tracker item to `shipped` (features) or `done` (bugs). For a slice, post the progress comment on the

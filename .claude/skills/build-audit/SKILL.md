@@ -14,13 +14,14 @@ how well. So this is the same method as `/function-audit` and `/code-audit`, on 
 build touched rather than every function in an area. It doesn't replace them: the owner's full audits still run, and a
 gate is never reported as an audit of an area.
 
-**Auditors fix nothing (owner, 2026-10-30).** They only write ledgers. The coding agent fixes, and the main session
-routes findings and files what's left.
+**Auditors fix nothing (owner, 2026-10-30).** They only write ledgers. The local coder fixes, from a fix order written
+by the item's owner (`.claude/skills/qwen-code/SKILL.md`, owner 2026-11-03), and the main session routes findings and
+files what's left.
 
 ```mermaid
 flowchart LR
   A[Main session review] --> B[Auditors check the changed functions]
-  B -->|must-fix findings| C[Coding agent fixes]
+  B -->|must-fix findings| C[Fix order to the local coder]
   C -->|re-check those rows| B
   B -->|clean| D[Release notes, commit, push]
   B -->|still failing after the fix rounds| E[Hold the item back]
@@ -81,10 +82,11 @@ Go to step 6. Otherwise start a fix round.
 
 Rounds are capped by the build type: `new` 3, `safe` 2, `slice` 1.
 
-1. **Route.** Send each must-fix finding, verbatim, to the coding agent that owns the item, with `SendMessage` so it keeps
-   its context. In `/slice-build`, the main session is the coder.
-2. **Fix.** The coder fixes it, adds a test that drives it, sweeps the same pattern elsewhere, and returns the files changed.
-   It doesn't certify its own work or edit a ledger.
+1. **Route.** Send each must-fix finding, verbatim, to the agent that owns the item, with `SendMessage` so it keeps its
+   context. In `/slice-build`, the main session owns it.
+2. **Fix.** The owner writes a fix order (`qwen-code`, step 5): the finding restated, the exact fix, a test that drives
+   it, and the same pattern swept elsewhere. The main session runs it, and the owner reviews the diff and returns the
+   files changed. Neither certifies the fix nor edits a ledger.
 3. **Re-check.** Continue the same auditor with `SendMessage`: name the rows and the files just changed, and nothing the
    coder said about them. It updates those rows and returns only what's still wrong and anything the fix broke.
 4. **Repeat** until nothing must be fixed, or the cap is reached.

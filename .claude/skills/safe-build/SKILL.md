@@ -49,6 +49,10 @@ them. Apply them at triage, at the choice of items, in every brief given to an a
    what only some would want; the default is a starting point, not a lock. Skip choices nobody would change. When an
    issue's fix picks one behaviour where others are reasonable, build the choice instead, and say so in its brief.
 
+**The local coder writes all code (owner, 2026-11-03).** Every code change in this build, including tests, audit fixes
+and CI fixes, is written by the model Unsloth Studio has loaded, through OpenCode, from a work order. Claude agents
+plan, write the orders, review and audit, and never edit code themselves. Follow `.claude/skills/qwen-code/SKILL.md`.
+
 **Before saying there's nothing to build,** compare the shipped app with the owner's instructions (the roadmap's
 specs, the owner decisions in `CLAUDE.md` and recent chat requests), not only with the open issues. Any instruction
 the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap.
@@ -63,6 +67,10 @@ Apply these on top of every step below:
   what must ship) and **stretch** (built only if the core went smoothly and budget is still healthy). Each stage is a
   complete, working piece, never a half-built feature behind a switch. A database migration or new dependency goes in
   core and is reviewed twice.
+- **The coder costs time, not usage.** Coder runs use no Claude usage but take minutes each, one at a time. What a
+  stage costs in usage is writing its orders and reviewing each result (plus any correction orders). Precise orders are
+  the saving: a vague order costs a correction round, which costs more than writing it well the first time. Keep the
+  main session out of the loop's detail: it runs orders and passes on result paths, and the managers read the diffs.
 - **Size each stage with its gate.** A stage is planned as implementation + audit gate + one fix round. The gate has a
   floor, whatever the size of the change: rehearsed on a 2-file, 22-line fix, the two auditors took 43 and 51 tool calls
   and about 1M cache-weighted tokens together (input + 0.1 x cache read + 1.25 x cache write + 5 x output), so a small
@@ -93,6 +101,8 @@ Apply these on top of every step below:
 - Work in the repository root. `git status` must be clean (local commits not yet pushed are fine); if not, stop and
   show the owner what's uncommitted.
 - `git pull --ff-only origin main`, and check `gh auth status`.
+- **Coder check** (`qwen-code`, step 1): a model is loaded in Unsloth Studio; note its context size. If none is, ask the
+  owner to load one. Never load or switch one yourself.
 - **Tracker parity check** (CLAUDE.md, "Parity rule"): list open issues and open tracker `bug`/`feature` items;
   import any issue without an item, archive duplicates (keep the `Flameingskull/FlexNotes#N` origin), set items whose
   issue closed to `shipped`/`done`, and file an issue for any tracker-only item. Run it again just before the push.
@@ -106,7 +116,7 @@ of its build stages. Triage works through it, not around it.
   phone pass), which a build can't do.
 - Launch the **bug-manager** and **feature-manager** agents at the same time. Ask each one to triage its list: label
   and prioritise open issues, flag duplicates, spam and `needs-info`, and return its prioritised table with a rough size
-  (files, lines) per item, with a
+  (files, lines, work orders) per item, with a
   **Roadmap** column naming the build stage each issue is in, or `none`. Give them the Issue map and Builds table in
   the brief so they don't have to read the plan themselves.
   Triage is label and issue work, not code work. Tell them to triage from the issues and `docs/CODEMAP.md` without
@@ -133,19 +143,29 @@ the gate and one fix round included in the size.
   than the budget allows, say which items become stretch.
 - `auto` or issue numbers: skip the question.
 
-## 4. Implement, stage by stage
-For each stage, in order, send the owning agent its issues to implement. Continue the triage agents with
-`SendMessage` if they're still available; a new `Agent` call starts from nothing. Each instruction is a **precise
-brief**, because what you know already saves the agent from re-exploring:
+## 4. Implement, stage by stage: work orders, the local coder, review
+For each stage, in order, the owning agent designs its issues and writes them as **work orders**, the local coder
+writes the code, and the agent reviews it (`qwen-code`, steps 2–4). Continue the triage agents with `SendMessage` if
+they're still available; a new `Agent` call starts from nothing. Give each a **precise brief**, because what you know
+already saves the agent from re-exploring:
 - the issue numbers, and the acceptance criteria that apply (a slice says which ones);
 - the files, functions and line ranges to change, and the ones to leave alone, from `docs/CODEMAP.md` and your own
   `grep`;
 - the pattern to copy (an existing function or screen that does the same kind of thing);
-- the constraints that matter here (migration needed or not, brand components from `ui/design/`, no new dependency).
-Run them in parallel when their changes touch different files; otherwise run bug fixes first, then features. The
-agents edit code only. They don't commit, push or close issues.
-Set each chosen item to `in-progress` in the tracker as you hand it out, and `in-review` once its changes are in the
-working tree. Collect from each agent: `Fixes #N` / `Closes #N` lines, release-note lines, files changed, and test tips.
+- the constraints that matter here (migration needed or not, brand components from `ui/design/`, no new dependency);
+- the build's version and the loaded model's context size, which sets how big an order can be.
+
+The loop, per item, bug fixes first, then features:
+1. The agent writes the item's orders (`nimbalyst-local/work-orders/<version>/<issue>-<n>.md`) and returns their paths
+   in the order they run. Agents can write orders in parallel; the coder runs them one at a time.
+2. You run each order with `.claude/scripts/qwen-code.ps1` in the background, and give the agent only the result
+   file's path and exit code. Exit 3 means no model: stop and ask the owner.
+3. The agent reviews the diff and accepts it or returns a correction order, which you run the same way (at most 2 per
+   order). An item the coder can't get right is held back, never finished by Claude.
+
+Nobody but the coder edits code, and nobody pushes or closes issues before step 6. Set each chosen item to
+`in-progress` in the tracker as you hand it out, and `in-review` once its accepted changes are in the working tree.
+Collect from each agent: `Fixes #N` / `Closes #N` lines, release-note lines, files changed, and test tips.
 
 After each stage: review its diff (step 5's checks) while it's fresh, invoke the `build-audit` skill with `safe` and the
 stage's base ref, commit it locally once it passes, and run the **checkpoint** from the budget rules before starting the
@@ -156,7 +176,8 @@ Read the full diff since the last release (`git diff origin/main`). There's no A
 compiler. Check imports, types, nullability, named arguments, `when` exhaustiveness, Compose API usage and `@OptIn`s,
 database migrations (`Db.VERSION` bump plus `onUpgrade` that keeps data, migration test, exported schema), and the
 brand theme. Check that the stages fit together: nothing duplicated, no conflicting edits.
-Fix problems before pushing. Make sure nothing adds a keystore, secret or credential.
+Get problems fixed before pushing, through correction orders to the coder (`qwen-code`, step 4), never by editing the
+code yourself. Make sure nothing adds a keystore, secret or credential.
 
 **Does it work? (CLAUDE.md rule 8, owner 2026-10-30.)** A compiling diff isn't a working function. For each item:
 - **Reach it:** name the control a person taps to get there. If it's hard to find, fix that in this build.
@@ -186,7 +207,8 @@ lines.
 
 ## 7. Watch the build
 - `gh run watch <id> --exit-status`. On failure, read `errors.txt` and `build-tail.log` from the `ci-logs` branch
-  (`git fetch origin ci-logs; git show origin/ci-logs:errors.txt`), fix, commit and push again. A fix that changes
+  (`git fetch origin ci-logs; git show origin/ci-logs:errors.txt`), have the coder fix it from a fix order that quotes
+  each error (`qwen-code`, step 5), review it, then commit and push again. A fix that changes
   behaviour gets a gate re-check first (`build-audit`, step 7), because a green push publishes straight away.
   After 3 failed attempts, or sooner if the reserve has run out, stop and report the errors to the owner. A failed
   run publishes nothing.
@@ -197,5 +219,6 @@ lines.
 
 ## 8. Report to the owner
 Give the release name and link, the issues resolved (with links), which stretch stages were built or skipped and
-why, anything deferred, what each item's proof is and what wasn't proved, the audit gate's results (`build-audit`, step
+why, anything deferred, anything held back because the coder couldn't get it right, how many coder runs and
+correction orders the build took, what each item's proof is and what wasn't proved, the audit gate's results (`build-audit`, step
 8), and what to test on the phone.
