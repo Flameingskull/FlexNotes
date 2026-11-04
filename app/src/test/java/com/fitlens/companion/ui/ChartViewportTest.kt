@@ -45,4 +45,49 @@ class ChartViewportTest {
         assertEquals(0.6f, v.yTo, eps)
         assertEquals(0.5f, v.to - v.from, eps)
     }
+
+    @Test
+    fun withoutAPeriodTheAxisIsTheDataSpan() {
+        val points = listOf(ChartPoint(100, 0.0, "2024-01-01"), ChartPoint(110, 0.0, "2024-01-02"))
+        val (xMin, xMax) = viewRange(points, ChartViewport())
+        assertEquals(100.0, xMin, 1e-9)
+        assertEquals(110.0, xMax, 1e-9)
+    }
+
+    @Test
+    fun aSingleDayWithoutAPeriodIsWidenedToTwoDays() {
+        val point = ChartPoint(5, 0.0, "2024-01-01")
+        val (xMin, xMax) = viewRange(listOf(point), ChartViewport())
+        assertEquals(4.0, xMin, 1e-9)
+        assertEquals(6.0, xMax, 1e-9)
+    }
+
+    @Test
+    fun aPeriodWiderThanTheDataSetsTheAxis() {
+        val points = listOf(ChartPoint(200, 0.0, "2024-01-01"), ChartPoint(210, 0.0, "2024-01-02"))
+        val period = ChartPeriod(100L, 300L)
+        val (xMin, xMax) = viewRange(points, ChartViewport(), period)
+        assertEquals(100.0, xMin, 1e-9)
+        assertEquals(300.0, xMax, 1e-9)
+    }
+
+    @Test
+    fun zoomIsAFractionOfThePeriod() {
+        val points = listOf(ChartPoint(40, 0.0, "2024-01-01"), ChartPoint(50, 0.0, "2024-01-02"))
+        val period = ChartPeriod(0L, 100L)
+        val (xMin, xMax) = viewRange(points, ChartViewport(from = 0.5f, to = 1f), period)
+        assertEquals(50.0, xMin, 1e-9)
+        assertEquals(100.0, xMax, 1e-9)
+    }
+
+    @Test
+    fun theTrendRangeAndThePlotRangeAreTheSame() {
+        val points = listOf(ChartPoint(100, 0.0, "2024-01-01"), ChartPoint(110, 0.0, "2024-01-02"))
+        val vp = ChartViewport()
+        val period = ChartPeriod(90L, 120L)
+        val (xMin1, xMax1) = viewRange(points, vp, period)
+        val (xMin2, xMax2) = viewRange(points, vp, period)
+        assertEquals(xMin1, xMin2, 1e-9)
+        assertEquals(xMax1, xMax2, 1e-9)
+    }
 }

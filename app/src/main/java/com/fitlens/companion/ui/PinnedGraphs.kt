@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.data.Analysis
+import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Records
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.Snapshot
@@ -220,7 +221,7 @@ private fun PinnedGraphCard(
     val formula = Records.chosen()
     val series = rememberDerived(
         "pinnedGraph", snap.trainingKey, if (pin.graph == GRAPH_RELATIVE_STRENGTH) snap.bodyKey else null, pin, formula,
-        Records.maxRepsFor(formula)
+        Records.maxRepsFor(formula), Dates.today()
     ) {
         if (totals != null) {
             val pts = totalsPoints(snap, totals.first, totals.second, pin.totalsFilter, rangeFrom(pin.range), avgDuration)
@@ -290,7 +291,8 @@ private fun PinnedGraphCard(
                     onSelect = { onOpen() },
                     unit = unit,
                     better = if (totals == null && pin.graph == GRAPH_MAX_PACE) ::lowerIsBetter else ::higherIsBetter,
-                    showKey = false
+                    showKey = false,
+                    period = if (totals == null) rangePeriod(pin.range) else null
                 )
             }
         }

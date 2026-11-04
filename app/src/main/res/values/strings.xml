@@ -764,6 +764,7 @@
     <string name="day_delete_workout">Delete this workout</string>
     <string name="day_add_photos">Add photos to this day</string>
     <string name="day_menu_analysis">Analysis</string>
+    <string name="day_menu_workouts">Workouts</string>
     <string name="day_menu_body">Body tracker</string>
     <string name="day_menu_medications">Medications</string>
     <string name="day_menu_photos">Photos</string>
@@ -1044,6 +1045,14 @@
     <string name="lib_back">Back</string>
     <string name="lib_create_workout">Create new workout</string>
     <string name="lib_edit_workout">Edit workout</string>
+    <string name="wks_title">Workouts</string>
+    <string name="wks_summary">%1$s · %2$s</string>
+    <plurals name="wks_days">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <string name="wks_empty_title">No workouts yet</string>
+    <string name="wks_empty_body">A workout is a set of exercises grouped by day, such as Push Day and Pull Day. Create one to log a whole day in a few taps.</string>
     <string name="lib_new_exercise">New exercise</string>
     <string name="lib_add_starter">Add starter library</string>
     <string name="lib_search_every">Search every exercise</string>
@@ -2800,6 +2809,9 @@
     <string name="sv_every_done">Every set done</string>
     <string name="sv_sets_done_cd">%1$d of %2$d sets done</string>
     <string name="ch_no_data">No data in this range</string>
+    <string name="ch_range_empty_title">Nothing logged in this period</string>
+    <string name="ch_range_empty_body">Last logged %1$s. Pick a longer period, or show all time.</string>
+    <string name="ch_range_show_all">Show all time</string>
     <string name="ch_right_axis">%1$s, right axis</string>
     <string name="ch_with_unit">%1$s (%2$s)</string>
     <string name="ch_series_name">"%1$s: "</string>

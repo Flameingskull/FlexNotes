@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
@@ -90,7 +91,7 @@ import com.fitlens.companion.ui.design.FitTextButton
 fun CalendarScreen(snap: Snapshot, nav: Nav) {
     val today = Dates.today()
     var selected by rememberSaveable { mutableStateOf(today) }
-    var monthStr by rememberSaveable { mutableStateOf(YearMonth.from(LocalDate.now()).toString()) }
+    var monthStr by rememberSaveable { mutableStateOf(YearMonth.from(Dates.todayDate()).toString()) }
     val month = YearMonth.parse(monthStr)
     val colors = LocalChartColors.current
     val shift by rememberUpdatedState<(Long) -> Unit>({ n -> monthStr = month.plusMonths(n).toString() })
@@ -114,7 +115,7 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
             actions = listOf(
                 TopBarAction(Icons.Filled.Home, stringResource(R.string.day_go_today)) {
                     selected = today
-                    monthStr = YearMonth.from(LocalDate.now()).toString()
+                    monthStr = YearMonth.from(Dates.todayDate()).toString()
                 },
                 TopBarAction(Icons.Filled.Search, stringResource(if (filter.active) R.string.cal_change_filter else R.string.cal_filter_days)) { filtering = true },
                 TopBarAction(Icons.Filled.List, stringResource(R.string.cal_every_day)) { nav.push(Screen.Timeline) }
@@ -178,15 +179,15 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
                                 if (dayNum in 1..days) {
                                     val date = month.atDay(dayNum).format(Dates.ISO)
                                     val dim = filter.active && date !in matches
-                                    DayCell(snap, date, dayNum, date == selected, colors.accent, colors.series, doses.containsKey(date), dim) {
-                                        // A second tap on the selected day opens it, like "Go!" in FitNotes (#9).
-                                        if (selected == date) nav.home(date) else selected = date
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                                     DayCell(snap, date, dayNum, date == selected, colors.accent, colors.series, doses.containsKey(date), dim) {
+                                         // A second tap on the selected day opens it, like "Go!" in FitNotes (#9).
+                                         if (selected == date) nav.home(date) else selected = date
+                                     }
+                                 }
+                             }
+                         }
+                     }
+                 }
             }
             Row(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                 Dot(colors.accent, 6.dp); Text(" " + stringResource(R.string.cal_legend_photo) + "    ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -302,22 +303,17 @@ private fun DayCell(
         Modifier
             .fillMaxSize()
             .clip(shape)
-            .background(
-                when {
-                    isSelected -> Brand.GoldDusk
-                    sets != null -> Brand.SurfaceHigh
-                    else -> Brand.Surface
-                }
-            )
-            .then(if (isToday) Modifier.border(2.dp, Brand.Gold, shape) else Modifier)
+            .background(if (sets != null) Brand.SurfaceHigh else Brand.Surface)
             // With a filter on, days without a matching set fade back so the matches stand out (#9).
             .alpha(if (dimmed && !isSelected) 0.3f else 1f)
             .clickable(onClick = onClick)
             .semantics(mergeDescendants = true) { contentDescription = spoken; this.selected = isSelected }
     ) {
-        if (!photos.isNullOrEmpty() && !isSelected) {
-            PhotoThumb(snap, photos.first(), Modifier.fillMaxSize(), sizePx = 200)
-            Box(Modifier.fillMaxSize().background(Brand.Black.copy(alpha = 0.45f)))
+        if (!photos.isNullOrEmpty()) {
+            Box(Modifier.fillMaxSize().testTag("cal_photo")) {
+                PhotoThumb(snap, photos.first(), Modifier.fillMaxSize(), sizePx = 200)
+                Box(Modifier.fillMaxSize().background(Brand.Black.copy(alpha = 0.45f)))
+            }
         }
         Text(
             "$dayNum",
@@ -335,6 +331,10 @@ private fun DayCell(
             if (hasDoses) Dot(Brand.Ivory, 6.dp)
             cats.forEach { Dot(categoryColour(it.colour), 6.dp) }
         }
+        // Today has a thin gold ring; the selected day a thicker, lighter outline (#329). A day that is both shows both,
+        // the ring inside the outline, so the two are never told apart by colour alone.
+        if (isToday) Box(Modifier.fillMaxSize().padding(if (isSelected) 4.dp else 0.dp).border(2.dp, Brand.Gold, shape))
+        if (isSelected) Box(Modifier.fillMaxSize().border(3.dp, Brand.GoldLight, shape))
     }
 }
 

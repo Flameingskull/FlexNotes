@@ -352,8 +352,8 @@ internal fun comparable(snap: Snapshot, exId: Long, label: String, compare: List
 
 /**
  * Graph [label] for exercise [exId] and the exercises it's compared with (#53), one series each, over range
- * [rangeIdx] of [RANGES] measured back from the latest day any of them was logged. [relative] shows each series as a
- * percentage of its first value in the range, so lifts of very different weights can be compared.
+ * [rangeIdx] of the range menu: whole calendar months back from today (`rangePeriod`, #328), or all time.
+ * [relative] shows each series as a percentage of its first value in the range, so lifts of very different weights can be compared.
  */
 internal fun comparedSeries(
     snap: Snapshot, exId: Long, label: String, compare: List<Long>, rangeIdx: Int, relative: Boolean,
@@ -361,10 +361,9 @@ internal fun comparedSeries(
 ): List<LineSeries> {
     val ids = listOf(exId) + comparable(snap, exId, label, compare)
     val all = ids.map { id -> id to exerciseGraphPoints(snap, id, label, repsFor, unitOf = exId) }
-    val days = RANGES[rangeIdx.coerceIn(RANGES.indices)].second
-    val end = all.mapNotNull { it.second.lastOrNull()?.x }.maxOrNull()
+    val period = rangePeriod(rangeIdx)
     return all.map { (id, pts) ->
-        val shown = if (days <= 0 || end == null) pts else pts.filter { it.x >= end - days }
+        val shown = inPeriod(pts, period) { it.x }
         val base = shown.firstOrNull()?.y
         val y = if (relative && base != null && base > 0) shown.map { it.copy(y = it.y / base * 100.0) } else shown
         LineSeries(snap.exercises[id]?.name ?: "Exercise", y)
@@ -419,6 +418,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
         )
     }
     var rangeIdx by rememberSaveable { mutableIntStateOf(initial?.range ?: 4) }
+    val period = rangePeriod(rangeIdx)
     var showTrend by rememberSaveable { mutableStateOf(false) }
     var fromZero by rememberSaveable { mutableStateOf(false) }
     var fullScreen by rememberSaveable { mutableStateOf(false) }
@@ -544,7 +544,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
             val bodyKey = if (isBodyRatio) snap.bodyKey else null
             val loaded = rememberDerived(
                 "exerciseGraph", snap.trainingKey, bodyKey, exId, g.label, repsFor, others, rangeIdx, isRelative,
-                formula, Records.maxRepsFor(formula)
+                formula, Records.maxRepsFor(formula), Dates.today()
             ) { comparedSeries(snap, exId, g.label, others, rangeIdx, isRelative, repsFor) }
             val series = loaded ?: listOf(LineSeries(g.label, emptyList()))
             val shown = series.first().points
@@ -618,7 +618,8 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                     trend = trend,
                     trendNote = trend?.let { res.getString(R.string.ex_trend, trendText(res, it, { v -> fmtNum(v, 1) }, trendUnit)) },
                     goal = goalLine,
-                    kind = kind
+                    kind = kind,
+                    period = period
                 )
                 ShareImages.share(ctx, res.getString(R.string.ex_share_creating), ShareImages.fileName(name, g.label)) { ShareImages.renderGraph(res, image) }
             }
@@ -629,6 +630,8 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                     Modifier.fillMaxWidth().heightIn(min = graphHeight()).padding(16.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            } else if (series.all { it.points.isEmpty() }) {
+                GraphRangeEmpty(snap.lastUsedByExercise[exId]) { rangeIdx = RANGE_ALL }
             } else {
                 FitChart(
                     series,
@@ -656,7 +659,8 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                     yFormat = yFormat,
                     gapDays = gapDays,
                     overlay = overlay,
-                    overlayUnit = overlayUnit
+                    overlayUnit = overlayUnit,
+                    period = period
                 )
             }
             ChartHint()
@@ -664,6 +668,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                 FullScreenChart(
                     "${ex?.name ?: stringResource(R.string.ex_fallback)} · ${graphName(res, g.label)}",
                     onDismiss = { fullScreen = false },
+                    resetKey = rangeIdx,
                     controls = {
                         GraphOptionChips(
                             rangeIdx, { rangeIdx = it },
@@ -701,7 +706,8 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                         yFormat = yFormat,
                         gapDays = gapDays,
                         overlay = overlay,
-                        overlayUnit = overlayUnit
+                        overlayUnit = overlayUnit,
+                        period = period
                     )
                 }
             }

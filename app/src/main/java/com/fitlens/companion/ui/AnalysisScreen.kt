@@ -283,11 +283,8 @@ internal fun totalsOf(pin: PinnedGraph): Pair<Analysis.Metric, Analysis.Period>?
     return m to p
 }
 
-/** The first day range [rangeIdx] of [RANGES] covers, counted back from today, or null for all time. */
-internal fun rangeFrom(rangeIdx: Int): String? {
-    val days = RANGES[rangeIdx.coerceIn(RANGES.indices)].second
-    return if (days > 0) LocalDate.now().minusDays(days).format(Dates.ISO) else null
-}
+/** The first day (ISO) range [rangeIdx] covers: whole calendar months back from today (#328), or null for all time. */
+internal fun rangeFrom(rangeIdx: Int): String? = rangeStartIso(rangeIdx)
 
 /** One point per period at its first day (#116), in the shown unit. It goes over the whole history: call it off the main thread. */
 internal fun totalsPoints(
@@ -318,6 +315,8 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
     val period = Analysis.Period.entries[periodIdx]
     val metric = Analysis.Metric.entries[metricIdx]
     val from = rangeFrom(rangeIdx)
+    // The last day anything matching the filter was logged, for the "nothing in this period" panel (#328).
+    val lastLogged = remember(snap.setsKey, filter) { snap.statSets.filter { filter.matches(snap, it) }.maxOfOrNull { it.date.take(10) } }
     var sel by remember(period, metric, rangeIdx, filter) { mutableStateOf<Int?>(null) }
 
     val totals = rememberDerived("analysisTotals", snap.trainingKey, metric, period, filter, from) {
@@ -404,10 +403,12 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
 
         when {
             totals == null -> AnalysisNote(stringResource(R.string.ex_working))
-            totals.all { valueOf(it) <= 0 } -> EmptyState(
-                stringResource(R.string.an_nothing_title),
-                stringResource(R.string.an_nothing_body, metric.word(res), filterLabel(res, snap, filter).lowercase())
-            )
+            totals.all { valueOf(it) <= 0 } ->
+                if (rangeIdx != RANGE_ALL && lastLogged != null) GraphRangeEmpty(lastLogged) { rangeIdx = RANGE_ALL }
+                else EmptyState(
+                    stringResource(R.string.an_nothing_title),
+                    stringResource(R.string.an_nothing_body, metric.word(res), filterLabel(res, snap, filter).lowercase())
+                )
             else -> {
                 FitChart(
                     series,
@@ -495,6 +496,7 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
             onDismiss = { fullScreen = false },
             controls = { GraphOptionChips(rangeIdx, { rangeIdx = it }, showTrend, { showTrend = !showTrend }, kind = kind, onKind = setKind) },
             valueZoom = kind != ChartKind.BAR,
+            resetKey = rangeIdx,
             footer = {
                 sel?.let { totals.getOrNull(it) }?.let { t ->
                     Text(

@@ -123,6 +123,9 @@ sealed interface Screen {
      */
     @Serializable
     data class WorkoutEditor(val id: Long) : Screen
+    /** The saved workouts (#353): each with its days and exercises, opened, duplicated or deleted. From the day log's menu. */
+    @Serializable
+    data object Workouts : Screen
     /** The Analysis hub (#90). */
     @Serializable
     data object Analysis : Screen
@@ -625,7 +628,7 @@ private class HeldView(val reads: AreaReads) {
 
 /** The composable for each [Screen]. A new destination adds a [Screen] and a line here. */
 @Composable
-private fun ScreenContent(s: Snapshot, nav: Nav, screen: Screen) {
+internal fun ScreenContent(s: Snapshot, nav: Nav, screen: Screen) {
     when (screen) {
         Screen.Timeline -> TimelineScreen(s, nav)
         Screen.Calendar -> CalendarScreen(s, nav)
@@ -637,6 +640,7 @@ private fun ScreenContent(s: Snapshot, nav: Nav, screen: Screen) {
         is Screen.Medication -> MedLockGate(nav) { MedicationScreen(s, nav, screen.name, screen.page) }
         is Screen.MedSchedule -> MedLockGate(nav) { ScheduleEditorScreen(s, nav, screen.id) }
         Screen.Analysis -> AnalysisScreen(s, nav)
+        Screen.Workouts -> WorkoutsScreen(s, nav)
         is Screen.WorkoutEditor -> WorkoutEditorScreen(s, nav, screen.id)
         Screen.Photos -> PhotosScreen(s, nav)
         is Screen.Day -> DayScreen(s, nav, screen.date)
