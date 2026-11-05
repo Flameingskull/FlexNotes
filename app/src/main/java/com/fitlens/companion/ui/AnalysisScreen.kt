@@ -466,7 +466,7 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
                 }
 
                 // Summary: the average over complete periods, and the best period.
-                val complete = totals.filter { !it.current && !it.clipped }
+                val complete = totals.filter { !it.current }
                 val avgOver = complete.ifEmpty { totals }
                 val avg = avgOver.sumOf { shown(valueOf(it)) } / avgOver.size
                 val best = totals.maxBy { valueOf(it) }

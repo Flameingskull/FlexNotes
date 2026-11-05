@@ -36,9 +36,7 @@ object Analysis {
         val days: List<String>,
         val current: Boolean,
         /** For duration: how many of [days] had a recorded start and finish. */
-        val timed: Int = 0,
-        /** True for the first period of a chosen range when the range starts inside it: only its days from the range start are counted (#328). */
-        val clipped: Boolean = false
+        val timed: Int = 0
     )
 
     /** The first day of the week (#7), set from the week-start setting each time the data snapshot loads. */
@@ -112,10 +110,9 @@ object Analysis {
         var guard = 0
         while (!start.isAfter(currentStart) && guard++ < 2000) {
             val end = periodEnd(start, period)
-            // The first period of a chosen range counts only the days from the range's start (#328).
-            val first = if (from != null && lo < from) from else lo
-            val clipped = first != lo
-            val days = byDay.keys.filter { it in first..hi }.sorted()
+            val lo = start.format(Dates.ISO)
+            val hi = end.format(Dates.ISO)
+            val days = byDay.keys.filter { it in lo..hi }.sorted()
             val daySets = days.flatMap { byDay.getValue(it) }
             var timed = 0
             val value = when (metric) {
@@ -127,7 +124,7 @@ object Analysis {
                     workoutSeconds(snap, d).also { if (it > 0) timed++ }
                 }.toDouble()
             }
-            out += PeriodTotal(start, end, value, days, start == currentStart, timed, clipped)
+            out += PeriodTotal(start, end, value, days, start == currentStart, timed)
             start = next(start, period)
         }
         return out

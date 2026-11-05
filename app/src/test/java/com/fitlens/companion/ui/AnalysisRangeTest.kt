@@ -56,35 +56,5 @@ class AnalysisRangeTest : FunctionTest() {
         assertEquals(LocalDate.of(2027, 2, 1), t.last().start)
     }
 
-    @Test
-    fun perYearOnShortRangesCountsOnlyTheRange() {
-        Dates.clockSource = f.clock
-        val days = f.snapshot().statSets.map { it.date.take(10) }.distinct()
-        for (idx in 0..1) {
-            val t = Analysis.totals(f.snapshot(), Analysis.Metric.Workouts, Analysis.Period.Year, Analysis.Filter(), rangeFrom(idx))
-            assertEquals(1, t.size)
-            assertTrue(t.first().clipped)
-            assertEquals(days.count { it >= rangeFrom(idx)!! }.toDouble(), t.first().value)
-        }
-    }
 
-    @Test
-    fun perMonthOnOneMonthCountsOnlyFromTheStartDay() {
-        Dates.clockSource = f.clock
-        val snap = f.snapshot()
-        val t = Analysis.totals(snap, Analysis.Metric.Workouts, Analysis.Period.Month, Analysis.Filter(), f.ONE_MONTH_AGO)
-        assertTrue(t.first().clipped)
-        val days = snap.statSets.map { it.date.take(10) }.distinct()
-        assertEquals(days.count { it >= f.ONE_MONTH_AGO && it < "2026-10-01" }.toDouble(), t.first().value)
-        val last = t.last()
-        assertFalse(last.clipped)
-        assertEquals(days.count { it >= "2026-10-01" }.toDouble(), last.value)
-    }
-
-    @Test
-    fun allTimeIsNeverClipped() {
-        Dates.clockSource = f.clock
-        val t = Analysis.totals(f.snapshot(), Analysis.Metric.Workouts, Analysis.Period.Month, Analysis.Filter(), null)
-        assertFalse(t.any { it.clipped })
-    }
 }
