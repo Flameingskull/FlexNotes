@@ -16,19 +16,19 @@ class BarWidthTest {
     @Test
     fun denseBarsAreAsNarrowAsTheClosestPair() {
         val w = barWidthFor(1000f, 100.0, listOf(0L, 1L, 50L, 100L), 2f, 28f)
-        assertEquals(7f, w, 0.01)
+        assertEquals(7f, w, 0.01f)
     }
 
     @Test
     fun aSingleBarTakesTheCapNotTheWholeAxis() {
         val w = barWidthFor(1000f, 30.0, listOf(5L), 2f, 28f)
-        assertEquals(28f, w, 0.01)
+        assertEquals(28f, w, 0.01f)
     }
 
     @Test
     fun barsOnTheSameDayCountOnce() {
         val w1 = barWidthFor(1000f, 100.0, listOf(10L, 10L, 60L), 2f, 28f)
         val w2 = barWidthFor(1000f, 100.0, listOf(10L, 60L), 2f, 28f)
-        assertEquals(w2, w1, 0.01)
+        assertEquals(w2, w1, 0.01f)
     }
 }

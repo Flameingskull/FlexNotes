@@ -1,9 +1,9 @@
 # Code audit: library-workouts
 
 > No full audit yet: rows from build gates only.
-> Build gate 1.0.199: 6 functions checked (WorkoutsScreen, WorkoutRow, its Duplicate, Delete and Undo actions, its strings), followed into Routines.save, copy, delete and write, TodayPlan.workout, Routines.nextDay and the library's switcher. On the working tree over 527d379, before CI run 41925517281 finished.
-> Audited 2026-11-04 against 1.0.199 (working tree on 527d379, nothing committed). Files read in full: 1 of 1 in scope; the rest of the area was not read.
-> Results: 5 Verified, 6 Read OK, 1 Defect, 0 Risk, 1 Improve, 0 Not checked.
+> Build gate 1.0.199: 6 functions checked, re-checked after fix round 1 (Routines.restore, the shared helpers) (WorkoutsScreen, WorkoutRow, its Duplicate, Delete and Undo actions, its strings), followed into Routines.save, copy, delete and write, TodayPlan.workout, Routines.nextDay and the library's switcher. On the working tree over 527d379, before CI run 41925517281 finished.
+> Audited 2026-11-04 against 1.0.199 (working tree on 527d379, nothing committed). Files read in full: 1 of 3 in scope; the rest of the area was not read.
+> Results: 6 Verified, 7 Read OK, 0 Defect, 1 Risk, 0 Improve, 0 Not checked.
 > `Verified` names a test that would fail if this broke. Those tests had not yet run when the rows were written: a green release confirms them.
 
 ## Files
@@ -11,6 +11,8 @@
 | File | Read in full |
 | --- | --- |
 | ui/WorkoutsScreen.kt | Yes |
+| data/Routines.kt | No (build gate: changed functions only) |
+| ui/WorkoutEditorScreen.kt | No (build gate: changed functions only) |
 
 ## Checks
 
@@ -23,9 +25,10 @@
 | Duplicate | Data safety | WorkoutsScreen.kt:73 | Verified | Routines.copy with new ids, one transaction. duplicateAddsACopyToTheList asserts the copy stored with its 3 days and both rows drawn | #353 |
 | Duplicate and Delete when the write fails | Failure | WorkoutsScreen.kt:74, :100 | Read OK | AppScope's handler logs, clears busy and shows the plain-words failure; no success message after a throw, since the message follows the write in the same coroutine | #353 |
 | Delete asks first | Data safety | WorkoutsScreen.kt:79, :92 | Verified | deleteAsksFirstThenRemovesTheWorkoutAndUndoBringsItBack asserts the sheet's title and that the workout is still stored before Confirm, gone after | #353 |
-| Undo after Delete really restores | Data safety | WorkoutsScreen.kt:103 | Defect | Undo is `Routines.copy(w, w.name)`: a new workout id, new day ids and the next sort_order. Trigger: log Push Day from "PPL" today (workout_origin links the date to its day id), and PPL is the library's current workout (`lastRoutineId`); delete it here, tap Undo. Result: PPL returns at the bottom of the list; the library's switcher no longer finds `lastRoutineId`, so it falls back; TodayPlan no longer links today to Push Day or to PPL (every origin holds the old ids), and Routines.nextDay finds no logged day among the new ids, so wherever PPL is offered it suggests Push Day again instead of Pull Day. Sibling: WorkoutEditorScreen.kt:398-400 does the same (already there). Fix: a Routines.restore(routine) that re-inserts the routine, its days, items and planned sets with their original ids and sort_order in one transaction, used by both. Test: delete then Undo, assert the stored workout has the original id, day ids and position, and Routines.nextDay returns the day after the logged one | #353 |
+| Undo after Delete really restores | Data safety | WorkoutsScreen.kt:111, Routines.kt:201 | Verified | Fix round 1: Undo is now `Routines.restore(w)`, which re-inserts the workout and its days under their own ids and sort_order, with notes and training blocks encoded as `save` does and exercises through `writeExercises`, in one transaction, then refreshes LIBRARY. workout_origin and `lastRoutineId` were never touched by delete, so they resolve again. A second Undo hits the IGNORE on the routine and adds nothing. RoutineRestoreTest.undoPutsAWorkoutBackWithItsOwnIdsAndPlace (deletes the middle of three: ids, order, day ids and names, and the second restore) and WorkoutsScreenTest.deleteAsksFirstThenRemovesTheWorkoutAndUndoBringsItBack (ids and day ids through the real Undo) would both fail with the old copy | #353 |
 | The workout awaiting Delete across rotation | Android lifecycle | WorkoutsScreen.kt:52 | Read OK | Kept as its id in rememberSaveable; the sheet shows only while the workout still exists, so one deleted elsewhere hides it | #353 |
-| Duplicate, Delete and Undo copied from the editor | Structure | WorkoutsScreen.kt:73-106 | Improve | The same three actions, strings and Undo are written out again here and in WorkoutEditorScreen.kt:192-200, 389-403. One shared helper (for example `WorkoutActions.duplicate/delete`) means the Undo fix above, and any later change, lands in both | #353 |
+| Duplicate, Delete and Undo shared with the editor | Structure | WorkoutsScreen.kt:103, :111; WorkoutEditorScreen.kt:193, :392 | Read OK | Fix round 1: `duplicateWorkout` and `deleteWorkoutWithUndo` are the one copy, called by both screens. The editor passes `original`, its routine as it was when opened (remember(id)); save pops the editor, so that is the stored workout | #353 |
 | Labels and long names | Project rules | WorkoutsScreen.kt:121, :125, :128 | Read OK | The row is one clickable merging name and summary; the ⋮ says "Options for <name>"; the name has no maxLines, so it wraps. Type from typography roles, colours from the theme and Brand.Hairline | #353 |
 | Strings | Project rules | strings.xml:767, :1048-1055 | Read OK | `day_menu_workouts`, `wks_title`, `wks_summary`, `wks_days` (plural), `wks_empty_title`, `wks_empty_body` in resources; the rest reuse `lib_*` and `workout_*`. No hard-coded text | #353 |
 | @OptIn(ExperimentalMaterial3Api) | Build | WorkoutsScreen.kt:47 | Read OK | Added after the first CI round with its import; file-level opt-in has no runtime effect. CI run 41925517281 decides whether it compiles | #353 |
+| Routines.restore: a day id already in use | Data safety | Routines.kt:211 | Risk | `restoreDay`'s result is ignored. If its insert is IGNOREd because that day id now belongs to another workout, `writeExercises(r, d.id, ...)` still runs: it clears that other day's exercises and planned sets and writes these in their place. The tables are AUTOINCREMENT, so ids aren't reused in normal use; the trigger is a backup restore (a different database) inside the Undo message's lifetime, then Undo, with the routine id free and a day id taken. Fix: throw (rolling back the transaction) or skip the day when `restoreDay` returns -1. Test: restore a routine whose day id exists under another workout, and assert the other day is unchanged | #353 |
