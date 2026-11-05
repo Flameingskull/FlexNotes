@@ -903,6 +903,14 @@ interface RoutineDao {
     @Insert
     fun addRoutine(row: RoutineRow): Long
 
+    /** Puts a deleted workout back under its own id (Undo, #353): -1 and no change when a workout with that id exists. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun restoreRoutine(row: RoutineRow): Long
+
+    /** Puts a deleted workout's day back under its own id (Undo, #353). */
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    fun restoreDay(row: RoutineDayRow): Long
+
     @Query("UPDATE routine SET name = :name, notes = :notes WHERE id = :id")
     fun updateRoutine(id: Long, name: String, notes: String?)
 

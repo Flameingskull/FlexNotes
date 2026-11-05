@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
@@ -82,7 +83,7 @@ import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * The calendar (#87, #9), laid out after FitNotes: a month grid (swipe or arrows for other months) with category dots,
- * a gold ring for today and the selected day filled gold dusk, the month's workout count, and the selected
+ * a thin gold ring for today and a thicker, lighter outline on the selected day (#329), the month's workout count, and the selected
  * day's workout below with Open day. Tapping the selected day again opens it too. The list view is All days.
  * The filter (#9) dims every day without a matching set and counts the matches.
  */
@@ -90,7 +91,7 @@ import com.fitlens.companion.ui.design.FitTextButton
 fun CalendarScreen(snap: Snapshot, nav: Nav) {
     val today = Dates.today()
     var selected by rememberSaveable { mutableStateOf(today) }
-    var monthStr by rememberSaveable { mutableStateOf(YearMonth.from(LocalDate.now()).toString()) }
+    var monthStr by rememberSaveable { mutableStateOf(YearMonth.from(Dates.todayDate()).toString()) }
     val month = YearMonth.parse(monthStr)
     val colors = LocalChartColors.current
     val shift by rememberUpdatedState<(Long) -> Unit>({ n -> monthStr = month.plusMonths(n).toString() })
@@ -114,7 +115,7 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
             actions = listOf(
                 TopBarAction(Icons.Filled.Home, stringResource(R.string.day_go_today)) {
                     selected = today
-                    monthStr = YearMonth.from(LocalDate.now()).toString()
+                    monthStr = YearMonth.from(Dates.todayDate()).toString()
                 },
                 TopBarAction(Icons.Filled.Search, stringResource(if (filter.active) R.string.cal_change_filter else R.string.cal_filter_days)) { filtering = true },
                 TopBarAction(Icons.Filled.List, stringResource(R.string.cal_every_day)) { nav.push(Screen.Timeline) }
@@ -175,18 +176,18 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
                         for (c in 0 until 7) {
                             val dayNum = r * 7 + c - offset + 1
                             Box(Modifier.weight(1f).aspectRatio(0.8f).padding(2.dp)) {
-                                if (dayNum in 1..days) {
-                                    val date = month.atDay(dayNum).format(Dates.ISO)
-                                    val dim = filter.active && date !in matches
-                                    DayCell(snap, date, dayNum, date == selected, colors.accent, colors.series, doses.containsKey(date), dim) {
-                                        // A second tap on the selected day opens it, like "Go!" in FitNotes (#9).
-                                        if (selected == date) nav.home(date) else selected = date
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                                 if (dayNum in 1..days) {
+                                     val date = month.atDay(dayNum).format(Dates.ISO)
+                                     val dim = filter.active && date !in matches
+                                     DayCell(snap, date, dayNum, date == selected, colors.accent, colors.series, doses.containsKey(date), dim) {
+                                         // A second tap on the selected day opens it, like "Go!" in FitNotes (#9).
+                                         if (selected == date) nav.home(date) else selected = date
+                                     }
+                                 }
+                             }
+                         }
+                     }
+                 }
             }
             Row(Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                 Dot(colors.accent, 6.dp); Text(" " + stringResource(R.string.cal_legend_photo) + "    ", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -275,68 +276,69 @@ private fun MonthCount(snap: Snapshot, month: YearMonth, modifier: Modifier) {
     )
 }
 
-@Composable
-private fun DayCell(
-    snap: Snapshot, date: String, dayNum: Int, isSelected: Boolean, photoColor: Color, measureColor: Color,
-    hasDoses: Boolean, dimmed: Boolean, onClick: () -> Unit
-) {
-    val photos = snap.photosByDate[date]
-    val hasRecords = snap.recordsByDate.containsKey(date)
-    val sets = snap.setsByDate[date]
-    val isToday = date == Dates.today()
-    val shape = FitShapes.row
-    val cats = remember(sets) {
-        sets?.map { it.exerciseId }?.distinct()?.mapNotNull { snap.categoryOf(it) }?.distinctBy { it.id }?.take(3).orEmpty()
-    }
-    val res = LocalContext.current.resources
-    val spoken = listOfNotNull(
-        Dates.long(date),
-        sets?.map { it.exerciseId }?.distinct()?.size?.let { n -> res.getQuantityString(R.plurals.cal_spoken_workout, n, n) },
-        if (!photos.isNullOrEmpty()) res.getString(R.string.cal_spoken_photo) else null,
-        if (hasRecords) res.getString(R.string.cal_spoken_measurements) else null,
-        if (hasDoses) res.getString(R.string.cal_spoken_doses) else null,
-        if (isToday) res.getString(R.string.cal_spoken_today) else null,
-        if (dimmed) res.getString(R.string.cal_spoken_dimmed) else null
-    ).joinToString(", ")
-    Box(
-        Modifier
-            .fillMaxSize()
-            .clip(shape)
-            .background(
-                when {
-                    isSelected -> Brand.GoldDusk
-                    sets != null -> Brand.SurfaceHigh
-                    else -> Brand.Surface
-                }
-            )
-            .then(if (isToday) Modifier.border(2.dp, Brand.Gold, shape) else Modifier)
-            // With a filter on, days without a matching set fade back so the matches stand out (#9).
-            .alpha(if (dimmed && !isSelected) 0.3f else 1f)
-            .clickable(onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = spoken; this.selected = isSelected }
+    @Composable
+    private fun DayCell(
+        snap: Snapshot, date: String, dayNum: Int, isSelected: Boolean, photoColor: Color, measureColor: Color,
+        hasDoses: Boolean, dimmed: Boolean, onClick: () -> Unit
     ) {
-        if (!photos.isNullOrEmpty() && !isSelected) {
-            PhotoThumb(snap, photos.first(), Modifier.fillMaxSize(), sizePx = 200)
-            Box(Modifier.fillMaxSize().background(Brand.Black.copy(alpha = 0.45f)))
+        val todayRing = MaterialTheme.colorScheme.primary
+        val selectedOutline = MaterialTheme.colorScheme.secondary
+        val photos = snap.photosByDate[date]
+        val hasRecords = snap.recordsByDate.containsKey(date)
+        val sets = snap.setsByDate[date]
+        val isToday = date == Dates.today()
+        val shape = FitShapes.row
+        val cats = remember(sets) {
+            sets?.map { it.exerciseId }?.distinct()?.mapNotNull { snap.categoryOf(it) }?.distinctBy { it.id }?.take(3).orEmpty()
         }
-        Text(
-            "$dayNum",
-            Modifier.padding(4.dp),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (sets != null) FontWeight.Bold else FontWeight.Normal,
-            color = if (isToday) Brand.GoldLight else Brand.Ivory
-        )
-        Row(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        val res = LocalContext.current.resources
+        val spoken = listOfNotNull(
+            Dates.long(date),
+            sets?.map { it.exerciseId }?.distinct()?.size?.let { n -> res.getQuantityString(R.plurals.cal_spoken_workout, n, n) },
+            if (!photos.isNullOrEmpty()) res.getString(R.string.cal_spoken_photo) else null,
+            if (hasRecords) res.getString(R.string.cal_spoken_measurements) else null,
+            if (hasDoses) res.getString(R.string.cal_spoken_doses) else null,
+            if (isToday) res.getString(R.string.cal_spoken_today) else null,
+            if (dimmed) res.getString(R.string.cal_spoken_dimmed) else null
+        ).joinToString(", ")
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clip(shape)
+                .background(if (sets != null) Brand.SurfaceHigh else Brand.Surface)
+                // With a filter on, days without a matching set fade back so the matches stand out (#9).
+                .alpha(if (dimmed && !isSelected) 0.3f else 1f)
+                .clickable(onClick = onClick)
+                .semantics(mergeDescendants = true) { contentDescription = spoken; this.selected = isSelected }
         ) {
-            if (!photos.isNullOrEmpty()) Dot(photoColor, 6.dp)
-            if (hasRecords) Dot(measureColor, 6.dp)
-            if (hasDoses) Dot(Brand.Ivory, 6.dp)
-            cats.forEach { Dot(categoryColour(it.colour), 6.dp) }
+            if (!photos.isNullOrEmpty()) {
+                Box(Modifier.fillMaxSize().testTag("cal_photo")) {
+                    PhotoThumb(snap, photos.first(), Modifier.fillMaxSize(), sizePx = 200)
+                    Box(Modifier.fillMaxSize().background(Brand.Black.copy(alpha = 0.45f)))
+                }
+            }
+            Text(
+                "$dayNum",
+                Modifier.padding(4.dp),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (sets != null) FontWeight.Bold else FontWeight.Normal,
+                color = if (isToday) Brand.GoldLight else Brand.Ivory
+            )
+            Row(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                if (!photos.isNullOrEmpty()) Dot(photoColor, 6.dp)
+                if (hasRecords) Dot(measureColor, 6.dp)
+                if (hasDoses) Dot(Brand.Ivory, 6.dp)
+                cats.forEach { Dot(categoryColour(it.colour), 6.dp) }
+            }
+            // Today has a thin gold ring; the selected day a thicker, lighter outline (#329). A day that is both shows both,
+            // the ring inside the outline, so the two are never told apart by colour alone.
+            if (isToday) Box(Modifier.fillMaxSize().padding(if (isSelected) 4.dp else 0.dp).border(2.dp, todayRing, shape))
+            if (isSelected) Box(Modifier.fillMaxSize().border(3.dp, selectedOutline, shape))
         }
     }
-}
 
 /** The selected day below the grid: its exercises, body values and photos, and Open day (#87). */
 @Composable

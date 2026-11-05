@@ -96,6 +96,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.fitlens.companion.data.Analysis
 import com.fitlens.companion.data.CHART_HINT_TIMES
+import com.fitlens.companion.data.Dates
+import com.fitlens.companion.ui.design.GoldButton
 import com.fitlens.companion.data.Settings
 import com.fitlens.companion.data.fmtNum
 import kotlin.math.abs
@@ -367,6 +369,11 @@ fun FullScreenChart(
     footer: @Composable () -> Unit = {},
     /** Lets a vertical pinch or drag zoom and move the values. Off for bar charts, which always start at zero. */
     valueZoom: Boolean = true,
+    /**
+     * Changes when the graph's range does (#328): the zoom then goes back to the whole chart, so an old zoom can't leave
+     * a longer range cut short. Turning the phone keeps the key, so it keeps the zoom.
+     */
+    resetKey: Any? = null,
     chart: @Composable (viewport: ChartViewport, height: Dp, resetZoom: () -> Unit) -> Unit
 ) {
     var from by rememberSaveable { mutableFloatStateOf(0f) }
@@ -376,6 +383,14 @@ fun FullScreenChart(
     val viewport = ChartViewport(from, to, yFrom, yTo)
     val set: (ChartViewport) -> Unit = { v -> from = v.from; to = v.to; yFrom = v.yFrom; yTo = v.yTo }
     val reset: () -> Unit = { set(ChartViewport()) }
+    // A new range starts from the whole chart (#328). The key last seen is saved, so a rotation isn't a change.
+    var seenKey by rememberSaveable { mutableStateOf(resetKey?.toString()) }
+    LaunchedEffect(resetKey) {
+        if (seenKey != resetKey?.toString()) {
+            seenKey = resetKey?.toString()
+            reset()
+        }
+    }
     val res = LocalContext.current.resources
     // Follows the phone until Rotate is tapped, which fixes landscape or portrait; kept through the turn (#269).
     var orientation by rememberSaveable { mutableIntStateOf(ActivityInfo.SCREEN_ORIENTATION_FULL_SENSOR) }
@@ -600,5 +615,28 @@ private suspend fun PointerInputScope.detectAxisTransformGestures(
                 }
             }
         } while (!canceled && event.changes.any { it.pressed })
+    }
+}
+
+/**
+ * What a graph shows when its range holds nothing but older values exist (#328): says so, names the last day logged
+ * ([lastLogged], `yyyy-MM-dd`; null when it isn't known) and offers All time through [onShowAll].
+ */
+@Composable
+fun GraphRangeEmpty(lastLogged: String?, onShowAll: () -> Unit) {
+    Column(
+        Modifier.fillMaxWidth().height(graphHeight()).padding(Spacing.lg),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(stringResource(R.string.ch_range_empty_title), style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+        Text(
+            if (lastLogged != null) stringResource(R.string.ch_range_empty_body, Dates.day(lastLogged)) else stringResource(R.string.ch_no_data),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = Spacing.sm, bottom = Spacing.md)
+        )
+        GoldButton(onClick = onShowAll) { Text(stringResource(R.string.ch_range_show_all)) }
     }
 }

@@ -373,7 +373,12 @@ fun FitChart(
     /** The small key under a single series that explains its marks. Off where the chart is only a preview (pinned cards). */
     showKey: Boolean = true,
     /** A reference range (#211), low and high (either may be null), shaded behind the series. */
-    range: Pair<Double?, Double?>? = null
+    range: Pair<Double?, Double?>? = null,
+    /**
+     * The days the time axis covers (#328): a chosen range's whole period, even where the data is shorter, so a year
+     * with four weeks of values draws as a year. Null: the data's own span, first point to last.
+     */
+    period: ChartPeriod? = null
 ) {
     var hidden by remember(series.size) { mutableStateOf(emptySet<Int>()) }
     // The overlay's legend entry follows the series, so its index is series.size.
@@ -386,7 +391,7 @@ fun FitChart(
         else -> height
     }
     // Each series' trend, fitted to exactly the points in view (#152): zoomed in, it describes that stretch.
-    val (xMin, xMax) = if (all.isEmpty()) 0.0 to 0.0 else viewRange(all, viewport)
+    val (xMin, xMax) = if (all.isEmpty()) 0.0 to 0.0 else viewRange(all, viewport, period)
     val trends = remember(series, visible, showTrend, trendSkipLast, xMin, xMax) {
         if (!showTrend) emptyMap() else visible.mapNotNull { i ->
             val pts = series[i].points.let { if (trendSkipLast) it.dropLast(1) else it }
@@ -399,7 +404,7 @@ fun FitChart(
         } else {
             LinePlot(
                 series, visible, kind, plotHeight, photoDays, goal, selected, onSelect, yFormat, unit, trends, yFromZero,
-                viewport, onExpand, gapDays, overlayShown, overlayUnit, better, range
+                viewport, onExpand, gapDays, overlayShown, overlayUnit, better, range, period
             )
         }
         if (series.size > 1 || showTrend || overlay != null) {
@@ -419,12 +424,25 @@ fun FitChart(
 }
 
 /**
- * The time range in view, in epoch days: the whole data range (widened to two days for a single day), narrowed by
- * [viewport]. The plot and the trend fit both use it, so they always cover the same points.
+ * A bar's width in pixels (#328): 70% of the room the closest two bars (of every series, [xs] are the epoch days of the points in view)
+ * take on an axis [spanDays] wide, so bars never overlap however long the period. One bar or several on the same day take
+ * the room of the whole axis. Kept between [minPx] and [maxPx].
  */
-internal fun viewRange(all: List<ChartPoint>, viewport: ChartViewport): Pair<Double, Double> {
-    val dataMin = all.minOf { it.x }
-    val dataMax = all.maxOf { it.x }
+internal fun barWidthFor(plotWidth: Float, spanDays: Double, xs: List<Long>, minPx: Float, maxPx: Float): Float {
+    val span = spanDays.coerceAtLeast(1.0)
+    val days = xs.distinct().sorted()
+    val gap = (1 until days.size).minOfOrNull { days[it] - days[it - 1] }?.toDouble() ?: span
+    return (plotWidth * (gap / span) * 0.7).toFloat().coerceIn(minPx, maxPx)
+}
+
+/**
+ * The time range in view, in epoch days: the chosen [period] when there is one, otherwise the whole data range
+ * (widened to two days for a single day), narrowed by [viewport]. The plot and the trend fit both use it, so they always
+ * cover the same points.
+ */
+internal fun viewRange(all: List<ChartPoint>, viewport: ChartViewport, period: ChartPeriod? = null): Pair<Double, Double> {
+    val dataMin = period?.from ?: all.minOf { it.x }
+    val dataMax = period?.to ?: all.maxOf { it.x }
     val fullMin = if (dataMax == dataMin) dataMin - 1 else dataMin
     val fullMax = if (dataMax == dataMin) dataMax + 1 else dataMax
     val fullSpan = (fullMax - fullMin).toDouble()
@@ -499,7 +517,8 @@ private fun LinePlot(
     overlayIn: LineSeries?,
     overlayUnit: String,
     better: (Double, Double) -> Boolean?,
-    range: Pair<Double?, Double?>?
+    range: Pair<Double?, Double?>?,
+    period: ChartPeriod?
 ) {
     val colors = LocalChartColors.current
     val textColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -511,7 +530,7 @@ private fun LinePlot(
     val labelStyle = MaterialTheme.typography.labelSmall.copy(color = textColor, letterSpacing = TextUnit.Unspecified)
 
     val all = visible.flatMap { series[it].points }
-    val (xMin, xMax) = viewRange(all, viewport)
+    val (xMin, xMax) = viewRange(all, viewport, period)
     val inView = all.filter { it.x >= xMin - 1 && it.x <= xMax + 1 }.ifEmpty { all }
     var yMin = inView.minOf { it.y }
     var yMax = inView.maxOf { it.y }
@@ -543,11 +562,11 @@ private fun LinePlot(
     val xFmt = if (xMax - xMin < 150) DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
     else DateTimeFormatter.ofPattern("MMM yy", Locale.getDefault())
 
-    // Bars (#137) need room at each end for half a column, and a width that leaves gaps between them.
-    val barSlots = if (kind != ChartKind.BAR) 0 else
-        visible.maxOfOrNull { si -> series[si].points.count { it.x >= xMin && it.x <= xMax } }?.coerceAtLeast(1) ?: 1
+    // Bars (#328) need room at each end for half a column, and a width that leaves gaps between them.
+    val barXs = if (kind != ChartKind.BAR) emptyList() else
+        visible.flatMap { si -> series[si].points }.map { it.x }.filter { it >= xMin && it <= xMax }
     fun barWidth(plotWidth: Float, maxPx: Float): Float =
-        if (kind != ChartKind.BAR) 0f else (plotWidth / barSlots * 0.7f).coerceIn(2f, maxPx)
+        if (kind != ChartKind.BAR) 0f else barWidthFor(plotWidth, xMax - xMin, barXs, 2f, maxPx)
 
     // What TalkBack reads: each series' range, low, high and latest value, then the selected point.
     val res = LocalContext.current.resources

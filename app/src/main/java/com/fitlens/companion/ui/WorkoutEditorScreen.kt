@@ -190,12 +190,7 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
                 if (days.size > 1 || days.any { it.slots.size > 1 } || (plan?.blocks?.size ?: 0) > 1) ReorderToggle(reordering) { reordering = it }
             },
             overflow = if (original.id == 0L) emptyList() else listOf(
-                MenuAction(stringResource(R.string.workout_duplicate)) {
-                    AppScope.scope.launch {
-                        Routines.copy(original, context.getString(R.string.workout_copy_name, original.name))
-                        UiEvents.show(context.getString(R.string.workout_duplicated, original.name))
-                    }
-                },
+                MenuAction(stringResource(R.string.workout_duplicate)) { duplicateWorkout(context, original) },
                 MenuAction(stringResource(R.string.workout_delete)) { confirmDelete = true }
             )
         )
@@ -394,12 +389,7 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
             onDismiss = { confirmDelete = false },
             onConfirm = {
                 nav.pop()
-                AppScope.scope.launch {
-                    Routines.delete(original.id)
-                    UiEvents.show(context.getString(R.string.workout_deleted, original.name), context.getString(R.string.workout_undo)) {
-                        AppScope.scope.launch { Routines.copy(original, original.name) }
-                    }
-                }
+                deleteWorkoutWithUndo(context, original)
             }
         )
     }

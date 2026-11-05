@@ -84,7 +84,9 @@ object ShareImages {
         val trendNote: String? = null,
         val goal: Double? = null,
         /** Drawn as the graph is on screen: line, bar, area or step (#137). */
-        val kind: ChartKind = ChartKind.LINE
+        val kind: ChartKind = ChartKind.LINE,
+        /** The days the axis covers (#328): the chosen range's whole period. Null: first point to last. */
+        val period: ChartPeriod? = null
     )
 
     fun renderGraph(res: Resources, g: GraphImage): Bitmap {
@@ -113,16 +115,15 @@ object ShareImages {
     private fun drawLine(c: Canvas, g: GraphImage, r: RectF, goalWord: String) {
         val pts = g.points
         if (pts.isEmpty()) return
-        val x0 = pts.first().x
-        val x1 = max(pts.last().x, x0 + 1)
+        val (x0, x1) = graphAxisDays(pts, g.period)
         val values = pts.map { it.y } + listOfNotNull(g.goal)
         var y0 = values.min()
         var y1 = values.max()
         if (y1 - y0 < 1e-6) { y0 -= 1; y1 += 1 }
         val pad = (y1 - y0) * 0.1
         y0 -= pad; y1 += pad
-        // Bars (#137) sit inside the frame by half a column.
-        val barW = if (g.kind == ChartKind.BAR) (r.width() / pts.size * 0.7f).coerceIn(4f, 48f) else 0f
+        // Bars (#328) sit inside the frame by half a column.
+        val barW = if (g.kind == ChartKind.BAR) barWidthFor(r.width(), (x1 - x0).toDouble(), pts.map { it.x }, 4f, 48f) else 0f
         fun px(x: Long) = r.left + barW / 2f + (x - x0).toFloat() / (x1 - x0).toFloat() * (r.width() - barW)
         fun py(v: Double) = r.bottom - ((v - y0) / (y1 - y0)).toFloat() * r.height()
 
@@ -135,8 +136,10 @@ object ShareImages {
             val s = g.format(v)
             c.drawText(s, r.left - 20f - label.measureText(s), gy + 10f, label)
         }
-        c.drawText(Dates.medium(pts.first().date), r.left, r.bottom + 50f, label)
-        val last = Dates.medium(pts.last().date)
+        // With a chosen period the ends are the period's first and last day, as on screen (#328).
+        val firstLabel = if (g.period == null) Dates.medium(pts.first().date) else Dates.medium(java.time.LocalDate.ofEpochDay(x0).format(Dates.ISO))
+        c.drawText(firstLabel, r.left, r.bottom + 50f, label)
+        val last = if (g.period == null) Dates.medium(pts.last().date) else Dates.medium(java.time.LocalDate.ofEpochDay(x1).format(Dates.ISO))
         c.drawText(last, r.right - label.measureText(last), r.bottom + 50f, label)
 
         g.goal?.let { goal ->
@@ -331,4 +334,11 @@ object ShareImages {
         if (line.isNotEmpty()) lines += line
         return lines.map { ellipsize(it, p, maxW) }
     }
+}
+
+/** The first and last epoch day of a shared graph's axis: the chosen [period], else the points' own span (at least a day wide). */
+internal fun graphAxisDays(pts: List<ChartPoint>, period: ChartPeriod?): Pair<Long, Long> {
+    val first = period?.from ?: pts.first().x
+    val last = period?.to ?: pts.last().x
+    return first to maxOf(last, first + 1)
 }

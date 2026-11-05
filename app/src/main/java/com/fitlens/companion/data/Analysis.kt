@@ -102,7 +102,7 @@ object Analysis {
         val sets = snap.statSets.filter { filter.matches(snap, it) }
         if (sets.isEmpty()) return emptyList()
         val byDay = sets.groupBy { it.date.take(10) }
-        val today = LocalDate.now()
+        val today = Dates.todayDate()
         val firstDay = Dates.parse(from) ?: Dates.parse(byDay.keys.min()) ?: return emptyList()
         val currentStart = periodStart(today, period)
         var start = periodStart(firstDay, period)

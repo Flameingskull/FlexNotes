@@ -37,6 +37,9 @@ import kotlin.math.roundToInt
 /** Neither direction of a ratio is better on its own: points stay plain. */
 private val noBetter: (Double, Double) -> Boolean? = { _, _ -> null }
 
+/** How many weeks the weekly effort graph covers: from the range start to today, at least four, with no upper limit (#328). */
+internal fun weekCountFor(todayDay: Long, from: Long): Int = ((todayDay - from + 7) / 7).toInt().coerceAtLeast(4)
+
 /**
  * One graph of the Readiness tab: chart type and full screen in a row over it, the picked point's day and value under
  * it. [graphId] remembers the chart type; [goal] draws a line at a threshold.
@@ -53,7 +56,9 @@ private fun ReadinessGraph(
     /** A shaded reference range with a line at each end (#242: the good band of the load ratio). */
     range: Pair<Double?, Double?>? = null,
     /** The screen's main graph: turning the phone opens it full screen (#269). */
-    turnOpens: Boolean = false
+    turnOpens: Boolean = false,
+    /** The graph's time axis period (#328). */
+    period: ChartPeriod? = null
 ) {
     val res = LocalContext.current.resources
     val (kind, setKind) = rememberChartKind(graphId)
@@ -66,19 +71,20 @@ private fun ReadinessGraph(
         Spacer(Modifier.weight(1f))
         ExpandGraphButton { fullScreen = true }
     }
-    FitChart(
-        series,
-        Modifier.padding(horizontal = 8.dp),
-        kind = kind,
-        goal = goal,
-        range = range,
-        selected = sel?.let { ChartSelection(0, it) },
-        onSelect = { sel = it.index; ChartHints.tapped() },
-        yFormat = format,
-        yFromZero = fromZero,
-        better = better,
-        onExpand = { ChartHints.expanded(); fullScreen = true }
-    )
+        FitChart(
+            series,
+            Modifier.padding(horizontal = 8.dp),
+            kind = kind,
+            goal = goal,
+            range = range,
+            selected = sel?.let { ChartSelection(0, it) },
+            onSelect = { sel = it.index; ChartHints.tapped() },
+            yFormat = format,
+            yFromZero = fromZero,
+            better = better,
+            onExpand = { ChartHints.expanded(); fullScreen = true },
+            period = period
+        )
     sel?.let { points.getOrNull(it) }?.let { p -> AnalysisNote(res.getString(R.string.an_label_value, Dates.long(p.date), format(p.y))) }
     if (fullScreen) {
         FullScreenChart(
@@ -107,7 +113,8 @@ private fun ReadinessGraph(
                 yFromZero = fromZero,
                 better = better,
                 viewport = vp,
-                onExpand = resetZoom
+                onExpand = resetZoom,
+                period = period
             )
         }
     }
@@ -118,7 +125,7 @@ private fun ReadinessGraph(
  * are in different units, so each is drawn as a share of its own best week; picking a week lists its real figures.
  */
 @Composable
-private fun InternalExternalGraph(snap: Snapshot, weeks: List<TrainingLoad.Week>) {
+private fun InternalExternalGraph(snap: Snapshot, weeks: List<TrainingLoad.Week>, period: ChartPeriod?) {
     val res = LocalContext.current.resources
     var sel by remember(weeks) { mutableStateOf<ChartSelection?>(null) }
     val volumeOf: (TrainingLoad.Week) -> Double = { snap.weight(it.volumeKg, null) }
@@ -140,7 +147,8 @@ private fun InternalExternalGraph(snap: Snapshot, weeks: List<TrainingLoad.Week>
         onSelect = { sel = it; ChartHints.tapped() },
         yFormat = { fmtNum(it, 0) + "%" },
         yFromZero = true,
-        better = noBetter
+        better = noBetter,
+        period = period
     )
     val picked = sel?.let { weeks.getOrNull(it.index) }
     AnalysisNote(
@@ -163,17 +171,17 @@ internal fun ReadinessTab(snap: Snapshot) {
     var rangeIdx by rememberSaveable { mutableIntStateOf(1) }
     var measureIdx by rememberSaveable { mutableIntStateOf(0) }
     var checkIn by rememberSaveable { mutableStateOf<String?>(null) }
-    val today = LocalDate.now()
+    val today = Dates.todayDate()
     val todayDay = today.toEpochDay()
     val todayIso = today.format(Dates.ISO)
     val history = rememberReadinessHistory(snap)
     val measure = TrainingLoad.Measure.entries[measureIdx]
     val isSession = remember(snap.libraryKey) { TrainingLoad.sessionTest(snap) }
     val loadByDay = remember(snap.setsKey, snap.libraryKey, measure) { TrainingLoad.daily(snap.statSets, measure, isSession) }
-    // "All" starts at the first thing logged.
-    val range = RANGES[rangeIdx].second
-    val from = if (range > 0) todayDay - range + 1
-    else listOfNotNull(history.firstOrNull()?.day, loadByDay.keys.minOrNull()).minOrNull() ?: todayDay
+    // Whole calendar months back from today (#328); "All" starts at the first thing logged.
+    val earliest = listOfNotNull(history.firstOrNull()?.day, loadByDay.keys.minOrNull()).minOrNull() ?: todayDay
+    val period = rangePeriod(rangeIdx, today)
+    val from = rangeStartDay(rangeIdx, earliest, today)
     val load = remember(loadByDay, from, todayDay) { TrainingLoad.series(loadByDay, from, todayDay) }
     val unit = when (measure) {
         TrainingLoad.Measure.VOLUME -> snap.weightUnit
@@ -203,10 +211,13 @@ internal fun ReadinessTab(snap: Snapshot) {
             Text(stringResource(if (todayScore?.part(Readiness.Source.CHECK_IN) != null) R.string.rd_edit_check_in else R.string.rd_check_in_now))
         }
         val scorePoints = history.filter { it.day >= from }.map { ChartPoint(it.day, it.score.toDouble(), LocalDate.ofEpochDay(it.day).format(Dates.ISO)) }
-        if (scorePoints.isEmpty()) {
+        val lastBefore = history.lastOrNull { it.day < from }?.day
+        if (scorePoints.isEmpty() && rangeIdx != RANGE_ALL && lastBefore != null) {
+            GraphRangeEmpty(LocalDate.ofEpochDay(lastBefore).format(Dates.ISO)) { rangeIdx = RANGE_ALL }
+        } else if (scorePoints.isEmpty()) {
             AnalysisNote(stringResource(R.string.rd_empty))
         } else {
-            ReadinessGraph(stringResource(R.string.rd_title), "analysis:readiness", scorePoints, { fmtNum(it, 0) }, turnOpens = true)
+            ReadinessGraph(stringResource(R.string.rd_title), "analysis:readiness", scorePoints, { fmtNum(it, 0) }, turnOpens = true, period = period)
             val avg = scorePoints.map { it.y }.average()
             AnalysisNote(res.getQuantityString(R.plurals.rd_range_average, scorePoints.size, avg.roundToInt(), scorePoints.size))
         }
@@ -252,7 +263,7 @@ internal fun ReadinessTab(snap: Snapshot) {
             val ratioPoints = load.mapNotNull { d -> d.ratio?.let { ChartPoint(d.day, it, LocalDate.ofEpochDay(d.day).format(Dates.ISO)) } }
             if (ratioPoints.isNotEmpty()) {
                 ReadinessGraph(stringResource(R.string.load_ratio), "analysis:load_ratio", ratioPoints, { fmtNum(it, 2) }, goal = TrainingLoad.SPIKE, better = noBetter,
-                    range = TrainingLoad.LOW to TrainingLoad.GOOD_MAX)
+                    range = TrainingLoad.LOW to TrainingLoad.GOOD_MAX, period = period)
                 AnalysisNote(stringResource(R.string.load_bands, fmtNum(TrainingLoad.LOW, 1), fmtNum(TrainingLoad.GOOD_MAX, 1), fmtNum(TrainingLoad.SPIKE, 1)))
                 val spikes = load.filter { it.spike }
                 AnalysisNote(
@@ -273,16 +284,16 @@ internal fun ReadinessTab(snap: Snapshot) {
             }
             val monotonyPoints = load.mapNotNull { d -> d.monotony?.let { ChartPoint(d.day, it, LocalDate.ofEpochDay(d.day).format(Dates.ISO)) } }
             if (monotonyPoints.isNotEmpty()) {
-                ReadinessGraph(stringResource(R.string.load_monotony), "analysis:monotony", monotonyPoints, { fmtNum(it, 2) }, goal = TrainingLoad.HIGH_MONOTONY, better = noBetter)
+                ReadinessGraph(stringResource(R.string.load_monotony), "analysis:monotony", monotonyPoints, { fmtNum(it, 2) }, goal = TrainingLoad.HIGH_MONOTONY, better = noBetter, period = period)
             }
             AnalysisNote(stringResource(R.string.load_note, TrainingLoad.ACUTE_DAYS, TrainingLoad.CHRONIC_DAYS))
         }
         // Internal against external load (#242), once any session has a load or hard minutes in the range.
-        val weekCount = (if (range > 0) range / 7 else (todayDay - from + 7) / 7).toInt().coerceIn(4, 52)
+        val weekCount = weekCountFor(todayDay, from)
         val weeks = remember(snap.setsKey, snap.libraryKey, weekCount, todayDay) { TrainingLoad.weekly(snap, todayDay, weekCount) }
         if (weeks.any { it.sessionLoad > 0 || it.hardMinutes > 0 }) {
             SectionLabel(stringResource(R.string.load_ie_title), Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-            InternalExternalGraph(snap, weeks)
+            InternalExternalGraph(snap, weeks, period)
         }
         Spacer(Modifier.padding(bottom = Spacing.xl))
     }

@@ -86,12 +86,7 @@ import com.fitlens.companion.ui.design.FitTextButton
 
 val RANGES = listOf("1M" to 30L, "3M" to 91L, "6M" to 182L, "1Y" to 365L, "All" to 0L)
 
-/** Points for a date range; range 0 = all. The range is anchored on the latest data point. */
-fun <T> inRange(items: List<T>, range: Long, dateOf: (T) -> String): List<T> {
-    if (range <= 0 || items.isEmpty()) return items
-    val end = Dates.epochDay(dateOf(items.last()))
-    return items.filter { Dates.epochDay(dateOf(it)) >= end - range }
-}
+
 
 /**
  * The Body Tracker, laid out as FitNotes's (its screenshots of 2026-09-23, #144): one screen with TRACK, HISTORY and
@@ -455,7 +450,9 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
     var fullScreen by rememberSaveable { mutableStateOf(false) }
     TurnOpensGraph(fullScreen) { fullScreen = it }
     val all = remember(snap.bodyKey, selectedName) { snap.dailySeries(selectedName) }
-    val shown = remember(all, rangeIdx) { inRange(all, RANGES[rangeIdx].second) { it.date } }
+    // Every range ends today and counts back whole calendar months; the axis shows the whole period (#328).
+    val period = rangePeriod(rangeIdx)
+    val shown = remember(all, period) { inPeriod(all, period) { Dates.epochDay(it.date) } }
     // A medication's graph can overlay one symptom's ratings on a 0–10 axis at the right (#207); 0 is none.
     val symptoms = if (snap.showsMedications) snap.medPlan.symptoms else emptyList()
     // A body graph can overlay a medication's daily doses instead (#208), while Medications aren't locked (#214).
@@ -466,9 +463,9 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
     val overlaid = symptoms.getOrNull(symptomIdx - 1)
     val medName = medNames.getOrNull(symptomIdx - 1 - symptoms.size)
     val overlaidMed = remember(snap.bodyKey, medName, hideMeds) { medName?.let { overlaySource(snap, it, hideMeds) } }
-    val symptomOverlay = remember(snap.bodyKey, overlaid, overlaidMed, shown) {
-        val from = shown.firstOrNull()?.date?.take(10)
-        val to = shown.lastOrNull()?.date?.take(10)
+    val symptomOverlay = remember(snap.bodyKey, overlaid, overlaidMed, shown, period) {
+        val from = period?.let { java.time.LocalDate.ofEpochDay(it.from).format(Dates.ISO) } ?: shown.firstOrNull()?.date?.take(10)
+        val to = period?.let { java.time.LocalDate.ofEpochDay(it.to).format(Dates.ISO) } ?: shown.lastOrNull()?.date?.take(10)
         when {
             from == null || to == null -> null
             overlaid != null -> LineSeries(
@@ -519,7 +516,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
             val better: (Double, Double) -> Boolean? = { from, to ->
                 def?.let { MeasurementGoals.isImprovement(it.goalType, it.goalValue, from, to) } ?: higherIsBetter(from, to)
             }
-            FitChart(
+            if (shown.isEmpty()) GraphRangeEmpty(all.lastOrNull()?.date?.take(10)) { rangeIdx = RANGE_ALL } else FitChart(
                 listOf(LineSeries(selectedName, points)),
                 Modifier.padding(horizontal = 8.dp),
                 kind = kind,
@@ -534,13 +531,15 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                 yFromZero = fromZero,
                 onExpand = { ChartHints.expanded(); fullScreen = true },
                 overlay = symptomOverlay,
-                overlayUnit = overlayUnit
+                overlayUnit = overlayUnit,
+                period = period
             )
             ChartHint()
             if (fullScreen) {
                 FullScreenChart(
                     selectedName,
                     onDismiss = { fullScreen = false },
+                    resetKey = rangeIdx,
                     controls = {
                         GraphOptionChips(
                             rangeIdx, { rangeIdx = it },
@@ -560,7 +559,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                         }
                     }
                 ) { vp, h, resetZoom ->
-                    FitChart(
+                    if (shown.isEmpty()) GraphRangeEmpty(all.lastOrNull()?.date?.take(10)) { rangeIdx = RANGE_ALL } else FitChart(
                         listOf(LineSeries(selectedName, points)),
                         kind = kind,
                         better = better,
@@ -576,7 +575,8 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                         viewport = vp,
                         onExpand = resetZoom,
                         overlay = symptomOverlay,
-                        overlayUnit = overlayUnit
+                        overlayUnit = overlayUnit,
+                        period = period
                     )
                 }
             }
