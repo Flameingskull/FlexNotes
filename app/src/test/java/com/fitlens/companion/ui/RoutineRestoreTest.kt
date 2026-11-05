@@ -40,4 +40,22 @@ class RoutineRestoreTest : FunctionTest() {
         runBlocking { Routines.restore(middle) }
         assertEquals(before.map { it.id }, stored().routines.map { it.id })
     }
+
+    @Test
+    fun undoLeavesADayNowOwnedByAnotherWorkoutAlone() {
+        runBlocking {
+            Routines.save(Routine(0L, "Push Pull Legs", days = listOf(RoutineDay(0L, "Push Day"), RoutineDay(0L, "Pull Day"))))
+            Routines.save(Routine(0L, "Upper Lower", days = listOf(RoutineDay(0L, "Upper"))))
+        }
+        val ppl = stored().routines.first { it.name == "Push Pull Legs" }
+        val other = stored().routines.first { it.name == "Upper Lower" }
+        val otherDay = other.days.first()
+        runBlocking { Routines.delete(ppl.id) }
+        val clash = ppl.copy(days = listOf(ppl.days.first().copy(id = otherDay.id)) + ppl.days.drop(1))
+        runBlocking { Routines.restore(clash) }
+        val after = stored()
+        assertEquals(listOf("Upper"), after.routinesById[other.id]!!.days.map { it.name })
+        assertEquals(listOf(otherDay.id), after.routinesById[other.id]!!.days.map { it.id })
+        assertEquals(listOf(ppl.days[1].id), after.routinesById[ppl.id]!!.days.map { it.id })
+    }
 }

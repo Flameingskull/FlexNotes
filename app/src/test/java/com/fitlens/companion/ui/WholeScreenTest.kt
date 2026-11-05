@@ -467,7 +467,11 @@ abstract class WholeScreenChecks(private val width: Int) {
             // ...and "FlexNotes" while the rest countdown shows beside it.
             Regex("""^(Day log, rest timer running|Rest timer sheet)[^\[]*\[[^\]]*\]: "FlexNotes" is cut short with an ellipsis""") to 325,
             // #326: History set rows are 34 to 36dp tall.
-            Regex("""^(Set entry, History|Exercise History, long name|Exercise overview, History)[^\[]*\[[^\]]*\]: "Set \d+, .*" has a \d+ × 3[4-6]dp touch target""") to 326
+            Regex("""^(Set entry, History|Exercise History, long name|Exercise overview, History)[^\[]*\[[^\]]*\]: "Set \d+, .*" has a \d+ × 3[4-6]dp touch target""") to 326,
+            // #365: at 200% font the calendar's weekday headers and its legend break words, and the selected day's
+            // comment is cut short.
+            Regex("""^Calendar[^\[]*\[[^\]]*\]: "(MON|TUE|WED|THU|FRI|SAT|SUN|Other dots: categories)" breaks a word across lines""") to 365,
+            Regex("""^Calendar[^\[]*\[[^\]]*\]: "“.*”" is cut short with an ellipsis""") to 365
         )
     }
 }

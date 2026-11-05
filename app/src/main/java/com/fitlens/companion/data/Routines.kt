@@ -209,7 +209,8 @@ object Routines {
         if (added == -1L) return@write
         val known = r.exerciseIds().toHashSet()
         routine.days.forEachIndexed { i, d ->
-            r.restoreDay(RoutineDayRow(d.id, routine.id, dayName(d.name, i), 0L, i))
+            // A day id already used by another workout is left alone, never overwritten (#353).
+            if (r.restoreDay(RoutineDayRow(d.id, routine.id, dayName(d.name, i), 0L, i)) == -1L) return@forEachIndexed
             writeExercises(r, d.id, d.exercises, known)
         }
     }

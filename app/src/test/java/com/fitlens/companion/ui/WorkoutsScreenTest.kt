@@ -9,6 +9,8 @@ import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.ui.FunctionTest
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -101,7 +103,7 @@ class WorkoutsScreenTest : FunctionTest() {
         val before = stored().routines
         val undo = app.getString(R.string.workout_undo)
         val messages = CopyOnWriteArrayList<UiMessage>()
-        val collector = AppScope.scope.launch { UiEvents.messages.collect { messages.add(it) } }
+        val collector = CoroutineScope(Dispatchers.Unconfined).launch { UiEvents.messages.collect { messages.add(it) } }
         try {
             compose.waitUntil(5_000) { UiEvents.messages.subscriptionCount.value > 0 }
             tap(app.getString(R.string.cmn_options_for, ppl))
