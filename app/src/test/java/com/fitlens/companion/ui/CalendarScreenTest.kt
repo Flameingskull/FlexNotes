@@ -1,12 +1,13 @@
 package com.fitlens.companion.ui
 
 import android.app.Application
-import androidx.compose.ui.test.assertContentDescriptionContains
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performClick
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
@@ -39,15 +40,15 @@ class CalendarScreenTest : FunctionTest() {
         // It opens on the clock's month, with today selected: today has a photo, and so does the 20th.
         assertShows(Dates.monthYear(LocalDate.parse(today)))
         compose.onNode(cell(today)).assertIsSelected()
-        compose.onNode(cell(today)).assertContentDescriptionContains(app.getString(R.string.cal_spoken_today), ignoreCase = true)
-        compose.onNode(cell(today)).assertContentDescriptionContains(app.getString(R.string.cal_spoken_photo), ignoreCase = true)
+        compose.onNode(cell(today)).assert(hasContentDescription(app.getString(R.string.cal_spoken_today), substring = true, ignoreCase = true))
+        compose.onNode(cell(today)).assert(hasContentDescription(app.getString(R.string.cal_spoken_photo), substring = true, ignoreCase = true))
         assertEquals("both photo days show their photo while one is selected", 2, thumbnails())
 
         // Selecting another photo day keeps both photos, and only that day is selected.
         compose.onNode(cell(photoDay)).performClick()
         compose.waitForIdle()
         compose.onNode(cell(photoDay)).assertIsSelected()
-        compose.onNode(cell(photoDay)).assertContentDescriptionContains(app.getString(R.string.cal_spoken_photo), ignoreCase = true)
+        compose.onNode(cell(photoDay)).assert(hasContentDescription(app.getString(R.string.cal_spoken_photo), substring = true, ignoreCase = true))
         compose.onNode(cell(today)).assertIsNotSelected()
         assertEquals(2, thumbnails())
 

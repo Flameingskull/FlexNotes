@@ -4,6 +4,7 @@ import android.app.Application
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -41,5 +42,22 @@ class ReadinessRangeTest : FunctionTest() {
             ChartPeriod(LocalDate.parse(LongHistoryFixture.ONE_YEAR_AGO).toEpochDay(), LocalDate.parse(LongHistoryFixture.END).toEpochDay()),
             rangePeriod(3)
         )
+    }
+
+    @Test
+    fun theWeeklyGraphReachesBackToTheFirstLoggedWeekOnAllTime() {
+        val f = LongHistoryFixture
+        val today = java.time.LocalDate.parse(f.END).toEpochDay()
+        val first = java.time.LocalDate.parse(f.START).toEpochDay()
+        assertEquals(((today - first + 7) / 7).toInt(), weekCountFor(today, first))
+        assertTrue(weekCountFor(today, first) > 150)
+    }
+
+    @Test
+    fun shortRangesStillCoverAtLeastFourWeeks() {
+        val f = LongHistoryFixture
+        val today = java.time.LocalDate.parse(f.END).toEpochDay()
+        assertTrue(weekCountFor(today, rangeStartDay(0, 0L, java.time.LocalDate.parse(f.END))) in 4..6)
+        assertEquals(4, weekCountFor(today, today))
     }
 }

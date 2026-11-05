@@ -559,7 +559,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                         }
                     }
                 ) { vp, h, resetZoom ->
-                    FitChart(
+                    if (shown.isEmpty()) GraphRangeEmpty(all.lastOrNull()?.date?.take(10)) { rangeIdx = RANGE_ALL } else FitChart(
                         listOf(LineSeries(selectedName, points)),
                         kind = kind,
                         better = better,

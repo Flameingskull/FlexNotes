@@ -2,8 +2,9 @@
 
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.198: 11 functions checked, re-checked after fix rounds 1 and 2.
-> Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 0 of 1 in scope; the rest of the area was not read.
-> Results: 8 Verified, 0 Read OK, 0 Defect, 1 Risk, 0 Improve, 2 Not checked.
+> Build gate 1.0.199: 1 function checked (the day log's ⋮ menu, its new Workouts entry), on the working tree over 527d379, before CI run 41925517281 finished.
+> Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 0 of 2 in scope; the rest of the area was not read.
+> Results: 9 Verified, 0 Read OK, 0 Defect, 1 Risk, 0 Improve, 2 Not checked.
 > `Verified` names a test that would fail if this broke. CI run 41336801625 ran this code: every reminder, alarm and rest test passed.
 
 ## Files
@@ -11,6 +12,7 @@
 | File | Read in full |
 | --- | --- |
 | ui/RestTimer.kt | No (build gate: changed functions only) |
+| ui/DayScreen.kt | No (build gate: changed functions only) |
 
 ## Checks
 
@@ -27,3 +29,4 @@
 | An alarm clock for every rest: system side effects | Lifecycle | RestTimer.kt:125 | Risk | Each rest becomes the phone's "next alarm": the alarm icon and lock-screen time change on every set, and phones whose bedtime or Do Not Disturb schedule ends at the next alarm will read it. Named as the price in ExactAlarms' KDoc; the bedtime effect needs checking on a phone | #346 |
 | Alert on time with the screen off | Lifecycle | RestTimer.kt:228 | Not checked | Needs a device; the tests prove the alarm is set, not Android's delivery | #342 |
 | Sound after a cold start | Lifecycle | RestTimer.kt:236 | Not checked | A process the alarm started has no component left once the receiver finishes, so Android may kill it mid-sound. Needs a device | #342 |
+| DayScreen ⋮ menu: Workouts entry | Logic | DayScreen.kt:203 | Verified | One MenuAction pushing Screen.Workouts, label from `day_menu_workouts`. WorkoutsScreenTest.theMenuOpensTheWorkoutsListAndCreateOpensTheEditor opens the real day log, taps More options then Workouts, and asserts nav.top and the list. The re-recorded day-menu goldens are in the tests ledger | #353 |

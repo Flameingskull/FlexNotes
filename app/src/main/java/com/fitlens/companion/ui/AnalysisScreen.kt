@@ -315,8 +315,11 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
     val period = Analysis.Period.entries[periodIdx]
     val metric = Analysis.Metric.entries[metricIdx]
     val from = rangeFrom(rangeIdx)
-    // The last day anything matching the filter was logged, for the "nothing in this period" panel (#328).
-    val lastLogged = remember(snap.setsKey, filter) { snap.statSets.filter { filter.matches(snap, it) }.maxOfOrNull { it.date.take(10) } }
+    // The latest day anything matching the filter was logged, and whether any matching set is on or after the range start (#328); off the main thread.
+    val logged = rememberDerived("analysisLogged", snap.trainingKey, filter, from) {
+        val days = snap.statSets.filter { filter.matches(snap, it) }.map { it.date.take(10) }
+        (days.maxOrNull() ?: "") to days.any { from == null || it >= from }
+    }
     var sel by remember(period, metric, rangeIdx, filter) { mutableStateOf<Int?>(null) }
 
     val totals = rememberDerived("analysisTotals", snap.trainingKey, metric, period, filter, from) {
@@ -404,7 +407,7 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
         when {
             totals == null -> AnalysisNote(stringResource(R.string.ex_working))
             totals.all { valueOf(it) <= 0 } ->
-                if (rangeIdx != RANGE_ALL && lastLogged != null) GraphRangeEmpty(lastLogged) { rangeIdx = RANGE_ALL }
+                if (rangeIdx != RANGE_ALL && logged != null && logged.first.isNotEmpty() && !logged.second) GraphRangeEmpty(logged.first) { rangeIdx = RANGE_ALL }
                 else EmptyState(
                     stringResource(R.string.an_nothing_title),
                     stringResource(R.string.an_nothing_body, metric.word(res), filterLabel(res, snap, filter).lowercase())
@@ -463,7 +466,7 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
                 }
 
                 // Summary: the average over complete periods, and the best period.
-                val complete = totals.filter { !it.current }
+                val complete = totals.filter { !it.current && !it.clipped }
                 val avgOver = complete.ifEmpty { totals }
                 val avg = avgOver.sumOf { shown(valueOf(it)) } / avgOver.size
                 val best = totals.maxBy { valueOf(it) }
@@ -481,7 +484,7 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
                         val all = totals.sumOf { it.days.size }
                         val timed = totals.sumOf { it.timed }
                         AnalysisNote(stringResource(R.string.an_timed_only, timed, all))
-                        DurationPerWorkout(snap, nav, filter, from)
+                        DurationPerWorkout(snap, nav, filter, from, rangePeriod(rangeIdx)) { rangeIdx = RANGE_ALL }
                     }
                     else -> {}
                 }
@@ -535,22 +538,25 @@ private fun WorkoutsTab(snap: Snapshot, nav: Nav, filter: Analysis.Filter, opene
  * per-workout graph FitNotes has, with the usual trend, full screen and tap for details.
  */
 @Composable
-private fun DurationPerWorkout(snap: Snapshot, nav: Nav, filter: Analysis.Filter, from: String?) {
+private fun DurationPerWorkout(snap: Snapshot, nav: Nav, filter: Analysis.Filter, from: String?, period: ChartPeriod?, onShowAll: () -> Unit) {
     val res = LocalContext.current.resources
     val min = stringResource(R.string.an_unit_min)
     var showTrend by rememberSaveable { mutableStateOf(false) }
     var fromZero by rememberSaveable { mutableStateOf(false) }
     var fullScreen by rememberSaveable { mutableStateOf(false) }
     var sel by remember(filter, from) { mutableStateOf<Int?>(null) }
-    val points = rememberDerived("durationPerWorkout", snap.trainingKey, filter, from) {
-        snap.setsByDate.entries
-            .filter { (d, sets) -> (from == null || d >= from) && sets.any { filter.matches(snap, it) } }
+    val timed = rememberDerived("durationPerWorkout", snap.trainingKey, filter, from) {
+        val every = snap.setsByDate.entries
+            .filter { (_, sets) -> sets.any { filter.matches(snap, it) } }
             .mapNotNull { (d, _) ->
                 val secs = Analysis.workoutSeconds(snap, d)
                 if (secs > 0) ChartPoint(Dates.epochDay(d), secs / 60.0, d) else null
             }
             .sortedBy { it.x }
-    } ?: emptyList()
+        every.filter { from == null || it.date >= from } to (every.lastOrNull { from != null && it.date < from }?.date ?: "")
+    }
+    val points = timed?.first ?: emptyList()
+    val lastBefore = timed?.second?.takeIf { it.isNotEmpty() }
     val series = listOf(LineSeries(stringResource(R.string.an_workout_length), points))
     val (kind, setKind) = rememberChartKind("analysis:workout-length")
     SectionTitle(stringResource(R.string.an_each_workout))
@@ -566,7 +572,7 @@ private fun DurationPerWorkout(snap: Snapshot, nav: Nav, filter: Analysis.Filter
         )
         ExpandGraphButton { fullScreen = true }
     }
-    FitChart(
+    if (points.isEmpty() && period != null && lastBefore != null) GraphRangeEmpty(lastBefore) { onShowAll() } else FitChart(
         series,
         Modifier.padding(horizontal = 8.dp),
         kind = kind,
@@ -576,7 +582,8 @@ private fun DurationPerWorkout(snap: Snapshot, nav: Nav, filter: Analysis.Filter
         unit = min,
         showTrend = showTrend,
         yFromZero = fromZero,
-        onExpand = { ChartHints.expanded(); fullScreen = true }
+        onExpand = { ChartHints.expanded(); fullScreen = true },
+        period = period
     )
     val picked = sel?.let { points.getOrNull(it) }
     if (picked != null) {
@@ -598,7 +605,7 @@ private fun DurationPerWorkout(snap: Snapshot, nav: Nav, filter: Analysis.Filter
                 }
             }
         ) { vp, h, resetZoom ->
-            FitChart(
+            if (points.isEmpty() && period != null && lastBefore != null) GraphRangeEmpty(lastBefore) { onShowAll() } else FitChart(
                 series,
                 kind = kind,
                 height = h,
@@ -609,7 +616,8 @@ private fun DurationPerWorkout(snap: Snapshot, nav: Nav, filter: Analysis.Filter
                 showTrend = showTrend,
                 yFromZero = fromZero,
                 viewport = vp,
-                onExpand = resetZoom
+                onExpand = resetZoom,
+                period = period
             )
         }
     }

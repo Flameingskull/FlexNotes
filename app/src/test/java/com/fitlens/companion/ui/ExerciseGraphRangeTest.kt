@@ -5,6 +5,7 @@ import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertNull
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -86,5 +87,19 @@ class ExerciseGraphRangeTest : FunctionTest() {
         val firstInYear = snap.statSetsByExercise.getValue(f.EX_BENCH).map { it.date }.first { it >= f.ONE_YEAR_AGO }
         waitForDay(firstInYear)
         assertTrue(!shows(Dates.day(f.START), substring = true))
+    }
+
+    @Test
+    fun lastDayBeforeNamesTheLatestEarlierPoint() {
+        val pts = listOf(ChartPoint(100L, 1.0, "2024-01-01"), ChartPoint(200L, 1.0, "2024-04-10"), ChartPoint(300L, 1.0, "2024-07-19"))
+        assertEquals("2024-04-10", lastDayBefore(pts, ChartPeriod(250L, 400L)))
+    }
+
+    @Test
+    fun lastDayBeforeIsNullWithoutAPeriodOrAnEarlierPoint() {
+        val pts = listOf(ChartPoint(100L, 1.0, "2024-01-01"), ChartPoint(200L, 1.0, "2024-04-10"), ChartPoint(300L, 1.0, "2024-07-19"))
+        assertNull(lastDayBefore(pts, null))
+        assertNull(lastDayBefore(pts, ChartPeriod(50L, 400L)))
+        assertNull(lastDayBefore(emptyList(), ChartPeriod(50L, 400L)))
     }
 }

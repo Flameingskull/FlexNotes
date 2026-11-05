@@ -193,6 +193,27 @@ object Routines {
     suspend fun copy(routine: Routine, name: String): Long =
         save(routine.copy(id = 0L, name = name, days = routine.days.map { it.copy(id = 0L) }))
 
+    /**
+     * Puts a deleted workout back exactly as it was (Undo, #353): the same workout and day ids and the same place in the
+     * list, with its days, exercises, planned sets and training blocks, in one transaction. Logged days still point at it
+     * because [delete] never touches `workout_origin`. Does nothing when a workout with that id exists, so a second Undo adds nothing.
+     */
+    suspend fun restore(routine: Routine): Unit = write { r ->
+        val plan = routine.plan?.let { it.copy(blocks = TrainingBlocks.normalised(it.blocks)) }?.takeIf { it.blocks.isNotEmpty() }
+        val added = r.restoreRoutine(
+            RoutineRow(
+                routine.id, routine.name, routine.notes?.trim()?.ifBlank { null }, routine.sortOrder,
+                plan?.let { TrainingBlocks.encode(it.blocks) }, plan?.start, if (plan?.repeats == true && !plan.ongoing) 1 else 0
+            )
+        )
+        if (added == -1L) return@write
+        val known = r.exerciseIds().toHashSet()
+        routine.days.forEachIndexed { i, d ->
+            r.restoreDay(RoutineDayRow(d.id, routine.id, dayName(d.name, i), 0L, i))
+            writeExercises(r, d.id, d.exercises, known)
+        }
+    }
+
     /** Adds a day holding [exercises] to the end of workout [routineId]. Returns the new day's id. */
     suspend fun addDay(routineId: Long, name: String, exercises: List<PlannedExercise>): Long = write { r ->
         val next = r.nextDayOrder(routineId)

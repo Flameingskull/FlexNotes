@@ -2,8 +2,9 @@
 
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.198: 17 functions checked, re-checked after fix rounds 1 and 2.
-> Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 5 of 10 in scope; the rest of the area was not read.
-> Results: 0 Verified, 16 Read OK, 0 Defect, 0 Risk, 0 Improve, 1 Not checked.
+> Build gate 1.0.199: 3 test files checked in full (NavHarness, CalendarScreenTest, WorkoutsScreenTest) plus the re-recorded day-menu goldens, on the working tree over 527d379, before CI run 41925517281 finished.
+> Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 8 of 13 in scope; the rest of the area was not read.
+> Results: 0 Verified, 19 Read OK, 0 Defect, 2 Risk, 2 Improve, 3 Not checked.
 > `Verified` names a test that would fail if this broke. CI run 41336801625 ran this code: every reminder, alarm and rest test passed.
 
 ## Files
@@ -20,6 +21,9 @@
 | app/src/test/java/com/fitlens/companion/ui/RestTimerAlarmTest.kt | No (build gate: changed functions only) |
 | app/src/test/java/com/fitlens/companion/data/ExactAlarmPermissionTest.kt | Yes |
 | app/src/test/java/com/fitlens/companion/ui/ExactAlarmSettingsTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/NavHarness.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/CalendarScreenTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/WorkoutsScreenTest.kt | Yes |
 
 ## Checks
 
@@ -42,3 +46,12 @@
 | Tests independent of time zone | Dates and time | LongHistoryFixture.kt:65 | Not checked | The fixed clock is UTC and alarms convert through the JVM's default zone; both go through local time, so it reads right. Only run on CI's zone | #333 |
 | setCanScheduleExactAlarms: two call forms | Build | ReminderHarness.kt:254 | Read OK | All four calls use the static form; CI run 41336801625 passed it (the test build compiled) | #346 |
 | FunctionTest leaves phone settings behind | Tests | FunctionTest.kt:96 | Read OK | closeSeams resets device settings | #333 |
+| NavHarness: the same host as the app? | Tests | NavHarness.kt:20 | Improve | Same Route, KEY, attach and sync as AppRoot, so taps really navigate. But it hands ScreenContent the live snapshot, where the app hands `rememberScreenSnapshot(s)` (#60's per-screen view, MainActivity.kt:614). A screen whose read isn't tracked, so it stays stale in the app after a write, passes every harness test. Making rememberScreenSnapshot internal and calling it here closes that | #353 |
+| CalendarScreenTest: could it fail if #329 broke? | Tests | CalendarScreenTest.kt:72 | Read OK | Yes for the thumbnail (counts `cal_photo` layers: the old `!isSelected` gives 1, not 2), for selected semantics on each tap, and for the second tap opening Screen.Day. Fixed clock and fixed fixture, so no time or order dependence. `onNode(cell(today))` needs exactly one clickable whose description holds the long date; CI decides that | #329 |
+| #329's look: outline, background, golden | Tests | CalendarScreen.kt:303, :336 | Risk | Nothing asserts the outline is drawn, that a selected square keeps its unselected background, or that today, selected and both differ; there is no calendar golden at all, and #329's last criterion asks for one with a selected photo day. Deleting both outline lines, or bringing back the GoldDusk fill, passes every test. A whole-screen golden of the calendar with today selected and a second photo day selected would fail on either | #329 |
+| WorkoutsScreenTest: could it fail if #353 broke? | Tests | WorkoutsScreenTest.kt | Read OK | Starts from the real day log and the real ⋮, writes through Routines into Room and reads back with stored(); asserts nav.top, rows, counts, the confirm sheet and stored state. Undo is invoked from the collected message, after waiting for a subscriber, so it isn't racing the flow. Redundant same-package import and unused Snapshot/Clock imports are warnings only (warningsAsErrors = false) | #353 |
+| WorkoutsScreenTest: "a long name is shown in full" | Tests | WorkoutsScreenTest.kt:177 | Improve | assertShows reads semantics text, which holds the whole string even when a Text is cut to one line with an ellipsis, so this can't fail if the name were truncated. Asserting the node's height spans more than one line, or a golden, would | #353 |
+| WorkoutsScreenTest: Undo checks too little | Tests | WorkoutsScreenTest.kt:220 | Risk | Asserts only the name and the day count after Undo, so the lost id, day ids and position (library-workouts ledger, Defect) pass. Assert the original id, day ids and list position | #353 |
+| Time and order independence of the new tests | Dates and time | CalendarScreenTest.kt:74, WorkoutsScreenTest.kt:145 | Read OK | Every open passes a fixed clock (ScreenFixture.clock or LongHistoryFixture.clock); FunctionTest deletes the database and resets seams around each test | #353 |
+| Re-recorded day-menu goldens | Tests | app/src/test/screenshots/screen_day_menu*.png | Not checked | CI re-records the eight from the new code, so they record whatever it draws. Someone has to look at them once: the menu gains a row, and at 320dp with font ×2 it may scroll | #353 |
+| The new files compile and the tests pass | Build | WorkoutsScreen.kt, the three test files | Not checked | CI run 41925517281 was still running when this was written | #353 |

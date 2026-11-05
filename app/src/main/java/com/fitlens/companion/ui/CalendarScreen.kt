@@ -83,7 +83,7 @@ import com.fitlens.companion.ui.design.FitTextButton
 
 /**
  * The calendar (#87, #9), laid out after FitNotes: a month grid (swipe or arrows for other months) with category dots,
- * a gold ring for today and the selected day filled gold dusk, the month's workout count, and the selected
+ * a thin gold ring for today and a thicker, lighter outline on the selected day (#329), the month's workout count, and the selected
  * day's workout below with Open day. Tapping the selected day again opens it too. The list view is All days.
  * The filter (#9) dims every day without a matching set and counts the matches.
  */
@@ -176,9 +176,9 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
                         for (c in 0 until 7) {
                             val dayNum = r * 7 + c - offset + 1
                             Box(Modifier.weight(1f).aspectRatio(0.8f).padding(2.dp)) {
-                                if (dayNum in 1..days) {
-                                    val date = month.atDay(dayNum).format(Dates.ISO)
-                                    val dim = filter.active && date !in matches
+                                 if (dayNum in 1..days) {
+                                     val date = month.atDay(dayNum).format(Dates.ISO)
+                                     val dim = filter.active && date !in matches
                                      DayCell(snap, date, dayNum, date == selected, colors.accent, colors.series, doses.containsKey(date), dim) {
                                          // A second tap on the selected day opens it, like "Go!" in FitNotes (#9).
                                          if (selected == date) nav.home(date) else selected = date
@@ -276,67 +276,69 @@ private fun MonthCount(snap: Snapshot, month: YearMonth, modifier: Modifier) {
     )
 }
 
-@Composable
-private fun DayCell(
-    snap: Snapshot, date: String, dayNum: Int, isSelected: Boolean, photoColor: Color, measureColor: Color,
-    hasDoses: Boolean, dimmed: Boolean, onClick: () -> Unit
-) {
-    val photos = snap.photosByDate[date]
-    val hasRecords = snap.recordsByDate.containsKey(date)
-    val sets = snap.setsByDate[date]
-    val isToday = date == Dates.today()
-    val shape = FitShapes.row
-    val cats = remember(sets) {
-        sets?.map { it.exerciseId }?.distinct()?.mapNotNull { snap.categoryOf(it) }?.distinctBy { it.id }?.take(3).orEmpty()
-    }
-    val res = LocalContext.current.resources
-    val spoken = listOfNotNull(
-        Dates.long(date),
-        sets?.map { it.exerciseId }?.distinct()?.size?.let { n -> res.getQuantityString(R.plurals.cal_spoken_workout, n, n) },
-        if (!photos.isNullOrEmpty()) res.getString(R.string.cal_spoken_photo) else null,
-        if (hasRecords) res.getString(R.string.cal_spoken_measurements) else null,
-        if (hasDoses) res.getString(R.string.cal_spoken_doses) else null,
-        if (isToday) res.getString(R.string.cal_spoken_today) else null,
-        if (dimmed) res.getString(R.string.cal_spoken_dimmed) else null
-    ).joinToString(", ")
-    Box(
-        Modifier
-            .fillMaxSize()
-            .clip(shape)
-            .background(if (sets != null) Brand.SurfaceHigh else Brand.Surface)
-            // With a filter on, days without a matching set fade back so the matches stand out (#9).
-            .alpha(if (dimmed && !isSelected) 0.3f else 1f)
-            .clickable(onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = spoken; this.selected = isSelected }
+    @Composable
+    private fun DayCell(
+        snap: Snapshot, date: String, dayNum: Int, isSelected: Boolean, photoColor: Color, measureColor: Color,
+        hasDoses: Boolean, dimmed: Boolean, onClick: () -> Unit
     ) {
-        if (!photos.isNullOrEmpty()) {
-            Box(Modifier.fillMaxSize().testTag("cal_photo")) {
-                PhotoThumb(snap, photos.first(), Modifier.fillMaxSize(), sizePx = 200)
-                Box(Modifier.fillMaxSize().background(Brand.Black.copy(alpha = 0.45f)))
-            }
+        val todayRing = MaterialTheme.colorScheme.primary
+        val selectedOutline = MaterialTheme.colorScheme.secondary
+        val photos = snap.photosByDate[date]
+        val hasRecords = snap.recordsByDate.containsKey(date)
+        val sets = snap.setsByDate[date]
+        val isToday = date == Dates.today()
+        val shape = FitShapes.row
+        val cats = remember(sets) {
+            sets?.map { it.exerciseId }?.distinct()?.mapNotNull { snap.categoryOf(it) }?.distinctBy { it.id }?.take(3).orEmpty()
         }
-        Text(
-            "$dayNum",
-            Modifier.padding(4.dp),
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (sets != null) FontWeight.Bold else FontWeight.Normal,
-            color = if (isToday) Brand.GoldLight else Brand.Ivory
-        )
-        Row(
-            Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        val res = LocalContext.current.resources
+        val spoken = listOfNotNull(
+            Dates.long(date),
+            sets?.map { it.exerciseId }?.distinct()?.size?.let { n -> res.getQuantityString(R.plurals.cal_spoken_workout, n, n) },
+            if (!photos.isNullOrEmpty()) res.getString(R.string.cal_spoken_photo) else null,
+            if (hasRecords) res.getString(R.string.cal_spoken_measurements) else null,
+            if (hasDoses) res.getString(R.string.cal_spoken_doses) else null,
+            if (isToday) res.getString(R.string.cal_spoken_today) else null,
+            if (dimmed) res.getString(R.string.cal_spoken_dimmed) else null
+        ).joinToString(", ")
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clip(shape)
+                .background(if (sets != null) Brand.SurfaceHigh else Brand.Surface)
+                // With a filter on, days without a matching set fade back so the matches stand out (#9).
+                .alpha(if (dimmed && !isSelected) 0.3f else 1f)
+                .clickable(onClick = onClick)
+                .semantics(mergeDescendants = true) { contentDescription = spoken; this.selected = isSelected }
         ) {
-            if (!photos.isNullOrEmpty()) Dot(photoColor, 6.dp)
-            if (hasRecords) Dot(measureColor, 6.dp)
-            if (hasDoses) Dot(Brand.Ivory, 6.dp)
-            cats.forEach { Dot(categoryColour(it.colour), 6.dp) }
+            if (!photos.isNullOrEmpty()) {
+                Box(Modifier.fillMaxSize().testTag("cal_photo")) {
+                    PhotoThumb(snap, photos.first(), Modifier.fillMaxSize(), sizePx = 200)
+                    Box(Modifier.fillMaxSize().background(Brand.Black.copy(alpha = 0.45f)))
+                }
+            }
+            Text(
+                "$dayNum",
+                Modifier.padding(4.dp),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = if (sets != null) FontWeight.Bold else FontWeight.Normal,
+                color = if (isToday) Brand.GoldLight else Brand.Ivory
+            )
+            Row(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                if (!photos.isNullOrEmpty()) Dot(photoColor, 6.dp)
+                if (hasRecords) Dot(measureColor, 6.dp)
+                if (hasDoses) Dot(Brand.Ivory, 6.dp)
+                cats.forEach { Dot(categoryColour(it.colour), 6.dp) }
+            }
+            // Today has a thin gold ring; the selected day a thicker, lighter outline (#329). A day that is both shows both,
+            // the ring inside the outline, so the two are never told apart by colour alone.
+            if (isToday) Box(Modifier.fillMaxSize().padding(if (isSelected) 4.dp else 0.dp).border(2.dp, todayRing, shape))
+            if (isSelected) Box(Modifier.fillMaxSize().border(3.dp, selectedOutline, shape))
         }
-        // Today has a thin gold ring; the selected day a thicker, lighter outline (#329). A day that is both shows both,
-        // the ring inside the outline, so the two are never told apart by colour alone.
-        if (isToday) Box(Modifier.fillMaxSize().padding(if (isSelected) 4.dp else 0.dp).border(2.dp, Brand.Gold, shape))
-        if (isSelected) Box(Modifier.fillMaxSize().border(3.dp, Brand.GoldLight, shape))
     }
-}
 
 /** The selected day below the grid: its exercises, body values and photos, and Open day (#87). */
 @Composable

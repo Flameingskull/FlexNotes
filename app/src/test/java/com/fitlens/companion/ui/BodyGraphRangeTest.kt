@@ -1,6 +1,7 @@
 package com.fitlens.companion.ui
 
 import android.app.Application
+import androidx.compose.ui.test.hasText
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.Snapshot
@@ -61,11 +62,11 @@ class BodyGraphRangeTest : FunctionTest() {
     @Test
     fun theOldDefinitionOfTheLatestValueNoLongerDecides() {
         val snap = f.snapshot()
+        // A week after the last Bodyweight value (Sun 25 Oct): one month back from 8 Nov starts on 8 Oct, not a month before that value.
         openScreen(snap, f.clockAt("10:00", "2026-11-08")) { s -> BodyGraphPane(s, nav, f.BODYWEIGHT) }
-        val first = firstFrom(snap, "2026-10-08")
-        waitForFirstDay(first)
-        val sep = first != firstFrom(snap, "2026-09-25")
-        if (sep) assertTrue(!shows(Dates.day(firstFrom(snap, "2026-09-25")), substring = true))
+        chooseRange(app.getString(R.string.an_all_time), app.getString(R.string.range_1m))
+        waitForFirstDay(firstFrom(snap, "2026-10-08"))
+        assertTrue(!shows(Dates.day(firstFrom(snap, "2026-09-25")), substring = true))
     }
 
     @Test
@@ -79,5 +80,17 @@ class BodyGraphRangeTest : FunctionTest() {
         tap(app.getString(R.string.ch_range_show_all))
         waitForFirstDay(oldest)
         assertTrue(!shows(app.getString(R.string.ch_range_empty_title)))
+    }
+
+    @Test
+    fun anEmptyRangeShowsTheSamePanelInFullScreen() {
+        val snap = f.snapshot()
+        openScreen(snap, f.clockAt("10:00", "2027-06-30")) { s -> BodyGraphPane(s, nav, f.BODYWEIGHT) }
+        chooseRange(app.getString(R.string.an_all_time), app.getString(R.string.range_1m))
+        val title = app.getString(R.string.ch_range_empty_title)
+        compose.waitUntil(5_000) { shows(title) }
+        tap(app.getString(R.string.ch_full_screen))
+        // The inline graph and the full-screen chart each show the panel.
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText(title)).fetchSemanticsNodes().size == 2 }
     }
 }

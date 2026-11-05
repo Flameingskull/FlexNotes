@@ -1,0 +1,43 @@
+package com.fitlens.companion.ui
+
+import android.app.Application
+import com.fitlens.companion.data.Routine
+import com.fitlens.companion.data.RoutineDay
+import com.fitlens.companion.data.Routines
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import org.robolectric.annotation.GraphicsMode
+
+@RunWith(RobolectricTestRunner::class)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+@Config(sdk = [34], application = Application::class, qualifiers = "w411dp-h3200dp-mdpi")
+class RoutineRestoreTest : FunctionTest() {
+
+    @Test
+    fun undoPutsAWorkoutBackWithItsOwnIdsAndPlace() {
+        runBlocking {
+            Routines.save(Routine(0L, "Push Pull Legs", days = listOf(RoutineDay(0L, "Push Day"), RoutineDay(0L, "Pull Day"), RoutineDay(0L, "Leg Day"))))
+            Routines.save(Routine(0L, "Upper Lower", days = listOf(RoutineDay(0L, "Upper"), RoutineDay(0L, "Lower"))))
+            Routines.save(Routine(0L, "Full Body", days = listOf(RoutineDay(0L, "Monday"))))
+        }
+        val before = stored().routines
+        val middle = before.first { it.name == "Upper Lower" }
+        runBlocking { Routines.delete(middle.id) }
+        assertNull(stored().routinesById[middle.id])
+        runBlocking { Routines.restore(middle) }
+        val after = stored().routines
+        assertEquals(before.map { it.id }, after.map { it.id })
+        assertEquals(before.map { it.name }, after.map { it.name })
+        assertEquals(middle.days.map { it.id }, after.first { it.id == middle.id }.days.map { it.id })
+        assertEquals(middle.days.map { it.name }, after.first { it.id == middle.id }.days.map { it.name })
+        assertNotNull(stored().routinesById[middle.id])
+        runBlocking { Routines.restore(middle) }
+        assertEquals(before.map { it.id }, stored().routines.map { it.id })
+    }
+}

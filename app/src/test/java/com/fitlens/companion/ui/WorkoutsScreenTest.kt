@@ -98,6 +98,7 @@ class WorkoutsScreenTest : FunctionTest() {
     fun deleteAsksFirstThenRemovesTheWorkoutAndUndoBringsItBack() {
         seed()
         openWorkouts()
+        val before = stored().routines
         val undo = app.getString(R.string.workout_undo)
         val messages = CopyOnWriteArrayList<UiMessage>()
         val collector = AppScope.scope.launch { UiEvents.messages.collect { messages.add(it) } }
@@ -117,7 +118,9 @@ class WorkoutsScreenTest : FunctionTest() {
             compose.waitUntil(5_000) { messages.any { it.actionLabel == undo } }
             messages.first { it.actionLabel == undo }.onAction!!.invoke()
             compose.waitUntil(5_000) { stored().routines.any { it.name == ppl } }
-            assertEquals(3, stored().routines.first { it.name == ppl }.days.size)
+            val after = stored().routines
+            assertEquals(before.map { it.id }, after.map { it.id })
+            assertEquals(before.first { it.name == ppl }.days.map { it.id }, after.first { it.name == ppl }.days.map { it.id })
             show(stored())
             assertShows(ppl)
         } finally {

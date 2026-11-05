@@ -424,6 +424,18 @@ fun FitChart(
 }
 
 /**
+ * A bar's width in pixels (#328): 70% of the room the closest two bars (of every series, [xs] are the epoch days of the points in view)
+ * take on an axis [spanDays] wide, so bars never overlap however long the period. One bar or several on the same day take
+ * the room of the whole axis. Kept between [minPx] and [maxPx].
+ */
+internal fun barWidthFor(plotWidth: Float, spanDays: Double, xs: List<Long>, minPx: Float, maxPx: Float): Float {
+    val span = spanDays.coerceAtLeast(1.0)
+    val days = xs.distinct().sorted()
+    val gap = (1 until days.size).minOfOrNull { days[it] - days[it - 1] }?.toDouble() ?: span
+    return (plotWidth * (gap / span) * 0.7).toFloat().coerceIn(minPx, maxPx)
+}
+
+/**
  * The time range in view, in epoch days: the chosen [period] when there is one, otherwise the whole data range
  * (widened to two days for a single day), narrowed by [viewport]. The plot and the trend fit both use it, so they always
  * cover the same points.
@@ -550,11 +562,11 @@ private fun LinePlot(
     val xFmt = if (xMax - xMin < 150) DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
     else DateTimeFormatter.ofPattern("MMM yy", Locale.getDefault())
 
-    // Bars (#137) need room at each end for half a column, and a width that leaves gaps between them.
-    val barSlots = if (kind != ChartKind.BAR) 0 else
-        visible.maxOfOrNull { si -> series[si].points.count { it.x >= xMin && it.x <= xMax } }?.coerceAtLeast(1) ?: 1
+    // Bars (#328) need room at each end for half a column, and a width that leaves gaps between them.
+    val barXs = if (kind != ChartKind.BAR) emptyList() else
+        visible.flatMap { si -> series[si].points }.map { it.x }.filter { it >= xMin && it <= xMax }
     fun barWidth(plotWidth: Float, maxPx: Float): Float =
-        if (kind != ChartKind.BAR) 0f else (plotWidth / barSlots * 0.7f).coerceIn(2f, maxPx)
+        if (kind != ChartKind.BAR) 0f else barWidthFor(plotWidth, xMax - xMin, barXs, 2f, maxPx)
 
     // What TalkBack reads: each series' range, low, high and latest value, then the selected point.
     val res = LocalContext.current.resources

@@ -30,6 +30,7 @@ import com.fitlens.companion.R
 import com.fitlens.companion.data.Routine
 import com.fitlens.companion.data.Routines
 import com.fitlens.companion.data.Snapshot
+import android.content.Context
 import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.FitTextButton
 import com.fitlens.companion.ui.design.FitTopBar
@@ -70,12 +71,7 @@ fun WorkoutsScreen(snap: Snapshot, nav: Nav) {
                         onOpen = { nav.push(Screen.WorkoutEditor(w.id)) },
                         menu = listOf(
                             MenuAction(stringResource(R.string.lib_edit_workout)) { nav.push(Screen.WorkoutEditor(w.id)) },
-                            MenuAction(stringResource(R.string.workout_duplicate)) {
-                                AppScope.scope.launch {
-                                    Routines.copy(w, context.getString(R.string.workout_copy_name, w.name))
-                                    UiEvents.show(context.getString(R.string.workout_duplicated, w.name))
-                                }
-                            },
+                            MenuAction(stringResource(R.string.workout_duplicate)) { duplicateWorkout(context, w) },
                             MenuAction(stringResource(R.string.workout_delete)) { deleting = w.id }
                         )
                     )
@@ -97,14 +93,27 @@ fun WorkoutsScreen(snap: Snapshot, nav: Nav) {
             onDismiss = { deleting = null },
             onConfirm = {
                 deleting = null
-                AppScope.scope.launch {
-                    Routines.delete(w.id)
-                    UiEvents.show(context.getString(R.string.workout_deleted, w.name), context.getString(R.string.workout_undo)) {
-                        AppScope.scope.launch { Routines.copy(w, w.name) }
-                    }
-                }
+                deleteWorkoutWithUndo(context, w)
             }
         )
+    }
+}
+
+/** Duplicate a workout, from the Workouts list and the editor (#353). */
+internal fun duplicateWorkout(context: Context, w: Routine) {
+    AppScope.scope.launch {
+        Routines.copy(w, context.getString(R.string.workout_copy_name, w.name))
+        UiEvents.show(context.getString(R.string.workout_duplicated, w.name))
+    }
+}
+
+/** Delete a workout and offer Undo, which puts it back exactly: same ids, same place in the list (#353). */
+internal fun deleteWorkoutWithUndo(context: Context, w: Routine) {
+    AppScope.scope.launch {
+        Routines.delete(w.id)
+        UiEvents.show(context.getString(R.string.workout_deleted, w.name), context.getString(R.string.workout_undo)) {
+            AppScope.scope.launch { Routines.restore(w) }
+        }
     }
 }
 

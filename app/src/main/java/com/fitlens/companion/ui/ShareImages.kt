@@ -122,8 +122,8 @@ object ShareImages {
         if (y1 - y0 < 1e-6) { y0 -= 1; y1 += 1 }
         val pad = (y1 - y0) * 0.1
         y0 -= pad; y1 += pad
-        // Bars (#137) sit inside the frame by half a column.
-        val barW = if (g.kind == ChartKind.BAR) (r.width() / pts.size * 0.7f).coerceIn(4f, 48f) else 0f
+        // Bars (#328) sit inside the frame by half a column.
+        val barW = if (g.kind == ChartKind.BAR) barWidthFor(r.width(), (x1 - x0).toDouble(), pts.map { it.x }, 4f, 48f) else 0f
         fun px(x: Long) = r.left + barW / 2f + (x - x0).toFloat() / (x1 - x0).toFloat() * (r.width() - barW)
         fun py(v: Double) = r.bottom - ((v - y0) / (y1 - y0)).toFloat() * r.height()
 

@@ -370,6 +370,10 @@ internal fun comparedSeries(
     }
 }
 
+/** The date of the latest point before [period] starts, or null when there is no period or the graph has no earlier value (#328). */
+internal fun lastDayBefore(points: List<ChartPoint>, period: ChartPeriod?): String? =
+    if (period == null) null else points.lastOrNull { it.x < period.from }?.date
+
 /** Graph [label]'s unit for exercise [exId]: its weight or distance unit, minutes, speed or pace. */
 internal fun graphUnit(snap: Snapshot, exId: Long, label: String): String {
     val distUnit = snap.distanceUnit(exId)
@@ -584,6 +588,10 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
             }
             val summary = if (series.size == 1) line(series[0], graphName(res, g.label)).orEmpty()
             else series.mapNotNull { line(it, it.label) }.joinToString("\n")
+            // This graph's own latest value before the range starts, for the empty-range panel (#328); null when it has none.
+            val lastBefore = rememberDerived(
+                "exerciseGraphBefore", snap.trainingKey, bodyKey, exId, g.label, repsFor, period?.from, formula, Records.maxRepsFor(formula)
+            ) { lastDayBefore(exerciseGraphPoints(snap, exId, g.label, repsFor), period) ?: "" }?.takeIf { it.isNotEmpty() }
             // Tapping a date shows every series' value on or nearest that date (#53).
             fun valuesOnly(p: ChartPoint): String =
                 if (series.size == 1) show(p.y)
@@ -630,8 +638,8 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                     Modifier.fillMaxWidth().heightIn(min = graphHeight()).padding(16.dp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } else if (series.all { it.points.isEmpty() }) {
-                GraphRangeEmpty(snap.lastUsedByExercise[exId]) { rangeIdx = RANGE_ALL }
+            } else if (series.all { it.points.isEmpty() } && lastBefore != null) {
+                GraphRangeEmpty(lastBefore) { rangeIdx = RANGE_ALL }
             } else {
                 FitChart(
                     series,
@@ -688,7 +696,7 @@ fun ExerciseGraphPane(snap: Snapshot, nav: Nav, exId: Long, initial: PinnedGraph
                         }
                     }
                 ) { vp, h, resetZoom ->
-                    FitChart(
+                    if (series.all { it.points.isEmpty() } && lastBefore != null) GraphRangeEmpty(lastBefore) { rangeIdx = RANGE_ALL } else FitChart(
                         series,
                         kind = kind,
                         better = if (g.lowerIsBetter) ::lowerIsBetter else ::higherIsBetter,

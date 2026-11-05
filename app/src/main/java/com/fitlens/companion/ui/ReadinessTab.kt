@@ -37,6 +37,9 @@ import kotlin.math.roundToInt
 /** Neither direction of a ratio is better on its own: points stay plain. */
 private val noBetter: (Double, Double) -> Boolean? = { _, _ -> null }
 
+/** How many weeks the weekly effort graph covers: from the range start to today, at least four, with no upper limit (#328). */
+internal fun weekCountFor(todayDay: Long, from: Long): Int = ((todayDay - from + 7) / 7).toInt().coerceAtLeast(4)
+
 /**
  * One graph of the Readiness tab: chart type and full screen in a row over it, the picked point's day and value under
  * it. [graphId] remembers the chart type; [goal] draws a line at a threshold.
@@ -122,7 +125,7 @@ private fun ReadinessGraph(
  * are in different units, so each is drawn as a share of its own best week; picking a week lists its real figures.
  */
 @Composable
-private fun InternalExternalGraph(snap: Snapshot, weeks: List<TrainingLoad.Week>) {
+private fun InternalExternalGraph(snap: Snapshot, weeks: List<TrainingLoad.Week>, period: ChartPeriod?) {
     val res = LocalContext.current.resources
     var sel by remember(weeks) { mutableStateOf<ChartSelection?>(null) }
     val volumeOf: (TrainingLoad.Week) -> Double = { snap.weight(it.volumeKg, null) }
@@ -144,7 +147,8 @@ private fun InternalExternalGraph(snap: Snapshot, weeks: List<TrainingLoad.Week>
         onSelect = { sel = it; ChartHints.tapped() },
         yFormat = { fmtNum(it, 0) + "%" },
         yFromZero = true,
-        better = noBetter
+        better = noBetter,
+        period = period
     )
     val picked = sel?.let { weeks.getOrNull(it.index) }
     AnalysisNote(
@@ -207,7 +211,10 @@ internal fun ReadinessTab(snap: Snapshot) {
             Text(stringResource(if (todayScore?.part(Readiness.Source.CHECK_IN) != null) R.string.rd_edit_check_in else R.string.rd_check_in_now))
         }
         val scorePoints = history.filter { it.day >= from }.map { ChartPoint(it.day, it.score.toDouble(), LocalDate.ofEpochDay(it.day).format(Dates.ISO)) }
-        if (scorePoints.isEmpty()) {
+        val lastBefore = history.lastOrNull { it.day < from }?.day
+        if (scorePoints.isEmpty() && rangeIdx != RANGE_ALL && lastBefore != null) {
+            GraphRangeEmpty(LocalDate.ofEpochDay(lastBefore).format(Dates.ISO)) { rangeIdx = RANGE_ALL }
+        } else if (scorePoints.isEmpty()) {
             AnalysisNote(stringResource(R.string.rd_empty))
         } else {
             ReadinessGraph(stringResource(R.string.rd_title), "analysis:readiness", scorePoints, { fmtNum(it, 0) }, turnOpens = true, period = period)
@@ -282,11 +289,11 @@ internal fun ReadinessTab(snap: Snapshot) {
             AnalysisNote(stringResource(R.string.load_note, TrainingLoad.ACUTE_DAYS, TrainingLoad.CHRONIC_DAYS))
         }
         // Internal against external load (#242), once any session has a load or hard minutes in the range.
-        val weekCount = ((todayDay - from + 7) / 7).toInt().coerceIn(4, 52)
+        val weekCount = weekCountFor(todayDay, from)
         val weeks = remember(snap.setsKey, snap.libraryKey, weekCount, todayDay) { TrainingLoad.weekly(snap, todayDay, weekCount) }
         if (weeks.any { it.sessionLoad > 0 || it.hardMinutes > 0 }) {
             SectionLabel(stringResource(R.string.load_ie_title), Modifier.padding(horizontal = Spacing.lg, vertical = Spacing.sm))
-            InternalExternalGraph(snap, weeks)
+            InternalExternalGraph(snap, weeks, period)
         }
         Spacer(Modifier.padding(bottom = Spacing.xl))
     }

@@ -238,6 +238,13 @@ abstract class WholeScreenChecks(private val width: Int) {
             ExerciseLibraryScreen(snap, nav, DAY)
         }
 
+    @Test fun calendar() = shoot("Calendar", "calendar") { CalendarScreen(snap, nav) }
+
+    @Test fun calendarAnotherPhotoDaySelected() = shoot(
+        "Calendar, another photo day selected", "calendar_selected_photo",
+        steps = { tap(Dates.long("2026-10-20"), substring = true) }
+    ) { CalendarScreen(snap, nav) }
+
     @Test fun libraryNewExercise() = shoot("New exercise", "lib_new_exercise", steps = { tap(str(R.string.lib_new_exercise)) }) {
         ExerciseLibraryScreen(snap, nav, DAY)
     }

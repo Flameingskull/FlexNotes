@@ -9,7 +9,7 @@ data class ChartPeriod(val from: Long, val to: Long)
 /** The graph range menu's last entry, All time. Entries 0 to 3 are 1, 3, 6 and 12 calendar months (`RANGES`' order). */
 internal const val RANGE_ALL = 4
 
-/** How many calendar months range [rangeIdx] covers: 1, 3, 6 or 12. 0 is all time (and any index that isn't a range). */
+/** The calendar months range [rangeIdx] covers: 1, 3, 6 or 12 for the ranges 0 to 3. All time ([RANGE_ALL]) and any other index return 0, meaning no limit. */
 internal fun rangeMonths(rangeIdx: Int): Int = when (rangeIdx) {
     0 -> 1
     1 -> 3
