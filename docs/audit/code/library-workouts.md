@@ -32,3 +32,14 @@
 | Strings | Project rules | strings.xml:767, :1048-1055 | Read OK | `day_menu_workouts`, `wks_title`, `wks_summary`, `wks_days` (plural), `wks_empty_title`, `wks_empty_body` in resources; the rest reuse `lib_*` and `workout_*`. No hard-coded text | #353 |
 | @OptIn(ExperimentalMaterial3Api) | Build | WorkoutsScreen.kt:47 | Read OK | Added after the first CI round with its import; file-level opt-in has no runtime effect. CI run 41925517281 decides whether it compiles | #353 |
 | Routines.restore: a day id already in use | Data safety | Routines.kt:213 | Read OK | Fix round 3: a day whose restoreDay returns -1 is skipped before writeExercises, so another workout's day is never cleared. RoutineRestoreTest.undoLeavesADayNowOwnedByAnotherWorkoutAlone gives no day any exercises, so it passes on the old code too (the old bug only wiped exercises and planned sets): give Upper an exercise with planned sets and assert they survive | #353 |
+
+## Build gate 1.0.199, #328 (graph ranges)
+
+Written by the main session from the code-auditor's report; re-checked after fix rounds 1 and 2. Files: `ui/TrainingScreen.kt`, No (build gate: changed functions only). Rows: 2 Verified, 2 Read OK.
+
+| Function, class or concern | Check | Where | Result | Evidence | Issue |
+| --- | --- | --- | --- | --- | --- |
+| comparedSeries, the period from today | Logic | TrainingScreen.kt:358-370 | Verified | ExerciseGraphRangeTest.eachRangeStartsAtItsCalendarMonthsBackFromToday, anOldExerciseHasNothingInAShortRangeAndEverythingInAllTime, relativeStartsAtOneHundredPercentOfTheFirstValueInTheRange | #328 |
+| ExerciseGraphPane empty panel | Logic | TrainingScreen.kt:374-375, :592-594, :641-642, :699 | Verified | lastDayBefore; no panel in All time. ExerciseGraphRangeTest.lastDayBeforeNamesTheLatestEarlierPoint, theScreenSaysNothingWasLoggedAndAllTimeBringsTheGraphBack | #328 |
+| Cache key and share | Dates and time | TrainingScreen.kt:546-548, :621 | Read OK | Dates.today() in the key; the share passes the period | #328 |
+| Full-screen resetKey | Android lifecycle | TrainingScreen.kt:679 | Read OK | | #328 |

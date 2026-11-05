@@ -1,6 +1,7 @@
 package com.fitlens.companion.ui
 
 import android.app.Application
+import android.os.Looper
 import com.fitlens.companion.R
 import com.fitlens.companion.data.Routine
 import com.fitlens.companion.data.RoutineDay
@@ -13,6 +14,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.robolectric.Shadows
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -118,8 +120,11 @@ class WorkoutsScreenTest : FunctionTest() {
             assertShows(long)
             // Undo puts it back with its days.
             compose.waitUntil(5_000) { messages.any { it.actionLabel == undo } }
-            messages.first { it.actionLabel == undo }.onAction!!.invoke()
-            compose.waitUntil(5_000) { stored().routines.any { it.name == ppl } }
+            compose.runOnUiThread { messages.first { it.actionLabel == undo }.onAction!!.invoke() }
+            compose.waitUntil(10_000) {
+                Shadows.shadowOf(Looper.getMainLooper()).idle()
+                stored().routines.any { it.name == ppl }
+            }
             val after = stored().routines
             assertEquals(before.map { it.id }, after.map { it.id })
             assertEquals(before.first { it.name == ppl }.days.map { it.id }, after.first { it.name == ppl }.days.map { it.id })

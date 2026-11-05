@@ -1,39 +1,36 @@
-# FlexNotes 1.0.198
+# FlexNotes 1.0.199
 
 ## Overview
 
-This update is about reminders you can rely on. Medication reminders now arrive as one notification per dose, each with its own Taken, Snooze and Skip. Every alarm in the app, for doses, logging and the rest timer, now rings at the minute it's set for, even when the phone is locked or idle.
+This update fixes three problems you reported. Your saved workouts have their own screen again, graph time ranges now show exactly the period you choose, and the calendar keeps a day's photo when you select it.
 
 ## What's new
 
-- **One reminder per dose:** three medications due at the same time give three notifications, each showing its own name and amount in full. Before, they were squeezed into one, and some names could be cut off.
-- **Taken, Snooze and Skip for that dose only:** logging one dose from a reminder no longer marks the others as taken. The others stay open until you answer them.
-- **Reminders name the day:** a reminder reads, for example, "Medication due Fri 30 Oct, 8:00". One left unanswered for more than a day is cleared, and the dose stays on Medications.
+- **The Workouts screen is back:** open the day log's menu and choose Workouts to see every saved workout, with its number of days and exercises. Tap one to open it in the workout editor. Use + or **Create new workout** to start a new one, and each workout's menu offers Edit, Duplicate and Delete.
+- **Undo really undoes:** deleting a workout, from the Workouts screen or the workout editor, asks first. Undo then puts back the very same workout, in its place in the list, with its days. The library's current workout and the next-day suggestion carry on as before.
 
 ## Improved
 
-- **Alarms on the minute:** medication reminders, their snoozes and follow-ups, logging reminders and the rest timer now use the phone's alarm-clock alarms, which ring on time even when the phone is idle. Android shows its alarm icon in the status bar while one is set, and some lock screens show the next alarm's time. No medication name is shown there.
-- **Nothing to allow on Android 13 and later:** FlexNotes can ring at exact times without asking. On Android 12, Settings still offers to allow it if it has been switched off.
-- **Rest timer with the screen off:** a rest now ends on a real alarm, so its sound and vibration come on time even if the phone has gone to sleep.
-- **Injection sites:** each Taken button names the site it will record, and two doses of the same injected medication always suggest different sites, including after a snooze, for a dose left from yesterday, and from the home-screen widget.
+- **Graph ranges mean what they say:** 1 month, 3 months, 6 months and 1 year now end today and count back whole calendar months, on every graph: body values, medications, exercises, Analysis, Readiness and pinned graphs. All time starts at your first logged value.
+- **The whole period on the axis:** a graph now spans the full range you pick, even when you have only a few values in it, so a year with four weeks of data looks like a year.
+- **Nothing logged in a range?** The graph says so, names the day you last logged, and offers **Show all time**. In full screen too, on body and exercise graphs.
+- **Zoom resets with the range:** changing the range in full screen goes back to the whole graph, so an old zoom can't hide part of the new period.
+- **Readiness on All time:** the weekly "Effort against work done" graph now goes back to your first entry. Before, it stopped after 52 weeks.
+- **Bars stay apart:** bar charts size their bars to the gap between values, so a few bars spread over a long period no longer run into one block. Shared graph images follow the same period and spacing.
 
 ## Fixed
 
-- **No reminders for times already past:** starting, resuming, editing or restoring a schedule no longer sends reminders for doses whose time had already passed that day.
-- **Reminders aren't lost:** a reminder that comes while FlexNotes can't load or save its data tries again shortly afterwards, and the next reminder is always set. A reminder missed while the phone was switched off appears when it's switched back on, if it's within 12 hours.
-- **Two reminders in the same minute,** such as a follow-up and a new dose, now both appear.
-- **Snoozing several at once** brings each one back at the time you chose.
-- **Clock and time zone changes:** reminders set in the hour when clocks go back no longer repeat, and a time zone change while the app is open no longer makes a reminder ring too early or not at all.
-- **If saving fails,** a reminder's Taken, Snooze or Skip keeps the reminder showing so you can try again.
-
-## Your data
-
-- No database change. Your workouts, measurements, photos, medications and settings are kept, and older backups still restore.
+- **Calendar:** selecting a day with a photo no longer hides the photo or turns the square dark. The selected day is outlined in gold, and today keeps its own thin ring.
+- **Analysis totals that only add up to zero,** such as duration for workouts without a timer, now say there's nothing to total, rather than "nothing logged".
+- **Exercise graphs** no longer show "Nothing logged in this period" with a button that does nothing when the chosen graph has no values at all.
 
 ## Known limitations
 
-- Do Not Disturb and silent mode can still silence a reminder that rings on time. A choice to let dose reminders sound through is planned (#347).
-- A switched-off phone can't ring. A dose whose time passed while it was off is reminded when the phone is back on, if it's within 12 hours.
-- On the night clocks go back, a snooze or follow-up that crosses the end of the repeated hour can ring up to an hour late (#352).
-- If you change a schedule twice in a row just after one of its dose times has passed, that dose can get a "still due" reminder although it had no first one (#355).
-- Switching on Lock Medications while reminders are showing leaves their names visible until each is answered (#350).
+- On Analysis, the first period of a range still counts the whole period. For example, "Workouts per year" on 1 month shows the year so far. A fix is planned.
+- After changing a graph's range, a tap can occasionally select a different point from the one under your finger. Changing the range again or reopening the graph corrects it. A fix is planned.
+- On the calendar at the largest font sizes, weekday headings and the legend can break mid-word.
+- If All time still stops short on your graphs, please compare it with the History list and report what you see.
+
+## Your data
+
+No database change. Updating keeps all your workouts, sets, body values, photos and medications.

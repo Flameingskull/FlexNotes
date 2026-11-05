@@ -58,3 +58,17 @@
 | Re-recorded day-menu goldens | Tests | app/src/test/screenshots/screen_day_menu*.png | Not checked | CI re-records the eight from the new code, so they record whatever it draws. Someone has to look at them once: the menu gains a row, and at 320dp with font ×2 it may scroll | #353 |
 | The new files compile and the tests pass | Build | WorkoutsScreen.kt, the three test files | Not checked | CI run 41925517281 was still running when this was written | #353 |
 | Restore of exercises, planned sets and training blocks: no test | Tests | RoutineRestoreTest.kt:23, WorkoutsScreenTest.kt:98 | Risk | Both tests restore workouts with days but no exercises, planned sets, notes or blocks, so `restore` writing those wrongly (its blocks encoding is a second copy of `save`'s) passes them. Seed a day with two exercises, planned sets and a training plan, delete, restore, and assert the stored routine equals the one before, field for field | #353 |
+
+## Build gate 1.0.199, #328 test files
+
+Written by the main session from the code-auditor's report. Read in full: GraphRangeTest, GraphRangeEmptyTest, BodyGraphRangeTest, ExerciseGraphRangeTest, AnalysisRangeTest, AnalysisPanelTest, ReadinessRangeTest, ShareGraphAxisTest, BarWidthTest, GraphRangeIndexTest. Rows: 9 Read OK, 2 Risk, 1 Improve.
+
+| Function, class or concern | Check | Where | Result | Evidence | Issue |
+| --- | --- | --- | --- | --- | --- |
+| GraphRangeEmptyTest compiles | Build | GraphRangeEmptyTest.kt:6 | Read OK | The wrong import is removed | #328 |
+| theOldDefinitionOfTheLatestValueNoLongerDecides | Tests | BodyGraphRangeTest.kt | Read OK | Picks 1 month and would fail on the old latest-anchored code | #328 |
+| BarWidthTest float deltas | Build | BarWidthTest.kt:19, :25, :32 | Read OK | assertEquals(Float, Float, Float) | #328 |
+| ReadinessRangeTest drives the graphs | Tests | ReadinessRangeTest.kt | Risk | weekCountFor is proven; the graphs' period and the empty panel aren't driven | #361 |
+| A screen test of the axis span | Tests | (none) | Risk | The date labels are drawn on the canvas only | #361 |
+| theTrendRangeAndThePlotRangeAreTheSame | Tests | ChartViewportTest.kt:84 | Improve | Calls the same function twice with the same input | #361 |
+| GraphRangeTest, AnalysisRangeTest, ExerciseGraphRangeTest, ShareGraphAxisTest, AnalysisPanelTest, GraphRangeIndexTest | Tests | | Read OK | Fixed dates and the clock seam reset after each test; AnalysisPanelTest has only the negative case | #328 |
