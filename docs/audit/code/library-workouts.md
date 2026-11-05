@@ -1,9 +1,9 @@
 # Code audit: library-workouts
 
 > No full audit yet: rows from build gates only.
-> Build gate 1.0.199: 6 functions checked, re-checked after fix round 1 (Routines.restore, the shared helpers) (WorkoutsScreen, WorkoutRow, its Duplicate, Delete and Undo actions, its strings), followed into Routines.save, copy, delete and write, TodayPlan.workout, Routines.nextDay and the library's switcher. On the working tree over 527d379, before CI run 41925517281 finished.
+> Build gate 1.0.199: 6 functions checked, re-checked after fix rounds 1 and 3 (Routines.restore, the shared helpers) (WorkoutsScreen, WorkoutRow, its Duplicate, Delete and Undo actions, its strings), followed into Routines.save, copy, delete and write, TodayPlan.workout, Routines.nextDay and the library's switcher. On the working tree over 527d379, before CI run 41925517281 finished.
 > Audited 2026-11-04 against 1.0.199 (working tree on 527d379, nothing committed). Files read in full: 1 of 3 in scope; the rest of the area was not read.
-> Results: 6 Verified, 7 Read OK, 0 Defect, 1 Risk, 0 Improve, 0 Not checked.
+> Results: 6 Verified, 8 Read OK, 0 Defect, 0 Risk, 0 Improve, 0 Not checked.
 > `Verified` names a test that would fail if this broke. Those tests had not yet run when the rows were written: a green release confirms them.
 
 ## Files
@@ -31,4 +31,4 @@
 | Labels and long names | Project rules | WorkoutsScreen.kt:121, :125, :128 | Read OK | The row is one clickable merging name and summary; the ⋮ says "Options for <name>"; the name has no maxLines, so it wraps. Type from typography roles, colours from the theme and Brand.Hairline | #353 |
 | Strings | Project rules | strings.xml:767, :1048-1055 | Read OK | `day_menu_workouts`, `wks_title`, `wks_summary`, `wks_days` (plural), `wks_empty_title`, `wks_empty_body` in resources; the rest reuse `lib_*` and `workout_*`. No hard-coded text | #353 |
 | @OptIn(ExperimentalMaterial3Api) | Build | WorkoutsScreen.kt:47 | Read OK | Added after the first CI round with its import; file-level opt-in has no runtime effect. CI run 41925517281 decides whether it compiles | #353 |
-| Routines.restore: a day id already in use | Data safety | Routines.kt:211 | Risk | `restoreDay`'s result is ignored. If its insert is IGNOREd because that day id now belongs to another workout, `writeExercises(r, d.id, ...)` still runs: it clears that other day's exercises and planned sets and writes these in their place. The tables are AUTOINCREMENT, so ids aren't reused in normal use; the trigger is a backup restore (a different database) inside the Undo message's lifetime, then Undo, with the routine id free and a day id taken. Fix: throw (rolling back the transaction) or skip the day when `restoreDay` returns -1. Test: restore a routine whose day id exists under another workout, and assert the other day is unchanged | #353 |
+| Routines.restore: a day id already in use | Data safety | Routines.kt:213 | Read OK | Fix round 3: a day whose restoreDay returns -1 is skipped before writeExercises, so another workout's day is never cleared. RoutineRestoreTest.undoLeavesADayNowOwnedByAnotherWorkoutAlone gives no day any exercises, so it passes on the old code too (the old bug only wiped exercises and planned sets): give Upper an exercise with planned sets and assert they survive | #353 |

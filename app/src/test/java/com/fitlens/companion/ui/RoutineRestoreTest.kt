@@ -1,9 +1,12 @@
 package com.fitlens.companion.ui
 
 import android.app.Application
+import com.fitlens.companion.data.PlannedExercise
+import com.fitlens.companion.data.PlannedSet
 import com.fitlens.companion.data.Routine
 import com.fitlens.companion.data.RoutineDay
 import com.fitlens.companion.data.Routines
+import com.fitlens.companion.data.Workouts
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -43,9 +46,17 @@ class RoutineRestoreTest : FunctionTest() {
 
     @Test
     fun undoLeavesADayNowOwnedByAnotherWorkoutAlone() {
-        runBlocking {
+        val benchId = runBlocking {
+            val chest = Workouts.createCategory("Chest")
+            val bench = Workouts.createExercise("Bench Press", chest)
             Routines.save(Routine(0L, "Push Pull Legs", days = listOf(RoutineDay(0L, "Push Day"), RoutineDay(0L, "Pull Day"))))
-            Routines.save(Routine(0L, "Upper Lower", days = listOf(RoutineDay(0L, "Upper"))))
+            Routines.save(
+                Routine(
+                    0L, "Upper Lower",
+                    days = listOf(RoutineDay(0L, "Upper", listOf(PlannedExercise(bench, sets = listOf(PlannedSet(weightKg = 80.0, reps = 8), PlannedSet(weightKg = 85.0, reps = 6))))))
+                )
+            )
+            bench
         }
         val ppl = stored().routines.first { it.name == "Push Pull Legs" }
         val other = stored().routines.first { it.name == "Upper Lower" }
@@ -57,5 +68,8 @@ class RoutineRestoreTest : FunctionTest() {
         assertEquals(listOf("Upper"), after.routinesById[other.id]!!.days.map { it.name })
         assertEquals(listOf(otherDay.id), after.routinesById[other.id]!!.days.map { it.id })
         assertEquals(listOf(ppl.days[1].id), after.routinesById[ppl.id]!!.days.map { it.id })
+        val upper = after.routinesById[other.id]!!.days.first()
+        assertEquals(listOf(benchId), upper.exercises.map { it.exerciseId })
+        assertEquals(listOf(8, 6), upper.exercises.first().sets.map { it.reps })
     }
 }
