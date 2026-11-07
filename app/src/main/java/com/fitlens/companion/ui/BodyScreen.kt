@@ -70,14 +70,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.fitlens.companion.data.Dates
 import com.fitlens.companion.data.MRecord
-import com.fitlens.companion.data.MeasurementGoals
 import com.fitlens.companion.data.MeasurementDef
+import com.fitlens.companion.data.MeasurementGoals
 import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.fmtNum
+
 import com.fitlens.companion.data.fmtSigned
 import com.fitlens.companion.ui.design.SetCell
 import com.fitlens.companion.ui.design.SetRow as SetRowView
@@ -488,6 +490,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
         return
     }
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+        item { GoalLine(def) }
         item {
             // Range, trend and from-zero in one compact row (#115).
             GraphOptionChips(
@@ -512,15 +515,17 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
             } ?: emptyList()
             val photoDays = remember(snap.photosKey) { snap.photosByDate.keys.map { Dates.epochDay(it) }.toSet() }
             val unit = def?.unit ?: shown.lastOrNull()?.unit ?: ""
-            // A measurement with a goal judges each move by it, as its changes do (changeColour, #198).
-            val better: (Double, Double) -> Boolean? = { from, to ->
-                def?.let { MeasurementGoals.isImprovement(it.goalType, it.goalValue, from, to) } ?: higherIsBetter(from, to)
-            }
+            // Each move is judged by the measurement's own direction, or the user's choice with none (#330).
+            val plainNoGoal = plainWhenNoGoal()
+            val better: (Double, Double) -> Boolean? = { from, to -> measurementVerdict(def, plainNoGoal, from, to) }
+            // A specific value can't be told from the other goals by `better` alone, so the key is told (#330).
+            val keyMode = if (def != null && def.goalType == MeasurementGoals.TARGET && def.goalValue > 0) ChartKeyMode.TARGET else null
             if (shown.isEmpty()) GraphRangeEmpty(all.lastOrNull()?.date?.take(10)) { rangeIdx = RANGE_ALL } else FitChart(
                 listOf(LineSeries(selectedName, points)),
                 Modifier.padding(horizontal = 8.dp),
                 kind = kind,
                 better = better,
+                keyMode = keyMode,
                 photoDays = photoDays,
                 goal = if (def != null && def.goalType != 0 && def.goalValue > 0) def.goalValue else null,
                 range = def?.takeIf { it.hasRange }?.let { it.refLow to it.refHigh },
@@ -558,25 +563,26 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                             )
                         }
                     }
-                ) { vp, h, resetZoom ->
-                    if (shown.isEmpty()) GraphRangeEmpty(all.lastOrNull()?.date?.take(10)) { rangeIdx = RANGE_ALL } else FitChart(
-                        listOf(LineSeries(selectedName, points)),
-                        kind = kind,
-                        better = better,
-                        height = h,
-                        photoDays = photoDays,
-                        goal = if (def != null && def.goalType != 0 && def.goalValue > 0) def.goalValue else null,
-                        range = def?.takeIf { it.hasRange }?.let { it.refLow to it.refHigh },
-                        selected = selectedPoint?.let { ChartSelection(0, it) },
-                        onSelect = { selectedPoint = it.index },
-                        unit = unit,
-                        showTrend = showTrend,
-                        yFromZero = fromZero,
-                        viewport = vp,
-                        onExpand = resetZoom,
-                        overlay = symptomOverlay,
-                        overlayUnit = overlayUnit,
-                        period = period
+                    ) { vp, h, resetZoom ->
+                        if (shown.isEmpty()) GraphRangeEmpty(all.lastOrNull()?.date?.take(10)) { rangeIdx = RANGE_ALL } else FitChart(
+                            listOf(LineSeries(selectedName, points)),
+                            kind = kind,
+                            better = better,
+                            keyMode = keyMode,
+                            height = h,
+                            photoDays = photoDays,
+                            goal = if (def != null && def.goalType != 0 && def.goalValue > 0) def.goalValue else null,
+                            range = def?.takeIf { it.hasRange }?.let { it.refLow to it.refHigh },
+                            selected = selectedPoint?.let { ChartSelection(0, it) },
+                            onSelect = { selectedPoint = it.index },
+                            unit = unit,
+                            showTrend = showTrend,
+                            yFromZero = fromZero,
+                            viewport = vp,
+                            onExpand = resetZoom,
+                            overlay = symptomOverlay,
+                            overlayUnit = overlayUnit,
+                            period = period
                     )
                 }
             }
@@ -590,7 +596,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
             val sel = selectedPoint?.let { shown.getOrNull(it) }
             if (sel != null) SelectedPointCard(snap, nav, sel)
         }
-        item { StatsBlock(shown, def?.unit ?: shown.lastOrNull()?.unit ?: "") }
+        item { StatsBlock(shown, def?.unit ?: shown.lastOrNull()?.unit ?: "", def) }
     }
 }
 
@@ -621,17 +627,26 @@ private fun SelectedPointCard(snap: Snapshot, nav: Nav, r: MRecord) {
 }
 
 @Composable
-private fun StatsBlock(list: List<MRecord>, unit: String) {
+private fun StatsBlock(list: List<MRecord>, unit: String, def: MeasurementDef?) {
     if (list.isEmpty()) return
     val first = list.first()
     val last = list.last()
+    // The move from the first to the last value, judged by the measurement's direction or the user's choice with none (#330).
+    val good = measurementVerdict(def, plainWhenNoGoal(), first.value, last.value)
+    val moveColour = verdictColour(good, Color.Unspecified)
+    // The change in words too, so colour is not the only signal (#330).
+    val changeWords = good?.let { stringResource(if (it) R.string.body_change_better else R.string.body_change_worse) }
     val min = list.minBy { it.value }
     val max = list.maxBy { it.value }
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(Modifier.fillMaxWidth()) {
             LabelValue(stringResource(R.string.body_stat_start, Dates.day(first.date)), "${fmtNum(first.value)} $unit", Modifier.weight(1f))
             LabelValue(stringResource(R.string.body_stat_latest, Dates.day(last.date)), "${fmtNum(last.value)} $unit", Modifier.weight(1f))
-            LabelValue(stringResource(R.string.body_stat_change), "${fmtSigned(last.value - first.value)} $unit", Modifier.weight(1f), deltaColour(last.value - first.value, Color.Unspecified))
+            LabelValue(
+                stringResource(R.string.body_stat_change), "${fmtSigned(last.value - first.value)} $unit",
+                if (changeWords == null) Modifier.weight(1f) else Modifier.weight(1f).semantics(mergeDescendants = true) { stateDescription = changeWords },
+                moveColour
+            )
         }
         Row(Modifier.fillMaxWidth()) {
             LabelValue(stringResource(R.string.body_stat_lowest, Dates.day(min.date)), "${fmtNum(min.value)} $unit", Modifier.weight(1f))
@@ -641,7 +656,7 @@ private fun StatsBlock(list: List<MRecord>, unit: String) {
         val days = Dates.epochDay(last.date) - Dates.epochDay(first.date)
         if (days >= 14) {
             val perWeek = (last.value - first.value) / days * 7
-            Text(stringResource(R.string.body_avg_per_week, "${fmtSigned(perWeek, 2)} $unit".trim(), days.toInt()), style = MaterialTheme.typography.bodyMedium, color = deltaColour(perWeek, Color.Unspecified))
+            Text(stringResource(R.string.body_avg_per_week, "${fmtSigned(perWeek, 2)} $unit".trim(), days.toInt()), style = MaterialTheme.typography.bodyMedium, color = moveColour)
         }
     }
 }
@@ -662,6 +677,7 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
     }
     val byDate = remember(records) { records.groupBy { it.date.take(10) }.toSortedMap() }
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
+        item { GoalLine(def) }
         // A medication's dose changes come first, each with its date (#204).
         if (snap.showsMedications) doseChangeRows(snap, snap.medPlan.changesOf(name))
         byDate.entries.reversed().forEach { (d, l) ->

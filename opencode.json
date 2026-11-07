@@ -54,5 +54,13 @@
     "webfetch": "deny",
     "websearch": "deny",
     "external_directory": "deny"
+  },
+  "tools": {
+    "task": false,
+    "todowrite": false,
+    "skill": false,
+    "question": false,
+    "webfetch": false,
+    "websearch": false
   }
 }

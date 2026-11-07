@@ -3,8 +3,9 @@
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.198: 2 functions checked, re-checked after fix rounds 1 and 2.
 > Build gate 1.0.199: 5 functions checked, re-checked after fix round 1 (outline colours, KDoc and indentation, Daos.restoreRoutine and restoreDay) (CalendarScreen, DayCell, Screen.Workouts, ScreenContent, the Today button), on the working tree over 527d379, before CI run 41925517281 finished.
+> Build gate 1.0.200: 2 functions checked (#330, which way is good; working tree over e67bae8, before CI ran the tests named).
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 0 of 4 in scope; the rest of the area was not read.
-> Results: 4 Verified, 7 Read OK, 1 Defect, 1 Risk, 1 Improve, 1 Not checked.
+> Results: 5 Verified, 8 Read OK, 1 Defect, 1 Risk, 1 Improve, 1 Not checked.
 > `Verified` names a test that would fail if this broke. For 1.0.199 those tests had not yet run when the rows were written: a green release confirms them.
 
 ## Files
@@ -15,6 +16,7 @@
 | ui/CalendarScreen.kt | No (build gate: changed functions only) |
 | ui/MainActivity.kt | No (build gate: changed functions only) |
 | data/Daos.kt | No (build gate: changed functions only) |
+| data/Models.kt | No (build gate: changed functions only) |
 
 ## Checks
 
@@ -35,3 +37,5 @@
 | Screen.Workouts after rotation or process death | Android lifecycle | MainActivity.kt:271 | Read OK | Encoded as JSON in the back stack like every screen; an object round-trips by its class name. Not driven by a test | #353 |
 | ScreenContent made internal | Structure | MainActivity.kt:631 | Read OK | Only so NavHarness can call it; no behaviour change. See the tests ledger: the harness passes the live snapshot, not rememberScreenSnapshot's view | #353 |
 | RoutineDao.restoreRoutine, restoreDay | Data safety | Daos.kt:906, :910 | Read OK | `@Insert(onConflict = IGNORE)` returning the row id or -1; an explicit non-zero id is kept, since autoGenerate only fills 0. Called only inside Routines.restore's transaction. The caller's handling of restoreDay's -1 is a Risk in the library-workouts ledger | #353 |
+| MeasurementGoals.verdict | Logic | Models.kt:436 | Verified | MeasurementGoalsTest: up, down, closer and further on both sides of a target, no direction with and without plain, a target of 0, equal values for every type. An unknown goal_type falls to the no-direction rule, as before | #330 |
+| verdict: equality of doubles | Logic | Models.kt:437 | Read OK | `to == from` on values converted by the same function, so two equal stored values stay equal; changeText's "No change" uses the same test, so text and colour agree | #330 |

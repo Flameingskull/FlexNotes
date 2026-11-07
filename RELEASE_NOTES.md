@@ -1,36 +1,29 @@
-# FlexNotes 1.0.199
+# FlexNotes 1.0.200
 
 ## Overview
 
-This update fixes three problems you reported. Your saved workouts have their own screen again, graph time ranges now show exactly the period you choose, and the calendar keeps a day's photo when you select it.
+You now decide which way is good for every body measurement. Not everyone recording their weight wants it to fall, so each measurement can be set to "Up is good", "Down is good", "A specific value" or "Neither". Every green and red for that measurement then follows your choice, wherever it appears.
 
 ## What's new
 
-- **The Workouts screen is back:** open the day log's menu and choose Workouts to see every saved workout, with its number of days and exercises. Tap one to open it in the workout editor. Use + or **Create new workout** to start a new one, and each workout's menu offers Edit, Duplicate and Delete.
-- **Undo really undoes:** deleting a workout, from the Workouts screen or the workout editor, asks first. Undo then puts back the very same workout, in its place in the list, with its days. The library's current workout and the next-day suggestion carry on as before.
+- **Which way is good?** Open any measurement, standard, vital or one of your own, and tap the line under its figures that reads "Which way is good?". It's on the Track tab, in History and above the graph. Choose Up is good, Down is good, A specific value (with your target) or Neither. The ⋮ menu and Settings › Measurements open the same choice.
+- **Colours that agree everywhere:** for one measurement, the Track row, History, the day log, the graph's points and bars, the Change and per-week figures, the trend line's figures and Photo Compare all use the same rule. Down is good shows a fall in green. A specific value shows a move closer to your target in green and a move away in red.
+- **Your choice when there's no direction:** a new setting, **Colour changes with no goal**, chooses between Rise green, fall red (as before, and still the default) and Plain, which shows no green or red at all. Find it in Settings (search "colour" or "color"), or under Neither in the "Which way is good?" sheet. It's saved when you press Save.
 
 ## Improved
 
-- **Graph ranges mean what they say:** 1 month, 3 months, 6 months and 1 year now end today and count back whole calendar months, on every graph: body values, medications, exercises, Analysis, Readiness and pinned graphs. All time starts at your first logged value.
-- **The whole period on the axis:** a graph now spans the full range you pick, even when you have only a few values in it, so a year with four weeks of data looks like a year.
-- **Nothing logged in a range?** The graph says so, names the day you last logged, and offers **Show all time**. In full screen too, on body and exercise graphs.
-- **Zoom resets with the range:** changing the range in full screen goes back to the whole graph, so an old zoom can't hide part of the new period.
-- **Readiness on All time:** the weekly "Effort against work done" graph now goes back to your first entry. Before, it stopped after 52 weeks.
-- **Bars stay apart:** bar charts size their bars to the gap between values, so a few bars spread over a long period no longer run into one block. Shared graph images follow the same period and spacing.
-
-## Fixed
-
-- **Calendar:** selecting a day with a photo no longer hides the photo or turns the square dark. The selected day is outlined in gold, and today keeps its own thin ring.
-- **Analysis totals that only add up to zero,** such as duration for workouts without a timer, now say there's nothing to total, rather than "nothing logged".
-- **Exercise graphs** no longer show "Nothing logged in this period" with a button that does nothing when the chosen graph has no values at all.
+- **The graph key reads right:** when down is good, the key says so ("Better: lower"). For a specific value it says "Closer to your goal" and "Further from it", with the same marks the graph draws.
+- **The arrow always stays:** colour is never the only signal. Every change keeps its arrow and signed number, and with Plain the graph still draws which way each point moved.
+- **"Best" only when there is one:** the gold "Best" star appears only when the graph has a direction to judge by. Graphs with none, including the Readiness load ratio, monotony and effort graphs, no longer star their first point.
+- **Pace graphs:** a falling pace now shows as green, on the trend line and in the key.
+- **Screen readers** say whether a measurement's Change was better or worse.
 
 ## Known limitations
 
-- On Analysis, the first period of a range still counts the whole period. For example, "Workouts per year" on 1 month shows the year so far. A fix is planned.
-- After changing a graph's range, a tap can occasionally select a different point from the one under your finger. Changing the range again or reopening the graph corrects it. A fix is planned.
-- On the calendar at the largest font sizes, weekday headings and the legend can break mid-word.
-- If All time still stops short on your graphs, please compare it with the History list and report what you see.
+- A move that ends exactly as far from a specific value as it started still shows as red rather than plain (#371).
+- In Photo Compare, if the newer photo is on the left, the change is read from right to left (#371).
+- With two values on one day, the Track row and the day log can compare against different earlier values, so one value can be green on one screen and red on the other (#372).
 
 ## Your data
 
-No database change. Updating keeps all your workouts, sets, body values, photos and medications.
+No database change. Updating keeps all your workouts, sets, body values, photos and medications. Directions you or a FitNotes import set before stay exactly as they were.

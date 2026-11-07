@@ -2,7 +2,9 @@
 
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.199: 19 functions checked (#328, graph ranges; working tree over 527d379). Written by the main session from the auditor's report (the harness stopped the subagent writing files); re-checked after fix rounds 1 and 2.
-> Results: 10 Verified, 8 Read OK, 2 Defect, 1 Risk, 1 Improve, 1 Not checked.
+> Build gate 1.0.200: 7 functions checked (#330, which way is good; working tree over e67bae8, before CI ran the tests named).
+> Build gate 1.0.200, fix rounds 1 and 2 re-checked: the findings below and the rows they touch. CI on the round-1 tree compiled and passed 739 of 741 tests; CI on the round-2 tree (c4e8a86) passed 740 of 741, including every #330 test; the one failure is the known WholeScreen320Test.librarySearch (#349).
+> Results: 14 Verified, 8 Read OK, 2 Defect, 1 Risk, 2 Improve, 1 Not checked.
 
 `Verified` here names a test. A green release is what confirms it.
 
@@ -43,3 +45,11 @@
 | PinnedGraphCard | Dates and time | PinnedGraphs.kt:222-230, :295 | Read OK | Dates.today() in the cache key | #328 |
 | RANGES' day counts are dead | Structure | BodyScreen.kt:87 | Improve | GraphRangeIndexTest guards RANGE_ALL == RANGES.lastIndex; the 30L to 0L values still mislead | #328 |
 | Cause of All time stopping short | Logic | range path | Not checked | The Readiness cap and the full-screen zoom are fixed; no other limit found. Needs a phone with a multi-year import | #328 |
+| chartKeyMode | Logic | Charts.kt:285 | Verified | ChartKeyModeTest.theModeFollowsWhichWayIsGood: higher, lower, DECREASE, INCREASE, plain and all-null rules | #330 |
+| chartKeyMode infers the mode from one probe | Structure | Charts.kt:285, :307, :474 | Improve | better(1.0, 0.0) can't tell a specific value (1 to 0 against a target of 85 reads as UP), which is why BodyGraphPane must also pass keyMode. bestPoint now uses the same probe. A future caller with a target rule that forgets keyMode gets Better/Worse arrows over Closer/Further triangles. Passing the mode with the rule removes the second source | #370 |
+| ChartKey: Closer/Further for a specific value, nothing for no colours | Project rules | Charts.kt:310-318 | Verified | ChartKeyModeTest.aSpecificValueKeySaysCloserAndFurther, aKeyWithNoColoursLeavesOutBetterAndWorse | #330 |
+| ChartKey: arrows point down when down is good | Logic | Charts.kt:350-358 | Verified | The triangles and the new spoken words ("Better: lower", "Worse: higher") come from the same betterUp, so ChartKeyModeTest.theKeyNamesWhatIsBetterAndWorseWhenLowerIsGood and theKeyNamesWhatIsBetterAndWorseWhenHigherIsGood fail if it is wrong; GoalGraphTest asserts it on the real pane. The drawn direction itself is not compared | #330 |
+| trendVerdict | Logic | Charts.kt:475 | Verified | TrendVerdictTest: down, default, plain, target, pace, flat | #330 |
+| TrendReadout coloured by the graph's rule | Logic | Charts.kt:440, :514 | Read OK | Was the slope's sign. Same for higherIsBetter graphs; a rising pace trend is now red, which is right. Multi-series charts apply one rule to every series, as their points already did | #330 |
+| FitChart keyMode parameter | Structure | Charts.kt:398, :437 | Read OK | Default null keeps every other caller (Analysis, Readiness, Training, pinned) on the inferred mode | #330 |
+| ChartKey: symbols for bars and a specific value, spoken words | Android lifecycle | Charts.kt:316-330, :340 | Read OK | Fix round 1: the key draws the bar-top line on a bar chart and both triangles for a specific value, matching the plot. Each item merges into one node whose description is the fuller words, so TalkBack reads "Better: lower". ChartKeyModeTest.theKeyForABarChartStillNamesCloserAndFurther | #330 |

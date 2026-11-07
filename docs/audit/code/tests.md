@@ -3,8 +3,10 @@
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.198: 17 functions checked, re-checked after fix rounds 1 and 2.
 > Build gate 1.0.199: 3 test files checked in full (NavHarness, CalendarScreenTest, WorkoutsScreenTest) plus the re-recorded day-menu goldens, re-checked after fix round 1 (RoutineRestoreTest, the calendar goldens, the Undo test), on the working tree over 527d379, before CI run 41925517281 finished.
+> Build gate 1.0.200: 9 functions checked (#330, which way is good; working tree over e67bae8, before CI ran the tests named).
+> Build gate 1.0.200, fix rounds 1 and 2 re-checked: the findings below and the rows they touch. CI on the round-1 tree compiled and passed 739 of 741 tests; CI on the round-2 tree (c4e8a86) passed 740 of 741, including every #330 test; the one failure is the known WholeScreen320Test.librarySearch (#349).
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 9 of 15 in scope; the rest of the area was not read.
-> Results: 0 Verified, 21 Read OK, 0 Defect, 1 Risk, 2 Improve, 3 Not checked.
+> Results: 0 Verified, 34 Read OK, 0 Defect, 4 Risk, 3 Improve, 3 Not checked.
 > `Verified` names a test that would fail if this broke. CI run 41336801625 ran this code: every reminder, alarm and rest test passed.
 
 ## Files
@@ -26,6 +28,16 @@
 | app/src/test/java/com/fitlens/companion/ui/WorkoutsScreenTest.kt | Yes |
 | app/src/test/java/com/fitlens/companion/ui/RoutineRestoreTest.kt | Yes |
 | app/src/test/java/com/fitlens/companion/ui/WholeScreenTest.kt | No (build gate: changed functions only) |
+| app/src/test/java/com/fitlens/companion/data/MeasurementGoalsTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/ChartKeyModeTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/GoalReachTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/GoalSheetTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/MeasurementVerdictTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/NoGoalColourTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/PhotoCompareVerdictTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/TrendVerdictTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/MoveMarkerTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/GoalGraphTest.kt | Yes |
 
 ## Checks
 
@@ -58,6 +70,18 @@
 | Re-recorded day-menu goldens | Tests | app/src/test/screenshots/screen_day_menu*.png | Not checked | CI re-records the eight from the new code, so they record whatever it draws. Someone has to look at them once: the menu gains a row, and at 320dp with font ×2 it may scroll | #353 |
 | The new files compile and the tests pass | Build | WorkoutsScreen.kt, the three test files | Not checked | CI run 41925517281 was still running when this was written | #353 |
 | Restore of exercises, planned sets and training blocks: no test | Tests | RoutineRestoreTest.kt:23, WorkoutsScreenTest.kt:98 | Risk | Both tests restore workouts with days but no exercises, planned sets, notes or blocks, so `restore` writing those wrongly (its blocks encoding is a second copy of `save`'s) passes them. Seed a day with two exercises, planned sets and a training plan, delete, restore, and assert the stored routine equals the one before, field for field | #353 |
+| MeasurementGoalsTest, MeasurementVerdictTest, TrendVerdictTest | Tests | the three files | Read OK | Pure functions with exact expected values, both signs, equal values and plain; no time, order or platform dependence | #330 |
+| PhotoCompareVerdictTest | Tests | PhotoCompareVerdictTest.kt | Read OK | Builds a real BodyPart and Snapshot (internal constructors, same module) and runs compareRows; would fail on the old isImprovement-only code for the two no-direction cases. assertTrue(x == true) gives a poor failure message | #330 |
+| ChartKeyModeTest: down is good | Tests | ChartKeyModeTest.kt:68-82 | Read OK | Fix round 1: asserts the spoken words "Better: lower" / "Worse: higher" and their absence for Up, which come from the same flag as the triangles, so it now fails if the direction is wrong | #330 |
+| ChartKeyModeTest: no colours keeps Best | Tests | ChartKeyModeTest.kt:31-38, :58-64 | Read OK | Now asserts no Best in NONE mode, and bestPoint's result for higher, lower, none and plain | #330 |
+| GoalSheetTest | Tests | GoalSheetTest.kt | Read OK | Drives the real sheet and Settings flow: Cancel after Plain leaves the choice alone, Save writes it, answer order, the TARGET-0 text, goalText matching the Track line. pickingPlainThenSaveSetsIt's background save is now joined before teardown (row below) | #330 |
+| GoalReachTest | Tests | GoalReachTest.kt | Read OK | Saves through the sheet into Room and reads back with stored(); storedGoal polls 100 x 50 ms, bounded and enough for one write. The History, Graph and Medication cases only assert the line is there | #330 |
+| NoGoalColourTest | Tests | NoGoalColourTest.kt:46-67; FunctionTest.kt:97 | Read OK | Round 1's CI failure (theChangeColourFollowsTheSettingAtOnce: "attempt to re-open an already-closed SQLiteDatabase", a background save and Store.refresh outliving the test) is fixed two ways in round 2: that test now uses Settings.showWith, which writes nothing, and FunctionTest.closeSeams runs Settings.awaitWrites before Store.db.close, so choosingPlainInSettingsSavesIt and GoalSheetTest.pickingPlainThenSaveSetsIt (both through updatePortable on the settings scope) finish their writes first. The test still re-reads the colours after recomposition, so it can fail | #330 |
+| Risky code with no test | Tests | BodyScreen.kt:519-521, :629-660; Charts.kt:866-880 | Read OK | Fix round 1: GoalGraphTest draws BodyGraphPane with each answer and asserts the key's words, Best and the Change verdict. Left undriven: the colour of a point on the canvas (moveTriangleColour is unit-tested) | #330 |
+| The new tests compile and pass | Build | the ten files | Read OK | CI on the round-2 tree (c4e8a86) compiled them and passed 740 of 741: NoGoalColourTest, GoalSheetTest, MoveMarkerTest, GoalGraphTest, ChartKeyModeTest and the rest of #330's tests all passed. The one failure is the known flaky WholeScreen320Test.librarySearch golden (#349), being re-run | #330 |
+| MoveMarkerTest | Tests | MoveMarkerTest.kt | Read OK | Pure: good, bad, no verdict both ways (round 2: with the real ChartColors, asserting neither green, red nor the series colour), first and unchanged points | #330 |
+| GoalGraphTest | Tests | GoalGraphTest.kt | Read OK | Real pane on a fixture with only Bodyweight's goal replaced; waits for the key (5 s, bounded); asserts the words and the state description, both present and absent. Fixed clock and preferences from openScreen | #330 |
+| GoalReachTest: a store write on AppScope outlives the test | Tests | GoalReachTest.kt:145-166; MeasurementGoals.kt:159; Store.kt:932-941 | Risk | The sheet saves with AppScope.scope.launch, not the settings scope, so awaitWrites doesn't join it. storedGoal returns once the row is written, but the same job then runs refresh(Area.BODY), which rebuilds the snapshot from the database and calls MedReminders.rearm. If teardown closes the database first, the same "already-closed" error can fail theTrackTabGoalLineOpensTheSheetAndDownIsGoodMakesAFallGood. It passed on CI. Waiting for stored() to show the goal and then for Store.snapshot to carry it (or joining AppScope's children in closeSeams too) closes it. Siblings: any FunctionTest that saves through AppScope | #373 |
 
 ## Build gate 1.0.199, #328 test files
 

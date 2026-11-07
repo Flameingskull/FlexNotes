@@ -3,7 +3,8 @@
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.198: 17 functions checked (re-checked after fix round 2).
 > Audited 2026-10-31 against 1.0.198 (working tree over 830f7e1, before CI ran the tests named). Files read in full: 2 of the 2 this gate needed; not the area.
-> Results: 13 Proved, 4 Read OK, 0 Fails, 0 Gap, 0 Not checked.
+> Build gate 1.0.200: 3 functions checked (#330, the no-goal colour setting; working tree over e67bae8, before CI ran the tests named).
+> Results: 15 Proved, 5 Read OK, 0 Fails, 0 Gap, 0 Not checked.
 
 `Proved` here names a test that drives the function. Nothing was run: a green release is what confirms it.
 
@@ -37,3 +38,6 @@
 | Allowing exact alarms on Android 12 or 12L | Both chains are set again | MedReminders.kt:773 | Proved | ExactAlarmPermissionTest.allowingExactAlarmsAgainSetsBothChainsAgainAsAlarmClocks, through the platform's broadcast. Whether a phone sends it needs an Android 12 phone | |
 | Settings says reminders may be late | Only where it's true: Android 12 or 12L with the permission revoked; search matches the page | strings.xml:1988, SettingsScreen.kt:285 | Proved | ExactAlarmSettingsAndroid13Test.searchingForExactAlarmsFindsNoRowThatIsNotThere, ExactAlarmSettingsAndroid12Test.searchFindsTheRow, and the page tests' `assertNotShows("ten minutes")` | |
 | The code map's note on reminder clocks | Tells a test author the truth | docs/CODEMAP.md:330 | Read OK | Now says the rest timer's `now()` is still `System.currentTimeMillis()` (#343); the `ExactAlarms.kt` row names `epochMillis`, `retryDelayMs`, `retryAt`, `ACTION_PERMISSION_CHANGED` and `LiveClock` | |
+| Plain choice stored and read back | Kept across restarts and backups; off by default | Settings.kt:280, :488, :794 | Read OK | Saved as "1" or left out, read with bool(); MeasurementGoalsTest.thePlainChoiceDefaultsToOff checks only the default, no test round-trips it through the store |  |
+| Settings › Colour changes with no goal | Rise green, fall red (default) or Plain, saved and shown at once | SettingsScreen.kt:388-395 | Proved | NoGoalColourTest.choosingPlainInSettingsSavesIt; the effect on colours, NoGoalColourTest.theChangeColourFollowsTheSettingAtOnce |  |
+| Search finds it | Typing words a person would use lists the row | strings.xml settings_no_goal_colour_kw | Proved | NoGoalColourTest.theRowIsOnSettingsAndSearchFindsIt ("which way"), and round 1 adds the American spelling: NoGoalColourTest.searchingTheAmericanSpellingFindsTheRow |  |

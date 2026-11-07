@@ -426,6 +426,18 @@ object MeasurementGoals {
             else -> null
         }
     }
+
+    /**
+     * Whether a move from [from] to [to] is good (true), bad (false) or gets no colour (null) (#330): the one rule every
+     * green and red for a body value follows. A goal direction decides it, including closer to or further from a specific
+     * value. With no direction (none, or a specific value with no target typed) the user's choice decides: by default a
+     * rise is good and a fall bad; with [plainNoGoal] there is no colour. Equal values never get a colour.
+     */
+    fun verdict(type: Int, target: Double, from: Double, to: Double, plainNoGoal: Boolean): Boolean? {
+        if (to == from) return null
+        isImprovement(type, target, from, to)?.let { return it }
+        return if (plainNoGoal) null else to > from
+    }
 }
 
 data class MRecord(

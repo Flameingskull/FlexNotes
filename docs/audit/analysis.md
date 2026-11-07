@@ -2,7 +2,9 @@
 
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.199: 27 functions checked (#328, graph ranges; working tree over 527d379). Written by the main session from the auditor's report (the harness stopped the subagent writing files); re-checked after fix rounds 1 and 2.
-> Results: 11 Proved, 13 Read OK, 0 Fails, 2 Gap, 0 Not checked.
+> Build gate 1.0.200: 7 functions checked (#330, the graph key and trend colours; working tree over e67bae8, before CI ran the tests named).
+> Fix rounds 1 and 2 (1.0.200): 2 rows re-checked or added.
+> Results: 17 Proved, 16 Read OK, 0 Fails, 2 Gap, 0 Not checked. (Recounted over every row at 1.0.200; the 1.0.199 line had undercounted.)
 
 `Proved` here names a test that drives the function. A green release is what confirms it.
 
@@ -50,3 +52,11 @@
 | Readiness empty range | Says so, offers All time | ReadinessTab.kt:210-216 | Read OK | Panel when the range is empty and an earlier score exists; no test drives it |  |
 | Readiness today | App clock | ReadinessTab.kt:170 | Read OK |  |  |
 | Shared image axis | The period's first and last day | ShareImages.kt:118, :140-143, :340 | Proved | ShareGraphAxisTest (4); the labels Read OK |  |
+| chartKeyMode | A graph's rule gives Up, Down or no colours | Charts.kt:285 | Proved | ChartKeyModeTest.theModeFollowsWhichWayIsGood (pure logic) |  |
+| Key when down is good | Better and Worse, with Better's triangle pointing down | Charts.kt:313-317 | Proved | ChartKeyModeTest.aDownIsGoodKeyStillSaysBetterAndWorse asserts the words; the triangle directions are Read OK |  |
+| Key with no colours | No Better/Worse items | Charts.kt:313 | Proved | ChartKeyModeTest.aKeyWithNoColoursLeavesOutBetterAndWorse |  |
+| Key for a specific value | Its symbols match the graph's marks and say closer or further | Charts.kt:322-334, :347-350 | Read OK | Fixed in round 1: Closer and Further draw the plot's own triangles (both directions) or the bar-top line, not circles. Words proved by ChartKeyModeTest.aSpecificValueKeySaysCloserAndFurther, theKeyForABarChartStillNamesCloserAndFurther and GoalGraphTest.aSpecificValueKeyReadsCloserAndFurtherAndTheChangeIsCloser; no test reads the drawn shapes |  |
+| trendVerdict | The trend's fitted ends judged by the graph's own rule | Charts.kt:475 | Proved | TrendVerdictTest (5 tests: down good, default and Plain, specific value, pace, flat) |  |
+| Trend figure colour on every graph | Follows each graph's rule | Charts.kt:440, :514 | Read OK | Sibling change in this build: a falling pace trend (TrainingScreen.kt:648, :702) is now green, and the Readiness ratio, monotony and effort trends (noBetter) are now plain where they were slope-coloured. Higher-is-better graphs unchanged. No screen test reads the colour |  |
+| Pace graph key | Better points down for pace | TrainingScreen.kt:648; Charts.kt:437 | Read OK | chartKeyMode(lowerIsBetter) = DOWN; before this build Better always pointed up |  |
+| Moves with no verdict on any single-series graph | Never green or red where no side is better (Readiness ratio, monotony, effort: ReadinessTab.kt:37) | Charts.kt:253-258, :866 | Read OK | Round 2: muted direction triangles, where they were plain markers before this build. MoveMarkerTest.aMoveWithNoVerdictIsNeitherGreenNorRed proves the colour rule; no Readiness screen test reads it |  |

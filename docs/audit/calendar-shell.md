@@ -4,7 +4,8 @@
 > Build gate 1.0.198: 3 functions checked (re-checked after fix round 2).
 > Audited 2026-10-31 against 1.0.198 (working tree over 830f7e1, before CI ran the tests named). Files read in full: 3 of the 3 this gate needed; not the area.
 > Build gate 1.0.199: 11 functions checked (#329 the calendar's selected day, and the Workouts route for #353; working tree over 527d379, before CI ran the tests named). Re-checked after fix round 1: the golden, the outline colours and the today/selected distinction.
-> Results: 6 Proved, 7 Read OK, 0 Fails, 0 Gap, 1 Not checked.
+> Build gate 1.0.200: 2 functions checked (#330, the shared verdict in data/Models.kt; working tree over e67bae8, before CI ran the tests named).
+> Results: 7 Proved, 7 Read OK, 1 Fails, 0 Gap, 1 Not checked.
 
 ## Files
 
@@ -15,6 +16,7 @@
 | ui/TodayWidget.kt | Yes |
 | ui/MainActivity.kt | No (build gate: changed functions only) |
 | ui/CalendarScreen.kt | No (build gate: changed functions only; `CalendarScreen` and `DayCell` read in full) |
+| data/Models.kt | No (build gate: changed functions only; `MeasurementGoals` read in full) |
 
 ## Functions
 
@@ -34,3 +36,5 @@
 | Top bar Today (home icon) | Back to today's month with today selected | CalendarScreen.kt:116-118 | Read OK | Same `Dates.todayDate()`. Not driven | |
 | The calendar's golden, with a selected photo day | Updated, so how a selected photo day looks is recorded | WholeScreenTest.kt:241-246 | Read OK | Fix round 1: `calendar` (today, a photo day, selected) and `calendarAnotherPhotoDaySelected` (taps 20 Oct, the other photo day) at both widths and both font sizes, on the fixture's clock. A golden records the look; it proves only that later builds don't change it, not that it is right. Files not yet in `app/src/test/screenshots`: CI is recording them | #329 |
 | Workouts route | `Screen.Workouts` survives the back stack's encoding and draws the Workouts screen | MainActivity.kt:128, 643 | Proved | WorkoutsScreenTest drives it through `NavHarness`, which uses `Nav.encode`/`Nav.decode` and `ScreenContent` as `AppRoot` does | |
+| MeasurementGoals.verdict | One rule: a direction decides (closer to a specific value); none, or a specific value with no target, follows the Plain choice; equal values never coloured | Models.kt:436 | Proved | MeasurementGoalsTest (7 tests) |  |
+| A move that ends as far from a specific value as it started | No colour: it came no closer and went no further | Models.kt:425 | Fails | Already there (isImprovement, #27), now spread to trends and labelled "Further from it" by this build's key. Specific value 80 kg, 82 then 78: strict `<` gives false, so the change is red and the graph key calls it further from the goal | #371 |
