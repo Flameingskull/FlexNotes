@@ -20,6 +20,7 @@ import com.fitlens.companion.R
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
@@ -267,22 +268,23 @@ private fun ActionMenu(a: TopBarAction) {
 private fun FittedTitle(title: String, style: TextStyle, modifier: Modifier = Modifier) {
     // Never smaller than [MIN_TITLE_SIZE] of the title's size at the standard font size, however large the user's is.
     val floor = (MIN_TITLE_SIZE / LocalDensity.current.fontScale).coerceAtMost(1f)
-    var scale by remember(title, style, floor) { mutableFloatStateOf(1f) }
-    Text(
-        title,
-        modifier,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        style = if (scale == 1f) style else style.copy(
-            fontSize = if (style.fontSize.isSpecified) style.fontSize * scale else style.fontSize,
-            lineHeight = if (style.lineHeight.isSpecified) style.lineHeight * scale else style.lineHeight
-        ),
-        onTextLayout = { layout ->
-            if ((layout.hasVisualOverflow || layout.isLineEllipsized(0)) && scale > floor) {
-                scale = (scale - 0.1f).coerceAtLeast(floor)
+    BoxWithConstraints(modifier) {
+        var scale by remember(title, style, floor, constraints.maxWidth) { mutableFloatStateOf(1f) }
+        Text(
+            title,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            style = if (scale == 1f) style else style.copy(
+                fontSize = if (style.fontSize.isSpecified) style.fontSize * scale else style.fontSize,
+                lineHeight = if (style.lineHeight.isSpecified) style.lineHeight * scale else style.lineHeight
+            ),
+            onTextLayout = { layout ->
+                if ((layout.hasVisualOverflow || layout.isLineEllipsized(0)) && scale > floor) {
+                    scale = (scale - 0.1f).coerceAtLeast(floor)
+                }
             }
-        }
-    )
+        )
+    }
 }
 
 private const val MIN_TITLE_SIZE = 0.8f

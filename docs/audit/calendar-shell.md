@@ -5,7 +5,8 @@
 > Audited 2026-10-31 against 1.0.198 (working tree over 830f7e1, before CI ran the tests named). Files read in full: 3 of the 3 this gate needed; not the area.
 > Build gate 1.0.199: 11 functions checked (#329 the calendar's selected day, and the Workouts route for #353; working tree over 527d379, before CI ran the tests named). Re-checked after fix round 1: the golden, the outline colours and the today/selected distinction.
 > Build gate 1.0.200: 2 functions checked (#330, the shared verdict in data/Models.kt; working tree over e67bae8, before CI ran the tests named).
-> Results: 7 Proved, 7 Read OK, 1 Fails, 0 Gap, 1 Not checked.
+> Build gate 1.0.201: 4 functions checked (#349, the top bar title refitting; working tree over 3adada9, before CI ran the tests named).
+> Results: 8 Proved, 10 Read OK, 1 Fails, 0 Gap, 1 Not checked.
 
 ## Files
 
@@ -16,6 +17,7 @@
 | ui/TodayWidget.kt | Yes |
 | ui/MainActivity.kt | No (build gate: changed functions only) |
 | ui/CalendarScreen.kt | No (build gate: changed functions only; `CalendarScreen` and `DayCell` read in full) |
+| ui/design/TopBar.kt | No (build gate: changed functions only; `FitTopBar`, `iconsThatFit` and `FittedTitle` read in full) |
 | data/Models.kt | No (build gate: changed functions only; `MeasurementGoals` read in full) |
 
 ## Functions
@@ -38,3 +40,7 @@
 | Workouts route | `Screen.Workouts` survives the back stack's encoding and draws the Workouts screen | MainActivity.kt:128, 643 | Proved | WorkoutsScreenTest drives it through `NavHarness`, which uses `Nav.encode`/`Nav.decode` and `ScreenContent` as `AppRoot` does | |
 | MeasurementGoals.verdict | One rule: a direction decides (closer to a specific value); none, or a specific value with no target, follows the Plain choice; equal values never coloured | Models.kt:436 | Proved | MeasurementGoalsTest (7 tests) |  |
 | A move that ends as far from a specific value as it started | No colour: it came no closer and went no further | Models.kt:425 | Fails | Already there (isImprovement, #27), now spread to trends and labelled "Further from it" by this build's key. Specific value 80 kg, 82 then 78: strict `<` gives false, so the change is red and the graph key calls it further from the goal | #371 |
+| Top bar title shrinks to fit | One line, a step smaller at a time down to 80% of the standard size; only a title still too long then ends in an ellipsis (#157, #325) | TopBar.kt:268-289 | Proved | Unchanged rule, now inside BoxWithConstraints(modifier). WholeScreen320Test and WholeScreenTest at 100% and 200% font report any new title cut short with an ellipsis; only #325's known titles are allowed. A green round-2 run confirms it |  |
+| Title starts again from full size when its room changes | Rotating, icons moving into the ⋮ menu, or the library's categories then search giving a different width: the title refits to the new room instead of staying shrunk | TopBar.kt:272 | Read OK | scale is remembered on constraints.maxWidth. The width comes from the bar's title slot (TopAppBar) or the remaining Row space beside the ▾ (weight, fill = false), never from the title's own size, so a reset can't loop. No test changes the room and reads the title's size |  |
+| Centred tab-screen titles | Still centred | TopBar.kt:114-118 | Read OK | The box wraps the text, so the Column's centring is unchanged. The ellipsis checks cover these screens; no test reads the position |  |
+| Library title with its ▾ switcher | The name shrinks or ellipsizes and the ▾ stays visible | TopBar.kt:122-128 | Read OK | weight(1f, fill = false) moved from the Text to the box, a direct Row child, so the arrow keeps its room. #325's library names are the known ellipses in WholeScreenTest |  |

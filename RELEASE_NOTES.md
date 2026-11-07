@@ -1,4 +1,4 @@
-# FlexNotes 1.0.200
+# FlexNotes 1.0.201
 
 ## Overview
 
@@ -17,6 +17,7 @@ You now decide which way is good for every body measurement. Not everyone record
 - **"Best" only when there is one:** the gold "Best" star appears only when the graph has a direction to judge by. Graphs with none, including the Readiness load ratio, monotony and effort graphs, no longer star their first point.
 - **Pace graphs:** a falling pace now shows as green, on the trend line and in the key.
 - **Screen readers** say whether a measurement's Change was better or worse.
+- **More reliable releases:** the whole-screen picture tests now wait for each screen to finish settling before comparing it, so a picture caught mid-change no longer stops an update from being published. The project's README has also been rewritten to be shorter and up to date.
 
 ## Known limitations
 

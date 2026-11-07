@@ -21,7 +21,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.unit.Density
 import androidx.test.core.app.ApplicationProvider
@@ -309,7 +312,10 @@ abstract class WholeScreenChecks(private val width: Int) {
         RestTimer.adjust(-15)
     }
 
-    private fun openMenu() = tap(str(R.string.cmn_more_options))
+    private fun openMenu() =
+        withControl(str(R.string.cmn_more_options), false, "click") {
+            performSemanticsAction(SemanticsActions.OnClick)
+        }
 
     private fun fromMenu(item: Int) {
         openMenu()
@@ -333,7 +339,8 @@ abstract class WholeScreenChecks(private val width: Int) {
     /** Types [text] into the screen's text field. */
     private fun typeText(text: String) {
         try {
-            compose.onNode(hasSetTextAction()).performTextInput(text)
+            // The set-text action does not focus the field, so no cursor is drawn: its blink could differ between runs (#349).
+            compose.onNode(hasSetTextAction()).performTextReplacement(text)
             compose.waitForIdle()
         } catch (e: Throwable) {
             found += "Could not type \"$text\": ${e.message?.lineSequence()?.firstOrNull()}"
@@ -386,6 +393,7 @@ abstract class WholeScreenChecks(private val width: Int) {
                 stepsDone = true
                 steps()
             }
+            settle()
             val label = "${width}dp$suffix"
             val where = "$title [$width dp, $percent% font]"
             try {
@@ -396,6 +404,23 @@ abstract class WholeScreenChecks(private val width: Int) {
             golden("screen_${name}_$label.png", where)
         }
         report()
+    }
+
+    /**
+     * Lets the screen finish changing before it is checked and drawn into a golden (#349). Work on other threads
+     * (the stores, the settings) can land after the first idle, and a change it makes may start an animation, so each
+     * round gives that work real time to finish, runs the posted changes, then plays the test clock forward so any
+     * animation or delayed change completes. Three rounds in all. The test clock is put back to advancing by itself.
+     */
+    private fun settle() {
+        repeat(3) {
+            Thread.sleep(100)
+            compose.waitForIdle()
+            compose.mainClock.autoAdvance = false
+            compose.mainClock.advanceTimeBy(500)
+            compose.mainClock.autoAdvance = true
+            compose.waitForIdle()
+        }
     }
 
     /** Compares the screen with its golden, or records one when there is none (see [ScreenshotTest]). */

@@ -16,8 +16,8 @@ for the next release.
 1. Fork the repository and create a branch from `main`.
 2. Make your change. Please:
    - follow the existing Kotlin and Compose style;
-   - use the brand colours and theme in `app/src/main/java/com/fitlens/companion/ui/Theme.kt` (black, imperial
-     purple and gold) rather than new colours;
+   - use the brand colours and theme in `app/src/main/java/com/fitlens/companion/ui/Theme.kt` (black and vibrant
+     gold; charts may also use the ChartHues palette) rather than new colours;
    - keep existing users' data safe. A database change must bump `Db.VERSION` and add an `onUpgrade` migration that
      keeps existing data;
    - don't change the `applicationId`, the version numbering or the signing setup.

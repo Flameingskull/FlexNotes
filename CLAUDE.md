@@ -52,7 +52,7 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
    API level Google Play then requires, raising AGP and Gradle with it, and review that version's behaviour changes.
    Never let an update touch `applicationId`, the signing setup, the signing secrets or `BUILD_OFFSET`.
 7. **Refresh the README every 5 releases**, both on GitHub and locally. Rewrite `README.md` so it matches the app as
-   released, its purpose and direction, and every other section. Last refresh: **1.0.196**. Next due: **1.0.201**.
+   released, its purpose and direction, and every other section. Last refresh: **1.0.201**. Next due: **1.0.206**.
    The `/new-build`, `/safe-build` and `/slice-build` skills check this in their release-notes step.
 8. **Reviews and audits must be reliable (owner, 2026-10-30).** Whether something works is checked by following it to
    its result, not by reading its text or layout, and only a test that drives it counts as proof. Findings from a real
