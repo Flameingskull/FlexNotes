@@ -385,6 +385,14 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
                 summary = stringResource(R.string.settings_length_unit_summary)
             ) { i -> Settings.updatePortable { it.copy(lengthUnit = if (i == 1) LengthUnits.IN else LengthUnits.CM) } }
         },
+        mainRow(s, R.string.settings_no_goal_colour, R.string.settings_no_goal_colour_kw) { title ->
+            SettingsChoiceRow(
+                title,
+                listOf(stringResource(R.string.mg_plain_off), stringResource(R.string.mg_plain_on)),
+                if (prefs.plainNoGoal) 1 else 0,
+                summary = stringResource(R.string.settings_no_goal_colour_summary)
+            ) { i -> Settings.updatePortable { it.copy(plainNoGoal = i == 1) } }
+        },
         // The profile (#172) took over the Sex row: one page for every value the formulas use.
         mainRow(s, R.string.settings_profile, R.string.settings_profile_kw) { title ->
             SettingsActionRow(title, profileSummary(LocalContext.current.resources, prefs)) { open(SettingsSection.Profile) }

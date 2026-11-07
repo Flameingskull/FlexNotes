@@ -94,6 +94,7 @@ abstract class FunctionTest {
         Settings.showWith(PortableSettings())
         // Phone settings a test set (a reminder, a lock) must not reach the next test.
         runBlocking { Settings.updateDeviceNow { DeviceSettings() } }
+        runBlocking { Settings.awaitWrites() }
         Store.db.close()
         app.deleteDatabase(Db.NAME)
     }

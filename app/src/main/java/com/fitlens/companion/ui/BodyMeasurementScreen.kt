@@ -251,9 +251,7 @@ fun BodyMeasurementScreen(snap: Snapshot, nav: Nav, name: String, page: Int = 0)
                                     modifier = Modifier.weight(2f)
                                 )
                             }
-                            if (def != null && def.goalType != 0) {
-                                Text(goalText(res, def), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
+                            GoalLine(def)
                             // As in FitNotes: Save and Clear for a new value, Update and Delete for the selected one.
                             if (chosen == null) {
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
