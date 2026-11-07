@@ -245,6 +245,18 @@ internal fun DrawScope.marker(shape: Int, c: Offset, r: Float, color: Color, sty
     }
 }
 
+/**
+ * The colour of the triangle that marks a move to [now] from [prev], or null when the point keeps the plain marker:
+ * the first point and an unchanged value (#330). A good move is [better], a bad one [worse], and a changed value with
+ * no verdict (Plain chosen) is the [neutral] colour (the muted text colour, never green or red), so the arrow stays.
+ */
+internal fun moveTriangleColour(prev: Double?, now: Double, good: Boolean?, neutral: Color, better: Color, worse: Color): Color? = when {
+    prev == null || now == prev -> null
+    good == true -> better
+    good == false -> worse
+    else -> neutral
+}
+
 /** A triangle pointing up for a rise or down for a fall (#198). */
 internal fun DrawScope.arrowMarker(up: Boolean, c: Offset, r: Float, color: Color) {
     val tip = if (up) -1.15f else 1.15f
@@ -278,16 +290,51 @@ fun higherIsBetter(from: Double, to: Double): Boolean? = when {
 /** For graphs where less is better, such as pace (#198). */
 fun lowerIsBetter(from: Double, to: Double): Boolean? = higherIsBetter(to, from)
 
-/** What a lone series' marks mean (#198): green better, red worse, the triangle's direction, the best star, the latest ring. */
+/** What the key's Better and Worse items mean (#330): which way is good, a specific value, or nothing coloured. */
+enum class ChartKeyMode { UP, DOWN, TARGET, NONE }
+
+/** The key mode a graph's [better] rule implies: a fall is good (DOWN), a rise is (UP), or no move has a colour (NONE). */
+internal fun chartKeyMode(better: (Double, Double) -> Boolean?): ChartKeyMode = when (better(1.0, 0.0)) {
+    true -> ChartKeyMode.DOWN
+    false -> ChartKeyMode.UP
+    null -> ChartKeyMode.NONE
+}
+
+/**
+ * The best point of [shown] by the graph's own [better] rule (#330), or null when the rule gives no good or bad side
+ * (no direction with Plain chosen, or a ratio with no better side): then no point is starred and the key has no "Best".
+ */
+internal fun bestPoint(shown: List<ChartPoint>, better: (Double, Double) -> Boolean?): ChartPoint? =
+    if (chartKeyMode(better) == ChartKeyMode.NONE) null
+    else shown.reduceOrNull { b, p -> if (better(b.y, p.y) == true) p else b }
+
+/**
+ * The symbol the key uses for a good or bad move (#330), the same as the plot's: the up or down triangle ([up]), both
+ * triangles for a specific value (a move either way can be closer, [up] null), or on a bar chart ([bars]) the short
+ * line on the bar's top.
+ */
+private fun DrawScope.moveSymbol(bars: Boolean, up: Boolean?, color: Color) {
+    val r = size.height / 2.4f
+    if (bars) {
+        drawLine(color, Offset(0f, center.y), Offset(size.width, center.y), strokeWidth = 3.dp.toPx())
+    } else if (up == null) {
+        arrowMarker(true, Offset(size.width * 0.27f, center.y), r, color)
+        arrowMarker(false, Offset(size.width * 0.73f, center.y), r, color)
+    } else {
+        arrowMarker(up, center, r, color)
+    }
+}
+
+/** What a lone series' marks mean (#198): green better, red worse (the same triangles as the plot, or the bar-top line), the best star, the latest ring. */
 @Composable
-internal fun ChartKey(changes: Boolean, latest: Boolean) {
+internal fun ChartKey(changes: Boolean, latest: Boolean, mode: ChartKeyMode = ChartKeyMode.UP, bars: Boolean = false) {
     val colors = LocalChartColors.current
     val style = MaterialTheme.typography.labelSmall
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     @Composable
-    fun Item(label: String, draw: DrawScope.() -> Unit) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Canvas(Modifier.size(12.dp), onDraw = draw)
+    fun Item(label: String, width: Dp = 12.dp, description: String = label, draw: DrawScope.() -> Unit) {
+        Row(Modifier.semantics(mergeDescendants = true) { contentDescription = description }, verticalAlignment = Alignment.CenterVertically) {
+            Canvas(Modifier.size(width, 12.dp), onDraw = draw)
             Spacer(Modifier.width(4.dp))
             Text(label, style = style, color = muted)
         }
@@ -297,11 +344,19 @@ internal fun ChartKey(changes: Boolean, latest: Boolean) {
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (changes) {
-            Item(stringResource(R.string.ch_key_better)) { arrowMarker(true, center, size.minDimension / 2.4f, colors.better) }
-            Item(stringResource(R.string.ch_key_worse)) { arrowMarker(false, center, size.minDimension / 2.4f, colors.worse) }
+        if (changes && mode == ChartKeyMode.TARGET) {
+            val symbolWidth = if (bars) 12.dp else 26.dp
+            Item(stringResource(R.string.ch_key_closer), symbolWidth) { moveSymbol(bars, null, colors.better) }
+            Item(stringResource(R.string.ch_key_further), symbolWidth) { moveSymbol(bars, null, colors.worse) }
+        } else if (changes && mode != ChartKeyMode.NONE) {
+            // Better points the way that is good: up, or down when lower is better.
+            val betterUp = mode != ChartKeyMode.DOWN
+            val betterWords = stringResource(if (betterUp) R.string.ch_key_better_higher else R.string.ch_key_better_lower)
+            val worseWords = stringResource(if (betterUp) R.string.ch_key_worse_lower else R.string.ch_key_worse_higher)
+            Item(stringResource(R.string.ch_key_better), description = betterWords) { moveSymbol(bars, betterUp, colors.better) }
+            Item(stringResource(R.string.ch_key_worse), description = worseWords) { moveSymbol(bars, !betterUp, colors.worse) }
         }
-        Item(stringResource(R.string.ch_key_best)) { star(center, size.minDimension / 2f, colors.accent) }
+        if (mode != ChartKeyMode.NONE) Item(stringResource(R.string.ch_key_best)) { star(center, size.minDimension / 2f, colors.accent) }
         if (latest) Item(stringResource(R.string.ch_key_latest)) {
             drawCircle(colors.goal, radius = size.minDimension / 2.4f, center = center, style = Stroke(width = 1.5.dp.toPx()))
         }
@@ -378,7 +433,9 @@ fun FitChart(
      * The days the time axis covers (#328): a chosen range's whole period, even where the data is shorter, so a year
      * with four weeks of values draws as a year. Null: the data's own span, first point to last.
      */
-    period: ChartPeriod? = null
+    period: ChartPeriod? = null,
+    /** What the key's Better and Worse mean (#330); null works it out from [better]. A specific-value goal passes TARGET. */
+    keyMode: ChartKeyMode? = null
 ) {
     var hidden by remember(series.size) { mutableStateOf(emptySet<Int>()) }
     // The overlay's legend entry follows the series, so its index is series.size.
@@ -417,9 +474,10 @@ fun FitChart(
             }
         }
         if (showKey && visible.size == 1 && all.isNotEmpty()) {
-            ChartKey(changes = kind != ChartKind.AREA, latest = kind != ChartKind.BAR)
+            val mode = keyMode ?: chartKeyMode(better)
+            ChartKey(changes = kind != ChartKind.AREA, latest = kind != ChartKind.BAR, mode = mode, bars = kind == ChartKind.BAR)
         }
-        if (showTrend && all.isNotEmpty()) TrendReadout(series, visible, trends, trendUnit, trendSkipLast)
+        if (showTrend && all.isNotEmpty()) TrendReadout(series, visible, trends, trendUnit, trendSkipLast, better)
     }
 }
 
@@ -449,6 +507,14 @@ internal fun viewRange(all: List<ChartPoint>, viewport: ChartViewport, period: C
     return (fullMin + viewport.from * fullSpan) to (fullMin + viewport.to * fullSpan)
 }
 
+/**
+ * Whether a trend line is going the good way (true), the bad way (false) or neither (null), by the graph's own
+ * [better] rule applied to the line's two fitted ends (#330): so down is good, closer to a specific value and pace
+ * (lower is better) all colour a trend correctly.
+ */
+internal fun trendVerdict(t: TrendLine, better: (Double, Double) -> Boolean?): Boolean? =
+    better(t.at(t.fromX), t.at(t.toX))
+
 /** The most room the trend's figures take under a chart: [TrendReadout] scrolls beyond it. */
 private val TREND_ROOM = 100.dp
 
@@ -462,7 +528,8 @@ private fun TrendReadout(
     visible: List<Int>,
     trends: Map<Int, TrendLine>,
     unit: String,
-    skippedLast: Boolean
+    skippedLast: Boolean,
+    better: (Double, Double) -> Boolean?
 ) {
     val res = LocalContext.current.resources
     Column(
@@ -484,7 +551,7 @@ private fun TrendReadout(
                 else res.getString(R.string.ch_trend_prefix, trendText(res, t, { v -> fmtNum(v, 1) }, u)),
                 style = MaterialTheme.typography.bodySmall,
                 color = if (t == null) MaterialTheme.colorScheme.onSurfaceVariant
-                else deltaColour(t.slope, MaterialTheme.colorScheme.onSurfaceVariant)
+                else verdictColour(trendVerdict(t, better), MaterialTheme.colorScheme.onSurfaceVariant)
             )
         }
         if (skippedLast && trends.isNotEmpty()) {
@@ -796,9 +863,10 @@ private fun LinePlot(
                         // or red for better or worse. The first point and an unchanged one keep the plain marker.
                         val prev = if (single && i > 0) pts[i - 1].y else null
                         val good = prev?.let { better(it, p.y) }
-                        if (prev != null && good != null && p.y != prev) {
+                        val triangle = moveTriangleColour(prev, p.y, good, textColor, colors.better, colors.worse)
+                        if (prev != null && triangle != null) {
                             arrowMarker(p.y > prev, c, 5.5.dp.toPx(), surface)
-                            arrowMarker(p.y > prev, c, 4.5.dp.toPx(), if (good) colors.better else colors.worse)
+                            arrowMarker(p.y > prev, c, 4.5.dp.toPx(), triangle)
                         } else {
                             marker(si, c, 5.dp.toPx(), surface)
                             marker(si, c, 4.dp.toPx(), color)
@@ -809,7 +877,7 @@ private fun LinePlot(
                 // The best point in view gets a gold star above it, and the latest an ivory ring (#198).
                 if (single) {
                     val shown = pts.filter { it.x >= xMin && it.x <= xMax }
-                    shown.reduceOrNull { b, p -> if (better(b.y, p.y) == true) p else b }?.let { b ->
+                    bestPoint(shown, better)?.let { b ->
                         val c = Offset(px(b.x), py(b.y).coerceIn(top, bottom) - 13.dp.toPx())
                         star(c, 6.5.dp.toPx(), surface)
                         star(c, 5.dp.toPx(), colors.accent)

@@ -328,7 +328,7 @@ fun CompareScreen(snap: Snapshot, nav: Nav, a: Long, b: Long) {
                         stringResource(R.string.pv_days_apart, abs(days).toInt(), fmtNum(abs(days) / 7.0, 1)),
                         Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.titleSmall
                     )
-                    val rows = compareRows(snap, da, db)
+                    val rows = compareRows(snap, da, db, plainWhenNoGoal())
                     if (rows.isNotEmpty()) {
                         SectionLabel(stringResource(R.string.pv_body_values), Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
                         rows.forEach { row ->
@@ -339,13 +339,9 @@ fun CompareScreen(snap: Snapshot, nav: Nav, a: Long, b: Long) {
                                 Text(row.label, Modifier.weight(1.3f))
                                 Text(row.left, Modifier.weight(1f))
                                 Text(row.right, Modifier.weight(1f))
-                                // A measurement with a goal is judged by it, as the body tracker does (changeColour, #303): a
-                                // smaller waist is green, not red.
-                                val changeColor = when (row.better) {
-                                    true -> Brand.Rise
-                                    false -> Brand.Fall
-                                    null -> deltaColour(row.delta, MaterialTheme.colorScheme.primary)
-                                }
+                                // Each change is judged by the measurement's direction, or the user's choice with none
+                                // (#330): a smaller waist is green when down is good. Plain is the normal text colour.
+                                val changeColor = verdictColour(row.better, MaterialTheme.colorScheme.onSurface)
                                 Text(row.change, Modifier.weight(0.9f), color = changeColor)
                             }
                         }
@@ -370,10 +366,10 @@ fun CompareScreen(snap: Snapshot, nav: Nav, a: Long, b: Long) {
     }
 }
 
-/** [better] is whether the change moved towards the measurement's goal, or null with no goal or no change (#303). */
+/** [better] is whether the change is good for the measurement (its direction, or the user's choice with none), or null for no colour (#330). */
 data class CompareRow(val label: String, val left: String, val right: String, val change: String, val delta: Double = 0.0, val better: Boolean? = null)
 
-fun compareRows(snap: Snapshot, da: String, db: String): List<CompareRow> =
+fun compareRows(snap: Snapshot, da: String, db: String, plainNoGoal: Boolean = false): List<CompareRow> =
     snap.usedMeasurements.mapNotNull { m ->
         val ha = snap.valueNear(m.name, da, 7)
         val hb = snap.valueNear(m.name, db, 7)
@@ -383,9 +379,7 @@ fun compareRows(snap: Snapshot, da: String, db: String): List<CompareRow> =
         val ch = if (ha != null && hb != null) fmtSigned(hb.first.value - ha.first.value) else ""
         val unit = (hb ?: ha)?.first?.unit ?: ""
         val delta = if (ha != null && hb != null) hb.first.value - ha.first.value else 0.0
-        val better = if (ha != null && hb != null) {
-            com.fitlens.companion.data.MeasurementGoals.isImprovement(m.goalType, m.goalValue, ha.first.value, hb.first.value)
-        } else null
+        val better = if (ha != null && hb != null) measurementVerdict(m, plainNoGoal, ha.first.value, hb.first.value) else null
         CompareRow("${m.name}${if (unit.isNotBlank()) " ($unit)" else ""}", l, r, ch, delta, better)
     }
 

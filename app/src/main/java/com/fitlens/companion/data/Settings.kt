@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -275,7 +276,9 @@ data class PortableSettings(
     /** The PDF report's pages: dark (as in the app) or light (for printing) (#46). */
     val pdfDark: Boolean = true,
     /** Photos per day in the PDF report's daily log, 0 to 4 (#46). */
-    val pdfPhotosPerDay: Int = 2
+    val pdfPhotosPerDay: Int = 2,
+    /** When there's no goal direction, whether to show changes with no colour (true) or fall=bad/rise=good (false). */
+    val plainNoGoal: Boolean = false
 ) {
     companion object {
         const val AUTOFILL_LAST = "last"
@@ -330,6 +333,14 @@ object Settings {
 
     /** Waits for the first load. Everything that reads settings goes through here. */
     suspend fun awaitLoaded() = loaded.await()
+
+    /**
+     * Waits for every background load and save started so far (each is short), so a test can close the database after
+     * them instead of racing them (#330). The app does not call it.
+     */
+    internal suspend fun awaitWrites() {
+        scope.coroutineContext[Job]?.children?.toList()?.forEach { it.join() }
+    }
 
     /**
      * The current phone settings. Loading takes a few milliseconds at start-up; a caller that arrives before it's
@@ -483,6 +494,7 @@ object Settings {
             P_REST_SOUND to if (s.restSound) null else "0",
             P_REST_VOLUME to s.restVolume.takeIf { it != 80 }?.toString(),
             P_MARK_COMPLETE to if (s.markComplete) "1" else null,
+            P_PLAIN_NO_GOAL to if (s.plainNoGoal) "1" else null,
             P_GRAPH_KINDS to s.graphKinds?.takeIf { it.isNotBlank() },
             P_PINNED_GRAPHS to s.pinnedGraphs?.takeIf { it.isNotBlank() },
             P_GRAPH_COMPARE to s.graphCompare?.takeIf { it.isNotBlank() },
@@ -613,6 +625,7 @@ object Settings {
     private const val P_REST_SOUND = "rest_sound"
     private const val P_REST_VOLUME = "rest_volume"
     private const val P_MARK_COMPLETE = "mark_complete"
+    private const val P_PLAIN_NO_GOAL = "plain_no_goal"
     private const val P_GRAPH_KINDS = "graph_kinds"
     private const val P_PINNED_GRAPHS = "pinned_graphs"
     private const val P_GRAPH_COMPARE = "graph_compare"
@@ -787,6 +800,7 @@ object Settings {
         restSound = get(P_REST_SOUND) != "0",
         restVolume = get(P_REST_VOLUME)?.toIntOrNull()?.coerceIn(10, 100) ?: 80,
         markComplete = bool(get(P_MARK_COMPLETE)),
+        plainNoGoal = bool(get(P_PLAIN_NO_GOAL)),
         graphKinds = get(P_GRAPH_KINDS)?.takeIf { it.isNotBlank() },
         pinnedGraphs = get(P_PINNED_GRAPHS)?.takeIf { it.isNotBlank() },
         graphCompare = get(P_GRAPH_COMPARE)?.takeIf { it.isNotBlank() },
