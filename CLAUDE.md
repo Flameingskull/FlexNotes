@@ -86,8 +86,12 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
    **work orders** precise enough for a small-context model with no compiler, review its diffs and send correction
    orders. An item it can't get right in 3 runs is held back, never finished by Claude. Claude still writes docs,
    release notes, the README, issues and commits. The method is `.claude/skills/local-coder/SKILL.md`; the coder's own
-   rules are `AGENTS.md` and its permissions `opencode.json`. Never load, switch or unload the owner's model, and never
-   name a specific model in a skill or agent: if no model answers, ask.
+   rules are `AGENTS.md` and its permissions `opencode.json`. Never switch to another model or unload the owner's, and
+   never name a specific model in a skill or agent: if no model answers, ask. **The one exception (owner, 2026-11-08):**
+   the model server updates itself, and an update can leave the model on the CPU. So every build's preflight has the
+   main Claude session check the model is on the GPU, unless that's already known, and if it isn't, restore the
+   server's GPU runtime files and reload the same model, unchanged, onto the GPU (`local-coder` step 1a). The coder
+   can't do this itself, since it's the model being reloaded.
 
 ## Product direction (owner decisions, 2026-09-23)
 

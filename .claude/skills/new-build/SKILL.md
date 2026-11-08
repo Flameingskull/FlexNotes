@@ -54,8 +54,10 @@ the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap
   release, and set the plan item's `progress`; mark it `completed` only when every issue it depends on has shipped.
 - Work in the repository root. `git status` must be clean; if not, stop and show the owner what's uncommitted.
 - `git pull --ff-only origin main`, and check `gh auth status`.
-- **Coder check** (`local-coder`, step 1): OpenCode has a coding model and it answers; note its context size. If not,
-  ask the owner. Never load, switch or unload a model yourself.
+- **Coder check** (`local-coder`, steps 1 and 1a): OpenCode has a coding model and it answers; note its context size.
+  Unless it's already known to be on the GPU, the main session checks that it is and, if it isn't, puts it there
+  (server updates have dropped it to the CPU), then carries on with the build. The coder can't do this itself. If
+  there's no model or it can't be put on the GPU, ask the owner. Never switch to another model or unload one.
 - **Tracker parity check** (CLAUDE.md, "Parity rule"): list open issues and open tracker `bug`/`feature` items;
   import any issue without an item, archive duplicates (keep the `Flameingskull/FlexNotes#N` origin), set items whose
   issue closed to `shipped`/`done`, and file an issue for any tracker-only item. Run it again just before the push.

@@ -35,8 +35,61 @@ opencode models                               # every model OpenCode can use, as
 - **None is chosen:** ask the owner once which listed model to use for this build (the question tool, the listed
   models as options), then pass it to every run as `-Model provider/model`. Don't guess.
 
-Never load, switch or unload a model, and never force-cancel a chat: the owner chooses what runs. If the first run
+Never switch to a different model or unload one, and never force-cancel a chat: the owner chooses what runs. The one
+exception is step 1a: reloading the owner's own model, unchanged, onto the GPU (owner, 2026-11-08). If the first run
 exits 3 (no model, or it can't be reached), stop and ask the owner. Size orders to the context (step 2).
+
+## 1a. Make sure the model is on the GPU
+
+**Owner, 2026-11-08:** the model server updates itself (today Unsloth Studio, which runs llama.cpp), and turning that
+off isn't an option. An update has twice left the model running on the CPU without saying so: the GPU backend couldn't
+load because the update dropped its GPU runtime libraries. On the CPU every order takes many times longer. So every
+build command checks this at its preflight, before the first order, and fixes it.
+
+**The main Claude session does this, never the coder.** The coder is the model being checked: it can't load, unload or
+reload itself, and no work order may ask it to. The main session uses its own tools (the server's status and load
+tools, the shell). Copying the server's runtime files and reloading the model are machine set-up, not code, so rule 9
+doesn't route them to the coder. Never reload while an order is running, because a reload ends that run: wait for the
+run to finish or time out first.
+
+**Skip it when it's already known.** The check isn't needed when either:
+- this session already confirmed the model is on the GPU, and nothing has restarted, updated or reloaded the server
+  since; or
+- `nimbalyst-local/coder-gpu.md` (local only) records the model server's process id from its last confirmation, and
+  that process is still running (`Get-Process -Id <pid>`). The same process means the same load. An update, restart or
+  reload starts a new process, so the check runs again.
+
+**Quick check** (when not already known):
+1. Ask the server what's loaded and where, if it has a status tool (Unsloth Studio: `studio_status`; its `hardware`
+   block and the chat model).
+2. Compare GPU memory with the server's own memory:
+   `nvidia-smi --query-gpu=memory.used,memory.total --format=csv`, and the working set of the model server's process
+   (`llama-server.exe`). **On the GPU:** GPU memory used is about the model's size and the process holds only a few
+   GB of RAM. **On the CPU:** the GPU is nearly idle and the process holds about the model's size in RAM.
+3. On the GPU: record it (below) and carry on with the build.
+
+**Not on the GPU: fix it, in this order.**
+1. **Can the server see the GPU?** Run its engine's device list (`llama-server.exe --list-devices`, from the folder in
+   its command line). `(none)` means the GPU backend failed to load, almost always because GPU runtime libraries are
+   missing after an update. Find the libraries its GPU backend imports (the `*.dll` names inside `ggml-cuda.dll`,
+   such as `cublas64_NN.dll`, `cublasLt64_NN.dll`, `cudart64_NN.dll`), find the same major version elsewhere on the
+   machine (another bundle the same server installed, or a CUDA toolkit), and copy them beside the engine. Only
+   add files, never replace or delete any. Check the device list again. `nimbalyst-local/coder-gpu.md` records where
+   they came from last time.
+2. **Reload the same model onto the GPU:** same model, same quantisation, same context the owner had (read them from
+   the server's process command line before reloading). Preview the load first if the server can (`plan_load` with
+   `device: "gpu"`). If it won't fit, quantise the KV cache (`q8_0`) first. Never switch the model or its quantisation,
+   and never cut the context below the owner's setting without asking.
+3. **Verify:** GPU memory jumps to about the model's size, the server process's RAM drops, and a one-line
+   `opencode run "Reply with exactly the word READY. Do not use any tools."` answers within seconds.
+4. **Record it:** update `nimbalyst-local/coder-gpu.md` with the time, the server process id, GPU memory used, and the
+   load settings (model, quantisation, context, KV cache), plus what was fixed, if anything.
+
+**Can't get it onto the GPU?** Stop before the first order and ask the owner. Never run a build's orders on the CPU
+without saying so.
+
+**Mid-build:** if a run stalls, times out or is far slower than earlier runs, run this check again before treating the
+order as too big.
 
 ## 2. Write the work order
 
