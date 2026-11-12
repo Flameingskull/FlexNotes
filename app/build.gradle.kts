@@ -133,7 +133,7 @@ dependencies {
     implementation("androidx.health.connect:connect-client:1.1.0")
     // connect-client brings Guava at runtime only, which swaps CameraX's ListenableFuture for Guava's empty stand-in
     // on the compile classpath. Guava itself on the compile classpath puts the class back; R8 drops what isn't used.
-    implementation("com.google.guava:guava:33.7.2-android")
+    implementation("com.google.guava:guava:33.8.0-android")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     // Background automatic backups (#34). Local only: WorkManager needs no internet permission.
     implementation("androidx.work:work-runtime-ktx:2.12.0")
@@ -153,7 +153,7 @@ dependencies {
     // ui-test-manifest only adds the empty test activity to debug builds; the release APK never contains it.
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.77.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.78.0")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
