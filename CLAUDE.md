@@ -77,6 +77,12 @@ New backups are `.flexnotes`; `.fitlens` files and `FitLens_auto_` backups still
      roadmap too) for a later build: never another round, re-check or retest. An item is held back only if its main
      function is still broken or it risks data or medication records; otherwise it ships, using `Refs #N` if an acceptance
      criterion moved to the new issue. Keep tasks small enough to get right in one pass.
+   - **Issues from failures are work-order-ready (owner, 2026-11-13).** Every issue filed because something failed or was
+     left unfinished (a gate finding not fixed, a held item, an order still wrong after its correction, a test or file
+     taken out after a CI failure, every audit finding) follows `.claude/templates/failure-issue.md`: exact files, lines and names, the
+     error or wrong code quoted, one decided fix, the test that proves it, what was already tried, and checkable criteria.
+     No room for interpretation: a manager can write its work orders from the issue alone. An issue that can't be filled
+     in that way isn't filed until it can (`needs-info` only for a genuine owner decision, with the options).
    - A full `/function-audit` runs every 10 releases. Last full: **none yet** (the first attempt, 2026-10-30, stopped with nothing recorded). Next due: **now**,
      when the owner runs it, and by **1.0.207** at the latest.
    - A build's item is done only when a person can reach it from an obvious control and a test drives it and asserts

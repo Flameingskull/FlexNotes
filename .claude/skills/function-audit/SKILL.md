@@ -48,7 +48,7 @@ during an audit, not even a one-line fix. Fixes are built later, from the issues
 5. **Populate the backlog (required).** This session does it once all areas are in, so a defect shared across areas
    gets one issue:
    - Match each `Fails` and `Gap` against existing issues (`gh issue list --state all`).
-   - **File an issue for each new one, holding every action needed to resolve it:** what a person sees, steps, wrong
+   - **File an issue for each new one, written to `.claude/templates/failure-issue.md`, holding every action needed to resolve it:** what a person sees, steps, wrong
      and expected result, `file:line`, the sibling places to sweep, the test that must drive it, and acceptance criteria.
      Label `bug` or `enhancement`, `area:`, a priority, and `ready`. Group rows only when one fix resolves them all.
    - **Import each into the tracker** (`tracker_import`, external id `Flameingskull/FlexNotes#N`), and set its status,

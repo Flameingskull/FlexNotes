@@ -87,6 +87,11 @@ Never write "checked", "fine" or "looks good" without a row. You can't run the a
 Android SDK here. Don't claim otherwise. Don't report a suspicion as `Fails`: follow it until you know, or mark it
 `Not checked` and say what would settle it. A false alarm costs less than a miss, but only one you've traced is a finding.
 
+Every finding becomes an issue written to `.claude/templates/failure-issue.md`, so give it everything that template needs: exact
+`file:line` and names, the wrong code or result quoted, how to see it, what's expected, one fix (or the options, when
+only the owner can choose), the test that would prove it, and its size. A finding the filer would have to re-investigate
+is unfinished.
+
 ## What to write
 
 Write only `docs/audit/<area>.md`, using the format in `docs/audit/README.md`: every source file you read, and every

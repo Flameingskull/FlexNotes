@@ -51,6 +51,13 @@ When the user asks for a feature in chat, make sure it's on the list: search fir
 `gh issue create --label enhancement --label needs-triage`, a clear title, and a body describing the user's
 request in their words, plus acceptance criteria.
 
+## Issues from failures (owner, 2026-11-13)
+
+Any issue you file because something failed or was left unfinished (an order still wrong after its correction, an
+audit finding you couldn't fix in the one round, a test taken out) follows `.claude/templates/failure-issue.md`: exact files, lines
+and names, the error or wrong code quoted, one decided fix, the test, what was already tried, checkable criteria. When
+you pick one up, it should need no investigating; if it does, fix the issue text first and say so.
+
 ## Logging gaps you notice (standing owner rule)
 
 While triaging, planning or building, if you notice a significant gap, a missing feature or function, or a more

@@ -198,7 +198,8 @@ ids that exist, and nothing outside the order.
   `git restore -- <files>` (and delete new files), then rewrite the order more explicitly, or split it smaller.
   Putting files back isn't writing code.
 - **Cap (owner, 2026-11-13, "One pass, no loops"):** one review and at most one correction order per order (2 coder
-  runs). If it still isn't right, stop: file what's left as an issue for a later build (tracker and roadmap too) and say
+  runs). If it still isn't right, stop: file what's left as an issue for a later build, written to
+  `.claude/templates/failure-issue.md` with both attempts under "Already tried" (tracker and roadmap too), and say
   in the report what the coder couldn't do. Hold the item back (as `build-audit` step 5 does) only if its main function
   is broken without it or data is at risk. Never fix it yourself, and never send it round again.
 
@@ -209,6 +210,7 @@ short, dated, one line each.
 
 - **Audit findings** (build-audit step 5): the owner of the item turns each must-fix finding into a fix order, one round
   only. The owner reviews the result; the auditor doesn't re-check it.
-- **CI failures:** read `errors.txt`, then write a fix order that quotes each error line and gives the exact fix.
+- **CI failures:** read `errors.txt`, then write a fix order that quotes each error line and gives the exact fix. A test
+  or file taken out instead is filed with `.claude/templates/failure-issue.md`, the CI error quoted.
   Its owner reviews it once; it isn't re-audited.
 - **No loops anywhere:** one correction per order, one gate fix round, no re-checks. Whatever is left is an issue.

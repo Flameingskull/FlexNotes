@@ -46,7 +46,7 @@ during an audit, not even a one-line fix. Don't run a tool in a mode that applie
 5. **Populate the backlog (required).** This session does it once all areas are in, so a defect shared across areas
    gets one issue:
    - Match each `Defect`, `Risk` and `Improve` against existing issues (`gh issue list --state all`).
-   - **File an issue for each new one, holding every action needed to resolve it:** what goes wrong and when, `file:line`,
+   - **File an issue for each new one, written to `.claude/templates/failure-issue.md`, holding every action needed to resolve it:** what goes wrong and when, `file:line`,
      the sibling places to sweep, the proposed change, the test that must fail before it and pass after, and acceptance
      criteria. Label `bug` for a defect and `enhancement` for the others, `area:`, a priority, and `ready`. Group rows only
      when one change resolves them all.

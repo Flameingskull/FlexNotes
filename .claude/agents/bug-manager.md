@@ -43,6 +43,13 @@ owner, in the Claude Code session, decides what gets built.
   `priority: low` (cosmetic, minor inconvenience).
 - `duplicate` / `wontfix`: close with a short comment explaining why.
 
+## Issues from failures (owner, 2026-11-13)
+
+Any issue you file because something failed or was left unfinished (an order still wrong after its correction, an
+audit finding you couldn't fix in the one round, a test taken out) follows `.claude/templates/failure-issue.md`: exact files, lines
+and names, the error or wrong code quoted, one decided fix, the test, what was already tried, checkable criteria. When
+you pick one up, it should need no investigating; if it does, fix the issue text first and say so.
+
 ## Logging gaps you notice (standing owner rule)
 
 While triaging or fixing, if you notice a significant gap, a missing feature or function, or a more stable or

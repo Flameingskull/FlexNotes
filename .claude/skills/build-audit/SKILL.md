@@ -112,7 +112,8 @@ can finish, commit locally, don't push, and tell the owner. A build never ships 
 For each finding left over, with the same actions as step 5 of `/function-audit`:
 
 - Match it against existing issues (`gh issue list --state all`).
-- **File an issue** for each new one, holding every action needed to resolve it, and label it. Group findings only when
+- **File an issue** for each new one, written to `.claude/templates/failure-issue.md` (no room for interpretation: exact names and lines, the
+  wrong code or error quoted, one decided fix, the test, what was tried), and label it. Group findings only when
   one fix resolves them all.
 - **Import it to the tracker** with its fields mapped, and add it to the plan item's `dependsOn`.
 - **Add it to the roadmap:** the Issue map, a build stage, and the Status block's "Left" and "Next".

@@ -92,6 +92,11 @@ Never write "fine" without a row. You can't run the app or the tests: no phone, 
 claim otherwise. A `Defect` needs a concrete trigger you traced: otherwise it's a `Risk`, or `Not checked` with what
 would settle it. Don't pad with style preferences.
 
+Every finding becomes an issue written to `.claude/templates/failure-issue.md`, so give it everything that template needs: exact
+`file:line` and names, the wrong code or result quoted, how to see it, what's expected, one fix (or the options, when
+only the owner can choose), the test that would prove it, and its size. A finding the filer would have to re-investigate
+is unfinished.
+
 ## What to write
 
 Write only `docs/audit/code/<area>.md`, in the code ledger format from `docs/audit/README.md`: every file you read, and
