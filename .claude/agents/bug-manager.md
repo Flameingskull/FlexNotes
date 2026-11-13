@@ -122,5 +122,10 @@ field mapping. Your part: whenever you change an issue's labels, make its tracke
 its type (`bug`), status, priority, `area` and `githubIssue`. When you file a feature request for a gap you noticed,
 import it as well (`tracker_import`, provider `github-issues`, external id `Flameingskull/FlexNotes#N`).
 
+**The issue is the source, as it is now (owner, 2026-11-13).** The owner edits issues directly on GitHub. Triage and
+work orders start from the issue's current labels, body and comments (`gh issue view N --json title,labels,body,state`),
+never from the tracker item or an earlier read in this conversation. When you find an item that disagrees with its
+issue, fix the item and say so. Never report the two as matching from issue numbers or counts.
+
 Never set an item to `done` yourself, and never quote a `FIL.n` key outside the editor — it is local to this machine,
 not a shared issue key. The owner's commit closes the issue and the item with it.

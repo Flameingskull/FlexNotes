@@ -82,9 +82,11 @@ the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap
   Unless it's already known to be on the GPU, the main session checks that it is and, if it isn't, puts it there
   (server updates have dropped it to the CPU), then carries on with the build. The coder can't do this itself. If
   there's no model or it can't be put on the GPU, ask the owner. Never switch to another model or unload one.
-- **Tracker parity check** (CLAUDE.md, "Parity rule"): list open issues and open tracker `bug`/`feature` items;
-  import any issue without an item, archive duplicates (keep the `Flameingskull/FlexNotes#N` origin), set items whose
-  issue closed to `shipped`/`done`, and file an issue for any tracker-only item. Run it again just before the push.
+- **Tracker parity check** (CLAUDE.md, "Parity rule", steps 1-6): compare the **content** of every issue updated since
+  `nimbalyst-local/parity-last.txt` (labels, priority, title, state, `Depends on` lines) with its tracker item, field by
+  field, and fix what differs; import missing issues, archive duplicates, close items whose issue closed, file an issue
+  for any tracker-only item. Never report parity from numbers or counts. Edited issues in this build go back to their
+  agent for re-triage. Run it again just before the push (only issues updated since the first check).
 - Work out this build's version: the latest release number + 1 (or the run number + `BUILD_OFFSET`). Check whether
   the README refresh is due (step 5).
 

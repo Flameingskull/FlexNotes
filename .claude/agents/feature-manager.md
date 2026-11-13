@@ -130,6 +130,11 @@ provider `github-issues`, external id `Flameingskull/FlexNotes#N`), and every la
 item. Find it with `tracker_list` filtered on `githubIssue` (`where: [{field: "githubIssue", op: "=", value: N}]`),
 then `tracker_update` its type (`feature`), status, priority, `area`, `githubIssue` and tags.
 
+**The issue is the source, as it is now (owner, 2026-11-13).** The owner edits issues directly on GitHub. Triage and
+work orders start from the issue's current labels, body and comments (`gh issue view N --json title,labels,body,state`),
+never from the tracker item or an earlier read in this conversation. When you find an item that disagrees with its
+issue, fix the item and say so. Never report the two as matching from issue numbers or counts.
+
 When you write a plan that establishes an ordering, record it as `dependsOn` on the dependent item and put a matching
 `Depends on #N` line in the issue body, so the graph and the issue never disagree. `dependsOn` takes tracker item
 **ids** (`import_...`); a `FIL.n` key is stored but never resolves, leaving the item looking unblocked. `tracker_ready`

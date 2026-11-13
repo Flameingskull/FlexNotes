@@ -253,11 +253,24 @@ now", ranked by how much each item unblocks.
 
 **Parity rule (owner, 2026-10-22): the tracker and GitHub issues must always match.** Every open issue has exactly
 one tracker item, and every open tracker bug or feature has an open issue: nothing lost, nothing duplicated. Each build
-skill (`/new-build`, `/safe-build`, `/slice-build`) runs the parity check at its start and again before its push:
-list open issues (`gh issue list --state open --json number,title,labels`) and open tracker items (`bug`, `feature`,
-with `full`); import any issue without an item (match by issue number, either repo name); archive duplicates, keeping
-the item whose origin is `Flameingskull/FlexNotes#N`; and set items whose issue has closed to `shipped` or `done`.
-A tracker bug or feature with no issue gets one filed (rule 5) and is re-imported, never left tracker-only.
+skill (`/new-build`, `/safe-build`, `/slice-build`) runs the parity check at its start and again before its push.
+
+**Parity means content, not numbers (owner, 2026-11-13).** Issues are edited directly on GitHub (labels, priority, titles,
+bodies, `Depends on` lines, closures), so matching issue numbers or counts proves nothing. Never call the two in parity
+from a count or a list of numbers. The check, kept cheap by looking only at what changed:
+1. Read the last check's time from `nimbalyst-local/parity-last.txt` (local only; if missing, check every open issue).
+2. Fetch every issue updated since then, open or closed:
+   `gh issue list --state all --limit 300 --search "updated:>=<time>" --json number,title,state,labels,body,updatedAt`.
+   Also list open issue numbers and open tracker `bug`/`feature` items, to catch anything missing or tracker-only.
+3. For each fetched issue, compare its item field by field with the mapping table above: type, status, priority, `area`,
+   tags, title, `githubIssue`, and `dependsOn` from its `Depends on #N` lines (tracker ids, open issues only). Update
+   every field that differs. A closed issue sets its item to `shipped` (feature) or `done` (bug).
+4. Import any open issue without an item (match by issue number, either repo name), archive duplicates (keep the item
+   whose origin is `Flameingskull/FlexNotes#N`), and file an issue (rule 5) for any tracker-only bug or feature.
+5. An edited body or acceptance criteria on an issue in the build, or one the roadmap maps, goes to the owning agent
+   for re-triage before it's worked on: the build works from the issue as it is now.
+6. Write the check's start time to `nimbalyst-local/parity-last.txt`, and report what was compared: how many issues
+   were updated, how many items changed, and which.
 
 **Making a new build:** the owner runs `/new-build` (`.claude/skills/new-build/SKILL.md`). With no arguments it asks
 which items to include; `/new-build auto` builds everything `ready`; `/new-build 12 15` builds those issues.
