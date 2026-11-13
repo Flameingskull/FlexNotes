@@ -42,6 +42,7 @@ import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.ListRowWithMenu
 import com.fitlens.companion.ui.design.MenuAction
 import kotlinx.coroutines.launch
@@ -191,6 +192,7 @@ internal fun GoalEditor(snap: Snapshot, goal: ExerciseGoal, timeBased: Boolean, 
     var text by remember {
         mutableStateOf(if (goal.target > 0) fmtNum(goalShown(snap, goal.kind, goal.target, goal.exerciseId), 2) else "")
     }
+    val unsaved = rememberDirty(kind, text.trim())
     val value = text.trim().replace(',', '.').toDoubleOrNull()
 
     fun save() {
@@ -210,7 +212,8 @@ internal fun GoalEditor(snap: Snapshot, goal: ExerciseGoal, timeBased: Boolean, 
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.goals_save),
         onConfirm = { save() },
-        confirmEnabled = value != null && value > 0
+        confirmEnabled = value != null && value > 0,
+        dirty = unsaved,
     ) {
         Text(stringResource(R.string.goal_generic), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -254,6 +254,7 @@ internal fun ReadinessSheet(snap: Snapshot, date: String, onDismiss: () -> Unit)
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.rd_save),
         confirmEnabled = typed.isNotEmpty(),
+        dirty = typed.toMap() != saved,
         onConfirm = { write(typed.toMap(), res.getString(R.string.rd_saved, dayLabel)) },
         secondaryLabel = if (saved.isNotEmpty()) stringResource(R.string.rd_clear) else null,
         onSecondary = if (saved.isNotEmpty()) {

@@ -22,6 +22,7 @@ import com.fitlens.companion.data.CustomType
 import com.fitlens.companion.data.WorkoutDataException
 import com.fitlens.companion.data.Workouts
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.SectionLabel
 import kotlinx.coroutines.launch
 
@@ -50,6 +51,7 @@ fun CustomTypeSheet(existing: CustomType?, onDismiss: () -> Unit, onSaved: (Int)
     val count = draft.valueCount
     val res = LocalContext.current.resources
     val ready = name.isNotBlank() && count in 1..CustomType.MAX_VALUES && (!ownMetric || draft.metricName != null)
+    val unsaved = rememberDirty(name.trim(), weight, reps, distance, time, ownMetric, metricName.trim(), metricUnit.trim())
 
     fun save() {
         AppScope.scope.launch {
@@ -94,6 +96,7 @@ fun CustomTypeSheet(existing: CustomType?, onDismiss: () -> Unit, onSaved: (Int)
         confirmLabel = stringResource(R.string.type_save),
         onConfirm = { save() },
         confirmEnabled = ready,
+        dirty = unsaved,
         secondaryLabel = if (existing != null) stringResource(R.string.type_delete) else null,
         onSecondary = if (existing != null) ({ confirmDelete = true }) else null
     ) {

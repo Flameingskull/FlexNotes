@@ -75,6 +75,7 @@ import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.DragHandle
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.FitTopBar
+import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.GoldButton
 import com.fitlens.companion.ui.design.ListRowWithMenu
@@ -805,6 +806,7 @@ private fun PhaseSheet(existing: MedPhase?, canBeOngoing: Boolean, onDismiss: ()
     var on by rememberSaveable { mutableStateOf(existing?.on ?: true) }
     var length by rememberSaveable { mutableStateOf((existing?.length ?: 4).toString()) }
     var unit by rememberSaveable { mutableStateOf(existing?.unit ?: PhaseUnit.WEEKS) }
+    val unsaved = rememberDirty(on, length.trim(), unit)
     val offered = PhaseUnit.entries.filter { it != PhaseUnit.ONGOING || (canBeOngoing && on) }
     // Turning a phase off (or a phase that can't be ongoing) falls back to weeks.
     val chosen = if (unit in offered) unit else PhaseUnit.WEEKS
@@ -814,6 +816,7 @@ private fun PhaseSheet(existing: MedPhase?, canBeOngoing: Boolean, onDismiss: ()
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.type_save),
         confirmEnabled = ongoing || (length.toIntOrNull() ?: 0) > 0,
+        dirty = unsaved,
         onConfirm = {
             val n = if (ongoing) 1 else (length.toIntOrNull() ?: 1).coerceIn(1, 999)
             onSave(MedPhase(existing?.id ?: 0L, on, n, chosen, existing?.doses.orEmpty()))
@@ -873,6 +876,7 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
     var stepBy by rememberSaveable { mutableStateOf(stepped?.let { fmtNum(abs(it.step)) }.orEmpty()) }
     var stepEvery by rememberSaveable { mutableStateOf((stepped?.stepEvery ?: 7).toString()) }
     var stepLimit by rememberSaveable { mutableStateOf(stepped?.stepLimit?.let { fmtNum(it) }.orEmpty()) }
+    val unsaved = rememberDirty(medication.trim(), amount.trim(), unit.trim(), time, mode, weekdays.sorted(), every.trim(), comment.trim(), stepMode, stepBy.trim(), stepEvery.trim(), stepLimit.trim())
     fun number(text: String) = text.trim().replace(',', '.').toDoubleOrNull()
 
     /** The taper fields as a dose's step, amount and limit: null when they're asked for but not filled in. */
@@ -912,6 +916,7 @@ private fun DoseSheet(snap: Snapshot, existing: MedDose?, defaultDays: MedDays, 
         title = stringResource(if (existing == null) R.string.md_add_dose else R.string.md_edit_dose),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.type_save),
+        dirty = unsaved,
         onConfirm = { save() }
     ) {
         if (names.isNotEmpty()) {

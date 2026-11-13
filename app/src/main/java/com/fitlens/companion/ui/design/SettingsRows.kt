@@ -384,6 +384,7 @@ fun SettingsNumberRow(
 @Composable
 private fun NumberEntrySheet(title: String, value: Int, range: IntRange, onDismiss: () -> Unit, onSave: (Int) -> Unit) {
     var text by remember { mutableStateOf(value.toString()) }
+    val unsaved = rememberDirty(text.trim())
     val typed = text.trim().toIntOrNull()
     val valid = typed != null && typed in range
     val focus = remember { FocusRequester() }
@@ -391,6 +392,7 @@ private fun NumberEntrySheet(title: String, value: Int, range: IntRange, onDismi
         title = title,
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.settings_number_save),
+        dirty = unsaved,
         onConfirm = { if (typed != null && valid) { onSave(typed); onDismiss() } },
         confirmEnabled = valid
     ) {

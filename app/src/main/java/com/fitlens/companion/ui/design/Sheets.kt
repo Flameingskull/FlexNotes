@@ -1,4 +1,4 @@
-@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 
 package com.fitlens.companion.ui.design
 
@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
@@ -26,9 +28,16 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,6 +48,7 @@ import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -48,6 +58,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Velocity
+import androidx.compose.ui.unit.dp
 import com.fitlens.companion.ui.Brand
 import com.fitlens.companion.ui.Dot
 import com.fitlens.companion.ui.FitShapes
@@ -68,11 +79,32 @@ private object KeepScrollInSheet : NestedScrollConnection {
 }
 
 /**
+ * Whether a sheet's typed values differ from what they were when it first appeared (#334). Pass every value the
+ * person can change, as plain values (strings, numbers, booleans, enums, lists): it compares their text now with
+ * their text at the start, so typing and then undoing the typing is not "unsaved". Kept with `rememberSaveable`,
+ * so turning the phone keeps the starting point. Call it where the sheet's own state is declared, and pass the
+ * result to [FitSheet]'s `dirty`.
+ */
+@Composable
+fun rememberDirty(vararg draft: Any?): Boolean {
+    val now = draft.toList().toString()
+    val atStart = rememberSaveable { now }
+    return now != atStart
+}
+
+/** Whether a drag, a tap outside or Back may close a sheet: not while it holds unsaved input (#334). */
+internal fun sheetMayClose(dirty: Boolean): Boolean = !dirty
+
+/**
  * A modal bottom sheet in the FlexNotes style (#80): [title], gold hairline, scrolling [content] and a sticky
  * button row. The confirm button appears when both [confirmLabel] and [onConfirm] are given; use a specific verb
  * ("Save set", "Delete workout"), never "OK". [destructive] colours the confirm button as an error action.
  * The caller closes the sheet (usually inside [onConfirm]); [onDismiss] runs on Cancel, back or a tap outside.
+ * While [dirty] is true (the sheet holds typed values that aren't saved yet, see [rememberDirty]) a drag, a tap
+ * outside and Back do nothing, so nothing typed is lost by accident (#334); Cancel and the confirm button still close it.
  * [secondaryLabel] and [onSecondary] add an outlined button before the confirm button, such as "Save and add another".
+ * With [expandable] the title row gets a button that takes the sheet to full screen and back, and a drag up on the
+ * title, hairline or buttons does the same; [startExpanded] opens it full screen (#331). Both default to off.
  */
 @Composable
 fun FitSheet(
@@ -86,23 +118,73 @@ fun FitSheet(
     destructive: Boolean = false,
     secondaryLabel: String? = null,
     onSecondary: (() -> Unit)? = null,
+    dirty: Boolean = false,
+    expandable: Boolean = false,
+    startExpanded: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    // Read at the moment of the drag or tap, not when the sheet state was made (#334).
+    val dirtyNow by rememberUpdatedState(dirty)
+    // Full screen is the sheet's own state, kept when the phone is turned (#331).
+    var full by rememberSaveable { mutableStateOf(expandable && startExpanded) }
+    val sheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = true,
+        confirmValueChange = {
+            if (it == SheetValue.Hidden && full) {
+                // A drag down from full screen goes back to the usual height; it does not close the sheet (#331).
+                full = false
+                false
+            } else it != SheetValue.Hidden || sheetMayClose(dirtyNow)
+        }
+    )
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (sheetMayClose(dirtyNow)) onDismiss() },
         modifier = modifier,
         sheetState = sheetState,
         shape = FitShapes.sheet,
         containerColor = Brand.Onyx,
         contentColor = Brand.Ivory
     ) {
-        Column(Modifier.fillMaxWidth()) {
-            Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = Spacing.lg))
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .then(if (expandable && full) Modifier.fillMaxHeight().imePadding() else Modifier)
+                .pointerInput(expandable) {
+                    if (!expandable) return@pointerInput
+                    // A drag up on the title, hairline or buttons goes full screen; a drag down from full screen goes back.
+                    val needed = 24.dp.toPx()
+                    var moved = 0f
+                    detectVerticalDragGestures(
+                        onDragStart = { moved = 0f },
+                        onDragEnd = {
+                            if (moved < -needed) full = true else if (moved > needed) full = false
+                        },
+                        onDragCancel = { moved = 0f },
+                        onVerticalDrag = { _, amount -> moved += amount }
+                    )
+                }
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(start = Spacing.lg, end = if (expandable) Spacing.xs else Spacing.lg),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                if (expandable) {
+                    IconButton(onClick = { full = !full }) {
+                        Icon(
+                            if (full) Icons.Filled.KeyboardArrowDown else Icons.Filled.KeyboardArrowUp,
+                            contentDescription = stringResource(if (full) R.string.sheet_collapse else R.string.sheet_expand),
+                            tint = Brand.Gold
+                        )
+                    }
+                }
+            }
             GoldHairline(Modifier.padding(top = Spacing.sm, bottom = Spacing.md))
             Column(
                 Modifier
-                    .weight(1f, fill = false)
+                    .weight(1f, fill = expandable && full)
                     .nestedScroll(KeepScrollInSheet)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = Spacing.lg),
@@ -110,11 +192,7 @@ fun FitSheet(
             ) {
                 content()
             }
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
-                horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            val buttons: @Composable () -> Unit = {
                 FitTextButton(onClick = onDismiss) { Text(dismissLabel) }
                 val secondary = onSecondary
                 if (secondary != null && secondaryLabel != null) {
@@ -136,6 +214,20 @@ fun FitSheet(
                         GoldButton(onClick = confirm, enabled = confirmEnabled) { Text(confirmLabel) }
                     }
                 }
+            }
+            if (expandable) {
+                FlowRow(
+                    Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
+                    verticalArrangement = Arrangement.spacedBy(Spacing.xs),
+                    itemVerticalAlignment = Alignment.CenterVertically
+                ) { buttons() }
+            } else {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = Spacing.lg, vertical = Spacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(Spacing.sm, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
+                ) { buttons() }
             }
         }
     }

@@ -102,6 +102,7 @@ fun BodyFatCalculatorSheet(snap: Snapshot, date: String, onDismiss: () -> Unit, 
         onDismiss = onDismiss,
         confirmLabel = percent?.let { stringResource(R.string.bf_use_value, fmtNum(it, 1)) } ?: stringResource(R.string.bf_use),
         confirmEnabled = percent != null,
+        dirty = typed.values.any { it.isNotBlank() },
         onConfirm = { use() }
     ) {
         Text(

@@ -401,6 +401,11 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
                 summary = stringResource(R.string.settings_change_from_summary)
             ) { i -> Settings.updatePortable { it.copy(changeFromEarlierDay = i == 0) } }
         },
+        mainRow(s, R.string.settings_body_entry_full, R.string.settings_body_entry_full_kw) { title ->
+            SettingsSwitchRow(title, prefs.bodyEntryFullScreen, summary = stringResource(R.string.settings_body_entry_full_summary)) { on ->
+                Settings.updatePortable { it.copy(bodyEntryFullScreen = on) }
+            }
+        },
         // The profile (#172) took over the Sex row: one page for every value the formulas use.
         mainRow(s, R.string.settings_profile, R.string.settings_profile_kw) { title ->
             SettingsActionRow(title, profileSummary(LocalContext.current.resources, prefs)) { open(SettingsSection.Profile) }

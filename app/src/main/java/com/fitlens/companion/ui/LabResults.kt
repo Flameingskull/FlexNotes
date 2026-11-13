@@ -24,6 +24,7 @@ import com.fitlens.companion.data.MeasurementDef
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import kotlinx.coroutines.launch
 
 /**
@@ -78,11 +79,13 @@ internal fun rangeValid(low: String, high: String): Boolean {
 internal fun ReferenceRangeSheet(def: MeasurementDef, onDismiss: () -> Unit) {
     var low by rememberSaveable { mutableStateOf(def.refLow?.let { fmtNum(it) } ?: "") }
     var high by rememberSaveable { mutableStateOf(def.refHigh?.let { fmtNum(it) } ?: "") }
+    val unsaved = rememberDirty(low.trim(), high.trim())
     FitSheet(
         title = stringResource(R.string.lab_range_title, def.name),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.type_save),
         confirmEnabled = rangeValid(low, high),
+        dirty = unsaved,
         onConfirm = {
             val l = parseRangeValue(low)
             val h = parseRangeValue(high)

@@ -40,6 +40,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -232,11 +233,13 @@ fun PhotoViewerScreen(snap: Snapshot, nav: Nav, ids: List<Long>, index: Int) {
     if (editNote) {
         val saved = current.note?.trim().orEmpty()
         var text by remember(current.id) { mutableStateOf(saved) }
+        val unsaved = rememberDirty(text.trim())
         FitSheet(
             title = stringResource(R.string.pv_comment_title),
             onDismiss = { editNote = false },
             confirmLabel = stringResource(R.string.pv_comment_save),
             confirmEnabled = text.trim() != saved,
+            dirty = unsaved,
             onConfirm = {
                 val id = current.id
                 val value = text

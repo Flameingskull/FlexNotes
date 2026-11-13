@@ -662,10 +662,12 @@ fun SetCommentSheet(
 ) {
     // Saved, so a half-typed comment survives rotation (#304).
     var text by rememberSaveable { mutableStateOf(initial.orEmpty()) }
+    val unsaved = rememberDirty(text.trim())
     FitSheet(
         title = title,
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.cmn_save),
+        dirty = unsaved,
         onConfirm = {
             onSave(text.trim().ifBlank { null })
             onDismiss()

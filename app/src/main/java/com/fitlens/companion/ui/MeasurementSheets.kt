@@ -39,6 +39,7 @@ import com.fitlens.companion.data.Snapshot
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -89,6 +90,13 @@ fun MeasurementEntrySheet(
     var calculating by rememberSaveable { mutableStateOf(false) }
     // An injected medication's site (#210): the value's own, or the suggested next one for a new value.
     var site by rememberSaveable(existing?.id) { mutableStateOf(InjectionSite.of(existing?.site)) }
+    // Unsaved input: a new value is its typed value and comment; an edit is any change to the value (#334, #331).
+    val dirty = rememberDirty(
+        value, comment,
+        if (existing != null) theDate else null,
+        if (existing != null) timeText else null,
+        if (existing != null) site else null
+    )
     val injected = snap.isInjected(name.trim())
     val suggestedSite = remember(snap.bodyKey, name) { InjectionSites.suggest(snap.records, name.trim()) }
     val unit = existing?.unit ?: snap.measurementDefs.firstOrNull { it.name == name }?.unit
@@ -121,7 +129,7 @@ fun MeasurementEntrySheet(
         seeded = prefill
     }
 
-    fun save() {
+    fun save(close: Boolean = true) {
         val v = value.trim().replace(',', '.').toDoubleOrNull()
         val n = name.trim()
         if (v == null || n.isBlank()) {
@@ -159,7 +167,13 @@ fun MeasurementEntrySheet(
                 if (injected && chosenSite?.key != existing.site) MedExtras.setSite(existing.id, chosenSite)
             }
         }
-        onDismiss()
+        if (close) onDismiss()
+        else {
+            // Ready for the next value: the measurement, date and time stay as chosen.
+            value = ""
+            comment = ""
+            site = null
+        }
     }
 
     FitSheet(
@@ -172,8 +186,11 @@ fun MeasurementEntrySheet(
         dismissLabel = stringResource(R.string.cancel),
         confirmLabel = stringResource(R.string.type_save),
         onConfirm = { save() },
-        secondaryLabel = if (existing != null) stringResource(R.string.lib_delete) else null,
-        onSecondary = if (existing != null) ({ deleteBodyValue(res, existing); onDismiss() }) else null
+        secondaryLabel = if (existing != null) stringResource(R.string.lib_delete) else stringResource(R.string.mse_save_add),
+        onSecondary = if (existing != null) ({ deleteBodyValue(res, existing); onDismiss() }) else ({ save(close = false) }),
+        dirty = dirty,
+        expandable = true,
+        startExpanded = Settings.portable.collectAsState().value.bodyEntryFullScreen
     ) {
         if (existing == null) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {

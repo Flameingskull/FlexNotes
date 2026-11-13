@@ -50,6 +50,7 @@ import com.fitlens.companion.data.WorkoutTime
 import com.fitlens.companion.data.Workouts
 import com.fitlens.companion.ui.design.ConfirmSheet
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.relativeDayLabel
 import kotlinx.coroutines.launch
 import com.fitlens.companion.ui.design.FitCheckbox
@@ -184,6 +185,7 @@ private fun ChecklistHeading(title: String, state: ToggleableState, bold: Boolea
 fun WorkoutCommentSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
     val existing = remember(snap.notesKey, date) { snap.workoutComments[date]?.joinToString("\n\n").orEmpty() }
     var text by remember(date) { mutableStateOf(existing) }
+    val unsaved = rememberDirty(text.trim())
     val res = LocalContext.current.resources
 
     FitSheet(
@@ -191,6 +193,7 @@ fun WorkoutCommentSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.wk_comment_save),
         confirmEnabled = text.trim() != existing.trim(),
+        dirty = unsaved,
         onConfirm = {
             val value = text
             onDismiss()

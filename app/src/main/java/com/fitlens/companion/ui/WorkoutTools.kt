@@ -9,6 +9,7 @@ import androidx.compose.ui.res.stringResource
 import com.fitlens.companion.R
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.GoldButton
+import com.fitlens.companion.ui.design.rememberDirty
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.padding
@@ -118,6 +119,7 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
     var start by remember { mutableStateOf(first?.start?.takeIf { it.isNotBlank() }) }
     var end by remember { mutableStateOf(first?.end?.takeIf { it.isNotBlank() }) }
     var picking by remember { mutableStateOf<Boolean?>(null) } // true: start, false: end
+    val unsaved = rememberDirty(start, end)
     val isToday = date == Dates.today()
     val s = start
     val e = end
@@ -143,6 +145,7 @@ fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
         dismissLabel = stringResource(R.string.close),
         confirmLabel = stringResource(R.string.wk_save),
         confirmEnabled = s != null && (e == null || e >= s),
+        dirty = unsaved,
         onConfirm = { save(s, e) }
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
