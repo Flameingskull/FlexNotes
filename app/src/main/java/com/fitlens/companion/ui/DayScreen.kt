@@ -590,8 +590,11 @@ private fun BodyValuesCard(
             }
         }
         HorizontalDivider(color = Brand.Hairline)
+        // The Settings choices are read once for the card, not once per row (#370).
+        val plainNoGoal = plainWhenNoGoal()
+        val fromEarlierDay = changeFromEarlierDay()
         records.forEachIndexed { i, r ->
-            val prev = remember(snap.bodyKey, r.id) { snap.recordsByName[r.name]?.lastOrNull { it.date < r.date } }
+            val prev = remember(snap.bodyKey, r.id, fromEarlierDay) { snap.recordsByName[r.name]?.let { previousValue(it, r, fromEarlierDay) } }
             val def = snap.allMeasurements.firstOrNull { it.name == r.name }
             val change = prev?.let { changeText(LocalContext.current.resources, it, r) }
             val openLabel = stringResource(R.string.day_open_named, r.name)
@@ -650,7 +653,7 @@ private fun BodyValuesCard(
                     Text(
                         change,
                         style = MaterialTheme.typography.bodySmall,
-                        color = changeColour(def, prev.value, r.value),
+                        color = changeColour(def, plainNoGoal, prev.value, r.value),
                         textAlign = TextAlign.End,
                         modifier = Modifier.fillMaxWidth().padding(top = Spacing.xxs)
                     )

@@ -98,7 +98,7 @@ what you couldn't prove.
 2. Write them to `nimbalyst-local/work-orders/<version>/<issue>-<n>.md` and return their paths, in the order they run.
    The main session runs them one at a time and sends you each result file's path and exit code.
 3. Review each result: read the diff of the order's files, not just the coder's report. Accept it, or write a
-   correction order (at most 2 per order). If the coder still can't get it right, say so: the item is held back.
+   correction order (at most one per order, owner 2026-11-13). If it's still wrong after that, say so: it's filed as an issue for a later build.
    Never edit the code yourself, not even one line.
 4. Every order keeps updates installable over the existing app: never change `applicationId`, the version numbering
    or the signing setup, and never add a keystore or any secret. Any database change needs a version bump and an
@@ -118,9 +118,9 @@ types, Compose APIs in the BOM version in `app/build.gradle.kts`), because a com
 
 Before a build pushes, its audit gate (`.claude/skills/build-audit/SKILL.md`) may return findings on your features,
 verbatim. For each one, write a fix order (`local-coder`, step 5): the fix, a test that drives it and asserts the outcome,
-and the same pattern swept elsewhere. Review the result, then return the files changed and the test's name. An auditor re-checks it, so don't certify your own fix. If you think a
-finding is wrong, say why with `file:line` rather than leaving it. The number of fix rounds is capped, and an item still
-failing is held back from the release.
+and the same pattern swept elsewhere. Review the result, then return the files changed and the test's name. Your review is the only check: no auditor re-checks it, and there's no second round. If you think a
+finding is wrong, say why with `file:line` rather than leaving it. There is one fix round (owner, 2026-11-13): whatever
+it doesn't fix is filed as an issue for a later build.
 
 ## Keep the Nimbalyst tracker in step
 

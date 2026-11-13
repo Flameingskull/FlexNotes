@@ -196,6 +196,11 @@
     <string name="settings_no_goal_colour">Colour changes with no goal</string>
     <string name="settings_no_goal_colour_kw">green red colour color rise fall body measurement goal direction plain which way is good</string>
     <string name="settings_no_goal_colour_summary">Applies to every measurement that hasn\'t been told which way is good. Plain shows no green or red; the arrow and the signed number stay.</string>
+    <string name="settings_change_from">Compare a body value with</string>
+    <string name="settings_change_from_kw">change previous before earlier last value day compare body measurement weight arrow since green red</string>
+    <string name="settings_change_from_summary">Decides what the change under a body value is measured from, on the Track tab, History and the day log. With several values in one day, the first choice compares with the last value on an earlier day; the second with the value just before it, even on the same day.</string>
+    <string name="change_from_day">Last value on an earlier day</string>
+    <string name="change_from_value">The value just before it</string>
     <string name="unit_centimetres">Centimetres (cm)</string>
     <string name="unit_inches">Inches (in)</string>
     <string name="settings_week_start">Calendar Week Start</string>
@@ -2381,6 +2386,7 @@
     <string name="pv_tap_change">Tap photo to change</string>
     <string name="pv_days_apart">%1$d days apart (%2$s weeks)</string>
     <string name="pv_nearest_note">≈ means the nearest measurement within 7 days was used.</string>
+    <string name="pv_change_note">The change runs from the earlier photo to the later one, whichever side each is on.</string>
     <string name="pv_save_gallery">Save to gallery</string>
     <string name="pv_choose_photo">Choose a photo</string>
     <string name="pv_choose">Choose</string>

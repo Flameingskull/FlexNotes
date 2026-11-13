@@ -1,30 +1,27 @@
-# FlexNotes 1.0.201
+# FlexNotes 1.0.202
 
 ## Overview
 
-You now decide which way is good for every body measurement. Not everyone recording their weight wants it to fall, so each measurement can be set to "Up is good", "Down is good", "A specific value" or "Neither". Every green and red for that measurement then follows your choice, wherever it appears.
+This update makes body value colours agree everywhere. The same value can no longer be green on one screen and red on another, a move that stays as far from your target is no longer called worse, and Photo Compare always reads the change from the earlier photo to the later one.
 
 ## What's new
 
-- **Which way is good?** Open any measurement, standard, vital or one of your own, and tap the line under its figures that reads "Which way is good?". It's on the Track tab, in History and above the graph. Choose Up is good, Down is good, A specific value (with your target) or Neither. The ⋮ menu and Settings › Measurements open the same choice.
-- **Colours that agree everywhere:** for one measurement, the Track row, History, the day log, the graph's points and bars, the Change and per-week figures, the trend line's figures and Photo Compare all use the same rule. Down is good shows a fall in green. A specific value shows a move closer to your target in green and a move away in red.
-- **Your choice when there's no direction:** a new setting, **Colour changes with no goal**, chooses between Rise green, fall red (as before, and still the default) and Plain, which shows no green or red at all. Find it in Settings (search "colour" or "color"), or under Neither in the "Which way is good?" sheet. It's saved when you press Save.
+- **Choose what a change is compared with:** a new setting, **Compare a body value with**, decides where a body value's change is measured from: **the last value on an earlier day** (the default) or **the value just before it**. Find it in Settings (search "previous" or "compare"), or on a measurement's "Which way is good?" sheet.
+
+## Fixed
+
+- **One meaning of "previous" everywhere:** the Track tab, History and the day log now measure a body value's change from the same earlier value, so the same value gets the same colour on every screen. If you log more than one value in a day, the Track row and History now compare with the last value on an earlier day by default, as the day log always did. Medication doses still compare with the dose just before.
+- **Equal distance from a target:** with "A specific value" as the goal, a move that ends exactly as far from your target as it started is no longer shown in red. It gets no colour.
+- **Photo Compare reads the right way:** the change and its colour now run from the earlier photo to the later one, whichever side each photo is on, and the screen says so. The image you share or save from Compare puts the change beside the later photo's value.
+- **The "Best" star on a target graph:** a graph whose target is exactly half way between two points (for example a waist-to-height ratio of 0.5) shows its "Best" star again.
 
 ## Improved
 
-- **The graph key reads right:** when down is good, the key says so ("Better: lower"). For a specific value it says "Closer to your goal" and "Further from it", with the same marks the graph draws.
-- **The arrow always stays:** colour is never the only signal. Every change keeps its arrow and signed number, and with Plain the graph still draws which way each point moved.
-- **"Best" only when there is one:** the gold "Best" star appears only when the graph has a direction to judge by. Graphs with none, including the Readiness load ratio, monotony and effort graphs, no longer star their first point.
-- **Pace graphs:** a falling pace now shows as green, on the trend line and in the key.
-- **Screen readers** say whether a measurement's Change was better or worse.
-- **More reliable releases:** the whole-screen picture tests now wait for each screen to finish settling before comparing it, so a picture caught mid-change no longer stops an update from being published. The project's README has also been rewritten to be shorter and up to date.
+- **Steadier colours:** each screen now reads the "Colour changes with no goal" choice once, so every row on it always agrees.
+- **More reliable releases:** the automated checks that run before each update now wait for any save still in progress before they finish, so a slow save can't make an update fail at random.
 
 ## Known limitations
 
-- A move that ends exactly as far from a specific value as it started still shows as red rather than plain (#371).
-- In Photo Compare, if the newer photo is on the left, the change is read from right to left (#371).
-- With two values on one day, the Track row and the day log can compare against different earlier values, so one value can be green on one screen and red on the other (#372).
-
-## Your data
-
-No database change. Updating keeps all your workouts, sets, body values, photos and medications. Directions you or a FitNotes import set before stay exactly as they were.
+- The progress PDF still measures each body value's change from the last value on an earlier day, whatever you choose in **Compare a body value with** (#377).
+- Inside the app's code, a graph's good/bad rule and its key still aren't forced to travel together, so a future change could separate them. Nothing does today (#370).
+- Some automated screen checks don't yet wait for saves in progress (#378).

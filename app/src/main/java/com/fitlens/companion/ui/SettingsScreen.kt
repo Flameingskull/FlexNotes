@@ -393,6 +393,14 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
                 summary = stringResource(R.string.settings_no_goal_colour_summary)
             ) { i -> Settings.updatePortable { it.copy(plainNoGoal = i == 1) } }
         },
+        mainRow(s, R.string.settings_change_from, R.string.settings_change_from_kw) { title ->
+            SettingsChoiceRow(
+                title,
+                listOf(stringResource(R.string.change_from_day), stringResource(R.string.change_from_value)),
+                if (prefs.changeFromEarlierDay) 0 else 1,
+                summary = stringResource(R.string.settings_change_from_summary)
+            ) { i -> Settings.updatePortable { it.copy(changeFromEarlierDay = i == 0) } }
+        },
         // The profile (#172) took over the Sex row: one page for every value the formulas use.
         mainRow(s, R.string.settings_profile, R.string.settings_profile_kw) { title ->
             SettingsActionRow(title, profileSummary(LocalContext.current.resources, prefs)) { open(SettingsSection.Profile) }

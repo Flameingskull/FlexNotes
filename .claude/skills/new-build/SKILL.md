@@ -109,8 +109,9 @@ The loop, per item, bug fixes first, then features:
    in the order they run. Agents can write orders in parallel; the coder runs them one at a time.
 2. You run each order with `.claude/scripts/local-coder.ps1` in the background, and give the agent only the result
    file's path and exit code. Exit 3 means no model: stop and ask the owner.
-3. The agent reviews the diff and accepts it or returns a correction order, which you run the same way (at most 2 per
-   order). An item the coder can't get right is held back, never finished by Claude.
+3. The agent reviews the diff once and accepts it or returns one correction order, which you run the same way. That's
+   the limit (owner, 2026-11-13, "One pass, no loops"): an order still wrong after its correction is filed as an issue
+   for a later build, never finished by Claude and never sent round again.
 
 Nobody but the coder edits code, and nobody commits, pushes or closes issues before step 6. Set each chosen item to
 `in-progress` in the tracker as you hand it out, and `in-review` once its accepted changes are in the working tree (see
@@ -130,8 +131,8 @@ code yourself. Make sure nothing adds a keystore, secret or credential.
 - **Sweep it:** search for the same pattern and concept on every other screen, fix them or file them, and list them in
   the commit.
 - **Audit it:** once your own review is done, run the gate on the whole build: invoke the `build-audit` skill with
-  `new`. Auditors check what this build changed, must-fix findings go back to the coding agent, the fixes are re-checked
-  (up to 3 rounds), and an item still failing is held back. Coding agents don't write ledgers. Check
+  `new`. Auditors check what this build changed once, must-fix findings go back to the coding agent for one fix round
+  (reviewed by its owner, never re-audited), and whatever is still wrong is filed as an issue for a later build. Coding agents don't write ledgers. Check
   `python .github/scripts/audit_coverage.py --findings`.
 - **Full audit:** if this build's version is at or past the next-due version in `CLAUDE.md` rule 8, run `/function-audit all` first.
 If the build added, moved or renamed a file or changed a pattern, check that `docs/CODEMAP.md` was updated (and its
@@ -153,7 +154,7 @@ lines.
 - `gh run watch <id> --exit-status`. On failure, read `errors.txt` and `build-tail.log` from the `ci-logs` branch
   (`git fetch origin ci-logs; git show origin/ci-logs:errors.txt`), have the coder fix it from a fix order that quotes
   each error (`local-coder`, step 5), review it, then commit and push again. A fix that changes
-  behaviour gets a gate re-check first (`build-audit`, step 7), because a green push publishes straight away.
+  behaviour is reviewed by its owner and never re-audited (`build-audit`, step 7); if it can't be done in one pass, file it.
   After 3 failed attempts, stop and report the errors to the owner.
 - Confirm the release exists with its APK, source archives and `SHA256SUMS.txt`, and that the issues closed.
 - Now that the push has closed the issues, close their tracker items too: `shipped` for features, `done` for bugs.

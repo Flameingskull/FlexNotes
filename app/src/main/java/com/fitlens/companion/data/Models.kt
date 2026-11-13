@@ -416,13 +416,20 @@ object MeasurementGoals {
 
     val all = listOf(NONE, INCREASE, DECREASE, TARGET)
 
-    /** Whether going from [from] to [to] moves towards the goal, or null when there's no goal or no change. */
+    /**
+     * Whether going from [from] to [to] moves towards the goal, or null when there's no goal, no change, or (for a
+     * specific value) the move ends exactly as far from it as it started (#371).
+     */
     fun isImprovement(type: Int, target: Double, from: Double, to: Double): Boolean? {
         if (to == from) return null
         return when (type) {
             INCREASE -> to > from
             DECREASE -> to < from
-            TARGET -> if (target <= 0) null else kotlin.math.abs(to - target) < kotlin.math.abs(from - target)
+            TARGET -> if (target <= 0) null else {
+                val before = kotlin.math.abs(from - target)
+                val after = kotlin.math.abs(to - target)
+                if (kotlin.math.abs(after - before) < 1e-9) null else after < before
+            }
             else -> null
         }
     }
@@ -435,6 +442,9 @@ object MeasurementGoals {
      */
     fun verdict(type: Int, target: Double, from: Double, to: Double, plainNoGoal: Boolean): Boolean? {
         if (to == from) return null
+        // A specific value with a target decides alone: a move that ends as far from it as it started has no colour,
+        // and must not fall back to "a rise is good" (#371).
+        if (type == TARGET && target > 0) return isImprovement(type, target, from, to)
         isImprovement(type, target, from, to)?.let { return it }
         return if (plainNoGoal) null else to > from
     }

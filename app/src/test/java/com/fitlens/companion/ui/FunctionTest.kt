@@ -44,9 +44,10 @@ import java.time.Clock
 /**
  * The base for tests that drive a screen the way a person does and assert what happened (#333): open a screen on a
  * [Snapshot] and a clock, tap, long-press or type into its controls by their text, read back what is drawn
- * ([drawn], [shows]) and what is stored ([stored]). The set-up and tear-down are those of `WholeScreenChecks` (Store,
- * Settings, `AppScope`, `Dates.clockSource`, `Settings.showWith`, the rest timer), and every seam is put back after
- * each test.
+ * ([drawn], [shows]) and what is stored ([stored]). The set-up is that of `WholeScreenTest` (Store, Settings,
+ * `AppScope`, `Dates.clockSource`, `Settings.showWith`, the rest timer). The tear-down puts every seam back, and also
+ * the phone settings, and waits for background saves (`settleAppScopeJobs`, `Settings.awaitWrites`) before the
+ * database closes, which `WholeScreenTest`'s own tear-down does not (#373).
  *
  * A subclass repeats the three annotations Robolectric reads, as `WholeScreen411Test` does:
  * ```
@@ -94,9 +95,45 @@ abstract class FunctionTest {
         Settings.showWith(PortableSettings())
         // Phone settings a test set (a reminder, a lock) must not reach the next test.
         runBlocking { Settings.updateDeviceNow { DeviceSettings() } }
+        // A save the app started on AppScope can still be running; the database must not close under it (#373).
+        // If the wait gives up it warns and cancels what is left, so nothing leaks into the next test.
+        settleAppScopeJobs()
         runBlocking { Settings.awaitWrites() }
         Store.db.close()
         app.deleteDatabase(Db.NAME)
+    }
+
+    /**
+     * Test seam (#373): lets every job the app started on [AppScope] finish, and any debounced reminder re-arm, so a
+     * test closes the database after them instead of racing them. The main looper is run on while waiting, with its
+     * clock moving forward, because those jobs resume on it (a job in `delay()` wakes only when the clock moves).
+     * Gives up after [timeoutMs] so a job that never ends cannot hang a test. Returns true when everything
+     * finished, false when it gave up.
+     */
+    protected fun awaitAppScopeJobs(timeoutMs: Long = 5_000L): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            org.robolectric.shadows.ShadowLooper.idleMainLooper(10, java.util.concurrent.TimeUnit.MILLISECONDS)
+            // A cancelled job still running its finally block is not completed yet, so it is still waited for.
+            val jobsRunning = AppScope.scope.coroutineContext[kotlinx.coroutines.Job]?.children?.any { !it.isCompleted } ?: false
+            val remindersIdle = com.fitlens.companion.data.MedReminders.rearmIdle() && com.fitlens.companion.data.LogReminders.rearmIdle()
+            if (!jobsRunning && remindersIdle) return true
+            Thread.sleep(10)
+        }
+        return false
+    }
+
+    /**
+     * Waits as [awaitAppScopeJobs] does. When it gives up it prints a warning naming how many jobs were left, cancels
+     * them so nothing leaks into a later test, and returns how many it cancelled; 0 when everything finished (#373).
+     */
+    protected fun settleAppScopeJobs(timeoutMs: Long = 5_000L): Int {
+        if (awaitAppScopeJobs(timeoutMs)) return 0
+        val left = AppScope.scope.coroutineContext[kotlinx.coroutines.Job]?.children?.filter { !it.isCompleted }?.toList().orEmpty()
+        System.err.println("FunctionTest: ${left.size} AppScope job(s) still running after $timeoutMs ms; cancelling them before the database closes (#373).")
+        left.forEach { it.cancel() }
+        awaitAppScopeJobs(500L)
+        return left.size
     }
 
     /**

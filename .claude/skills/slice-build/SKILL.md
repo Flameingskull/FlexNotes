@@ -61,9 +61,9 @@ the app doesn't meet yet is filed as an issue (rule 5) and goes into the roadmap
   schema change unless the item can't work without one. If the item needs more, slice it or choose another item.
 - **Leave room when choosing.** Choose at about 4 files and 250 lines, preferring items in one or two audit areas
   (`docs/audit/areas.txt`), so the driving test and a fix round still fit the cap.
-- **Few orders.** A slice is at most about 3 work orders (each up to 3 files), plus up to 2 correction orders each.
-- **One fix round.** If the gate's fix would break the cap, or the item still fails after it, the item is held back
-  (`build-audit`, step 5), not shipped.
+- **Few orders.** A slice is at most about 3 work orders (each up to 3 files), plus at most one correction order each (`CLAUDE.md` rule 8, "One pass, no loops").
+- **One fix round.** If the gate's fix would break the cap, or the item's main function is still broken after it, the
+  item is held back (`build-audit`, step 5); anything else left over is filed as an issue and the slice ships.
 - **Read only what you need.** Start from `docs/CODEMAP.md` and the notes in `.claude/agent-notes/`, then `grep` for
   the exact code and read only those parts. Don't read whole large files or the whole backlog.
 - **Two CI attempts.** Check the Kotlin carefully before the first push. If the second attempt fails too, stop and
@@ -121,7 +121,7 @@ pattern and concept on other screens, and list them in the commit: fix them if t
 Don't write in `docs/audit/`: the gate does that.
 
 **Audit gate:** invoke the `build-audit` skill with `slice`. Its auditors check what this slice changed, you turn any
-must-fix finding into a fix order for the coder, and they re-check it, one round only. Check `python .github/scripts/audit_coverage.py --findings`.
+must-fix finding into a fix order for the coder, one round only, reviewed by its owner and never re-audited; what it doesn't fix is filed. Check `python .github/scripts/audit_coverage.py --findings`.
 A full `/function-audit` that's due (rule 8) is never run from here: say so in the report, so the owner can run it.
 
 ## 5. Release notes, README, commit
@@ -140,7 +140,7 @@ A full `/function-audit` that's due (rule 8) is never run from here: say so in t
 - `gh run watch <id> --exit-status`. On failure, read `git show origin/ci-logs:errors.txt` (after
   `git fetch origin ci-logs`), have the coder fix it from a fix order that quotes each error, review it, commit and
   push again. That's two attempts at most (see Budget rules). A fix that
-  changes behaviour gets a gate re-check first (`build-audit`, step 7), because a green push publishes straight away.
+  changes behaviour is reviewed once and never re-audited (`build-audit`, step 7); if it can't be done in one pass, file it.
 - Confirm the release has its APK, source archives and `SHA256SUMS.txt`. For a full item, confirm the issue closed
   and set its tracker item to `shipped` (features) or `done` (bugs). For a slice, post the progress comment on the
   issue and leave the tracker item open.

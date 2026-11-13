@@ -62,6 +62,17 @@ class MeasurementGoalsTest {
     }
 
     @Test
+    fun equalDistanceEitherSideOfASpecificValueGetsNoColour() {
+        for (plain in listOf(false, true)) {
+            assertNull(v(MeasurementGoals.TARGET, 80.0, 82.0, 78.0, plain))
+            assertNull(v(MeasurementGoals.TARGET, 80.0, 78.0, 82.0, plain))
+        }
+        assertEquals(true, v(MeasurementGoals.TARGET, 80.0, 82.0, 79.0))
+        assertEquals(false, v(MeasurementGoals.TARGET, 80.0, 79.0, 82.0))
+        assertNull(MeasurementGoals.isImprovement(MeasurementGoals.TARGET, 80.0, 82.0, 78.0))
+    }
+
+    @Test
     fun thePlainChoiceDefaultsToOff() {
         assertFalse(PortableSettings().plainNoGoal)
         assertTrue(PortableSettings().copy(plainNoGoal = true).plainNoGoal)

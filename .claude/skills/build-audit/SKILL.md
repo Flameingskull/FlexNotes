@@ -1,12 +1,13 @@
 ---
 name: build-audit
-description: The audit gate inside every FlexNotes build. Before a build pushes, a function-auditor and a code-auditor check only what that build worked on, findings go back to the coding agent, the fixes are re-checked, and anything still failing is held back. /new-build, /safe-build and /slice-build invoke it; it isn't a build or a full audit on its own.
+description: The audit gate inside every FlexNotes build. Before a build pushes, a function-auditor and a code-auditor check only what that build worked on, findings go back to the coding agent for one fix round, and whatever is still wrong is filed as an issue for a later build. /new-build, /safe-build and /slice-build invoke it; it isn't a build or a full audit on its own.
 argument-hint: "<build: new | safe | slice> [base ref]"
 ---
 
 # /build-audit: the gate before a build pushes
 
-Arguments: `$ARGUMENTS`. The build type sets the fix rounds: `new` 3, `safe` 2, `slice` 1. The base ref is what the work
+Arguments: `$ARGUMENTS`. Every build type gets the same gate: **one audit and one fix round** (owner, 2026-11-13; see
+"One pass, no loops" in `CLAUDE.md` rule 8). The build type only names the caller. The base ref is what the work
 is compared with: the last commit before the work for a `/safe-build` stage, otherwise `origin/main`.
 
 `CLAUDE.md` rule 8 says only a test that drives a function is proof, and that usage limits shrink what is audited, never
@@ -21,12 +22,13 @@ files what's left.
 ```mermaid
 flowchart LR
   A[Main session review] --> B[Auditors check the changed functions]
-  B -->|must-fix findings| C[Fix order to the local coder]
-  C -->|re-check those rows| B
-  B -->|clean| D[Release notes, commit, push]
-  B -->|still failing after the fix rounds| E[Hold the item back]
+  B -->|must-fix findings| C[One round of fix orders to the local coder]
+  C -->|reviewed by the order's owner, not re-audited| D[Release notes, commit, push]
+  B -->|clean| D
+  C -->|still wrong, or the coder couldn't do it| F[Issue, tracker, roadmap]
+  C -->|main function broken, or data at risk| E[Hold the item back]
   E --> D
-  B -->|not caused by this build, or optional| F[Issue, tracker, roadmap]
+  B -->|not caused by this build, or optional| F
 ```
 
 ## 1. Scope
@@ -78,29 +80,32 @@ the report, with why.
 
 Go to step 6. Otherwise start a fix round.
 
-## 5. The fix loop
+## 5. One fix round, then file the rest
 
-Rounds are capped by the build type: `new` 3, `safe` 2, `slice` 1.
+**Owner, 2026-11-13: one pass, no loops.** Every build type gets exactly one fix round, and the fixes are never
+re-audited. Re-checks, second rounds and retests waste usage on what should be small tasks. Whatever is still wrong after
+the round is filed for a later build.
 
-1. **Route.** Send each must-fix finding, verbatim, to the agent that owns the item, with `SendMessage` so it keeps its
-   context. In `/slice-build`, the main session owns it.
-2. **Fix.** The owner writes a fix order (`local-coder`, step 5): the finding restated, the exact fix, a test that drives
-   it, and the same pattern swept elsewhere. The main session runs it, and the owner reviews the diff and returns the
-   files changed. Neither certifies the fix nor edits a ledger.
-3. **Re-check.** Continue the same auditor with `SendMessage`: name the rows and the files just changed, and nothing the
-   coder said about them. It updates those rows and returns only what's still wrong and anything the fix broke.
-4. **Repeat** until nothing must be fixed, or the cap is reached.
+1. **Route.** Send all the must-fix findings at once, verbatim, to the agent that owns each item, with `SendMessage` so it
+   keeps its context. In `/slice-build`, the main session owns them.
+2. **Fix.** The owner writes the fix orders (`local-coder`, step 5): the finding restated, the exact fix, a test that
+   drives it, and the same pattern swept elsewhere. The main session runs them, and the owner reviews the diffs once and
+   returns the files changed. It may send one correction order per fix order, and no more. Neither certifies the fix
+   nor edits a ledger.
+3. **Stop there.** No auditor re-check, no second round. Each finding the round didn't resolve goes to step 6 as an
+   issue: the coder couldn't do it in two runs, the owner's review found it still wrong, or it was too big for one round.
+   Say so in the report.
 
-**Still failing at the cap: hold the item back, never ship it.**
+**Hold an item back only when, after the round, its main function is still broken or it puts data or medication records
+at risk.** Otherwise it ships, with `Refs #N` if one of its acceptance criteria moved to the new issue. To hold it back:
 
 - Save its diff to `nimbalyst-local/held/<issue>-<version>.diff`, and take it out of the build.
 - Comment on the issue with the finding and leave it open, and return its tracker item to `ready`.
 - Take any row about the held work out of the ledgers.
-- Have the auditor re-check whatever the removal touched.
 - If it can't be separated from the rest of the build, **stop without pushing** and report it to the owner.
 
 `/slice-build` also holds an item back if its fix would break the build's size cap. If the budget runs low before the gate
-can finish, commit locally, don't push, and tell the owner. A build never ships ungated work.
+can finish, commit locally, don't push, and tell the owner. A build never ships work that skipped the audit itself.
 
 ## 6. File what's left
 
@@ -127,7 +132,8 @@ ledger written only by gates correctly keeps failing it until the first full aud
 A failed CI run publishes nothing, and a green push publishes straight away, so:
 
 - A compile or golden fix goes straight through.
-- **A fix that changes behaviour gets a re-check first.** Continue the auditor on it as in step 5, before pushing.
+- **A fix that changes behaviour** is reviewed by its owner, never re-audited (step 5). If it can't be done in one
+  pass, file it and ship without it, or hold the item back as in step 5.
 
 Ledger rows are written before CI has run the tests they name. A green release is what confirms `Proved` and `Verified`. If
 CI shows a named test failing, correct its row in the same fix.
@@ -137,7 +143,7 @@ CI shows a named test failing, correct its row in the same fix.
 Give the build's report, in plain words:
 
 - how many functions each auditor checked, and the counts of each result;
-- what was found, fixed and re-checked, in how many rounds;
+- what was found and fixed in the one fix round, and what was filed instead;
 - what was held back, and why;
 - what was filed, with issue numbers and build stages;
 - what rests on `Read OK` alone, and what wasn't checked, for the owner's phone test;

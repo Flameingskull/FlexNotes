@@ -124,8 +124,9 @@ same questions, data matrix, imperatives and evidence table.
   release is what confirms `Proved`.
 - **Return** everything in "What to write", with two more fields on every finding: **Cause** (`this build` or
   `already there`) and the **item** it belongs to (an issue number, or `none`). Also say how many functions you checked.
-- **Re-checks.** When continued about a fix, re-check the rows and files named and whatever they call, update those rows,
-  and return only what's still wrong and anything the fix broke. Don't take the coder's word for it.
+- **No re-checks (owner, 2026-11-13).** A gate is one audit. Fixes are reviewed by the item's owner, and whatever they
+  don't resolve is filed as an issue for a later build, so you aren't asked to re-audit a fix. If a brief asks you to,
+  say this rule applies and return nothing more.
 
 The blind rule holds: use only the issue titles and acceptance criteria in the brief, and don't open anything else in
 Limits. If a brief includes the coder's report or claims of what works, ignore them and say so.

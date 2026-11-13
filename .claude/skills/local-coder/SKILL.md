@@ -197,18 +197,18 @@ ids that exist, and nothing outside the order.
 - **Unusable** (wrong file, wrong approach, broken beyond a quick fix): put the order's files back with
   `git restore -- <files>` (and delete new files), then rewrite the order more explicitly, or split it smaller.
   Putting files back isn't writing code.
-- **Cap:** at most 2 correction orders per order (3 coder runs). If it still isn't right, hold the item back as the
-  build-audit skill does (save the diff to `nimbalyst-local/held/`, take it out of the build, comment on the issue,
-  set the item back to `ready`), and say in the report what the coder couldn't do. Never fix it yourself.
+- **Cap (owner, 2026-11-13, "One pass, no loops"):** one review and at most one correction order per order (2 coder
+  runs). If it still isn't right, stop: file what's left as an issue for a later build (tracker and roadmap too) and say
+  in the report what the coder couldn't do. Hold the item back (as `build-audit` step 5 does) only if its main function
+  is broken without it or data is at risk. Never fix it yourself, and never send it round again.
 
 Note in the agent's notes (`.claude/agent-notes/`) any reusable lesson about writing orders the coder gets right:
 short, dated, one line each.
 
 ## 5. The same loop everywhere
 
-- **Audit findings** (build-audit step 5): the owner of the item turns each must-fix finding into a fix order. The
-  auditor re-checks the files after it runs.
+- **Audit findings** (build-audit step 5): the owner of the item turns each must-fix finding into a fix order, one round
+  only. The owner reviews the result; the auditor doesn't re-check it.
 - **CI failures:** read `errors.txt`, then write a fix order that quotes each error line and gives the exact fix.
-  Re-run the gate on it if it changes behaviour.
-- **Held items** and the round caps are unchanged: coder runs don't count as audit rounds, and correction orders don't
-  count against the gate's fix rounds.
+  Its owner reviews it once; it isn't re-audited.
+- **No loops anywhere:** one correction per order, one gate fix round, no re-checks. Whatever is left is an issue.

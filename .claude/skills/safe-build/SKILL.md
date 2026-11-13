@@ -83,7 +83,7 @@ Apply these on top of every step below:
   doesn't, stop adding stages and go to release with what's committed.
 - **Cut stages, never the gate.** A stage that can't be gated doesn't ship. Auditors are never downgraded to save usage.
 - **Keep a reserve.** Hold about a quarter of the budget for the whole-build review, a final cross-stage check (only if
-  stages touched the same functions), release notes, README and code map, CI fixes and any CI re-check. Never spend the
+  stages touched the same functions), release notes, README and code map, CI fixes. Never spend the
   reserve on extra features.
 - **Partly done issues** use `Refs #N` and get a progress comment. They stay open, with their tracker item open too.
 - **One push.** Every stage is committed locally. Push once at the end. One push is one release.
@@ -162,8 +162,9 @@ The loop, per item, bug fixes first, then features:
    in the order they run. Agents can write orders in parallel; the coder runs them one at a time.
 2. You run each order with `.claude/scripts/local-coder.ps1` in the background, and give the agent only the result
    file's path and exit code. Exit 3 means no model: stop and ask the owner.
-3. The agent reviews the diff and accepts it or returns a correction order, which you run the same way (at most 2 per
-   order). An item the coder can't get right is held back, never finished by Claude.
+3. The agent reviews the diff once and accepts it or returns one correction order, which you run the same way. That's
+   the limit (owner, 2026-11-13, "One pass, no loops"): an order still wrong after its correction is filed as an issue
+   for a later build, never finished by Claude and never sent round again.
 
 Nobody but the coder edits code, and nobody pushes or closes issues before step 6. Set each chosen item to
 `in-progress` in the tracker as you hand it out, and `in-review` once its accepted changes are in the working tree.
@@ -187,8 +188,8 @@ code yourself. Make sure nothing adds a keystore, secret or credential.
   it, several at once, each state, late or refused). No test means it isn't done, and is reported as such.
 - **Sweep it:** search for the same pattern and concept on every other screen, fix them or file them, and list them in
   the commit.
-- **Audit it:** every stage has been through the gate (`build-audit`, step 4 above), up to 2 fix rounds each. An item still
-  failing was held back. If stages touched the same functions, continue the auditors for a final cross-stage check from
+- **Audit it:** every stage has been through the gate (`build-audit`, step 4 above): one audit and one fix round, never
+  re-audited. What it didn't fix was filed as an issue. If stages touched the same functions, continue the auditors for a final cross-stage check from
   the reserve. Coding agents don't write ledgers. Check `python .github/scripts/audit_coverage.py --findings`.
 - **Full audit:** if this build's version is at or past the next-due version in `CLAUDE.md` rule 8, run `/function-audit all` first.
 If the build added, moved or renamed a file or changed a pattern, check that `docs/CODEMAP.md` was updated (and its
@@ -211,7 +212,7 @@ lines.
 - `gh run watch <id> --exit-status`. On failure, read `errors.txt` and `build-tail.log` from the `ci-logs` branch
   (`git fetch origin ci-logs; git show origin/ci-logs:errors.txt`), have the coder fix it from a fix order that quotes
   each error (`local-coder`, step 5), review it, then commit and push again. A fix that changes
-  behaviour gets a gate re-check first (`build-audit`, step 7), because a green push publishes straight away.
+  behaviour is reviewed by its owner and never re-audited (`build-audit`, step 7); if it can't be done in one pass, file it.
   After 3 failed attempts, or sooner if the reserve has run out, stop and report the errors to the owner. A failed
   run publishes nothing.
 - Confirm the release exists with its APK, source archives and `SHA256SUMS.txt`, and that the issues closed.

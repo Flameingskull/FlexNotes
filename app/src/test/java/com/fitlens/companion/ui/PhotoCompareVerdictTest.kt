@@ -78,4 +78,38 @@ class PhotoCompareVerdictTest {
         val result = better(MeasurementGoals.DECREASE, plain = true)
         assertTrue(result == true)
     }
+
+    @Test
+    fun theChangeRunsEarlierToLaterWhicheverSideEachPhotoIsOn() {
+        val snap = snapshotWith(MeasurementGoals.DECREASE)
+        val forward = compareRows(snap, "2026-09-01", "2026-10-01", false).single()
+        val reversed = compareRows(snap, "2026-10-01", "2026-09-01", false).single()
+        org.junit.Assert.assertEquals(forward.change, reversed.change)
+        org.junit.Assert.assertTrue(reversed.change.isNotBlank())
+        assertTrue(reversed.better == true)
+        // The columns stay under their photos: the newer photo is on the left now.
+        org.junit.Assert.assertEquals(forward.left, reversed.right)
+        org.junit.Assert.assertEquals(forward.right, reversed.left)
+    }
+
+    @Test
+    fun equalDistanceFromATargetHasNoColourInPhotoCompare() {
+        // 92 and 90 are both 1 away from 91.
+        val snap = snapshotWith(MeasurementGoals.TARGET, 91.0)
+        assertNull(compareRows(snap, "2026-09-01", "2026-10-01", false).single().better)
+        assertNull(compareRows(snap, "2026-10-01", "2026-09-01", false).single().better)
+    }
+
+    @Test
+    fun theImageWritesTheChangeBesideTheLaterPhotosValue() {
+        val snap = snapshotWith(MeasurementGoals.DECREASE)
+        // Earlier photo on the left: 92 then 90, the change goes beside the right (later) value.
+        val forward = compareImageRows(compareRows(snap, "2026-09-01", "2026-10-01", false), leftIsLater = false).single()
+        org.junit.Assert.assertEquals("92", forward.second)
+        org.junit.Assert.assertEquals("90  −2", forward.third)
+        // After Swap the later photo is on the left: the change goes beside the left value.
+        val swapped = compareImageRows(compareRows(snap, "2026-10-01", "2026-09-01", false), leftIsLater = true).single()
+        org.junit.Assert.assertEquals("90  −2", swapped.second)
+        org.junit.Assert.assertEquals("92", swapped.third)
+    }
 }

@@ -301,11 +301,24 @@ internal fun chartKeyMode(better: (Double, Double) -> Boolean?): ChartKeyMode = 
 }
 
 /**
+ * A graph's good-or-bad rule together with what its key says (#370), as one value, so a caller can't give the rule
+ * without its key mode. Call it like the rule: `rule(from, to)` is true for a good move, false for a bad one, null for
+ * no colour. [FitChart] reads [keyMode] from it; any other rule has its key worked out by [chartKeyMode].
+ */
+class MoveRule(val keyMode: ChartKeyMode, private val verdict: (Double, Double) -> Boolean?) : (Double, Double) -> Boolean? {
+    override fun invoke(from: Double, to: Double): Boolean? = verdict(from, to)
+}
+
+/** The key mode of a graph's [better] rule (#370): a [MoveRule]'s own, else worked out by [chartKeyMode]. The one place both the key and the starred best point read it. */
+internal fun keyModeOf(better: (Double, Double) -> Boolean?): ChartKeyMode =
+    (better as? MoveRule)?.keyMode ?: chartKeyMode(better)
+
+/**
  * The best point of [shown] by the graph's own [better] rule (#330), or null when the rule gives no good or bad side
  * (no direction with Plain chosen, or a ratio with no better side): then no point is starred and the key has no "Best".
  */
 internal fun bestPoint(shown: List<ChartPoint>, better: (Double, Double) -> Boolean?): ChartPoint? =
-    if (chartKeyMode(better) == ChartKeyMode.NONE) null
+    if (keyModeOf(better) == ChartKeyMode.NONE) null
     else shown.reduceOrNull { b, p -> if (better(b.y, p.y) == true) p else b }
 
 /**
@@ -433,9 +446,7 @@ fun FitChart(
      * The days the time axis covers (#328): a chosen range's whole period, even where the data is shorter, so a year
      * with four weeks of values draws as a year. Null: the data's own span, first point to last.
      */
-    period: ChartPeriod? = null,
-    /** What the key's Better and Worse mean (#330); null works it out from [better]. A specific-value goal passes TARGET. */
-    keyMode: ChartKeyMode? = null
+    period: ChartPeriod? = null
 ) {
     var hidden by remember(series.size) { mutableStateOf(emptySet<Int>()) }
     // The overlay's legend entry follows the series, so its index is series.size.
@@ -474,7 +485,7 @@ fun FitChart(
             }
         }
         if (showKey && visible.size == 1 && all.isNotEmpty()) {
-            val mode = keyMode ?: chartKeyMode(better)
+            val mode = keyModeOf(better)
             ChartKey(changes = kind != ChartKind.AREA, latest = kind != ChartKind.BAR, mode = mode, bars = kind == ChartKind.BAR)
         }
         if (showTrend && all.isNotEmpty()) TrendReadout(series, visible, trends, trendUnit, trendSkipLast, better)

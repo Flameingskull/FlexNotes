@@ -346,6 +346,10 @@ fun CompareScreen(snap: Snapshot, nav: Nav, a: Long, b: Long) {
                             }
                         }
                         Text(
+                            stringResource(R.string.pv_change_note),
+                            Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
                             stringResource(R.string.pv_nearest_note),
                             Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -367,20 +371,33 @@ fun CompareScreen(snap: Snapshot, nav: Nav, a: Long, b: Long) {
 }
 
 /** [better] is whether the change is good for the measurement (its direction, or the user's choice with none), or null for no colour (#330). */
-data class CompareRow(val label: String, val left: String, val right: String, val change: String, val delta: Double = 0.0, val better: Boolean? = null)
+data class CompareRow(val label: String, val left: String, val right: String, val change: String, val better: Boolean? = null)
 
-fun compareRows(snap: Snapshot, da: String, db: String, plainNoGoal: Boolean = false): List<CompareRow> =
+fun compareRows(snap: Snapshot, da: String, db: String, plainNoGoal: Boolean): List<CompareRow> =
     snap.usedMeasurements.mapNotNull { m ->
         val ha = snap.valueNear(m.name, da, 7)
         val hb = snap.valueNear(m.name, db, 7)
         if (ha == null && hb == null) return@mapNotNull null
         val l = ha?.let { (if (it.second) "" else "≈") + fmtNum(it.first.value) } ?: "—"
         val r = hb?.let { (if (it.second) "" else "≈") + fmtNum(it.first.value) } ?: "—"
-        val ch = if (ha != null && hb != null) fmtSigned(hb.first.value - ha.first.value) else ""
+        // The change runs from the earlier photo's date to the later one, whichever side each is on (#371).
+        val earlier = if (da <= db) ha else hb
+        val later = if (da <= db) hb else ha
+        val ch = if (earlier != null && later != null) fmtSigned(later.first.value - earlier.first.value) else ""
         val unit = (hb ?: ha)?.first?.unit ?: ""
-        val delta = if (ha != null && hb != null) hb.first.value - ha.first.value else 0.0
-        val better = if (ha != null && hb != null) measurementVerdict(m, plainNoGoal, ha.first.value, hb.first.value) else null
-        CompareRow("${m.name}${if (unit.isNotBlank()) " ($unit)" else ""}", l, r, ch, delta, better)
+        val better = if (earlier != null && later != null) measurementVerdict(m, plainNoGoal, earlier.first.value, later.first.value) else null
+        CompareRow("${m.name}${if (unit.isNotBlank()) " ($unit)" else ""}", l, r, ch, better = better)
+    }
+
+/**
+ * The rows of the shared or saved compare image (#371): the label, the left photo's value and the right photo's. The
+ * change runs from the earlier photo to the later one, so it is written beside the later photo's value, on whichever
+ * side that photo is ([leftIsLater]).
+ */
+internal fun compareImageRows(rows: List<CompareRow>, leftIsLater: Boolean): List<Triple<String, String, String>> =
+    rows.map { r ->
+        if (leftIsLater) Triple(r.label, "${r.left}  ${r.change}".trim(), r.right)
+        else Triple(r.label, r.left, "${r.right}  ${r.change}".trim())
     }
 
 /** Picks one dated photo, newest first, on the FlexNotes glass (#92). */
@@ -430,8 +447,10 @@ private fun shareCompare(ctx: Context, snap: Snapshot, pa: Photo, pb: Photo, sav
                 val bb = FrameRenderer.loadBitmap(snap.photoFile(pb), 1000, 1000)
                 val da = pa.date ?: ""
                 val db = pb.date ?: ""
-                val rows = compareRows(snap, da, db).filter { it.left != "—" || it.right != "—" }.take(6)
-                    .map { Triple(it.label, it.left, "${it.right}  ${it.change}".trim()) }
+                val rows = compareImageRows(
+                    compareRows(snap, da, db, com.fitlens.companion.data.Settings.portable.value.plainNoGoal).filter { it.left != "—" || it.right != "—" }.take(6),
+                    leftIsLater = da > db
+                )
                 val days = abs(Dates.epochDay(db) - Dates.epochDay(da))
                 val out = FrameRenderer.renderCompare(ba, bb, da, db, rows, res.getString(R.string.pv_compare_footer, days.toInt()))
                 ba?.recycle(); bb?.recycle()

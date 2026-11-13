@@ -48,18 +48,44 @@ import com.fitlens.companion.ui.design.FitFilterChip
 fun measurementVerdict(def: MeasurementDef?, plainNoGoal: Boolean, from: Double, to: Double): Boolean? =
     MeasurementGoals.verdict(def?.goalType ?: MeasurementGoals.NONE, def?.goalValue ?: 0.0, from, to, plainNoGoal)
 
+/**
+ * A measurement's good-or-bad rule for its graph, with the key that explains it, as one value (#370). The move colours
+ * are [measurementVerdict]'s. The key says "Closer / Further" (TARGET) for a specific value with a target typed, taken
+ * from [def] and not from probing the rule; otherwise it follows the rule's direction ([chartKeyMode]).
+ */
+fun measurementRule(def: MeasurementDef?, plainNoGoal: Boolean): MoveRule {
+    val verdict: (Double, Double) -> Boolean? = { from, to -> measurementVerdict(def, plainNoGoal, from, to) }
+    val specificValue = def != null && def.goalType == MeasurementGoals.TARGET && def.goalValue > 0
+    return MoveRule(if (specificValue) ChartKeyMode.TARGET else chartKeyMode(verdict), verdict)
+}
+
 /** The user's choice for measurements with no direction (#330): true = plain, false = green for a rise and red for a fall. Changes show at once. */
 @Composable
 fun plainWhenNoGoal(): Boolean = Settings.portable.collectAsState().value.plainNoGoal
 
+/** The user's choice of what a body value's change is measured from (#372): true = the last value on an earlier day (the default). Changes show at once. */
+@Composable
+fun changeFromEarlierDay(): Boolean = Settings.portable.collectAsState().value.changeFromEarlierDay
+
+/**
+ * The value [record]'s change is measured from (#372), or null for the first one. One rule for the Track row, History
+ * and the day log, so a value is coloured the same way on each: with [fromEarlierDay] the last value of [history] on
+ * an earlier day than [record]'s; otherwise the value just before it in [history], even on the same day.
+ * [history] is one measurement's records, oldest first.
+ */
+fun previousValue(history: List<MRecord>, record: MRecord, fromEarlierDay: Boolean): MRecord? =
+    if (fromEarlierDay) history.lastOrNull { it.date.take(10) < record.date.take(10) }
+    else history.getOrNull(history.indexOfFirst { it.id == record.id } - 1)
+
 /**
  * The colour of a change between two values of a measurement (#27, #330): green when it is good, red when it is bad
  * ([measurementVerdict]), the normal text colour otherwise (unchanged, or plain by the user's choice). The signed
- * number and arrow next to it still carry the meaning, so colour is never the only signal.
+ * number and arrow next to it still carry the meaning, so colour is never the only signal. [plainNoGoal] is the
+ * user's Settings choice, read once per pane by the caller ([plainWhenNoGoal]) so no row reads it again (#370).
  */
 @Composable
-fun changeColour(def: MeasurementDef?, from: Double, to: Double): Color =
-    verdictColour(measurementVerdict(def, plainWhenNoGoal(), from, to), MaterialTheme.colorScheme.onSurface)
+fun changeColour(def: MeasurementDef?, plainNoGoal: Boolean, from: Double, to: Double): Color =
+    verdictColour(measurementVerdict(def, plainNoGoal, from, to), MaterialTheme.colorScheme.onSurface)
 
 /** The colour for a verdict (#330): green for good, red for bad, [none] for no colour. The one place a verdict becomes a colour. */
 fun verdictColour(good: Boolean?, none: Color): Color = when (good) {
@@ -141,6 +167,9 @@ fun MeasurementGoalSheet(def: MeasurementDef, onDismiss: () -> Unit) {
     // The no-direction colour choice (#330) is held here and written with Save, so Cancel keeps the old value.
     val savedPlain = plainWhenNoGoal()
     var plain by rememberSaveable { mutableStateOf(savedPlain) }
+    // What a body value's change is measured from (#372), held here and written with Save, like the choice above.
+    val savedFromDay = changeFromEarlierDay()
+    var fromDay by rememberSaveable { mutableStateOf(savedFromDay) }
     val value = text.trim().replace(',', '.').toDoubleOrNull()
     val needsValue = type == MeasurementGoals.TARGET
     FitSheet(
@@ -153,6 +182,7 @@ fun MeasurementGoalSheet(def: MeasurementDef, onDismiss: () -> Unit) {
             val v = if (t == MeasurementGoals.NONE) 0.0 else value ?: 0.0
             AppScope.scope.launch { Store.setMeasurementGoal(def.name, def.unit, t, v) }
             if (t == MeasurementGoals.NONE) Settings.updatePortable { it.copy(plainNoGoal = plain) }
+            if (!def.medication && fromDay != savedFromDay) Settings.updatePortable { it.copy(changeFromEarlierDay = fromDay) }
             onDismiss()
         }
     ) {
@@ -191,6 +221,14 @@ fun MeasurementGoalSheet(def: MeasurementDef, onDismiss: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+        if (!def.medication) {
+            // The same choice as Settings: what the change under a body value is measured from (#372).
+            Text(stringResource(R.string.settings_change_from), style = MaterialTheme.typography.labelLarge)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FitFilterChip(selected = fromDay, onClick = { fromDay = true }, label = { Text(stringResource(R.string.change_from_day)) })
+                FitFilterChip(selected = !fromDay, onClick = { fromDay = false }, label = { Text(stringResource(R.string.change_from_value)) })
+            }
         }
         Text(
             stringResource(R.string.mg_note),

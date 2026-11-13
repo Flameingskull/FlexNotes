@@ -4,7 +4,8 @@
 > Build gate 1.0.199: 27 functions checked (#328, graph ranges; working tree over 527d379). Written by the main session from the auditor's report (the harness stopped the subagent writing files); re-checked after fix rounds 1 and 2.
 > Build gate 1.0.200: 7 functions checked (#330, the graph key and trend colours; working tree over e67bae8, before CI ran the tests named).
 > Fix rounds 1 and 2 (1.0.200): 2 rows re-checked or added.
-> Results: 17 Proved, 16 Read OK, 0 Fails, 2 Gap, 0 Not checked. (Recounted over every row at 1.0.200; the 1.0.199 line had undercounted.)
+> Build gate 1.0.202: 3 functions checked (#370 the rule and its key as one value, in Charts.kt; working tree over 3589faf, before CI ran the tests named).
+> Results: 19 Proved, 16 Read OK, 1 Fails, 2 Gap, 0 Not checked.
 
 `Proved` here names a test that drives the function. A green release is what confirms it.
 
@@ -60,3 +61,6 @@
 | Trend figure colour on every graph | Follows each graph's rule | Charts.kt:440, :514 | Read OK | Sibling change in this build: a falling pace trend (TrainingScreen.kt:648, :702) is now green, and the Readiness ratio, monotony and effort trends (noBetter) are now plain where they were slope-coloured. Higher-is-better graphs unchanged. No screen test reads the colour |  |
 | Pace graph key | Better points down for pace | TrainingScreen.kt:648; Charts.kt:437 | Read OK | chartKeyMode(lowerIsBetter) = DOWN; before this build Better always pointed up |  |
 | Moves with no verdict on any single-series graph | Never green or red where no side is better (Readiness ratio, monotony, effort: ReadinessTab.kt:37) | Charts.kt:253-258, :866 | Read OK | Round 2: muted direction triangles, where they were plain markers before this build. MoveMarkerTest.aMoveWithNoVerdictIsNeitherGreenNorRed proves the colour rule; no Readiness screen test reads it |  |
+| MoveRule | A graph's good-or-bad rule and its key mode as one value; called like the rule | Charts.kt:308-310 | Proved | MoveRuleTest.theRuleGivesTheSameVerdictAsMeasurementVerdict, eachDirectionHasItsOwnKeyMode |  |
+| FitChart key from the rule | A MoveRule's key mode is used; any other rule's key is worked out from it, so the pace, training and Readiness graphs don't change | Charts.kt:484 | Proved | GoalGraphTest (body graph through BodyGraphPane: Closer/Further, Better/Worse, Plain); the other callers (AnalysisScreen, PinnedGraphs, ReadinessTab, TrainingScreen) pass plain functions and keep chartKeyMode, ChartKeyModeTest |  |
+| Best star for a specific value of 0.5 | The point closest to the value is starred, and the key's Best item matches it | Charts.kt:316-318, :887 | Fails | This build (#370, #371). bestPoint still probes the rule with chartKeyMode(better), that is better(1.0, 0.0), instead of the MoveRule's key mode. With #371 a specific value of exactly 0.5 (for example a waist-to-height ratio) makes that probe equal distance, so it returns null and no point is starred, while the key, now TARGET from the MoveRule, still shows "Best". Steps: a measurement with A specific value, 0.5, values 0.55, 0.52, 0.51: Graph shows Best in the key and no star. Expected: the star on 0.51. Fix: bestPoint uses (better as? MoveRule)?.keyMode ?: chartKeyMode(better), the same as the key | #370 |

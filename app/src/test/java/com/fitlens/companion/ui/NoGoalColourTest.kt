@@ -50,8 +50,9 @@ class NoGoalColourTest : FunctionTest() {
         var normal: Color? = null
         openScreen(LongHistoryFixture.snapshot()) {
             Column {
-                rise = changeColour(null, 80.0, 81.0)
-                fall = changeColour(null, 81.0, 80.0)
+                val plain = plainWhenNoGoal()
+                rise = changeColour(null, plain, 80.0, 81.0)
+                fall = changeColour(null, plain, 81.0, 80.0)
                 normal = MaterialTheme.colorScheme.onSurface
                 Text("x")
             }
@@ -74,8 +75,8 @@ class NoGoalColourTest : FunctionTest() {
         var down: Color? = null
         openScreen(LongHistoryFixture.snapshot(), preferences = PortableSettings(plainNoGoal = true)) {
             Column {
-                up = changeColour(MeasurementDef("Weight", "kg", 0, MeasurementGoals.INCREASE, 0.0, true), 80.0, 81.0)
-                down = changeColour(MeasurementDef("Weight", "kg", 0, MeasurementGoals.DECREASE, 0.0, true), 80.0, 81.0)
+                up = changeColour(MeasurementDef("Weight", "kg", 0, MeasurementGoals.INCREASE, 0.0, true), true, 80.0, 81.0)
+                down = changeColour(MeasurementDef("Weight", "kg", 0, MeasurementGoals.DECREASE, 0.0, true), true, 80.0, 81.0)
                 Text("x")
             }
         }

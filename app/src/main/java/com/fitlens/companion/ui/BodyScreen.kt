@@ -198,6 +198,11 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
             HorizontalPager(state = pager, modifier = Modifier.weight(1f), verticalAlignment = Alignment.Top) { pageIndex ->
                 // The Body tracker's Track / History / Graph are Medications' pages 2–4.
                 val page = if (medications) pageIndex - MED_LIST_PAGE else pageIndex
+                // The Settings choice for changes with no goal direction, read once for the page's rows (#370).
+                val plainNoGoal = plainWhenNoGoal()
+                // What a change is measured from (#372): the user's choice for body values. A medication's doses
+                // always compare with the dose just before, so the choice is not applied to them.
+                val fromEarlierDay = changeFromEarlierDay() && !medications
                 when {
                     pageIndex == 0 && medications -> LazyColumn(contentPadding = PaddingValues(bottom = 24.dp)) {
                         medicationTodayTab(
@@ -224,7 +229,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                                 SectionLabel(stringResource(R.string.lab_section), Modifier.padding(start = Spacing.lg, end = Spacing.lg, top = Spacing.md))
                             }
                             MeasurementListRow(
-                                snap, m,
+                                snap, m, plainNoGoal, fromEarlierDay,
                                 handle = reordering,
                                 onMoveUp = if (i > 0) ({ dragOrder.step(names, n, -1) }) else null,
                                 onMoveDown = if (i < order.lastIndex) ({ dragOrder.step(names, n, 1) }) else null,
@@ -233,7 +238,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                             HorizontalDivider(color = Brand.Hairline)
                         }
                     }
-                    page == 1 -> BodyHistoryAll(snap, measurements, onDelete = { deleteBodyValue(res, it) }) { r -> open = r.id }
+                    page == 1 -> BodyHistoryAll(snap, measurements, plainNoGoal, fromEarlierDay, onDelete = { deleteBodyValue(res, it) }) { r -> open = r.id }
                     else -> {
                         var graphOf by rememberSaveable { mutableStateOf(measurements.first().name) }
                         val names = measurements.map { it.name }
@@ -302,6 +307,8 @@ internal fun agoText(res: Resources, date: String, time: String): String {
 private fun MeasurementListRow(
     snap: Snapshot,
     m: MeasurementDef,
+    plainNoGoal: Boolean,
+    fromEarlierDay: Boolean,
     handle: Boolean = false,
     onMoveUp: (() -> Unit)? = null,
     onMoveDown: (() -> Unit)? = null,
@@ -311,7 +318,8 @@ private fun MeasurementListRow(
     val res = LocalContext.current.resources
     val recs = snap.recordsByName[m.name].orEmpty()
     val last = recs.lastOrNull()
-    val prev = recs.getOrNull(recs.size - 2)
+    // What the change is measured from is the user's choice, read once by the tracker (#372).
+    val prev = last?.let { previousValue(recs, it, fromEarlierDay) }
     val unit = m.unit.ifBlank { last?.unit.orEmpty() }
     val change = if (last != null && prev != null) changeText(res, prev, last) else null
     val flag = last?.let { flagText(res, m, it.value) }
@@ -349,7 +357,7 @@ private fun MeasurementListRow(
                     if (unit.isNotBlank()) Text(" $unit", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false)
                 }
                 if (change != null && prev != null) {
-                    Text(change, style = MaterialTheme.typography.bodySmall, color = changeColour(m, prev.value, last.value), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(change, style = MaterialTheme.typography.bodySmall, color = changeColour(m, plainNoGoal, prev.value, last.value), maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 // Outside its reference range (#211).
                 RangeFlag(m, last.value)
@@ -369,6 +377,8 @@ private fun MeasurementListRow(
 private fun BodyHistoryAll(
     snap: Snapshot,
     measurements: List<MeasurementDef>,
+    plainNoGoal: Boolean,
+    fromEarlierDay: Boolean,
     onDelete: (MRecord) -> Unit,
     onOpen: (MRecord) -> Unit
 ) {
@@ -405,7 +415,7 @@ private fun BodyHistoryAll(
             }
             items(recs, key = { "r${it.id}" }) { r ->
                 val history = snap.recordsByName[r.name].orEmpty()
-                val prev = history.getOrNull(history.indexOfFirst { it.id == r.id } - 1)
+                val prev = previousValue(history, r, fromEarlierDay)
                 val def = measurements.firstOrNull { it.name == r.name }
                 Row(
                     Modifier
@@ -430,7 +440,7 @@ private fun BodyHistoryAll(
                             if (r.unit.isNotBlank()) Text(" ${r.unit}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         if (prev != null) {
-                            Text(changeText(res, prev, r), style = MaterialTheme.typography.bodySmall, color = changeColour(def, prev.value, r.value), maxLines = 1)
+                            Text(changeText(res, prev, r), style = MaterialTheme.typography.bodySmall, color = changeColour(def, plainNoGoal, prev.value, r.value), maxLines = 1)
                         }
                         RangeFlag(def, r.value)
                     }
@@ -445,6 +455,10 @@ private fun BodyHistoryAll(
 @Composable
 internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
     val def = snap.allMeasurements.firstOrNull { it.name == selectedName }
+    // Each move is judged by the measurement's own direction, or the user's choice with none (#330). The choice is read
+    // once for the whole pane, and the rule carries its key mode with it (#370).
+    val plainNoGoal = plainWhenNoGoal()
+    val rule = remember(def, plainNoGoal) { measurementRule(def, plainNoGoal) }
     var rangeIdx by rememberSaveable { mutableIntStateOf(4) }
     var selectedPoint by remember(selectedName, rangeIdx) { mutableStateOf<Int?>(null) }
     var showTrend by rememberSaveable { mutableStateOf(false) }
@@ -515,17 +529,12 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
             } ?: emptyList()
             val photoDays = remember(snap.photosKey) { snap.photosByDate.keys.map { Dates.epochDay(it) }.toSet() }
             val unit = def?.unit ?: shown.lastOrNull()?.unit ?: ""
-            // Each move is judged by the measurement's own direction, or the user's choice with none (#330).
-            val plainNoGoal = plainWhenNoGoal()
-            val better: (Double, Double) -> Boolean? = { from, to -> measurementVerdict(def, plainNoGoal, from, to) }
-            // A specific value can't be told from the other goals by `better` alone, so the key is told (#330).
-            val keyMode = if (def != null && def.goalType == MeasurementGoals.TARGET && def.goalValue > 0) ChartKeyMode.TARGET else null
+
             if (shown.isEmpty()) GraphRangeEmpty(all.lastOrNull()?.date?.take(10)) { rangeIdx = RANGE_ALL } else FitChart(
                 listOf(LineSeries(selectedName, points)),
                 Modifier.padding(horizontal = 8.dp),
                 kind = kind,
-                better = better,
-                keyMode = keyMode,
+                better = rule,
                 photoDays = photoDays,
                 goal = if (def != null && def.goalType != 0 && def.goalValue > 0) def.goalValue else null,
                 range = def?.takeIf { it.hasRange }?.let { it.refLow to it.refHigh },
@@ -567,9 +576,8 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
                         if (shown.isEmpty()) GraphRangeEmpty(all.lastOrNull()?.date?.take(10)) { rangeIdx = RANGE_ALL } else FitChart(
                             listOf(LineSeries(selectedName, points)),
                             kind = kind,
-                            better = better,
-                            keyMode = keyMode,
-                            height = h,
+                better = rule,
+                height = h,
                             photoDays = photoDays,
                             goal = if (def != null && def.goalType != 0 && def.goalValue > 0) def.goalValue else null,
                             range = def?.takeIf { it.hasRange }?.let { it.refLow to it.refHigh },
@@ -596,7 +604,7 @@ internal fun BodyGraphPane(snap: Snapshot, nav: Nav, selectedName: String) {
             val sel = selectedPoint?.let { shown.getOrNull(it) }
             if (sel != null) SelectedPointCard(snap, nav, sel)
         }
-        item { StatsBlock(shown, def?.unit ?: shown.lastOrNull()?.unit ?: "", def) }
+        item { StatsBlock(shown, def?.unit ?: shown.lastOrNull()?.unit ?: "", def, plainNoGoal) }
     }
 }
 
@@ -627,12 +635,12 @@ private fun SelectedPointCard(snap: Snapshot, nav: Nav, r: MRecord) {
 }
 
 @Composable
-private fun StatsBlock(list: List<MRecord>, unit: String, def: MeasurementDef?) {
+private fun StatsBlock(list: List<MRecord>, unit: String, def: MeasurementDef?, plainNoGoal: Boolean) {
     if (list.isEmpty()) return
     val first = list.first()
     val last = list.last()
     // The move from the first to the last value, judged by the measurement's direction or the user's choice with none (#330).
-    val good = measurementVerdict(def, plainWhenNoGoal(), first.value, last.value)
+    val good = measurementVerdict(def, plainNoGoal, first.value, last.value)
     val moveColour = verdictColour(good, Color.Unspecified)
     // The change in words too, so colour is not the only signal (#330).
     val changeWords = good?.let { stringResource(if (it) R.string.body_change_better else R.string.body_change_worse) }
@@ -669,6 +677,11 @@ private fun StatsBlock(list: List<MRecord>, unit: String, def: MeasurementDef?) 
 @Composable
 internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -> Unit, onOpen: (MRecord) -> Unit) {
     val res = LocalContext.current.resources
+    // The Settings choice for changes with no goal direction, read once for the pane's rows (#370).
+    val plainNoGoal = plainWhenNoGoal()
+    // What a change is measured from (#372): the user's choice for body values; a medication's doses always compare
+    // with the dose just before.
+    val fromEarlierDay = changeFromEarlierDay() && !snap.showsMedications
     val records = snap.recordsByName[name].orEmpty()
     val def = snap.allMeasurements.firstOrNull { it.name == name }
     if (records.isEmpty()) {
@@ -695,7 +708,7 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
                         }
                     }
                     l.forEachIndexed { i, r ->
-                        val prev = records.getOrNull(records.indexOf(r) - 1)
+                        val prev = previousValue(records, r, fromEarlierDay)
                         SetRowView(
                             index = i + 1,
                             summary = "${fmtNum(r.value)} ${r.unit}",
@@ -716,7 +729,7 @@ internal fun BodyHistoryPane(snap: Snapshot, name: String, onDelete: (MRecord) -
                             Text(
                                 changeText(res, prev, r),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = changeColour(def, prev.value, r.value),
+                                color = changeColour(def, plainNoGoal, prev.value, r.value),
                                 modifier = Modifier.padding(start = 18.dp)
                             )
                         }
