@@ -4,6 +4,7 @@ package com.fitlens.companion.ui
 
 import com.fitlens.companion.ui.design.OverflowMenu
 import com.fitlens.companion.ui.design.StepperField
+import com.fitlens.companion.ui.design.rememberDirty
 import android.content.res.Resources
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.semantics.Role
@@ -316,7 +317,9 @@ fun WorkoutEditorScreen(snap: Snapshot, nav: Nav, id: Long) {
     renaming?.let { dayKey ->
         val day = days.firstOrNull { it.key == dayKey }
         var dayName by rememberSaveable(dayKey) { mutableStateOf(day?.name.orEmpty()) }
+        val unsaved = rememberDirty(dayName.trim())
         FitSheet(
+            dirty = unsaved,
             title = stringResource(R.string.workout_rename_day),
             onDismiss = { renaming = null },
             confirmLabel = stringResource(R.string.workout_rename_day),
@@ -680,6 +683,7 @@ private fun PlannedSetsSheet(
     var sameRest by rememberSaveable { mutableStateOf(planned.sets.none { it.restSeconds != null }) }
     var rest by rememberSaveable { mutableStateOf(planned.restSeconds?.takeIf { it > 0 }) }
     var restAfter by rememberSaveable { mutableStateOf(planned.restAfterSeconds?.takeIf { it > 0 }) }
+    val unsaved = rememberDirty(fill, rows.toList(), copyRest, sameRest, rest, restAfter)
     val fallbackRest = ex?.restSeconds ?: Settings.currentPortable().restSeconds
     val perSet = fill == Routines.FILL_PLANNED && !sameRest && !copyRest && !isRounds
     // What "Copy previous rest" would copy today, in the same words as the exercise row.
@@ -700,6 +704,7 @@ private fun PlannedSetsSheet(
         title = ex?.name ?: stringResource(R.string.workout_sets),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.workout_done),
+        dirty = unsaved,
         onConfirm = {
             // Set type rides along with each row; a row counts when it has any value.
             val sets = rows.map {
@@ -893,10 +898,12 @@ private fun DayRestSheet(dayName: String, onDismiss: () -> Unit, onDone: (Int?, 
     var after by rememberSaveable { mutableStateOf<Int?>(null) }
     // "Copy previous rest" (#151) for the whole day: each exercise takes its rest from its own last workout.
     var copyRest by rememberSaveable { mutableStateOf(false) }
+    val unsaved = rememberDirty(copyRest, rest, after)
     FitSheet(
         title = stringResource(R.string.workout_day_rest_title, dayName),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.workout_day_rest_confirm),
+        dirty = unsaved,
         onConfirm = { if (copyRest) onDone(Routines.REST_PREVIOUS, Routines.REST_PREVIOUS) else onDone(rest, after) }
     ) {
         Text(

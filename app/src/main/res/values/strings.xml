@@ -199,6 +199,9 @@
     <string name="settings_change_from">Compare a body value with</string>
     <string name="settings_change_from_kw">change previous before earlier last value day compare body measurement weight arrow since green red</string>
     <string name="settings_change_from_summary">Decides what the change under a body value is measured from, on the Track tab, History and the day log. With several values in one day, the first choice compares with the last value on an earlier day; the second with the value just before it, even on the same day.</string>
+    <string name="settings_body_entry_full">Open body value entry full screen</string>
+    <string name="settings_body_entry_full_kw">body value measurement weight medication entry sheet full screen expand big keyboard add log</string>
+    <string name="settings_body_entry_full_summary">Adding or editing a body value, or logging a medication, opens the entry sheet full screen instead of half height. You can still change its height on the sheet.</string>
     <string name="change_from_day">Last value on an earlier day</string>
     <string name="change_from_value">The value just before it</string>
     <string name="unit_centimetres">Centimetres (cm)</string>
@@ -1613,6 +1616,7 @@
     <string name="mse_measurement">Measurement</string>
     <string name="mse_value_unit">Value (%1$s)</string>
     <string name="mse_comment_optional">Comment (optional)</string>
+    <string name="mse_save_add">Save and add another</string>
     <!-- Measurement goals and order (#94) -->
     <string name="mg_no_change">No change since %1$s</string>
     <string name="mg_change">%1$s %2$s since %3$s · was %4$s</string>
@@ -2767,6 +2771,8 @@
     <string name="bfx_out_of_range">These measurements give %1$s%%, outside what the formula can measure (%2$s–%3$s%%). Check each value and its unit.</string>
     <string name="cmn_back">Back</string>
     <string name="cmn_ok">OK</string>
+    <string name="sheet_expand">Show full screen</string>
+    <string name="sheet_collapse">Show half height</string>
     <string name="cmn_delete">Delete</string>
     <string name="cmn_save">Save</string>
     <string name="cmn_search">Search</string>

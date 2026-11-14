@@ -7,7 +7,8 @@
 > Build gate 1.0.200: 2 functions checked (#330, the shared verdict in data/Models.kt; working tree over e67bae8, before CI ran the tests named).
 > Build gate 1.0.201: 4 functions checked (#349, the top bar title refitting; working tree over 3adada9, before CI ran the tests named).
 > Build gate 1.0.202: 2 functions checked (#371 equal distance from a specific value, in data/Models.kt; working tree over 3589faf, before CI ran the tests named).
-> Results: 9 Proved, 10 Read OK, 0 Fails, 0 Gap, 1 Not checked.
+> Build gate 1.0.204: 1 function checked (#334, the Settings number sheet; working tree over 8a66dc5).
+> Results: 9 Proved, 11 Read OK, 0 Fails, 0 Gap, 1 Not checked.
 
 ## Files
 
@@ -20,6 +21,7 @@
 | ui/CalendarScreen.kt | No (build gate: changed functions only; `CalendarScreen` and `DayCell` read in full) |
 | ui/design/TopBar.kt | No (build gate: changed functions only; `FitTopBar`, `iconsThatFit` and `FittedTitle` read in full) |
 | data/Models.kt | No (build gate: changed functions only; `MeasurementGoals` read in full) |
+| ui/design/SettingsRows.kt | No (build gate: changed functions only; `NumberEntrySheet` read in full) |
 
 ## Functions
 
@@ -45,3 +47,4 @@
 | Title starts again from full size when its room changes | Rotating, icons moving into the ⋮ menu, or the library's categories then search giving a different width: the title refits to the new room instead of staying shrunk | TopBar.kt:272 | Read OK | scale is remembered on constraints.maxWidth. The width comes from the bar's title slot (TopAppBar) or the remaining Row space beside the ▾ (weight, fill = false), never from the title's own size, so a reset can't loop. No test changes the room and reads the title's size |  |
 | Centred tab-screen titles | Still centred | TopBar.kt:114-118 | Read OK | The box wraps the text, so the Column's centring is unchanged. The ellipsis checks cover these screens; no test reads the position |  |
 | Library title with its ▾ switcher | The name shrinks or ellipsizes and the ▾ stays visible | TopBar.kt:122-128 | Read OK | weight(1f, fill = false) moved from the Text to the box, a direct Row child, so the arrow keeps its room. #325's library names are the known ellipses in WholeScreenTest |  |
+| Settings number sheet keeps a typed number | A changed number survives a tap outside, a drag and Back; Cancel and Save still close | SettingsRows.kt:387, :395 | Read OK | `rememberDirty(text.trim())` passed as `dirty`; the shared guard is proved in the body ledger (SheetGuardTest). No test opens this sheet. Already there, not this build: `text` is `remember`, so turning the phone puts the old number back (the dirty start point is saved, so it then reads as unchanged) | #334 |

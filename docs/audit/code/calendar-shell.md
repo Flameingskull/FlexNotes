@@ -7,7 +7,8 @@
 > Build gate 1.0.201: 2 functions checked (#349, deterministic goldens; working tree over 3adada9, with CI run on 5682876 and the three re-recorded goldens looked at).
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 0 of 4 in scope; the rest of the area was not read.
 > Build gate 1.0.202: 2 functions checked in this ledger (#371; working tree over 3589faf, before CI ran the tests named). 20 functions across body, analysis, photos and calendar-shell.
-> Results: 7 Verified, 9 Read OK, 1 Defect, 1 Risk, 1 Improve, 1 Not checked.
+> Build gate 1.0.204: 1 functions checked in this ledger (#334 unsaved sheets, #331 body value sheet; working tree over 8a66dc5, plus the LayoutChecks.isTextField correction). CI on draft PR #380 (as reported to the auditor, before that correction): compiled, 800 of 804 unit tests passed, the 4 failures all in BodyEntrySheetLayoutTest. 35 functions across body, photos, calendar-shell, settings-data, build-release and tests.
+> Results: 7 Verified, 10 Read OK, 1 Defect, 1 Risk, 1 Improve, 1 Not checked.
 > `Verified` names a test that would fail if this broke. For 1.0.199 those tests had not yet run when the rows were written: a green release confirms them.
 
 ## Files
@@ -20,6 +21,7 @@
 | data/Daos.kt | No (build gate: changed functions only) |
 | data/Models.kt | No (build gate: changed functions only) |
 | ui/design/TopBar.kt | No (build gate: changed functions only) |
+| ui/design/SettingsRows.kt | No (build gate: changed functions only) |
 
 ## Checks
 
@@ -45,3 +47,4 @@
 | verdict: equality of doubles | Logic | Models.kt:444 | Read OK | `to == from` on values converted by the same function, so two equal stored values stay equal; changeText's "No change" uses the same test, so text and colour agree | #330 |
 | FittedTitle: the shrink resets when the room changes | Android lifecycle | TopBar.kt:268-288 | Verified | `scale` was remembered on title, style and floor only, so a step taken while the bar was briefly narrower (before onSizeChanged moved icons into the menu) stayed after the room grew: the title's size depended on timing. Now also keyed on BoxWithConstraints' maxWidth. ScreenshotTest.topBar (top_bar_411dp_font2) and WholeScreen411Test.libraryCategoryOpened (screen_lib_category_411dp) now record the full-size title with room to spare (looked at: no ellipsis), so the old code fails them | #349 |
 | FittedTitle: the Box around the title | Structure | TopBar.kt:271 | Read OK | The caller's modifier (weight(1f, fill = false) in the menu title) moved to the Box, a direct child of the Row, so the weight still applies; the Text wraps inside it and the centred Column still centres it. BoxWithConstraints is a SubcomposeLayout, which fails on intrinsic measurement: nothing above it asks (Material 3's top bar measures its title with constraints, no IntrinsicSize in TopBar.kt), and CI drew every bar. A width change resets to full size and shrinks again in 0.1 steps to the floor; the title doesn't change the bar's width, so no loop | #349 |
+| NumberEntrySheet: unsaved guard | Data safety | SettingsRows.kt:384-397 | Read OK | Build gate 1.0.204. rememberDirty(text.trim()), text seeded from the value and filtered to digits before it's compared. No test types and taps outside. `typing` (SettingsRows.kt:343) is remember, so a turn closes the sheet, as before | #334 |

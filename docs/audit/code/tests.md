@@ -7,7 +7,9 @@
 > Build gate 1.0.200, fix rounds 1 and 2 re-checked: the findings below and the rows they touch. CI on the round-1 tree compiled and passed 739 of 741 tests; CI on the round-2 tree (c4e8a86) passed 740 of 741, including every #330 test; the one failure is the known WholeScreen320Test.librarySearch (#349).
 > Build gate 1.0.201: 3 functions checked (#349, deterministic goldens; working tree over 3adada9, with CI run on 5682876 and the three re-recorded goldens looked at).
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 9 of 15 in scope; the rest of the area was not read.
-> Results: 0 Verified, 36 Read OK, 0 Defect, 5 Risk, 3 Improve, 3 Not checked.
+> Build gate 1.0.204: 9 functions checked in this ledger (#334 unsaved sheets, #331 body value sheet; working tree over 8a66dc5, plus the LayoutChecks.isTextField correction). CI on draft PR #380 (as reported to the auditor, before that correction): compiled, 800 of 804 unit tests passed, the 4 failures all in BodyEntrySheetLayoutTest. 35 functions across body, photos, calendar-shell, settings-data, build-release and tests.
+> Build gate 1.0.204 (second code-auditor, the #334 call sites): SheetGuardTest read in full; one row added below, the file's other rows are the ones above. CI on draft PR #380 passed all of SheetGuardTest.
+> Results: 1 Verified, 43 Read OK, 0 Defect, 7 Risk, 5 Improve, 3 Not checked.
 > `Verified` names a test that would fail if this broke. CI run 41336801625 ran this code: every reminder, alarm and rest test passed.
 
 ## Files
@@ -39,6 +41,13 @@
 | app/src/test/java/com/fitlens/companion/ui/TrendVerdictTest.kt | Yes |
 | app/src/test/java/com/fitlens/companion/ui/MoveMarkerTest.kt | Yes |
 | app/src/test/java/com/fitlens/companion/ui/GoalGraphTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/SheetGuardTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/BodyEntrySettingTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/BodyEntryRowTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/BodyEntrySheetTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/BodyEntryAddAnotherTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/BodyEntrySheetLayoutTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/ui/LayoutChecks.kt | Yes |
 
 ## Checks
 
@@ -100,3 +109,18 @@ Written by the main session from the code-auditor's report. Read in full: GraphR
 | A screen test of the axis span | Tests | (none) | Risk | The date labels are drawn on the canvas only | #361 |
 | theTrendRangeAndThePlotRangeAreTheSame | Tests | ChartViewportTest.kt:84 | Improve | Calls the same function twice with the same input | #361 |
 | GraphRangeTest, AnalysisRangeTest, ExerciseGraphRangeTest, ShareGraphAxisTest, AnalysisPanelTest, GraphRangeIndexTest | Tests | | Read OK | Fixed dates and the clock seam reset after each test; AnalysisPanelTest has only the negative case | #328 |
+| LayoutChecks.isTextField: read-only fields | Tests | LayoutChecks.kt:193-198; TimeField.kt:47-50; BodyEntrySheetLayoutTest.kt:61-71 | Read OK | Build gate 1.0.204, corrected in this build. CI reported all 4 BodyEntrySheetLayoutTest cases failing with "(unlabelled)" overlaps "Time". Traced: TimeField's read-only OutlinedTextField is the first one any whole-screen check lays out (WholeScreenTest opens no body screen); its node has EditableText and a text layout but no SetText action and no Text, so the old isTextField was false and the exemption at :103 for a field's own floating label didn't apply, at every height and font. The correction also accepts EditableText, which only text fields carry, so it widens the exemption to read-only fields and nothing else. A green run of BodyEntrySheetLayoutTest confirms it. label() still prints "(unlabelled)" for any field, which made the failure hard to read | #331 |
+| No test that LayoutChecks still catches text over a read-only field | Tests | LayoutChecks.kt:103-105 | Improve | Build gate 1.0.204, this build. The exemption excuses any text inside a field's width, and now for read-only fields too; nothing checks that a Text drawn over a TimeField's value is still reported. Add two PhoneSizeTest-style cases: a labelled readOnly OutlinedTextField reports nothing, and a Text placed over it is reported. Also let label() fall back to EditableText so a field's line names it | #331 |
+| SheetGuardTest | Tests | SheetGuardTest.kt:81-166 | Verified | Build gate 1.0.204. Each screen case fails if the guard broke: it asserts the scrim exists, clicks it, then asserts the title and text and that the closed marker is absent; the untouched cases fail if dirty started true. Real call sites: WorkoutCommentSheet, SetCommentSheet, ReferenceRangeSheet | #334 |
+| #334 criteria not driven: Back and a drag | Tests | SheetGuardTest.kt:62-65 | Risk | Build gate 1.0.204, this build. The class KDoc says Back is not driven; nothing drags the sheet either, and the criterion names both. A change in which path Back takes would pass. Add: type, Espresso.pressBack(), assert open; performTouchInput { swipeDown() } on the title, assert open; and both closing an untouched sheet | #334 |
+| #331 criteria with no test | Tests | BodyEntrySheetTest.kt | Risk | Build gate 1.0.204, this build. No test drags or flicks up, drags down from full screen, turns the phone with a value typed at either height, or chooses a time or a site. theButtonGoesUpAndBackDown and opensFullScreenWhenTheSettingIsOn assert only which label the arrow shows, so a sheet that swapped the label but never grew passes. Add: the sheet's height against the window after each toggle (full at least 90% of it, half less); swipeUp on the title; StateRestorationTester with 61.7 typed at full height, asserting the value and the collapse label | #331 |
+| BodyEntryAddAnotherTest | Tests | BodyEntryAddAnotherTest.kt | Read OK | Build gate 1.0.204. Asserts Room (stored() reads the database, which starts empty, so 61.7 can only be the saved one), the cleared field and the value behind | #331 |
+| BodyEntrySettingTest and BodyEntryRowTest | Tests | BodyEntrySettingTest.kt; BodyEntryRowTest.kt | Read OK | Build gate 1.0.204. Assert the preference after a reload from the database and after each tap | #331 |
+| BodyEntrySheetTest: choosing a measurement or the date | Tests | BodyEntrySheetTest.kt:89-105 | Read OK | Build gate 1.0.204. A chip and the date picker at each height, asserting onDismiss never ran | #331 |
+| BodyEntrySheetLayoutTest reads the wall clock | Tests | BodyEntrySheetLayoutTest.kt:32; TimeField.kt:44 | Read OK | Build gate 1.0.204. It sets Dates.clockSource, but the time shown comes from LocalTime.now(), so the text differs per run; HH:mm keeps its width, so the layout check isn't affected | #331 |
+
+## Build gate 1.0.204, #334 test file (code-auditor, sheet call sites)
+
+| Function, class or concern | Check | Where | Result | Evidence | Issue |
+| --- | --- | --- | --- | --- | --- |
+| tapOutside picks any node described as close | Tests | SheetGuardTest.kt:68-73 | Improve | This build. It clicks the first node whose description contains `close` in any case, so a sheet with a Close icon would be clicked instead of the scrim, and a click landing on the sheet passes every keeps-text test. SetCommentSheet has no untouched counterpart to rule that out. Also, the tap cases see only FitSheet's onDismissRequest guard: with the confirmValueChange guard gone they still pass, since onDismiss never runs while the sheet slides away, so the drag test in the row above should assert the Save button is still displayed, not only that the closed marker is absent. Fix: match the exact scrim label (`hasContentDescription("Close sheet")` and hasClickAction()), and add `theSetCommentClosesOnATapOutsideWhenNothingWasTyped`. Size S | #334 |

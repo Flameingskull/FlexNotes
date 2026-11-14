@@ -44,6 +44,7 @@ import com.fitlens.companion.ui.design.SegmentedSwitch
 import com.fitlens.companion.ui.design.SettingsSwitchRow
 import com.fitlens.companion.ui.design.StepperField
 import com.fitlens.companion.ui.design.FitTextButton
+import com.fitlens.companion.ui.design.rememberDirty
 
 /**
  * Training blocks in the workout editor (#218): the plan's start date, its blocks (tap to edit; ⋮ to duplicate or
@@ -142,6 +143,7 @@ private fun BlockSheet(block: TrainingBlock, adding: Boolean, canBeOngoing: Bool
     var changing by rememberSaveable(block) { mutableStateOf(block.adjusts) }
     var pct by rememberSaveable(block) { mutableStateOf(block.weightPct.toString()) }
     var sets by rememberSaveable(block) { mutableStateOf(block.setChange.toString()) }
+    val unsaved = rememberDirty(name.trim(), length.trim(), unit, deload, changing, pct.trim(), sets.trim())
     val units = TrainingBlocks.UNITS.filter { canBeOngoing || it != PhaseUnit.ONGOING }
     val n = length.toIntOrNull()
     val pctValue = pct.toIntOrNull()
@@ -153,6 +155,7 @@ private fun BlockSheet(block: TrainingBlock, adding: Boolean, canBeOngoing: Bool
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.tb_done),
         confirmEnabled = valid,
+        dirty = unsaved,
         onConfirm = {
             onDone(
                 TrainingBlock(

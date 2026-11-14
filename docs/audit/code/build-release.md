@@ -3,7 +3,8 @@
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.198: 6 functions checked, re-checked after fix rounds 1 and 2.
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 0 of 2 in scope; the rest of the area was not read.
-> Results: 0 Verified, 4 Read OK, 0 Defect, 1 Risk, 0 Improve, 1 Not checked.
+> Build gate 1.0.204: 1 functions checked in this ledger (#334 unsaved sheets, #331 body value sheet; working tree over 8a66dc5, plus the LayoutChecks.isTextField correction). CI on draft PR #380 (as reported to the auditor, before that correction): compiled, 800 of 804 unit tests passed, the 4 failures all in BodyEntrySheetLayoutTest. 35 functions across body, photos, calendar-shell, settings-data, build-release and tests.
+> Results: 0 Verified, 5 Read OK, 0 Defect, 1 Risk, 0 Improve, 1 Not checked.
 
 ## Files
 
@@ -22,3 +23,4 @@
 | Strings removed and changed | Project rules | strings.xml:1979 | Read OK | mr_exact_allowed and mr_taken_sites have no references left in app/src; only values/ exists; no golden covers these pages. "Ten minutes" appears nowhere in app/src/main. No BUILD_OFFSET, applicationId, signing or Db.VERSION change in this diff | #346 |
 | Merged manifest | Build | Build output | Not checked | A library could declare the exact-alarm permission without the cap. Needs a build | #346 |
 | Exact-alarm permission-state action | Lifecycle | AndroidManifest.xml:181 | Read OK | Same string as AlarmManager's constant; on the existing boot receiver, which system broadcasts already reach | #346 |
+| 1.0.204 strings | Project rules | strings.xml:202-204, :1619, :2774-2775 | Read OK | Build gate 1.0.204. Five new names, each used in code (grep), nothing to escape, one values folder | #331 |

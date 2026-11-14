@@ -37,6 +37,7 @@ import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.data.fmtSigned
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.ListRowWithMenu
+import com.fitlens.companion.ui.design.rememberDirty
 import kotlinx.coroutines.launch
 import com.fitlens.companion.ui.design.FitFilterChip
 
@@ -172,11 +173,13 @@ fun MeasurementGoalSheet(def: MeasurementDef, onDismiss: () -> Unit) {
     var fromDay by rememberSaveable { mutableStateOf(savedFromDay) }
     val value = text.trim().replace(',', '.').toDoubleOrNull()
     val needsValue = type == MeasurementGoals.TARGET
+    val unsaved = rememberDirty(type, text.trim(), plain, fromDay)
     FitSheet(
         title = stringResource(R.string.mg_title, def.name),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.goals_save),
         confirmEnabled = !needsValue || (value != null && value > 0),
+        dirty = unsaved,
         onConfirm = {
             val t = type
             val v = if (t == MeasurementGoals.NONE) 0.0 else value ?: 0.0

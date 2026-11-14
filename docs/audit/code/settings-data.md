@@ -6,7 +6,8 @@
 > Build gate 1.0.200, fix rounds 1 and 2 re-checked: the findings below and the rows they touch. CI on the round-1 tree compiled and passed 739 of 741 tests; CI on the round-2 tree (c4e8a86) passed 740 of 741, including every #330 test; the one failure is the known WholeScreen320Test.librarySearch (#349).
 > Build gate 1.0.202: 7 functions checked (#372 the "compare with" choice, #373 the test teardown seam; working tree over 3589faf, before CI ran the tests named). Also read in full: the new tests AppScopeJobsTest.kt and ChangeFromScreensTest.kt (settings tests); the FunctionTest seam rows are kept here because it serves every area's tests.
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 0 of 4 in scope; the rest of the area was not read.
-> Results: 11 Verified, 10 Read OK, 0 Defect, 2 Risk, 4 Improve, 0 Not checked.
+> Build gate 1.0.204: 2 functions checked in this ledger (#334 unsaved sheets, #331 body value sheet; working tree over 8a66dc5, plus the LayoutChecks.isTextField correction). CI on draft PR #380 (as reported to the auditor, before that correction): compiled, 800 of 804 unit tests passed, the 4 failures all in BodyEntrySheetLayoutTest. 35 functions across body, photos, calendar-shell, settings-data, build-release and tests.
+> Results: 13 Verified, 10 Read OK, 0 Defect, 2 Risk, 4 Improve, 0 Not checked.
 > `Verified` names a test that would fail if this broke. CI run 41336801625 ran this code: every reminder, alarm and rest test passed.
 
 ## Files
@@ -49,3 +50,5 @@
 | awaitAppScopeJobs: cancelling children | Concurrency | FunctionTest.kt:114 | Improve | `isActive` is false for a cancelled child still running its finally or NonCancellable block; `!isCompleted` would wait for it | #373 |
 | AppScopeJobsTest | Tests | AppScopeJobsTest.kt:27-53 | Verified | Each test fails if the seam broke: no looper idling (the job never starts, false), no job check (done still false, goal not stored), no timeout (elapsed time). `never.cancel()` is not in a finally, so a failed assertion leaks a never-ending job into AppScope for every later test in the sandbox | #373 |
 | FunctionTest KDoc: teardown "those of WholeScreenChecks" | Structure | FunctionTest.kt:46-49 | Improve | No longer true: WholeScreenTest.tearDown waits for neither AppScope nor settings writes. Say what this teardown waits for | #373 |
+| PortableSettings.bodyEntryFullScreen saved and read back | Data safety | Settings.kt:178, :497, :630, :806 | Verified | Build gate 1.0.204. BodyEntrySettingTest.theChoiceIsSavedAndComesBackAfterARestart, switchingItOffIsSavedToo, offUntilTheUserSwitchesItOn. Stored as "1" or absent like workout_timer_auto, so an old install or backup reads false; the key is new and unique (grep). No schema change, so Db.VERSION stays | #331 |
+| Settings row: Open body value entry full screen | Logic | SettingsScreen.kt:404-408 | Verified | Build gate 1.0.204. BodyEntryRowTest.tappingItSwitchesItOnAndAgainOff (asserts the preference), searchFindsItByItsWords, theRowIsOnSettingsAndOffByDefault | #331 |

@@ -174,6 +174,8 @@ data class PortableSettings(
     val lastRoutineId: Long = 0L,
     /** Start the workout timer when the first set of today is saved (#12). */
     val workoutTimerAuto: Boolean = false,
+    /** Open the body value entry sheet full screen instead of half height (#331). Off by default. */
+    val bodyEntryFullScreen: Boolean = false,
     /** The rest timer's length in seconds (#20). */
     val restSeconds: Int = 90,
     /**
@@ -492,6 +494,7 @@ object Settings {
             P_HOME_SETS to s.homeSetsShown.takeIf { it != 0 }?.toString(),
             P_LAST_ROUTINE to s.lastRoutineId.takeIf { it != 0L }?.toString(),
             P_TIMER_AUTO to if (s.workoutTimerAuto) "1" else null,
+            P_BODY_ENTRY_FULL to if (s.bodyEntryFullScreen) "1" else null,
             P_REST_SECONDS to s.restSeconds.takeIf { it != 90 }?.toString(),
             P_MED_MISSED to s.medMissedAfter.takeIf { it != MedSchedules.MISSED_DEFAULT_MINUTES }?.toString(),
             P_REST_AUTO to if (s.restAutoStart) "1" else null,
@@ -624,6 +627,7 @@ object Settings {
     private const val P_HOME_SETS = "home_sets_shown"
     private const val P_LAST_ROUTINE = "last_routine"
     private const val P_TIMER_AUTO = "workout_timer_auto"
+    private const val P_BODY_ENTRY_FULL = "body_entry_full_screen"
     private const val P_REST_SECONDS = "rest_seconds"
     private const val P_MED_MISSED = "med_missed_after"
     private const val P_REST_AUTO = "rest_auto_start"
@@ -799,6 +803,7 @@ object Settings {
         homeSetsShown = get(P_HOME_SETS)?.toIntOrNull()?.takeIf { it in 1..10 } ?: 0,
         lastRoutineId = get(P_LAST_ROUTINE)?.toLongOrNull() ?: 0L,
         workoutTimerAuto = bool(get(P_TIMER_AUTO)),
+        bodyEntryFullScreen = bool(get(P_BODY_ENTRY_FULL)),
         // Any exact length from 1 s to 60 min (#105).
         restSeconds = get(P_REST_SECONDS)?.toIntOrNull()?.takeIf { it in 1..3600 } ?: 90,
         medMissedAfter = get(P_MED_MISSED)?.toIntOrNull()?.takeIf { it in MedSchedules.MISSED_CHOICES } ?: MedSchedules.MISSED_DEFAULT_MINUTES,

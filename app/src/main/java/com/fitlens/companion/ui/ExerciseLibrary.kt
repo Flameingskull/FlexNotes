@@ -119,6 +119,7 @@ import com.fitlens.companion.ui.design.PickerPill
 import com.fitlens.companion.data.WeightUnits
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.FitTopBar
+import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.rememberInPlaceOrder
 import com.fitlens.companion.ui.design.ReorderToggle
 import com.fitlens.companion.ui.design.DragHandle
@@ -1286,6 +1287,7 @@ fun CategoryEditorSheet(
 ) {
     var name by rememberSaveable { mutableStateOf(existing?.name ?: "") }
     var colour by rememberSaveable { mutableStateOf(existing?.colour?.takeIf { it != 0 } ?: CategoryPaletteArgb.first()) }
+    val unsaved = rememberDirty(name.trim(), colour)
     val res = LocalContext.current.resources
 
     FitSheet(
@@ -1293,6 +1295,7 @@ fun CategoryEditorSheet(
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.lib_save_category),
         confirmEnabled = name.isNotBlank(),
+        dirty = unsaved,
         onConfirm = {
             val n = name.trim()
             val c = colour

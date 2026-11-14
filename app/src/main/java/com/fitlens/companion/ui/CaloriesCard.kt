@@ -18,6 +18,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import com.fitlens.companion.ui.design.rememberDirty
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -219,6 +220,7 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
         mutableStateMapOf<Intake.Kind, String>().apply { (if (origin != null) own else totals).forEach { (k, v) -> put(k, fmtNum(v, 1)) } }
     }
     val valid = Intake.Kind.entries.all { k -> typed[k].isNullOrBlank() || intakeValue(typed[k].orEmpty()) != null }
+    val unsaved = rememberDirty(Intake.Kind.entries.map { typed[it].orEmpty().trim() })
     val dayLabel = relativeDayLabel(date)
     val undoLabel = stringResource(R.string.undo)
 
@@ -241,6 +243,7 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.cal_eaten_save),
         confirmEnabled = valid,
+        dirty = unsaved,
         onConfirm = {
             val values = Intake.Kind.entries.mapNotNull { k -> typed[k]?.let { intakeValue(it) }?.let { k to it } }.toMap()
             write(values, res.getString(R.string.cal_eaten_saved, dayLabel))

@@ -2,8 +2,9 @@
 
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.198: 54 functions checked, re-checked after fix rounds 1 and 2.
+> Build gate 1.0.204: 7 functions checked (#334, the sheet call sites in MedicationAsNeeded, MedicationExtras, MedicationToday and ScheduleEditorScreen; working tree over 8a66dc5). CI on these files (draft PR #380) compiled and SheetGuardTest passed.
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 3 of 3 in scope; the rest of the area was not read.
-> Results: 41 Verified, 9 Read OK, 0 Defect, 2 Risk, 0 Improve, 2 Not checked.
+> Results: 41 Verified, 15 Read OK, 2 Defect, 2 Risk, 0 Improve, 2 Not checked.
 > `Verified` names a test that would fail if this broke. CI run 41336801625 ran this code: every reminder, alarm and rest test passed.
 
 ## Files
@@ -13,6 +14,10 @@
 | data/MedReminders.kt | Yes |
 | data/ExactAlarms.kt | Yes |
 | ui/MedicationsPage.kt | Yes |
+| ui/MedicationAsNeeded.kt | No (build gate: changed functions only) |
+| ui/MedicationExtras.kt | No (build gate: changed functions only) |
+| ui/MedicationToday.kt | No (build gate: changed functions only) |
+| ui/ScheduleEditorScreen.kt | No (build gate: changed functions only) |
 
 ## Checks
 
@@ -72,3 +77,16 @@
 | Receivers rethrow CancellationException | Failure | MedReminders.kt:780; LogReminders.kt:316 | Verified | aCancellationFromInsideTheWorkIsAFailureWithARetryNotTheEndOfTheChain; ReminderHarnessTest.kt:115. withTimeoutOrNull returns null on its own timeout rather than throwing, the receiver scope is never cancelled, and finish() is in finally, so nothing outlives the broadcast. CI run 41336801625 passed it | #346 |
 | MedBootReceiver: failure tracked per chain | Failure | MedReminders.kt:808 | Verified | aBootWhoseMedicationStepOverrunsRetriesOnlyThatChain; aBootThatOverrunsItsTimeLeavesBothChainsAnAlarm. On a timeout the inner catches take the cancellation and set the flags, and the next suspension throws at once, so nothing hangs and each failed chain gets its retry. CI run 41336801625 passed it | #346 |
 | Locked notification extras carry the injection site | Security | MedReminders.kt:570 | Risk | With Lock Medications on, the button hides the site, but the notification extras still hold EXTRA_SITE (for example abdomen_upper_left), readable by any notification listener. It names no medication, but it says the dose is an injection. Keep it while locked (shownSites needs it) and accept that, or keep the map in memory | #327 |
+
+## Build gate 1.0.204, #334 (typed values kept on a tap outside)
+
+| Function, class or concern | Check | Where | Result | Evidence | Issue |
+| --- | --- | --- | --- | --- | --- |
+| AsNeededSheet: dirty | Data safety | MedicationAsNeeded.kt:153, :159 | Read OK | On and the most a day, both saveable | #334 |
+| SupplySheet: dirty | Data safety | MedicationExtras.kt:214, :236 | Read OK | On hand, refill, warning days and expiry (from PickDateDialog). Stop tracking and Save close through onDismiss | #334 |
+| SupplySheet: an untouched Save restarts the count | Data safety | MedicationExtras.kt:216, :242; Models.kt:596; MedExtras.kt:249 | Defect | Already there. onHand starts as fmtNum(left), two decimals, and `recount = left == null \|\| abs(hand - left) > 1e-9 \|\| add > 0` compares that rounded text with the exact left. Trigger: a supply whose remainder has more than two decimals (30 mL, two doses of 0.333 mL logged: left 29.334); open Supply, change only the warning days, Save: recount is true, MedExtras.count stores supply 29.33 and supplyFrom now, so 0.004 is lost and the count restarts on every such Save. Expected: no recount when the on-hand field wasn't changed. Fix: `val recount = left == null \|\| onHand.trim() != left.let { fmtNum(it) } \|\| add > 0`. Test: a medication with supply 30 and two 0.333 doses, open SupplySheet, change warning days, Save; assert the stored supply is still 30 and supplyFrom unchanged. Size S | #382 |
+| SymptomSheet: no dirty | Data safety | MedicationExtras.kt:467, :469, :479 | Defect | This build: #334's first criterion. Ratings save at once, but the sheet has two text fields, a new symptom's name (newName) and a rename (renameText), and passes no dirty. Trigger: Body tracker, symptoms, type `Headache` in the add field, tap above the sheet: it closes and the name is gone. Expected: it stays open with the text. Fix: pass `dirty = newName.isNotBlank() \|\| renaming != null` to the FitSheet at :479 (Done still closes it). Test: SheetGuardTest case `SiteHost { close -> SymptomSheet(snap, LongHistoryFixture.END, close) }`, type `Headache`, tapOutside, assert it still shows and `Guard test closed` doesn't. Size S | #334 |
+| DoseChangeSheet: dirty | Data safety | MedicationToday.kt:411, :418 | Read OK | Amount and this day only. Reached from DueDoseSheet's early return (:341), so each Change amount starts a new baseline; its Cancel closes both sheets through the shared onDismiss, as before | #334 |
+| DueDoseSheet: no typed input | Data safety | MedicationToday.kt:344 | Read OK | Taken, Skip and Change amount act at once; the only held value is the injection site before Taken (see the logging ledger's choice-only row) | #334 |
+| PhaseSheet: dirty | Data safety | ScheduleEditorScreen.kt:809, :819 | Read OK | On, length, unit; both hosts (:374, :380) close on save | #334 |
+| DoseSheet: dirty | Data safety | ScheduleEditorScreen.kt:879, :919 | Read OK | All twelve fields, weekdays sorted so set order can't matter. Save with a missing field shows a message and keeps the sheet; the host (:388-394) closes on a good save | #334 |

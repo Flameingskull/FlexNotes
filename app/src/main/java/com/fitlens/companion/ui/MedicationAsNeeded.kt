@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import com.fitlens.companion.ui.design.rememberDirty
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -149,11 +150,13 @@ internal fun AsNeededSheet(snap: Snapshot, name: String, onDismiss: () -> Unit) 
     var most by rememberSaveable { mutableStateOf(info.maxPerDay?.toString().orEmpty()) }
     val mostValue = most.trim().toIntOrNull()
     val valid = most.isBlank() || (mostValue != null && mostValue in 1..99)
+    val unsaved = rememberDirty(on, most.trim())
     FitSheet(
         title = stringResource(R.string.prn_sheet_title, name),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.type_save),
         confirmEnabled = valid,
+        dirty = unsaved,
         onConfirm = {
             val old = info
             val updated = info.copy(asNeeded = on, maxPerDay = if (on) mostValue else info.maxPerDay)

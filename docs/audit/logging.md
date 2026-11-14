@@ -5,7 +5,8 @@
 > Audited 2026-10-31 against 1.0.198 (working tree over 830f7e1, before CI ran the tests named). Files read in full: 2 of the 2 this gate needed; not the area.
 > Build gate 1.0.199: 19 functions checked (#353, the Workouts screen; working tree over 527d379, before CI ran the tests named). Re-checked after fix round 1: Undo after Delete, and the editor's Delete.
 > Build gate 1.0.202: 7 functions checked (#372 and #370, the day log's body values; working tree over 3589faf, before CI ran the tests named).
-> Results: 20 Proved, 16 Read OK, 0 Fails, 2 Gap, 1 Not checked.
+> Build gate 1.0.204: 10 functions checked (#334, sheets keep typed values on a tap outside, a drag and Back; the sheet call sites; working tree over 8a66dc5; CI on draft PR #380 compiled and passed all of SheetGuardTest).
+> Results: 23 Proved, 20 Read OK, 0 Fails, 4 Gap, 2 Not checked.
 
 `Proved` here names a test that drives the function. Nothing was run: a green release is what confirms it.
 
@@ -17,6 +18,10 @@
 | ui/TimerService.kt | Yes |
 | ui/WorkoutsScreen.kt | Yes |
 | ui/DayScreen.kt | No (build gate: changed functions only) |
+| ui/WorkoutEditing.kt | No (build gate: changed functions only) |
+| ui/WorkoutSheets.kt | No (build gate: changed functions only) |
+| ui/WorkoutTools.kt | No (build gate: changed functions only) |
+| ui/design/SetViews.kt | No (build gate: changed functions only) |
 
 ## Functions
 
@@ -61,3 +66,13 @@
 | Changing the choice while the day log is open | The day's change lines follow at once | DayScreen.kt:595-597 | Read OK | `changeFromEarlierDay()` collects `Settings.portable`; `remember` is keyed on it and on `bodyKey`, so an edit or the choice redraws the line. Not driven: the tests set the choice before opening | |
 | A day with the first value ever logged, or the earliest day's second value (default) | No change line | DayScreen.kt:597, 652 | Read OK | `previousValue` returns null, and the line shows only when there's a previous value | |
 | Change line for a same-day comparison | Readable for a person | MeasurementGoals.kt:102-109 | Read OK | "▼ 1 kg since Thu 29 Oct · was 89 kg" under a value on Thu 29 Oct: a real weekday date and the full figure, but no time, so with three values that day the reader can't tell which one it came from. Fits the owner rules as they stand | |
+| Workout comment: tap outside with text typed | Stays open, text kept | WorkoutEditing.kt:188, :196 | Proved | SheetGuardTest.theWorkoutCommentKeepsItsTextOnATapOutside. `rememberDirty(text.trim())` against the comment it opened with | |
+| Workout comment: tap outside with nothing typed | Closes as before | WorkoutEditing.kt:188 | Proved | SheetGuardTest.theWorkoutCommentClosesOnATapOutsideWhenNothingWasTyped | |
+| Workout comment: Save and Delete comment still close | Close and write | WorkoutEditing.kt:197, :228 | Read OK | Both call the caller's `onDismiss` directly, which the guard doesn't touch (it wraps only `ModalBottomSheet.onDismissRequest`). Typing then deleting back to the original is not dirty | |
+| Set comment and exercise comment (SetCommentSheet: Track tab set bubble, the Track tab's and the day log's exercise comment) | Tap outside keeps the text; Cancel closes | design/SetViews.kt:665; callers SetEntry.kt:708, :720, DayScreen.kt:887 | Proved | SheetGuardTest.theSetCommentKeepsItsTextOnATapOutsideAndCancelStillCloses (tap outside, then Cancel). Text is `rememberSaveable`, so rotation keeps it too. Each caller removes the sheet from composition when it closes, so a second set's sheet starts fresh | |
+| Add or replace workout: the review step (ticks, Save as new workout, its name) | Changing any keeps it open on a tap outside | WorkoutSheets.kt:281, :292 | Read OK | `rememberDirty(ticked.sorted(), saveIt, newName.trim())`; the review composable leaves composition on Choose another, so the next choice starts clean. Not driven by a test | |
+| Create workout from the day (SaveAsWorkoutSheet) | Changing ticks, target, day, names or fill keeps it open | WorkoutSheets.kt:391, :434 | Read OK | All six values passed; Save and Edit call `onDismiss` directly. Not driven by a test | |
+| Workout time: changed start or end | Stays open on a tap outside; Close, Save, Clear, Stop timer still close | WorkoutTools.kt:122, :148 | Read OK | `rememberDirty(start, end)`; Clear, Start timer and Stop timer call `onDismiss` directly. Not driven by a test | |
+| Drag down and Back on a sheet holding typed values (every guarded sheet in this ledger) | The sheet stays open with the values kept | design/Sheets.kt FitSheet `confirmValueChange` and `onDismissRequest` | Not checked | Read only: a drag settles through `confirmValueChange(Hidden)`, which returns false while dirty; Back runs Material 3's `settleToDismiss`, i.e. `sheetState.hide()` then `onDismissRequest()`. `hide()` vetoes through `confirmValueChange` in androidx-main `SheetDefaults.kt`, and FitSheet's `onDismissRequest` is guarded by `sheetMayClose`, so both should leave it open. Not confirmed for the Material 3 in BOM 2026.09.00, and no test drives a drag or Back (SheetGuardTest says "Back is not driven here"). If `hide()` there does not veto, Back would hide the sheet without closing it. Settled by a Robolectric test that types into WorkoutCommentSheet and SetCommentSheet, presses Back (`Espresso.pressBack()`) and swipes down (`performTouchInput { swipeDown() }` on the title), then asserts the title and the text are still shown | #334 |
+| Copy or move workout, Copy previous workout, Share workout: chosen day and ticks | The same rule as the review and Create workout sheets, which keep ticks on a tap outside | WorkoutEditing.kt:303, :380; WorkoutTools.kt:308 | Gap | None passes `dirty`, so a chosen target day and unticked exercises (or unticked sets to share) vanish on a tap outside, while ReviewWorkoutSheet and SaveAsWorkoutSheet keep the same kind of choice. Two rules for one concept. Cause: this build (criterion 1 sweep) | #334 |
+| Typed values survive turning the phone (Workout comment, Workout time, the review step, Create workout) | Kept, as #304 asks of sheets | WorkoutEditing.kt:187; WorkoutTools.kt:119-120; WorkoutSheets.kt:276-280, :383-390 | Gap | Fields are `remember`, not `rememberSaveable`, so a rotation drops them (the guard's start point is saved, so they at least read as unchanged afterwards, not stuck). Already there | #381 |

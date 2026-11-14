@@ -48,6 +48,7 @@ import com.fitlens.companion.data.MedExtras
 import com.fitlens.companion.data.Store
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.MenuAction
+import com.fitlens.companion.ui.design.rememberDirty
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -407,12 +408,14 @@ internal fun DoseChangeSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit
     val res = LocalContext.current.resources
     var amount by rememberSaveable { mutableStateOf(fmtNum(due.amount)) }
     var dayOnly by rememberSaveable { mutableStateOf(true) }
+    val unsaved = rememberDirty(amount.trim(), dayOnly)
     val taken = MedSchedules.takenRecord(snap.medicationView.records, due)
     FitSheet(
         title = stringResource(R.string.md_change_title, due.dose.medication),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.type_save),
         confirmEnabled = amount.trim().replace(',', '.').toDoubleOrNull() != null,
+        dirty = unsaved,
         onConfirm = {
             val value = amount.trim().replace(',', '.').toDoubleOrNull()
             if (value != null) {

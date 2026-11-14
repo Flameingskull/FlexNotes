@@ -48,6 +48,7 @@ import com.fitlens.companion.data.WorkoutDataException
 import com.fitlens.companion.data.userText
 import com.fitlens.companion.data.Workouts
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.PickerItem
 import com.fitlens.companion.ui.design.SearchablePicker
 import com.fitlens.companion.ui.design.SegmentedSwitch
@@ -277,6 +278,7 @@ private fun ReviewWorkoutSheet(
     var saveIt by remember(choice) { mutableStateOf(false) }
     val res = LocalContext.current.resources
     var newName by remember(choice) { mutableStateOf(res.getString(R.string.wk_default_name, weekdayOf(date))) }
+    val unsaved = rememberDirty(ticked.sorted(), saveIt, newName.trim())
     val setCount = resolved.filterIndexed { i, _ -> i in ticked }.sumOf { it.size }
 
     FitSheet(
@@ -287,6 +289,7 @@ private fun ReviewWorkoutSheet(
             else -> stringResource(R.string.wk_add_exercises)
         },
         confirmEnabled = ticked.isNotEmpty() && (!saveIt || newName.isNotBlank()),
+        dirty = unsaved,
         onConfirm = {
             onDismiss()
             val picked = exercises.filterIndexed { i, _ -> i in ticked }
@@ -385,6 +388,7 @@ fun SaveAsWorkoutSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: () -> 
     var dayId by remember { mutableStateOf(0L) }
     var name by remember { mutableStateOf(res.getString(R.string.wk_default_name, weekday)) }
     var dayName by remember { mutableStateOf(weekday) }
+    val unsaved = rememberDirty(ticked.sorted(), fill, routineId, dayId, name.trim(), dayName.trim())
     val target = snap.routinesById[routineId]
 
     fun save(edit: Boolean) {
@@ -427,6 +431,7 @@ fun SaveAsWorkoutSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: () -> 
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.wk_save),
         confirmEnabled = exercises.isNotEmpty() && (target != null || name.isNotBlank()),
+        dirty = unsaved,
         onConfirm = { save(edit = false) },
         secondaryLabel = stringResource(R.string.lib_edit),
         onSecondary = { save(edit = true) }

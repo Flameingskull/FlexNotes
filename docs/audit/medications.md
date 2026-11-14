@@ -3,7 +3,8 @@
 > No full audit yet: rows from build gates only.
 > Build gate 1.0.198: 59 functions checked (re-checked after fix round 3).
 > Audited 2026-10-31 against 1.0.198 (working tree over 830f7e1, before CI ran the tests named). Files read in full: 4 of the 4 this gate needed; not the area.
-> Results: 46 Proved, 5 Read OK, 2 Fails, 1 Gap, 5 Not checked.
+> Build gate 1.0.204: 9 functions checked (#334, sheets keep typed values on a tap outside, a drag and Back; the sheet call sites; working tree over 8a66dc5; CI on draft PR #380 compiled and passed all of SheetGuardTest).
+> Results: 46 Proved, 10 Read OK, 3 Fails, 3 Gap, 6 Not checked.
 
 `Proved` here names a test that drives the function. Nothing was run: a green release is what confirms it.
 
@@ -16,6 +17,10 @@
 | data/MedSchedules.kt | Yes |
 | ui/MedicationsPage.kt | Yes |
 | data/MedExtras.kt | No (build gate: changed functions only) |
+| ui/MedicationAsNeeded.kt | No (build gate: changed functions only) |
+| ui/MedicationExtras.kt | No (build gate: changed functions only) |
+| ui/MedicationToday.kt | No (build gate: changed functions only) |
+| ui/ScheduleEditorScreen.kt | No (build gate: changed functions only) |
 
 ## Functions
 
@@ -80,3 +85,12 @@
 | A snooze whose time passed while reminders were off | Doesn't ring when they're back on | MedReminders.kt:382 | Proved | aSnoozeLeftOverWhileRemindersWereOffDoesNotRingWhenTheyAreBackOn | |
 | The new exact-alarm tests compile | Tests build | ExactAlarmPermissionTest.kt:41 | Proved | Now `ShadowAlarmManager.setCanScheduleExactAlarms(...)`, here and in ExactAlarmSettingsTest.kt:30, :73. CI run 41336801625 compiled and ran 618 tests | |
 | The phone's time zone changes while the app runs | Now, today and every alarm follow the new zone | ExactAlarms.kt:29, MedReminders.kt:763 | Read OK | `LiveClock` follows the phone's zone. `clockChanged` brings the mark, `medPlanChangedAt` and `medPlanOldMark` back to now when ahead (aMarkAChangeTimeAndAnOldMarkAheadOfTheClockAreAllBroughtBackWhenTheClockGoesWest). Traced west after an edit: never-rung doses either come round again as first reminders or stay unchased. First run after the update: no old mark, so no past dose is chased, a one-off. No test changes the zone mid-run | |
+| As-needed sheet: switch and most a day | Stays open on a tap outside once changed | MedicationAsNeeded.kt:153, :159 | Read OK | `rememberDirty(on, most.trim())`. Not driven by a test | |
+| Supply sheet: on hand, refill, warning days, expiry | Same; Stop tracking and Save still close | MedicationExtras.kt:214, :236 | Read OK | All four passed; Clear expiry and the date picker change `expires`, which counts. Not driven by a test | |
+| Change dose amount: amount and day-only choice | Same | MedicationToday.kt:411, :418 | Read OK | Opened from the due-dose sheet, which leaves composition while it shows, so its start point is its own. Not driven by a test | |
+| Schedule editor: phase sheet | Same | ScheduleEditorScreen.kt:809, :819 | Read OK | On, length, unit passed. The screen's own `BackHandler` (:188) can't fire under a sheet, since the sheet is its own window. Not driven by a test | |
+| Schedule editor: dose sheet (medication, amount, unit, time, days, taper, comment) | Same | ScheduleEditorScreen.kt:879, :919 | Read OK | All twelve fields passed; a refused save keeps it open. Not driven by a test | |
+| Symptom sheet: a typed new symptom name, or a rename in progress | Stays open on a tap outside with the text kept | MedicationExtras.kt:463-479, :496, :557 | Fails | `FitSheet(title = ..., onDismiss = onDismiss, dismissLabel = ...)` passes no `dirty`. Type "Nausea" in the Add field (or start a rename), tap outside: the sheet closes and the text is gone. Ratings save as they're tapped, so only the typed text is at risk. Cause: this build (criterion 1 sweep, in a changed file) | #334 |
+| Due dose sheet: the chosen injection site before Taken | Kept on a tap outside, like other choices the build guards | MedicationToday.kt:339, :344 | Gap | No `dirty`: a site picked for a dose not yet taken is lost on a tap outside, and the suggested one comes back. Low: nothing is recorded until Taken. Cause: this build (criterion 1 sweep) | #334 |
+| Medication report sheet: typed patient name | Kept on a tap outside | MedicationReportSheet.kt:130, :162 (not in the changed files) | Gap | No `dirty`; the patient name and choices are lost on a tap outside. The emergency card sheet saves its details on any close (EmergencyCardSheet.kt:60, :116), so it's fine. Cause: this build (criterion 1 sweep) | #334 |
+| Drag down and Back on a sheet holding typed values (every guarded sheet in this ledger) | The sheet stays open with the values kept | design/Sheets.kt FitSheet `confirmValueChange` and `onDismissRequest` | Not checked | Read only: a drag settles through `confirmValueChange(Hidden)`, which returns false while dirty; Back runs Material 3's `settleToDismiss`, i.e. `sheetState.hide()` then `onDismissRequest()`. `hide()` vetoes through `confirmValueChange` in androidx-main `SheetDefaults.kt`, and FitSheet's `onDismissRequest` is guarded by `sheetMayClose`, so both should leave it open. Not confirmed for the Material 3 in BOM 2026.09.00, and no test drives a drag or Back (SheetGuardTest says "Back is not driven here"). If `hide()` there does not veto, Back would hide the sheet without closing it. Settled by a Robolectric test that types into DoseSheet or SymptomSheet, presses Back (`Espresso.pressBack()`) and swipes down (`performTouchInput { swipeDown() }` on the title), then asserts the title and the text are still shown | #334 |

@@ -5,7 +5,8 @@
 > Build gate 1.0.200: 7 functions checked (#330, which way is good; working tree over e67bae8, before CI ran the tests named).
 > Build gate 1.0.200, fix rounds 1 and 2 re-checked: the findings below and the rows they touch. CI on the round-1 tree compiled and passed 739 of 741 tests; CI on the round-2 tree (c4e8a86) passed 740 of 741, including every #330 test; the one failure is the known WholeScreen320Test.librarySearch (#349).
 > Build gate 1.0.202: 3 functions checked in this ledger (#370, #371; working tree over 3589faf, before CI ran the tests named). 20 functions across body, analysis, photos and calendar-shell.
-> Results: 16 Verified, 9 Read OK, 3 Defect, 1 Risk, 2 Improve, 1 Not checked.
+> Build gate 1.0.204: 2 functions checked (#334, CaloriesSheet and ReadinessSheet; working tree over 8a66dc5). CI on these files (draft PR #380) compiled and SheetGuardTest passed.
+> Results: 16 Verified, 11 Read OK, 3 Defect, 2 Risk, 2 Improve, 1 Not checked.
 
 `Verified` here names a test. A green release is what confirms it.
 
@@ -21,6 +22,8 @@
 | ui/PinnedGraphs.kt | No (build gate: changed functions only) |
 | ui/ReadinessTab.kt | No (build gate: changed functions only) |
 | ui/ShareImages.kt | No (build gate: changed functions only) |
+| ui/CaloriesCard.kt | No (build gate: changed functions only) |
+| ui/ReadinessViews.kt | No (build gate: changed functions only) |
 
 ## Functions
 
@@ -58,3 +61,11 @@
 | FitChart's key mode from the rule | Logic | Charts.kt:484 | Verified | Build gate 1.0.202. `(better as? MoveRule)?.keyMode ?: chartKeyMode(better)`; the keyMode parameter is gone and grep of app/src finds no `keyMode =` argument left, so every caller still compiles. GoalGraphTest.aSpecificValueKeyReadsCloserAndFurtherAndTheChangeIsCloser fails if the key fell back to the probe (UP for a target of 80) | #370 |
 | bestPoint: no best star for a target of exactly 0.5 | Logic | Charts.kt:316-318, :887; Models.kt:428-432 | Defect | Build gate 1.0.202, this build. bestPoint still asks chartKeyMode(better), which probes better(1.0, 0.0). For a specific value of 0.5, 1 and 0 are both 0.5 away, and #371 now makes an equal distance null, so the probe reads NONE and bestPoint returns null. The key, from MoveRule.keyMode, is TARGET and still lists "Best". Trigger: a measurement with "A specific value" of 0.5 (a waist-to-height ratio's usual target), two or more values, Graph tab: the key shows Closer, Further and Best, and no point has a star. Before this build the probe gave false (UP), so the star showed. Fix: bestPoint takes the key mode, `(better as? MoveRule)?.keyMode ?: chartKeyMode(better)` (one helper used by both FitChart and bestPoint), and returns null only for NONE. Test: bestPoint(points, measurementRule(def(TARGET, 0.5), false)) is the point nearest 0.5; fails today | #371 |
 | FitChart's `better` still takes any lambda | Structure | Charts.kt:436, :484 | Improve | Build gate 1.0.202, this build. The rule and its key travel together only when the caller passes a MoveRule: a plain lambda for a specific value is accepted and silently gets the probed key (Better/Worse over Closer/Further triangles), the case #370 set out to rule out. No caller does today (the others pass higherIsBetter, lowerIsBetter or noBetter). Make the parameter a MoveRule (with MoveRule constants for higher, lower and none), so a missing key mode is a compile error and the downcast goes | #370 |
+
+## Build gate 1.0.204, #334 (typed values kept on a tap outside)
+
+| Function, class or concern | Check | Where | Result | Evidence | Issue |
+| --- | --- | --- | --- | --- | --- |
+| CaloriesSheet: dirty | Data safety | CaloriesCard.kt:223, :246 | Read OK | The four fields in Intake.Kind order. `typed` is remember(date) and never re-filled, so Health Connect totals arriving after the first frame can't make an untouched sheet look unsaved. Clear and Save close through write() | #334 |
+| ReadinessSheet: dirty | Data safety | ReadinessViews.kt:257 | Read OK | `typed.toMap() != saved`: compared with what is stored, not with first sight, a different rule from rememberDirty but the same result here, since typed starts as a copy of saved and both survive rotation (#316). Ratings are whole steps, so exact Double equality holds | #334 |
+| Stored times read the system clock | Dates and time | CaloriesCard.kt:230; ReadinessViews.kt:241 | Risk | Already there. Intake and check-in records take `LocalTime.now()`, not the app clock (Dates.clockSource), so a test on a fixed clock stores the real time of day and a clock-seam test can't cover them. Siblings: MedicationToday.kt:188, :280, :379 (LocalDateTime.now, LocalTime.now), MedicationExtras.kt:471 (LocalDate.now), WorkoutTools.kt:194. Fix: Dates.nowDateTime().toLocalTime() and Dates.todayDate() at each. Test: save CaloriesSheet under LongHistoryFixture.clock and assert the stored record's time is the fixture's. Size S | #383 |

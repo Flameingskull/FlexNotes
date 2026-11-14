@@ -5,7 +5,8 @@
 > Build gate 1.0.200: 7 functions checked (#330, the graph key and trend colours; working tree over e67bae8, before CI ran the tests named).
 > Fix rounds 1 and 2 (1.0.200): 2 rows re-checked or added.
 > Build gate 1.0.202: 3 functions checked (#370 the rule and its key as one value, in Charts.kt; working tree over 3589faf, before CI ran the tests named).
-> Results: 19 Proved, 16 Read OK, 1 Fails, 2 Gap, 0 Not checked.
+> Build gate 1.0.204: 4 functions checked (#334, sheets keep typed values on a tap outside, a drag and Back; the sheet call sites; working tree over 8a66dc5; CI on draft PR #380 compiled and passed all of SheetGuardTest).
+> Results: 19 Proved, 18 Read OK, 1 Fails, 3 Gap, 1 Not checked.
 
 `Proved` here names a test that drives the function. A green release is what confirms it.
 
@@ -21,6 +22,8 @@
 | ui/PinnedGraphs.kt | No (build gate: changed functions only) |
 | ui/ReadinessTab.kt | No (build gate: changed functions only) |
 | ui/ShareImages.kt | No (build gate: changed functions only) |
+| ui/CaloriesCard.kt | No (build gate: changed functions only) |
+| ui/ReadinessViews.kt | No (build gate: changed functions only) |
 
 ## Functions
 
@@ -64,3 +67,7 @@
 | MoveRule | A graph's good-or-bad rule and its key mode as one value; called like the rule | Charts.kt:308-310 | Proved | MoveRuleTest.theRuleGivesTheSameVerdictAsMeasurementVerdict, eachDirectionHasItsOwnKeyMode |  |
 | FitChart key from the rule | A MoveRule's key mode is used; any other rule's key is worked out from it, so the pace, training and Readiness graphs don't change | Charts.kt:484 | Proved | GoalGraphTest (body graph through BodyGraphPane: Closer/Further, Better/Worse, Plain); the other callers (AnalysisScreen, PinnedGraphs, ReadinessTab, TrainingScreen) pass plain functions and keep chartKeyMode, ChartKeyModeTest |  |
 | Best star for a specific value of 0.5 | The point closest to the value is starred, and the key's Best item matches it | Charts.kt:316-318, :887 | Fails | This build (#370, #371). bestPoint still probes the rule with chartKeyMode(better), that is better(1.0, 0.0), instead of the MoveRule's key mode. With #371 a specific value of exactly 0.5 (for example a waist-to-height ratio) makes that probe equal distance, so it returns null and no point is starred, while the key, now TARGET from the MoveRule, still shows "Best". Steps: a measurement with A specific value, 0.5, values 0.55, 0.52, 0.51: Graph shows Best in the key and no star. Expected: the star on 0.51. Fix: bestPoint uses (better as? MoveRule)?.keyMode ?: chartKeyMode(better), the same as the key | #370 |
+| Calories eaten: typed totals | Stays open on a tap outside once changed; Save and Clear still close | CaloriesCard.kt:223, :246 | Read OK | `rememberDirty` over the four fields in kind order; the start values come from the snapshot synchronously (`rememberIntake` is a `remember`), so no late load makes it falsely dirty. Not driven by a test | |
+| Readiness check-in: ratings | Same | ReadinessViews.kt:257 | Read OK | `dirty = typed.toMap() != saved`, both maps of item to rating; ratings are `rememberSaveable` (#316), so rotation keeps them and the comparison holds. Not driven by a test | |
+| Typed values survive turning the phone: Calories eaten | Kept (#304) | CaloriesCard.kt:219 | Gap | `typed` is `remember(date)`, so a rotation drops typed totals. Already there | #381 |
+| Drag down and Back on a sheet holding typed values (every guarded sheet in this ledger) | The sheet stays open with the values kept | design/Sheets.kt FitSheet `confirmValueChange` and `onDismissRequest` | Not checked | Read only: a drag settles through `confirmValueChange(Hidden)`, which returns false while dirty; Back runs Material 3's `settleToDismiss`, i.e. `sheetState.hide()` then `onDismissRequest()`. `hide()` vetoes through `confirmValueChange` in androidx-main `SheetDefaults.kt`, and FitSheet's `onDismissRequest` is guarded by `sheetMayClose`, so both should leave it open. Not confirmed for the Material 3 in BOM 2026.09.00, and no test drives a drag or Back (SheetGuardTest says "Back is not driven here"). If `hide()` there does not veto, Back would hide the sheet without closing it. Settled by a Robolectric test that types into CaloriesSheet or ReadinessSheet, presses Back (`Espresso.pressBack()`) and swipes down (`performTouchInput { swipeDown() }` on the title), then asserts the title and the text are still shown | #334 |

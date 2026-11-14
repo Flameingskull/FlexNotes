@@ -190,8 +190,12 @@ internal object LayoutChecks {
         return laidOut.bottom > box.bottom + 0.5f || laidOut.top < box.top - 0.5f
     }
 
-    /** An editable text field: its own node reads as text but holds its placeholder and typed text. */
-    private fun SemanticsNode.isTextField(): Boolean = config.getOrNull(SemanticsActions.SetText) != null
+    /**
+     * A text field, editable or read-only: its own node reads as text but holds its placeholder, label and typed
+     * text. A read-only field (the clock field, `TimeField`) has no `SetText` action but does have `EditableText`.
+     */
+    private fun SemanticsNode.isTextField(): Boolean =
+        config.getOrNull(SemanticsActions.SetText) != null || config.getOrNull(SemanticsProperties.EditableText) != null
 
     /** Whether this node is inside [panes]' open pane for its window, or its window has none open. */
     private fun SemanticsNode.uncovered(panes: Map<Int, SemanticsNode>): Boolean {

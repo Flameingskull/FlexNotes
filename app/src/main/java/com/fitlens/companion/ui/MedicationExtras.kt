@@ -60,6 +60,7 @@ import com.fitlens.companion.data.Symptoms
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.DayNavigator
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.SectionLabel
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.ListRowWithMenu
@@ -210,6 +211,7 @@ internal fun SupplySheet(snap: Snapshot, name: String, unit: String, onDismiss: 
     var warn by rememberSaveable { mutableStateOf(info.warnDays.toString()) }
     var expires by rememberSaveable { mutableStateOf(info.expires) }
     var picking by rememberSaveable { mutableStateOf(false) }
+    val unsaved = rememberDirty(onHand.trim(), refill.trim(), warn.trim(), expires)
     fun num(t: String) = t.trim().replace(',', '.').toDoubleOrNull()
     val hand = num(onHand)
     val add = if (refill.isBlank()) 0.0 else num(refill)
@@ -231,6 +233,7 @@ internal fun SupplySheet(snap: Snapshot, name: String, unit: String, onDismiss: 
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.type_save),
         confirmEnabled = valid,
+        dirty = unsaved,
         onConfirm = {
             if (hand != null && add != null && warnDays != null) {
                 val updated = info.copy(warnDays = warnDays, expires = expires)
@@ -473,7 +476,12 @@ internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> 
         AppScope.scope.launch { MedExtras.addSymptom(clean) }
         newName = ""
     }
-    FitSheet(title = stringResource(R.string.sym_sheet_title), onDismiss = onDismiss, dismissLabel = stringResource(R.string.sym_done)) {
+    FitSheet(
+        title = stringResource(R.string.sym_sheet_title),
+        onDismiss = onDismiss,
+        dismissLabel = stringResource(R.string.sym_done),
+        dirty = newName.isNotBlank() || renaming != null
+    ) {
         DayNavigator(
             date = date,
             onPrevious = { shift(-1) },

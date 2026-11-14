@@ -29,6 +29,7 @@ import com.fitlens.companion.data.Store
 import com.fitlens.companion.report.MedicationReport
 import com.fitlens.companion.report.MedicationReportOptions
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.SectionLabel
 import kotlinx.coroutines.Dispatchers
@@ -68,6 +69,7 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
     }
     var body by rememberSaveable(bodyNames) { mutableStateOf(bodyNames.filter { it in SUMMARY_DEFAULTS }.toSet()) }
     var picking by remember { mutableStateOf<Int?>(null) }
+    val unsaved = rememberDirty(from, to, chosen.sorted(), patient.trim(), schedules, adherence, doseLog, comments, graphs, symptoms, dark, body.sorted())
 
     fun options() = MedicationReportOptions(
         from = minOf(from, to), to = maxOf(from, to), names = chosen, dark = dark, patient = patient,
@@ -132,6 +134,7 @@ internal fun MedicationReportSheet(snap: Snapshot, onDismiss: () -> Unit) {
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.mdr_save_pdf),
         confirmEnabled = chosen.isNotEmpty(),
+        dirty = unsaved,
         onConfirm = { savePdf.launch(name("pdf")) },
         secondaryLabel = stringResource(R.string.mdr_share_pdf),
         onSecondary = { if (chosen.isNotEmpty()) { share("pdf", "application/pdf"); onDismiss() } }
