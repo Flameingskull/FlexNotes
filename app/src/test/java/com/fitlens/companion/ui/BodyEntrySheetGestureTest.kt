@@ -80,16 +80,6 @@ class BodyEntrySheetGestureTest : FunctionTest() {
         compose.waitForIdle()
     }
 
-    private fun tapExpand() {
-        compose.onNodeWithText(expand()).performClick()
-        compose.waitForIdle()
-    }
-
-    private fun tapCollapse() {
-        compose.onNodeWithText(collapse()).performClick()
-        compose.waitForIdle()
-    }
-
     /** Neck 38 and Waist 85 cm on the day before, so a male profile of 180 cm gives a Body fat estimate. */
     private fun bodyFatSnapshot(): Snapshot {
         val base = LongHistoryFixture.snapshot()
