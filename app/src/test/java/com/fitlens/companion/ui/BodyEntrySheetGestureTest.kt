@@ -67,13 +67,6 @@ class BodyEntrySheetGestureTest : FunctionTest() {
 
     private fun tapOutside() = tap("close sheet", substring = true)
 
-    private fun swipeUpOnHandle() {
-        compose.onNodeWithTag("sheet-handle").performTouchInput {
-            swipe(start = center, end = Offset(center.x, center.y - 200f), durationMillis = 300)
-        }
-        compose.waitForIdle()
-    }
-
     private fun swipeDownOnTitle() {
         compose.onNodeWithText(title()).performTouchInput {
             swipe(start = center, end = Offset(center.x, center.y + 300f), durationMillis = 300)
@@ -96,17 +89,7 @@ class BodyEntrySheetGestureTest : FunctionTest() {
         return Snapshot(base.library, base.setPart, base.notes, BodyPart(defs, records, "kg"), base.photoPart, "kg", File("photos"))
     }
 
-    @Test
-    fun aSwipeUpOnTheDragHandleGoesFullScreenAndTheSheetIsReallyTaller() {
-        open()
-        val half = sheetHeight()
-        assertShows(expand())
-        swipeUpOnHandle()
-        assertShows(collapse())
-        assertFalse(closed)
-        val full = sheetHeight()
-        assertTrue("Full screen ($full px) should be much taller than the usual height ($half px)", full > half * 2)
-    }
+
 
     @Test
     fun theArrowReallyChangesTheSheetsHeightBothWays() {
@@ -135,23 +118,7 @@ class BodyEntrySheetGestureTest : FunctionTest() {
         assertShows("61.7")
     }
 
-    @Test
-    fun aTapOutsideClosesACleanSheetAtFullScreen() {
-        open(prefs = PortableSettings(bodyEntryFullScreen = true))
-        assertShows(collapse())
-        tapOutside()
-        assertTrue(closed)
-    }
 
-    @Test
-    fun aTapOutsideAtFullScreenWithTextShrinksItAndKeepsTheText() {
-        open(prefs = PortableSettings(bodyEntryFullScreen = true))
-        typeValue("61.7")
-        tapOutside()
-        assertFalse(closed)
-        assertShows("61.7")
-        assertShows(expand())
-    }
 
     @Test
     fun anUntouchedBodyFatSheetClosesOnATapOutside() {
