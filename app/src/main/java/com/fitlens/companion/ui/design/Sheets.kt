@@ -9,12 +9,12 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -25,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
@@ -49,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -78,16 +80,20 @@ private object KeepScrollInSheet : NestedScrollConnection {
     override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = available
 }
 
+/** Stands for a `null` value in [rememberDirty], so it never equals the text "null". */
+private const val NULL_VALUE = "\u0000null"
+
 /**
  * Whether a sheet's typed values differ from what they were when it first appeared (#334). Pass every value the
- * person can change, as plain values (strings, numbers, booleans, enums, lists): it compares their text now with
- * their text at the start, so typing and then undoing the typing is not "unsaved". Kept with `rememberSaveable`,
- * so turning the phone keeps the starting point. Call it where the sheet's own state is declared, and pass the
- * result to [FitSheet]'s `dirty`.
+ * person can change, as plain values (strings, numbers, booleans, enums, lists): each value's text now is compared
+ * with its text at the start, one value at a time, so typing and then undoing the typing is not "unsaved", and
+ * `("a, b", "c")` is never taken for `("a", "b, c")`. Kept with `rememberSaveable`, so turning the phone keeps the
+ * starting point. Call it where the sheet's own state is declared, and pass the result to [FitSheet]'s `dirty`.
  */
 @Composable
 fun rememberDirty(vararg draft: Any?): Boolean {
-    val now = draft.toList().toString()
+    val now = ArrayList<String>(draft.size)
+    draft.forEach { now.add(it?.toString() ?: NULL_VALUE) }
     val atStart = rememberSaveable { now }
     return now != atStart
 }
@@ -130,39 +136,51 @@ fun FitSheet(
     val sheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = true,
         confirmValueChange = {
-            if (it == SheetValue.Hidden && full) {
-                // A drag down from full screen goes back to the usual height; it does not close the sheet (#331).
+            if (it == SheetValue.Hidden && full && !sheetMayClose(dirtyNow)) {
+                // With something typed, Back or a drag down from full screen shrinks the sheet and keeps the text (#331).
                 full = false
                 false
             } else it != SheetValue.Hidden || sheetMayClose(dirtyNow)
         }
     )
+    // The sheet's own drag: up goes full screen; down from full screen goes back to the usual height; down at the
+    // usual height closes it, unless something is typed (#331, #334). Used on the content column and the handle.
+    val onDismissNow by rememberUpdatedState(onDismiss)
+    val dragToResize = Modifier.pointerInput(expandable) {
+        if (!expandable) return@pointerInput
+        val needed = 24.dp.toPx()
+        var moved = 0f
+        detectVerticalDragGestures(
+            onDragStart = { moved = 0f },
+            onDragEnd = {
+                if (moved < -needed) full = true
+                else if (moved > needed) {
+                    if (full) full = false else if (sheetMayClose(dirtyNow)) onDismissNow()
+                }
+            },
+            onDragCancel = { moved = 0f },
+            onVerticalDrag = { _, amount -> moved += amount }
+        )
+    }
+    val handle: @Composable () -> Unit = {
+        if (expandable) Box(Modifier.testTag("sheet-handle").then(dragToResize)) { BottomSheetDefaults.DragHandle() }
+        else BottomSheetDefaults.DragHandle()
+    }
     ModalBottomSheet(
         onDismissRequest = { if (sheetMayClose(dirtyNow)) onDismiss() },
         modifier = modifier,
         sheetState = sheetState,
         shape = FitShapes.sheet,
         containerColor = Brand.Onyx,
-        contentColor = Brand.Ivory
+        contentColor = Brand.Ivory,
+        dragHandle = handle
     ) {
         Column(
             Modifier
                 .fillMaxWidth()
                 .then(if (expandable && full) Modifier.fillMaxHeight().imePadding() else Modifier)
-                .pointerInput(expandable) {
-                    if (!expandable) return@pointerInput
-                    // A drag up on the title, hairline or buttons goes full screen; a drag down from full screen goes back.
-                    val needed = 24.dp.toPx()
-                    var moved = 0f
-                    detectVerticalDragGestures(
-                        onDragStart = { moved = 0f },
-                        onDragEnd = {
-                            if (moved < -needed) full = true else if (moved > needed) full = false
-                        },
-                        onDragCancel = { moved = 0f },
-                        onVerticalDrag = { _, amount -> moved += amount }
-                    )
-                }
+                .then(dragToResize)
+                .testTag("fit-sheet")
         ) {
             Row(
                 Modifier

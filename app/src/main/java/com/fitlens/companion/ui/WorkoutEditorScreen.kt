@@ -898,10 +898,12 @@ private fun DayRestSheet(dayName: String, onDismiss: () -> Unit, onDone: (Int?, 
     var after by rememberSaveable { mutableStateOf<Int?>(null) }
     // "Copy previous rest" (#151) for the whole day: each exercise takes its rest from its own last workout.
     var copyRest by rememberSaveable { mutableStateOf(false) }
+    val unsaved = rememberDirty(copyRest, rest, after)
     FitSheet(
         title = stringResource(R.string.workout_day_rest_title, dayName),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.workout_day_rest_confirm),
+        dirty = unsaved,
         onConfirm = { if (copyRest) onDone(Routines.REST_PREVIOUS, Routines.REST_PREVIOUS) else onDone(rest, after) }
     ) {
         Text(

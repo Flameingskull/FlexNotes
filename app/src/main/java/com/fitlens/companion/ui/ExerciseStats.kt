@@ -42,6 +42,7 @@ import com.fitlens.companion.data.fmtDuration
 import com.fitlens.companion.data.fmtNum
 import com.fitlens.companion.ui.design.DateRangePickerDialog
 import com.fitlens.companion.ui.design.FitSheet
+import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.ui.design.StatTile
 import com.fitlens.companion.ui.design.StepperField
@@ -280,11 +281,13 @@ fun EstimatedOneRmSettingsSheet(onDismiss: () -> Unit) {
         Settings.updatePortable { it.copy(e1rmMaxReps = value) }
         onDismiss()
     }
+    val unsaved = rememberDirty(reps.trim())
     FitSheet(
         title = stringResource(R.string.st_e1rm_title),
         onDismiss = onDismiss,
         confirmLabel = stringResource(R.string.st_ok),
         confirmEnabled = valid,
+        dirty = unsaved,
         onConfirm = { save(typed ?: 0) },
         secondaryLabel = stringResource(R.string.st_reset),
         onSecondary = { save(0) }

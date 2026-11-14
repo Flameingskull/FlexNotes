@@ -476,7 +476,12 @@ internal fun SymptomSheet(snap: Snapshot, initialDate: String, onDismiss: () -> 
         AppScope.scope.launch { MedExtras.addSymptom(clean) }
         newName = ""
     }
-    FitSheet(title = stringResource(R.string.sym_sheet_title), onDismiss = onDismiss, dismissLabel = stringResource(R.string.sym_done)) {
+    FitSheet(
+        title = stringResource(R.string.sym_sheet_title),
+        onDismiss = onDismiss,
+        dismissLabel = stringResource(R.string.sym_done),
+        dirty = newName.isNotBlank() || renaming != null
+    ) {
         DayNavigator(
             date = date,
             onPrevious = { shift(-1) },

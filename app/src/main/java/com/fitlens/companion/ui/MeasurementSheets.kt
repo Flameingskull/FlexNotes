@@ -90,13 +90,7 @@ fun MeasurementEntrySheet(
     var calculating by rememberSaveable { mutableStateOf(false) }
     // An injected medication's site (#210): the value's own, or the suggested next one for a new value.
     var site by rememberSaveable(existing?.id) { mutableStateOf(InjectionSite.of(existing?.site)) }
-    // Unsaved input: a new value is its typed value and comment; an edit is any change to the value (#334, #331).
-    val dirty = rememberDirty(
-        value, comment,
-        if (existing != null) theDate else null,
-        if (existing != null) timeText else null,
-        if (existing != null) site else null
-    )
+
     val injected = snap.isInjected(name.trim())
     val suggestedSite = remember(snap.bodyKey, name) { InjectionSites.suggest(snap.records, name.trim()) }
     val unit = existing?.unit ?: snap.measurementDefs.firstOrNull { it.name == name }?.unit
@@ -109,6 +103,19 @@ fun MeasurementEntrySheet(
     val lengthUnit = Settings.portable.collectAsState().value.lengthUnit
     val prefill = if (bodyFat) estimate?.percent?.let { fmtNum(it, 1) to estimateComment(res, estimate, lengthUnit) } else null
     var seeded by rememberSaveable { mutableStateOf<Pair<String, String>?>(null) }
+    // Unsaved input (#334, #331): a new value is its typed value, comment and a name typed in (a chip chosen from
+    // the list is not typing); an edit is any change to the value. A Body fat figure and comment the sheet filled
+    // in itself are not typing, so they count as empty until they are changed.
+    val seededNow = seeded
+    val seededUntouched = seededNow != null && value == seededNow.first && comment == seededNow.second
+    val dirty = rememberDirty(
+        if (seededUntouched) "" else value,
+        if (seededUntouched) "" else comment,
+        if (existing == null) name.trim().takeIf { it !in names } else null,
+        if (existing != null) theDate else null,
+        if (existing != null) timeText else null,
+        if (existing != null) site else null
+    )
     val firstSeed = remember { booleanArrayOf(true) }
     LaunchedEffect(bodyFat, theDate, prefill) {
         val was = seeded
