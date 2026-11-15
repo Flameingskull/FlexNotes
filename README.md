@@ -380,7 +380,7 @@ GitHub builds a test APK for every pull request.
 FlexNotes is a native Android app in **Kotlin** and **Jetpack Compose** (Material 3), with a local SQLite database
 managed by **Room**. The schema is recorded in `app/schemas/`, and every query is checked against it at build time. It
 targets Android 16 (API 36), compiles against API 37 and runs on Android 10 (API 29) or newer. It builds with Gradle 9
-and Android Gradle Plugin 9, which compiles the Kotlin itself. `docs/CODEMAP.md` says which file owns what.
+and Android Gradle Plugin 9, which compiles the Kotlin itself. `docs/CODEMAP.md` and the parts in `docs/codemap/` say which file owns what.
 
 Open the project in **Android Studio** and click **Run**, or run `./gradlew assembleDebug`. Your own builds are signed
 with your debug key, so Android won't install them over the official release. Test on an emulator or a spare phone, or

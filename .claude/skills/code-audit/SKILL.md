@@ -37,7 +37,8 @@ during an audit, not even a one-line fix. Don't run a tool in a mode that applie
 
 1. **Coverage.** Run the coverage script without flags. Add any new source file to `docs/audit/areas.txt`.
 2. **Audit.** Launch one `code-auditor` per chosen area, in parallel, with its area name and file list. Give it the full
-   model it needs, and don't give it the backlog. Each writes `docs/audit/code/<area>.md` and returns its findings.
+   model it needs, and don't give it the backlog. `CLAUDE.md` is already in every agent's context: the brief
+   never asks for it to be read. Each writes `docs/audit/code/<area>.md` and returns its findings.
 3. **Check the auditors.** Have a fresh agent, also changing no code, re-check a sample of `Read OK` rows in the riskiest
    code (migrations, restores, imports, medication records, anything that deletes) plus every surprising `Defect`. A wrong
    `Read OK` means that area is redone.
@@ -50,14 +51,14 @@ during an audit, not even a one-line fix. Don't run a tool in a mode that applie
      the sibling places to sweep, the proposed change, the test that must fail before it and pass after, and acceptance
      criteria. Label `bug` for a defect and `enhancement` for the others, `area:`, a priority, and `ready`. Group rows only
      when one change resolves them all.
-   - **Import each into the tracker** (`tracker_import`, external id `Flameingskull/FlexNotes#N`), and set its status,
-     priority, `area` and `githubIssue` as `CLAUDE.md` maps them. Add it to the tracker plan item's `dependsOn` (tracker
-     ids, keeping the existing ones) and update its `progress`.
+   - **Tracker, through one Clerk job:** run `python -I .claude/scripts/backlog.py` once the issues are filed, add the
+     plan item's `dependsOn` (tracker ids, keeping the existing ones) and `progress` to its worklist, and launch a
+     Clerk job on it (`.claude/skills/build-core/SKILL.md`, "Jobs"; mapping in `docs/process/tracker.md`).
    - **Add each to the roadmap** (`docs/plans/2026-10-24-roadmap.md`): the Issue map, a build stage in the Builds table
      (data-loss, security and medication defects early, grouped by the files they touch), and the Status block's "Left"
      and "Next", so a plain `/safe-build` picks them up.
    - Write each issue number into its ledger rows.
-   - Run the tracker parity check from `CLAUDE.md`, then `audit_coverage.py --code-ledgers`. Both must pass.
+   - Check the Clerk's checklist has no failures, then run `audit_coverage.py --code-ledgers`. It must pass.
    - After the first full run, add `--code-ledgers` to the coverage step in `.github/workflows/build.yml` and `pr.yml`
      as an edit for the next build, so a new file can't escape it.
 6. **Report.** Give the owner the coverage, the results by count, the catch rate, the serious findings in plain words,

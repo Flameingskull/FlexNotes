@@ -1,37 +1,93 @@
 # bug-manager notes
 
-What earlier runs learned that isn't obvious from the code or `docs/CODEMAP.md`. One dated line each; delete lines
-that stop being true. The repository is public: no personal data, secrets or `FIL.n` keys.
+What earlier runs learned that isn't obvious from the code or the code map (`docs/CODEMAP.md`, `docs/codemap/`). One
+line each; delete lines that stop being true, and keep the file under about 150 lines. Lessons about writing work
+orders go in `coder-orders.md`. The repository is public: no personal data, secrets or `FIL.n` keys.
+Pruned 2026-11-14: finished-issue status, superseded facts and tool tips for hand-editing code were removed.
 
-- 2026-09-25: No local Android SDK. CI is the compiler, so check imports, named arguments and `@OptIn`s by hand.
-  1.0.17 failed on a missing experimental opt-in for the Material 3 top bar.
-- 2026-09-25: Every workout write goes through `Workouts.write`, which reloads the whole `Snapshot`. Don't reload again
-  from the UI.
-- 2026-09-25: 1RM and PR logic lives only in `data/Records.kt` (#23). 1.0.19 and 1.0.20 shipped everything except
-  the PR celebration, which shipped in 1.0.21 (#23 closed).
-- 2026-09-25: PR rule: a set is a PR when it's strictly heavier than every earlier set of at least as many reps
-  (ties aren't PRs). New sets get it on save (`Workouts.addSet`); `Workouts.recalculatePrs` replays history.
-- 2026-09-25: Settings (1.0.21, #38): never call `Db.getMeta` / `setMeta` for a setting; use `data/Settings.kt`.
-  The phone-only `meta` rows left for downgrades are cleaned up by #98. The importer's `weight_unit` write is the
-  one deliberate exception.
-- 2026-09-25: The name `Settings` clashes with `androidx.compose.material.icons.filled.Settings`. Don't import both
-  in one file; `FitTopBar(onSettings = …)` already draws the gear.
-- 2026-09-25: Charts (1.0.22, #50): every graph uses `ui/Charts.kt` / `ui/ChartViews.kt`, with colours from
-  `LocalChartColors.palette` via `seriesColor(i)`. `FrameRenderer` has its own unrelated `ChartSeries` (video), so
-  don't reuse that name. #96 still needs Y-axis zoom and the buttons on the redesign's future graph screens.
+## Basics
 
-- Trend lines (#152): every trend, on screen and in shared images, comes from `ui/Trend.kt` (`trendOf`, `trendText`), fitted to the points in view. Never fit against point indices or draw a trend without its figures.
-- 2026-10-29 (#304 stage A): a `rememberSaveable` draft is not enough if a `LaunchedEffect` refills it on entry (SetEntry's fill effect): keep a saved `filled` flag and skip that effect's first run after a restore. Sheets keep a set as its id and look it up in the current list. Several files are CRLF and others LF, so edit through a line-ending-aware script or the Edit tool.
-- 2026-10-29 (#304 stage B): editor drafts (workout, schedule) live in `ScreenState.savedList` / `savedJson` as JSON; a field added to `PlannedSet`, `PlannedExercise`, `TrainingBlock`, `TrainingPlan`, `MedDays`, `MedDose` or `MedPhase` must stay serialisable (`DraftSerializationTest`). A new row key must start after the restored maximum.
-- 2026-10-29 (#307, #308): workout start/finish are shifted in Kotlin with `Dates.shiftStamp(stamp, days)` (the DAO's `moveTimes` still rewrites only the date part, so don't use it for a move). `MedicationReport.create` takes `is24Hour` from `DateFormat.is24HourFormat(ctx)` because it only has `Resources`. Left on `Dates.short`: `ShareImages.kt` ~137, `report/PdfReport.kt` ~307 (progress report axis labels) and `ui/design/CompactControls.kt:147` (custom range chip).
-- 2026-10-29 (#309 A-C): `data/` must not import `ui` Brand/MainActivity/TodayWidgets: use `AppHooks` (set first in `App.onCreate`). Still importing `ui`: `siteName` (MedReminders, MedicationReport), `poseText` (PhotoExport), `countParts` (Routines), and `PdfReport` (several): candidates for moving into `data/`. `Db.rebuild` now checks `COUNT(DISTINCT from-exprs)`: exact duplicates merge, different rows sharing a key stop the upgrade (test: `DbMigrationTest.rebuild*`, uses a v29 file whose `workout_origin` has no key). One date step only: `Dates.plusDays`.
-- 2026-10-29 (#309 E): `data/` imports no `ui` now (`AppHooks`, `data/DisplayText.kt`: poseText, countParts, siteName). `report/` and `video/` still do (#320). Editor sheets must close only after the write succeeds (a duplicate name used to close `ExerciseEditorSheet` / `CategoryEditorSheet` and lose everything typed). `rememberSaveable` takes a `Set<String>` or `Pair<String,String>` (both Serializable). Plain `remember` sheets still left: #316; Track tab draft: #315. Tracker: a bug item's `area` field is an array (`["ui"]`), a feature's is a string.
-- 2026-10-29 (#315, #316): a `rememberSaveable` map/list needs a `listSaver` (see `ReadinessSheet.typed`, `ExerciseLibrary.picked`); put a marker first when empty would restore as "no state". A sheet that holds a `MeasurementDef` keeps its name and looks it up in `snap.allMeasurements` (`MeasurementsEditor`). Enums (`InjectionSite`) and `Pair<String,String>` go straight into `rememberSaveable`. Seeding effects (Body fat prefill in `MeasurementEntrySheet`, the fill in `BodyMeasurementScreen`) skip their first run after a restore with a `remember { booleanArrayOf(true) }` flag plus a saved marker. Edit helper: Python on Windows needs `encoding='utf-8'` and keeps CRLF only with `newline=''`.
-- 2026-11-04 (1.0.199 orders): `Nav` has no controller in `FunctionTest`, so a pushed screen can't be asserted; `ui/NavHarness.kt` (test) fixes that. New whole-screen shots (`WholeScreenTest.shoot`) have no golden, and the release build sets `SCREENSHOT_STRICT`, so a new shot fails the release until its golden is recorded on a PR run and committed; adding a ⋮ menu item changes `screen_day_menu*` goldens (8 files). A new whole-screen shot also fails on any fresh layout finding (ellipsis, <48dp target), so don't use `ListRowWithMenu` (title maxLines 2) for long names. `CalendarScreen` took its month from `LocalDate.now()`, not `Dates.todayDate()` (`Dates.clockSource` doesn't reach it).
-- 2026-11-04 (#328): no code cap found for "All time stops short" (nothing limits sets, records or points; the only hard limit is `Analysis.totals`' `guard < 2000` periods, ~5.5 years of Day periods). Likely the owner's data is short and the axis ignored the range; reproduce with `LongHistoryFixture` (squat `OLD_LAST`). Range defaults differ: body and exercise 4 (All), Analysis Workouts and Readiness 1 (3M). `LocalDate.now()` still sits in `PhotosScreen`/`SettingsScreen`/others outside the graph path. A coder run once deleted three closing braces and an import in `CalendarScreen` (329-1): always check brace counts and imports in the diff.
-- 2026-11-05 (1.0.200 triage): #363 (ready, medium, analysis), #360 (ready, medium, body tracker), #359 (ready, low, exercises), #358 (ready, low, calendar) triaged; #326 is the only bug with no `ready` (needs a Row spacing setting designed first). Tracker: `tracker_update` takes `status`, `priority`, `fields` (`area` array for bugs), `tags`. #334 sizing: `FitSheet` (`ui/design/Sheets.kt:78`) calls `rememberModalBottomSheetState(skipPartiallyExpanded = true)` with no `confirmValueChange`; `SearchablePicker` (`:204`) already has the pattern. 62 `FitSheet(` calls in 37 files; ~25 hold typed input. A `dirty` parameter must go through `rememberUpdatedState` (the state's lambda is captured once). The Cancel button calls `onDismiss` directly, so it bypasses the guard.
-- 2026-11-07 (#349): the one whole-screen capture path is `shoot` in `WholeScreenTest.kt` (the only `golden(` and `captureScreenRoboImage` call); the fix is a `settle()` there (sleep, idle, play the test clock, three rounds). Whether it cures the flake can only be shown by repeated CI runs; the cause was inferred, not reproduced. `FittedTitle` (`TopBar.kt`) shrinks the title one step per layout, no animation.
-- 2026-11-07 (#349 round 2): `FittedTitle` (`TopBar.kt`) only ever shrinks (its `scale` is keyed on title/style/floor), so a title shrunk while the library's menu and extra icon crowded it stayed small after typing a search; the committed `screen_lib_search_320dp.png` title measures 107px wide against 116px at 411dp, i.e. one shrink step (0.9) is baked in. Fix: key `scale` on `constraints.maxWidth` inside `BoxWithConstraints` (orders 349-5, 349-6). Cursor: `typeText` uses `performTextReplacement` (no focus, no cursor). All four `lib_search` goldens and any golden whose title was stuck-shrunk need re-recording.
-- 2026-11-08 (1.0.202 orders 373/371/372): a heredoc with many files in one Bash call failed to parse and wrote nothing; write orders with the Write tool. `FunctionTest` teardown now meant to call `awaitAppScopeJobs()` (idles the Robolectric main looper, bounded 5s): `AppScope.scope` is on Dispatchers.Main, so a plain `join()` in `runBlocking` would deadlock. Main-list Settings rows (`mainRow(...)` in `SettingsScreen.mainRows`) search themselves, so only page rows need a `CATALOGUE` entry. A new main row changes the `screen_settings*` goldens. `MeasurementGoals.verdict` TARGET branch: with a target set it must decide alone (an equal-distance move used to fall through to "a rise is good"). `previousValue()` / `changeFromEarlierDay()` in `ui/MeasurementGoals.kt` are the one "previous value" rule (#372).
-- 2026-11-12 (1.0.202 gate round 1): a Robolectric main-thread `delay()` wakes only when the looper clock moves: use `ShadowLooper.idleMainLooper(10, MILLISECONDS)` in a wait loop, not the no-arg form; `Job.isActive` is false for a cancelled job still in `finally`, use `!isCompleted`. Read a text node's colour in a function test via `node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(list)` then `layoutInput.style.color` on an unmerged tree (see `LayoutChecks.kt`). A settings choice that applies to body values but not medications is read once per pane as `changeFromEarlierDay() && !medications` (BodyScreen). Big multi-file Bash heredocs sometimes fail to parse: write order files with the Write tool.
-- 2026-11-13 (#334 orders 334-1..10): `FitSheet(dirty)` guard = `rememberDirty(vararg)` (each value's text, as a list, vs its `rememberSaveable` start) + `confirmValueChange` + guarded `onDismissRequest`; Cancel calls the caller's `onDismiss` directly so it still closes. Call sites name the local `unsaved` (WorkoutEditorScreen/ScheduleEditorScreen already have a screen-level `dirty`). Place `rememberDirty` above any early `return` in the sheet (CustomTypeSheet). EmergencyCardSheet saves on every close, so it is not guarded. Tests can tap outside via the scrim node (content description contains "close"); Back can't be driven (no Espresso dependency). Skipped on purpose: calculators/stats sheets, RestTimer, choice/filter/info sheets, MeasurementSheets (#331 passes dirty).
+- No local Android SDK. CI is the compiler, so check imports, named arguments and `@OptIn`s by hand.
+- Writes refresh only the named `Area`s (`Workouts.write(areas)`, `writeSets(kind)`); a write that forgets an area
+  leaves that part of the screen stale. Don't reload again from the UI.
+- 1RM and PR logic lives only in `data/Records.kt`. A set is a PR when it's strictly heavier than every earlier set of
+  at least as many reps (ties aren't PRs).
+- Never call `Db.getMeta` / `setMeta` for a setting; use `data/Settings.kt`. The name `Settings` clashes with the
+  Material icon: don't import both in one file.
+- Every graph uses `ui/Charts.kt` / `ui/ChartViews.kt`, with colours via `seriesColor(i)`. `FrameRenderer` has its own
+  unrelated `ChartSeries` (video).
+- Every trend, on screen and in shared images, comes from `ui/Trend.kt` (`trendOf`, `trendText`), fitted to the points
+  in view. Never fit against point indices or draw a trend without its figures.
+- `data/`, `report/` and `video/` import no `ui`: use `AppHooks` (set first in `App.onCreate`) and
+  `data/DisplayText.kt` (`poseText`, `countParts`, `siteName`). One date step only: `Dates.plusDays`.
+- `gh issue view --json` takes `state`, not `status`.
+
+## State that must survive rotation
+
+- A `rememberSaveable` draft isn't enough if a `LaunchedEffect` refills it on entry (SetEntry's fill effect, the Body
+  fat prefill in `MeasurementEntrySheet`, the fill in `BodyMeasurementScreen`): keep a saved marker and skip that
+  effect's first run after a restore (`remember { booleanArrayOf(true) }` plus the marker).
+- Sheets keep a set as its id and look it up in the current list; a sheet that holds a `MeasurementDef` keeps its name
+  and looks it up in `snap.allMeasurements`.
+- Editor drafts (workout, schedule) live in `ScreenState.savedList` / `savedJson` as JSON: a field added to
+  `PlannedSet`, `PlannedExercise`, `TrainingBlock`, `TrainingPlan`, `MedDays`, `MedDose` or `MedPhase` must stay
+  serialisable (`DraftSerializationTest`). A new row key must start after the restored maximum.
+- `rememberSaveable` takes a `Set<String>`, a `Pair<String, String>` or an enum directly; a map or list needs a
+  `listSaver` (see `ReadinessSheet.typed`, `ExerciseLibrary.picked`), with a marker first when empty would restore as
+  "no state".
+- Editor sheets close only after the write succeeds (a duplicate name used to close `ExerciseEditorSheet` and lose
+  everything typed).
+
+## Sheets that hold typed input (#334, #331)
+
+- `FitSheet(dirty)` = `rememberDirty(vararg)` (each value's text, as a list, against its `rememberSaveable` start) +
+  `confirmValueChange` + a guarded `onDismissRequest`. `dirty` goes through `rememberUpdatedState`, because the sheet
+  state's lambda is captured once. Cancel calls the caller's `onDismiss` directly, so it still closes.
+- Call sites name the local `unsaved` (the workout and schedule editors already have a screen-level `dirty`). Place
+  `rememberDirty` above any early `return` in the sheet. `EmergencyCardSheet` saves on every close, so it isn't guarded.
+- Not guarded on purpose: calculator and stats sheets, the rest timer, choice, filter and info sheets (#384 covers the
+  choice sheets). Sheets still lose typed text on rotation where they use plain `remember` (#381).
+- Tests can tap outside via the scrim node (content description contains "close"); Back can't be driven on the JVM
+  (#385, #387 wait for the emulator, #335).
+
+## Dates and clocks
+
+- Workout start and finish are shifted in Kotlin with `Dates.shiftStamp(stamp, days)`; the DAO's `moveTimes` rewrites
+  only the date part, so don't use it for a move.
+- `MedicationReport.create` takes `is24Hour` from `DateFormat.is24HourFormat(ctx)`, because it only has `Resources`.
+- Anything displayed uses `Dates.todayDate()` / `nowDateTime()` (the `Dates.clockSource` seam). `LocalDate.now()` still
+  sits in some screens outside the graph path (#360, #383).
+- `MeasurementGoals.verdict`, TARGET branch: with a target set it decides alone (an equal-distance move used to fall
+  through to "a rise is good"). `previousValue()` / `changeFromEarlierDay()` in `ui/MeasurementGoals.kt` are the one
+  "previous value" rule (#372); a settings choice that applies to body values but not medications is read once per
+  pane as `changeFromEarlierDay() && !medications`.
+
+## Graphs
+
+- "All time stops short" (#328) had no code cap: the only hard limit is `Analysis.totals`' `guard < 2000` periods
+  (about 5.5 years of Day periods). Reproduce range bugs with `LongHistoryFixture`. Range defaults differ: body and
+  exercise 4 (All), Analysis Workouts and Readiness 1 (3M).
+- `Db.rebuild` checks `COUNT(DISTINCT from-exprs)`: exact duplicates merge, different rows sharing a key stop the
+  upgrade (`DbMigrationTest.rebuild*`).
+
+## Tests and goldens
+
+- `Nav` has no controller in `FunctionTest`, so a pushed screen can't be asserted there: use `ui/NavHarness.kt` (test).
+- A new whole-screen shot (`WholeScreenTest.shoot`) has no golden, and the release build sets `SCREENSHOT_STRICT`, so
+  it fails the release until its golden is recorded on the check branch's pull-request run and committed. Adding a ⋮
+  menu item changes the `screen_day_menu*` goldens (8 files); a new main Settings row changes `screen_settings*`.
+- A new whole-screen shot also fails on any fresh layout finding (ellipsis, a target under 48dp), so don't use
+  `ListRowWithMenu` (title `maxLines` 2) for long names.
+- The one whole-screen capture path is `shoot` in `WholeScreenTest.kt`; it `settle()`s first (#349). Whether a flake is
+  cured can only be shown by repeated CI runs. `FittedTitle` (`TopBar.kt`) keys its shrink on the available width;
+  `typeText` uses `performTextReplacement` (no focus, no cursor).
+- The function-test teardown calls `awaitAppScopeJobs()` (idles the Robolectric main looper, bounded): `AppScope.scope`
+  is on `Dispatchers.Main`, so a plain `join()` in `runBlocking` would deadlock.
+- A Robolectric main-thread `delay()` wakes only when the looper clock moves: use
+  `ShadowLooper.idleMainLooper(10, MILLISECONDS)` in a wait loop, not the no-argument form. `Job.isActive` is false for
+  a cancelled job still in `finally`: use `!isCompleted`.
+- Read a text node's colour in a function test via
+  `node.config.getOrNull(SemanticsActions.GetTextLayoutResult)?.action?.invoke(list)`, then `layoutInput.style.color`,
+  on an unmerged tree (see `LayoutChecks.kt`).
+- A test that reads the database on the main thread fails CI ("Cannot access database on the main thread"): 1.0.202's
+  settings round-trip test did, was taken out and is #379.

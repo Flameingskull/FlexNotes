@@ -1,209 +1,175 @@
 # feature-manager notes
 
-What earlier runs learned that isn't obvious from the code or `docs/CODEMAP.md`. One dated line each; delete lines
-that stop being true. The repository is public: no personal data, secrets or `FIL.n` keys.
+What earlier runs learned that isn't obvious from the code or the code map (`docs/CODEMAP.md`, `docs/codemap/`). One
+line each; delete lines that stop being true, and keep the file under about 150 lines. Lessons about writing work
+orders go in `coder-orders.md`. The repository is public: no personal data, secrets or `FIL.n` keys.
+Pruned 2026-11-14: finished-issue status, superseded facts, tool tips for hand-editing code and lines the code map
+already states were removed.
 
-- 2026-09-25: No local Android SDK. CI is the compiler, so check imports, named arguments and `@OptIn`s by hand.
-  1.0.17 failed on a missing experimental opt-in for the Material 3 top bar.
-- 2026-09-25: Every workout write goes through `Workouts.write`, which reloads the whole `Snapshot`. Don't reload again
-  from the UI.
-- 2026-09-25: 1RM and PR logic lives only in `data/Records.kt` (#23). 1.0.19 and 1.0.20 shipped everything except
-  the PR celebration, which shipped in 1.0.21 (#23 closed).
-- 2026-09-25: PR rule: a set is a PR when it's strictly heavier than every earlier set of at least as many reps
-  (ties aren't PRs). New sets get it on save (`Workouts.addSet`); `Workouts.recalculatePrs` replays history.
-- 2026-09-25: Settings (1.0.21, #38): never call `Db.getMeta` / `setMeta` for a setting; use `data/Settings.kt`.
-  The phone-only `meta` rows left for downgrades are cleaned up by #98. The importer's `weight_unit` write is the
-  one deliberate exception.
-- 2026-09-25: The name `Settings` clashes with `androidx.compose.material.icons.filled.Settings`. Don't import both
-  in one file; `FitTopBar(onSettings = …)` already draws the gear.
-- 2026-09-25: Charts (1.0.22, #50): every graph uses `ui/Charts.kt` / `ui/ChartViews.kt`, with colours from
-  `LocalChartColors.palette` via `seriesColor(i)`. `FrameRenderer` has its own unrelated `ChartSeries` (video), so
-  don't reuse that name. #96 still needs Y-axis zoom and the buttons on the redesign's future graph screens.
-- 2026-09-25: Cleaning `meta` rows that DataStore's one-time migration copies must happen *after* DataStore loads
-  (1.0.23, #98), never in `Db.onUpgrade`: the upgrade runs first, so a user jumping from 1.0.20 would lose them.
-  Data-only clean-ups like this don't need a `Db.VERSION` bump. The Sync tab is gone (#35); FitNotes import lives in
-  Settings → FitNotes import (`ui/FitNotesCards.kt`), and a new full-screen graph passes `GraphOptionChips` as
-  `controls`.
-- 2026-09-25: Shared files for the share sheet go in `cacheDir/exports` (the only FileProvider path) and are
-  sent with `shareFile` (`ui/PhotoViewerScreen.kt`). Delete the previous file of the same kind first (1.0.24).
-- 2026-09-25: Anything that deletes user data in bulk takes `Backups.safetyCopy` first and aborts if it fails, so
-  Settings → Backups → Undo can reverse it (1.0.24, #32). First-run UI keys off `DeviceSettings.setupDone`.
-- 2026-09-25: Analysis maths lives in `data/Analysis.kt` (pure Kotlin, unit-testable); screens only format. A
-  `@Composable` (e.g. `categoryColour`) can't be called inside `remember { }`; build colours from the raw Int there.
-- 2026-09-26: A value the user sets in FlexNotes on a FitNotes-owned row (e.g. a measurement's goal or order) needs a
-  marker (`measurement.edited`) that the importer checks, or the next import silently overwrites it (1.0.28).
-- 2026-09-26: Navigation is FitNotes-style since 1.0.29 (#79, #81): no bottom bar, `Screen.Day` is the root, and new
-  destinations go in the day log's ⋮ menu (`DayScreen`), not a tab. `PlainTopBar` takes its back arrow from
-  `LocalNavBack`. Workout dialogs are sheets in `ui/WorkoutEditing.kt`; undo a copy with the ids `copyWorkout`
-  returns (`Workouts.deleteSets`). Still open from bundle 3: workout time (#12), share (#11) and the rest-timer sheet.
-- 2026-09-26: Vocabulary (owner decision on #79): exercise = one movement; workout = a group of exercises with
-  prescribed sets (saved workout #100, logged workout = one date); routine = saved workouts split into user-named days
-  (#21, rewritten on top of #100). Write issues in these terms, and never label a single-exercise action as a workout.
-- 2026-09-26: 1.0.32 (#83, #82 partly): + opens `Screen.Library(date)`, which is the picker too; tapping an exercise
-  replaces the library with `Screen.SetEntry` so Back returns to the day log. The exercise screen's History and Graph
-  are `ExerciseGraphPane` / `ExerciseHistoryPane` in `ui/TrainingScreen.kt`. A day only shows an exercise once it has
-  a set, so "adding several exercises" is a queue until saved workouts (#100) give exercises planned sets. Still open:
-  #82 needs the rest timer (#20); #83 needs the unit override (#7) and merge (#57) in the editor and overflow.
-- 2026-09-26: Saved workouts (1.0.33, #100) are database v7 (`data/SavedWorkouts.kt`). Adding one logs every set at
-  once (FitNotes "Log All") via `Workouts.logPlanned`, so it undoes with `deleteSets`. Routines (#21) should reference
-  `saved_workout` ids per day rather than hold exercises. Still missing: a logged day doesn't record which saved
-  workout it came from (needed for "next day" suggestions and "swap for good" from the day log).
-- 2026-09-26: Routines (1.0.34, #21) are database v8 (`data/Routines.kt`). The library title is the routine switcher
-  (`PortableSettings.lastRoutineId`, also used by Add workout). `workout_origin` (one row per date) drives the
-  next-day suggestion; `deleteWorkout` clears it and `moveWorkout` moves it. `Screen.Routines` and
-  `Screen.SavedWorkouts` share names with the data objects, so always write `Screen.X` for the destination.
-- 2026-09-26: 1.0.35: workout timer = `workout_time` row with a start and blank finish (`WorkoutClock`); rest timer is
-  the in-app `RestTimer` singleton. Still open: a foreground service + notification so both survive the screen off
-  (#12, #20), per-exercise rest length (#15), share as image (#11). Settings `workoutTimerAuto`, `restSeconds`,
-  `restAutoStart`, `restVibrate` are portable (`meta`). The manifest now has VIBRATE.
-- 2026-09-26: 1.0.36: timers survive the screen off via `ui/TimerService.kt` (FGS type specialUse; never start it from
-  the background, `refresh` updates a running instance instead). README refreshed at 1.0.36, next due 1.0.41.
-- Anything that re-points data from one exercise id to another (merge, #57) must also re-point `import_rule`
-  exercise links and re-key `set` skip rules (their key starts with the exercise id), or the next FitNotes import
-  brings back duplicates or deleted sets. `Workouts.mergeExercises` is the reference.
-- A left-edge swipe to open a drawer conflicts with Android's gesture-navigation back swipe. Open drawers from a
-  button instead (1.0.42, #17).
-- A notification channel's sound can't be changed once created. To change it, create a channel with a new id and
-  delete the old one (`TimerService`, 1.0.44). The rest-over sound is played in-app by `RestSound` so its volume applies.
+## Build and release
+
+- No local Android SDK. CI is the compiler, so check imports, named arguments and `@OptIn`s by hand. `FitTopBar` needs
+  `@OptIn(ExperimentalMaterial3Api::class)` on the calling composable (1.0.17 and 1.0.57 failed on it).
+- A release's number is run number + 3 and jumps when a run is used up: read the actual name from `gh release list`
+  after the build rather than assuming latest + 1. The README refresh is checked against the version the release gets.
+- Release runs share one concurrency group and skip a commit that already has a `build-*` tag.
+- `gh issue view --json` takes `state`, not `status`. Write issue bodies to a file and pass `--body-file`.
+- Unused-resources lint is a warning-only `lint {}` block plus a non-blocking `lintDebug` CI step. Removing a function
+  can orphan a private val, a DAO method or a string: re-count those names afterwards.
+
+## Database and Room
+
+- A schema change means: the entity in `data/Schema.kt`, `Db.VERSION`, and an `if (oldVersion < N)` step in
+  `Db.upgrade` that leaves the table exactly as Room would create it (same types, NOT NULLs and `defaultValue`s), or
+  Room refuses to open. `RoomSchemaTest` catches a mismatch in CI. New tables need no `CREATE` in `Db.upgrade`: the
+  `reconcile` rebuild creates every table Room knows. `Db.VERSION` is 32.
+- Every database change adds an upgrade test to `DbMigrationTest`. Migration steps that touch a table older test
+  schemas lack check `hasTable` first.
+- **Never drop a table in a migration:** older builds must still open the database (#77). The old `saved_workout*`
+  tables stay empty rather than dropped.
+- The exported schema `app/schemas/.../<N>.json` carries Room's hash, so it can only come from a CI build: commit it
+  from `ci-logs` (`schemas/`) after the release. `ExportedSchemaTest` checks later migrations against it. The schemas
+  folder is a `debug` assets folder (Robolectric loads debug assets; `test` source-set assets are not merged).
+  `app/build.gradle.kts` runs `kspReleaseKotlin` after `kspDebugKotlin` and makes the debug asset merges depend on it,
+  so a new version needs no second CI run.
+- App code never writes SQL directly: `Db.writableDatabase` is `internal`, used only by `Db.upgrade` steps and tests.
+  New reads of an existing table belong in a DAO (`data/Daos.kt`), mapped with `toModel()`. Group multi-row edits with
+  `Db.transaction { }`, and chunk id lists by `Db.MAX_IDS`. Room `@Query` bind names avoid SQL keywords (`order`,
+  `key`, `from`, `to`).
+- `getMeta` / `setMeta` are Room queries and **must run off the main thread** (tests wrap them in `offMain`; tests
+  call DAO-backed code in `runBlocking(Dispatchers.IO)`).
+- `workout_set` and the other non-autogenerate tables are inserted with explicit-column `@Query("INSERT ...")`
+  returning `Long` (an `@Insert` of the entity would write id 0). A `@Query` INSERT can return the new row's id
+  (`MedDao.addAsNeeded`, `addTaken`): use that for Undo instead of looking the row up afterwards.
+- An optional range or list is one query with `(:fromDate IS NULL OR ...)` and `(:everyExercise OR x IN (:ids))`.
+- A dry run inside `Db.transaction { }` rolls back by throwing a private exception that carries the result
+  (`FitNotesImporter.DryRun`); Room rethrows a RuntimeException unchanged.
+- Cleaning `meta` rows that DataStore's one-time migration copies must happen *after* DataStore loads, never in
+  `Db.onUpgrade` (the upgrade runs first). Data-only clean-ups need no `Db.VERSION` bump.
+- Extra per-block fields go in the existing `routine.blocks` text (old lines read back unchanged), so no version bump.
+
+## Writes, records and imports
+
+- Writes refresh only the named `Area`s: `Workouts.write(areas)`; set-only writes whose changed sets are known use
+  `writeSets(kind)`, naming exercises, dates and extra `scope.areas` (look up a set's exercise *before* deleting it).
+  A write that forgets an area leaves that part of the screen stale. Don't reload again from the UI.
+- A write that can move a record ends with `replayPrs(w, scope.exercises)`. Never call the full `replayPrs(w)` from a
+  per-day or per-exercise write: it reads every weighted set in the history.
+- 1RM and PR logic lives only in `data/Records.kt`. Every e1RM goes through `Records.factor(reps, formula = chosen())`;
+  never inline a formula. A set is a PR when it's strictly heavier than every earlier set of at least as many reps.
+- `Workouts.kt` and `Routines.kt` write only through `WorkoutDao` and `RoutineDao`; the DAO `addSet` / `updateSet` take
+  the Session columns with no defaults, so a new caller must pass them.
+- Anything that re-points data from one exercise id to another (merge) must also re-point `import_rule` exercise links
+  and re-key `set` skip rules, or the next FitNotes import brings back duplicates. `Workouts.mergeExercises` is the
+  reference.
+- A value the user sets on a FitNotes-owned row needs a marker the importer checks (`measurement.edited`), or the next
+  import silently overwrites it. An import rule per external record id (`HealthSessions.RULE`) keeps a deleted or
+  edited import from coming back.
+- Anything that deletes user data in bulk takes `Backups.safetyCopy` first and aborts if it fails, so Settings ›
+  Backups › Undo can reverse it.
+- Any new path that copies, moves or deletes sets must carry exercise comments (`exercise_comment`), and its Undo must
+  restore them (`Workouts.setExerciseComments`). `workout_origin` (one row per date) drives the next-day suggestion:
+  `deleteWorkout` clears it and `moveWorkout` moves it.
+- A workout is `Routine` in code (`data/Routines.kt`); its days own their exercises. Changes to a logged day's planned
+  sets belong in `blockAdjusted`, called by both `logWorkoutDay` and `ReviewWorkoutSheet`.
+- Session and Rounds sets: a Session set is a normal `workout_set` row plus four nullable columns; its length is typed
+  in minutes (`SessionFields`), and its list line comes from `sessionMarks`. A Rounds set keeps rounds in `reps`, rest
+  in `restSeconds`, total in `durationSec`, hard time in `liveSec`; use `ExerciseTypes.isTimedSession` for anything
+  that reads a session's length. `restSeconds` means "rest after the set" for every other type, so `restFor`,
+  `Routines.resolve` and the day-wide rest sheet special-case Rounds; `Workouts.updateSet` writes it only with
+  `writeRest = true`.
+- A dose's day amount is `DueDose.amount` (taper, then dose change); `DueDose.planned` is the tapered amount before a
+  change, so "changed from" text uses `planned`, never `dose.amount`.
+- Health Connect values are body values with source `health_connect`, one per day, replaced by
+  `Store.writeHealthDays`. Anything that sums a day's values goes through `Sources.dayValues(day, hcPrimary)`;
+  anything that edits "the user's" values leaves `health_connect` rows out. A new type: a `HealthConnect.Kind`, its
+  manifest `READ_*` permission and a `PortableSettings.hc*` flag.
+- Writing to Health Connect without duplicates: a client record id per record, read back the app's own records by
+  `dataOriginFilter`, write a changed record at the old `clientRecordVersion` + 1, and make every read path skip
+  records whose data origin is FlexNotes.
+- A new unit family goes into `VitalUnits` and is folded into `MeasureUnits.sameKind` / `convert` / `choices` /
+  `convertible`. Anything stored on `measurement` in a unit (goal, `ref_low`, `ref_high`) is converted in
+  `MeasureUnits.shown(def)` and back on save. Body values in kg or lbs are converted for display in `BodyPart` and back
+  in `Store` writes, so stored values never change.
+
+## Settings and stored options
+
+- Never call `Db.getMeta` / `setMeta` for a setting; use `data/Settings.kt`. The importer's `weight_unit` write is the
+  one deliberate exception. The name `Settings` clashes with the Material icon: don't import both in one file.
+- Settings pages use `ui/design/SettingsRows.kt` (switch, choice, action, folder, danger, number, plus
+  `SettingsStatusCard`). A page row needs an entry in `CATALOGUE` (`SettingsScreen.kt`) so search finds it; rows on the
+  main list (`mainRows`) search themselves. A new main row changes the `screen_settings*` goldens.
+- A row that can't be used stays visible with `disabledReason`. A problem always shows an icon and text, never colour
+  alone. Put `focusRing()` before the row's `clickable`.
+- A stored option list or blob goes in `PortableSettings` as text with a plain-Kotlin codec that validates on read
+  (`data/MediaPrefs.kt`), unit-tested. A screen that remembers its options saves a moment after the last change and on
+  leaving, and only once something changed, so opening it never turns defaults into saved values.
+- Reading `Settings.portable.collectAsState()` inside one composable keeps a setting change on screen at once without
+  threading it through callers.
+- A stepper that writes settings or the database debounces its commit and flushes on dispose (`RestTimerSheet`).
+
+## Screens, navigation and state
+
+- Navigation is FitNotes-style: no bottom bar, `Screen.Day` is the root, new destinations go in the day log's ⋮ menu.
+  Never write to a stack directly: use `nav.replace(screen)`. `nav.top` / `atHome` update synchronously. Screen state
+  that must survive rotation goes in a `ScreenState` ViewModel.
+- + opens `Screen.Library(date)`, which is the picker too; tapping an exercise replaces it with `Screen.SetEntry`, so
+  Back returns to the day log. The library title is the routine switcher (`PortableSettings.lastRoutineId`).
+- A left-edge swipe to open a drawer conflicts with Android's back gesture: open drawers from a button.
+- Never start `ui/TimerService.kt` from the background: `refresh` updates a running instance. A notification channel's
+  sound can't be changed once created: use a new channel id and delete the old one.
+- New glyphs go in `ui/design/Icons.kt` (`FitIcons`), because only `material-icons-core` is a dependency.
+- Panes reused in a `ModalBottomSheet` must not sit inside `FitSheet` (its content scrolls, so a LazyColumn pane would
+  crash). `FitSheet` keeps `skipPartiallyExpanded = true` and models "full screen" as its own saved `full` state
+  (`expandable`): M3 offers a half stop only when content is taller than half the screen, and then the buttons sit off
+  screen. Don't add a `Row` to `FitSheet` for every sheet (goldens): branch on the parameter.
+
+## Text, dates and strings
+
+- Date helpers in `Dates` (`data/Models.kt`): `day` ("Mon 27 Oct", the human-first standard), `long` (weekday and
+  year); `medium` has no weekday, so it's wrong for dates people read. For anything displayed use
+  `Dates.todayDate()` / `nowDateTime()` (the `Dates.clockSource` seam), never `LocalDate.now()`.
+- The data layer has no `Resources`: plain results carry a typed value the UI words; refusals throw
+  `WorkoutDataException(R.string.x, args)` and screens show `e.userText(res)` (its `message` is null). Data-layer enums
+  keep their `label`; the UI maps them in `ui/AnalysisText.kt`.
+- `strings.xml`: apostrophes and quotes are escaped; Android trims leading and trailing spaces and collapses double
+  spaces unless the text is wrapped in double quotes. A string read with `getString(id)` and no arguments isn't
+  formatted, so `%%` shows literally: use `formatted="false"` and a bare `%`.
+- Text inside `semantics { }`, `onClick` or `remember { }` can't call `stringResource`: read it into a `val` first.
+  Inside `Modifier.semantics { }`, a local named `selected` shadows the semantics property: write `this.selected`.
+- `GRAPH_*` labels and `metricGraphLabels` are stored keys (pinned graphs, chart kinds): translate them only through a
+  display mapping. Add new graphs only at the end of `graphLabels`, because `exercise.default_graph` stores the index.
+  Count graphs are `Total <name>` labels appended by `graphLabels(type, timeBased, countNames)`.
+
+## Charts
+
+- Every graph uses `ui/Charts.kt` / `ui/ChartViews.kt`, with colours from `LocalChartColors.palette` via
+  `seriesColor(i)`. `FrameRenderer` has its own unrelated `ChartSeries` (video): don't reuse the name.
 - `categoryColour` and `exercisePickerItems` are `@Composable`: never call them inside `remember { }` or
-  `rememberChartData { }` (1.0.43 CI failure).
-- 1.0.45: every e1RM goes through `Records.factor(reps, formula = chosen())`; never inline a formula. Panes reused in
-  a `ModalBottomSheet` must not sit inside `FitSheet` (its content scrolls, so a LazyColumn pane would crash);
-  `ExerciseOverviewSheet` uses `ModalBottomSheet` directly with a bounded height.
-- 2026-09-28: Owner design direction: set rows as labelled columns driven by exercise type (#101), faked glass depth via shared `ui/design` modifiers, no blur/Haze (#102). Owner wants weight + time lifts (#14; asked if it should be a priority slice).
-- 1.0.49 (#112, #108, #109, #105, #111): only `material-icons-core` is a dependency, so new glyphs go in
-  `ui/design/Icons.kt` (`FitIcons`, Material path data) rather than adding icons-extended. Top-bar widgets that aren't
-  plain icons (the rest countdown) go in `FitTopBar(trailing = …)`. A stepper that writes settings or the database
-  debounces its commit and flushes on dispose (`RestTimerSheet`), so holding + doesn't reload the snapshot every step.
-- 2026-09-29 (1.0.50, #106): saved workouts and routines are one model, database v13. A workout is `Routine` in code
-  (`data/Routines.kt`), its days own their exercises (`routine_day_exercise`, `routine_day_set`); `SavedWorkouts.kt`,
-  `Screen.SavedWorkouts`, `Screen.Routines` and `Screen.RoutineEditor` are gone (use `Screen.WorkoutEditor(id)`). The
-  old `saved_workout*` tables stay empty rather than dropped, because older builds must still open the database (#77):
-  never drop a table in a migration.
-- 2026-09-29 (1.0.52, #107, #40 slice): exercise comments live in `exercise_comment` (v14), keyed by date and
-  exercise, FlexNotes-only (no skip rules). Any new path that copies, moves or deletes sets must carry them, and its
-  Undo must restore them (`Workouts.setExerciseComments`). JVM tests now exist (`app/src/test`, Robolectric, run in
-  CI before the release build): every database change adds an upgrade test to `DbMigrationTest`.
-- 2026-09-29 (1.0.54, #40 closed): tests cover migrations (v1, v2, v12, v13), the FitNotes merge and backup/restore.
-  Release runs share one concurrency group and skip a commit that already has a `build-*` tag, after one push
-  published 1.0.52 and 1.0.53 twice. A release's number is run number + 3 and can jump if a run is used up; read the
-  actual release name from `gh release list` after the build rather than assuming latest + 1.
-- 1.0.54 (#60 slice, #96): writes no longer reload everything. `Workouts.write(areas)` refreshes only the named
-  `Area`s; set-only writes that don't replay PRs use `writeSets` and name their exercises or dates in the scope
-  (look up a set's exercise *before* deleting it). A write that forgets an area leaves that part of the screen stale,
-  so name every area a new write touches. Still open on #60: per-area flows so unrelated screens don't recompose, and
-  timing on a large real dataset. Full-screen graphs zoom values via `ChartViewport.yFrom`/`yTo`; bar charts pass
-  `valueZoom = false`.
-- 1.0.56 (#22 slice, #24 slice, #90, icon): graph names are `GRAPH_*` constants in `ui/TrainingScreen.kt`; add new
-  graphs only at the end of `graphLabels`, because `exercise.default_graph` stores the index. Analysis has five tabs
-  (`TAB_*` in `AnalysisScreen.kt`). The launcher icon is the owner's artwork, unedited (`branding/`); never redraw it.
-  Left on #22: cardio pace/speed graphs (need #7) and share a graph as an image. Left on #24: pace tiles (#7).
-- 1.0.58 (#86 slice, #87 slice, README refresh): settings pages use `ui/design/SettingsRows.kt`; a new setting adds a
-  row there and an entry to `CATALOGUE` in `SettingsScreen.kt` so search finds it. Rest-timer options live once, in
-  `RestAlertOptions`. `FitTopBar` needs `@OptIn(ExperimentalMaterial3Api::class)` on the calling composable (1.0.57
-  CI failure). A failed CI run uses up its version number, so the README refresh is checked against the version the
-  release actually gets. Left on #86: Backups / Import / Data tools pages on the rows, sub-screen transitions. Left
-  on #87: share.
-- 1.0.62 (#115 slice, #116, #117; owner chat requests): graphs size from the screen and use one compact control row
-  (`GraphOptionChips` with `DropdownPill` / `OptionsMenu`); lines never break; no bar charts. Body values in kg or lbs
-  are converted for display in `BodyPart` and back in `Store` writes, so stored values never change. Left on #115: the
-  same compact-controls pass on every other screen.
-- 1.0.94 (#37): Navigation Compose runs behind `Nav`. The `NavHost` has one destination, `Route(s)`, whose argument
-  is the `Screen` as JSON, so no screen needs its own route or nav types. Never write to a stack directly: use
-  `nav.replace(screen)` (same kind updates the entry in place, another kind pops and pushes). `nav.top` / `atHome`
-  update synchronously after each call, so loops like `while (!nav.atHome && nav.top !is Screen.Day) nav.pop()` end.
-  Screen state that must survive rotation goes in a `ScreenState` ViewModel (`ui/ScreenState.kt`).
-- 1.0.96 (#46, #92): a stored option list or blob goes in `PortableSettings` as text with a plain-Kotlin codec that
-  validates on read (`data/MediaPrefs.kt`, `SlideshowPrefs`), unit-tested in `src/test`. A screen that remembers its
-  options saves a moment after the last change and on leaving, and only once something changed, so opening it never
-  turns defaults into saved values. Inside `Modifier.semantics { }`, a local named `selected` shadows the semantics
-  property: write `this.selected = …`. Icons missing from icons-core are added to `FitIcons` from the Material paths.
-- 1.0.98 (#14): user-defined exercise types live in `ExerciseTypes.custom` (refreshed by `Store.loadLibrary`), so type checks need no snapshot. A custom metric's graph labels are "Best X" / "Total X"; metric names can't be weight, reps, distance or time, so labels never collide with built-in graphs.
-- 1.0.101 (#41, #94): strings.xml needs `\'` and `\"` escaped (a bare apostrophe fails the resource merge). A settings
-  row that can't be used stays visible with `disabledReason` rather than being hidden. A "reset" of preferences keeps
-  what the user built (pins, comparisons, profile) and phone state (folders, schedules); Undo re-applies the old
-  `PortableSettings` whole, which `withPlatesConverted` leaves alone because the plate list differs.
-- 1.0.102 (#41, #94, #93): a Settings page whose preferences should reset together gets a `PreferenceGroup` and the
-  section's `group`; add new fields of that page to `withGroupFrom` or they won't reset. Undo re-applies only the
-  group's values, so a change made meanwhile on another page survives. Haptics go through `ui/design/Haptics.kt`
-  (`confirm` for saves and ticks, `record` for PRs), never a raw `performHapticFeedback`. Moving many literals to
-  strings.xml is quickest with a Python script written to a file (the shell mangles backslashes in heredocs).
-- 1.0.104 (#94): exercise screen tabs, library and workout sheets moved to strings.xml. Source files mix CRLF and LF
-  in the working tree: a replacement script must read with `newline=""`, match on LF and write back the original
-  ending, or every line shows as changed. `GRAPH_*` labels and `metricGraphLabels` are stored keys (pinned graphs,
-  chart kinds), so translate them only through a separate display mapping, never by changing the constants.
-- 1.0.105 (#94): Analysis, Stats, Goals, the body tracker and chart controls moved to strings.xml. Data-layer enums keep their `label`; the UI maps them in `ui/AnalysisText.kt`. Making a helper `@Composable` (as `relativeDayLabel`) breaks any plain wrapper that calls it (`WorkoutDrawer.relativeLabel`): grep every caller. A string read with `getString(id)` and no arguments isn't formatted, so `%%` shows literally: use `formatted="false"` and a bare `%`.
-- 1.0.107 (#94): the rest of the UI moved to strings.xml. Android trims a resource string's leading and trailing spaces and collapses double spaces unless the text is wrapped in double quotes (`"  ·  %1$s"`): check every suffix and separator. Text inside `semantics { }`, `onClick` or `remember { }` can't call `stringResource`; read it into a `val` first or use `res.getString`. A `@Composable`'s default parameter can call `stringResource`. Plain JUnit tests that call a helper now taking `Resources` need Robolectric (`TrendTest`).
-- 1.0.108–1.0.109 (#156): the data layer has no `Resources`. Functions that take a `Context` word their results with it; plain results carry a typed value the UI words (`Backups.Refusal`, `Analysis.Slice` with an empty label, `SeedResult.text(res)`); refusals throw `WorkoutDataException(R.string.x, args)` and screens show `e.text(res)` (its `message` is null, so never show `e.message` for one: use `e.userText(res)`). The Bash tool mangles heredocs holding apostrophes or backslashes: write scripts and replacement lists with the Write tool.
-- 1.0.110 (#41): Settings rows come in six kinds in `ui/design/SettingsRows.kt` (switch, choice, action with `value` and `warning`, folder, danger, number) plus `SettingsStatusCard`; use them rather than a raw `Button` or a stack of `SettingsNote`s. A problem always shows an icon and text, never colour alone. Put `focusRing()` before the row's `clickable` so keyboard focus is outlined in gold. A setting that needs notifications calls `NotificationAccess.ask(reason)` when switched on and shows `NotificationsOffNote` under it; it stays on if refused, because the feature still works in the app.
-- 2026-10-06 (1.0.113, #36 first slice): Room opens `fitlens.db` (v21). A schema change now means: the entity in
-  `data/Schema.kt`, `Db.VERSION`, and an `if (oldVersion < N)` step in `Db.upgrade` that leaves the table exactly as
-  Room would create it (same types, NOT NULLs and `defaultValue`s), or Room refuses to open. `RoomSchemaTest` catches
-  a mismatch in CI. Keep writing SQL through `Db.writableDatabase`; never call Room's main-thread-checked APIs from
-  `getMeta`. Still open on #36: DAOs, committed schema JSON, no queries on the main thread.
-- 2026-10-06 (1.0.114, #36 second slice): DAOs in `data/Daos.kt` now back the snapshot loads, `meta`, body, photo
-  and goal code, so `getMeta`/`setMeta` are Room queries and **must run off the main thread** (Room throws
-  otherwise; tests wrap them in `offMain`). New reads of an existing table belong in a DAO, mapped with `toModel()`;
-  group multi-row edits with `Db.transaction { }`, and chunk id lists by `Db.MAX_IDS`. Room's `@Query` bind names
-  avoid SQL keywords (`order`, `key`, `from`, `to`). Still open on #36: workout writes (`Workouts.kt`, `Routines.save`),
-  imports and backups on DAOs, and committing `app/schemas/.../21.json` (CI now saves it to `ci-logs` under `schemas/`).
-- 2026-10-06 (1.0.115, #36 third slice): `Workouts.kt` and `Routines.kt` write only through `WorkoutDao` and
-  `RoutineDao`; their `write { w -> }` blocks get the DAO, not a database. A new workout query goes in `WorkoutDao`.
-  `workout_set` and the other non-autogenerate tables are inserted with explicit-column `@Query("INSERT ...")`
-  returning `Long` (an `@Insert` of the entity would write id 0); position/superset 0 still lets the triggers decide.
-  An optional range or list is one query with `(:fromDate IS NULL OR ...)` and `(:everyExercise OR x IN (:ids))`.
-  `app/schemas/.../21.json` is committed and is a `debug` assets folder (Robolectric loads debug assets; `test` source-set assets are NOT merged, which cost a CI run); `ExportedSchemaTest` (MigrationTestHelper)
-  validates upgrades against it, so a new `Db.VERSION` must commit its new JSON from `ci-logs` in the same build or
-  the next. Still open on #36: the FitNotes import and backups (`Backups`, `AutoBackup`, `BackupSync`) on DAOs.
-- 2026-10-06 (1.0.118, #36 closed): the FitNotes import (`ImportDao`) and the backup checkpoint (`MaintenanceDao`)
-  are on DAOs, and `Db.writableDatabase` is `internal`: app code never writes SQL directly any more, only `Db.upgrade`
-  steps and tests do. A dry run inside `Db.transaction { }` rolls back by throwing a private exception that carries
-  the result (`FitNotesImporter.DryRun`); Room rethrows a RuntimeException unchanged. Tests call DAO-backed code in
-  `runBlocking(Dispatchers.IO)`.
-- 2026-10-06 (1.0.119, #60): any write whose changed sets are known goes through `Workouts.writeSets(kind)`, naming
-  exercises, dates and extra `scope.areas`; if it can move a record it ends with `replayPrs(w, scope.exercises)`. Never
-  call the full `replayPrs(w)` from a per-day or per-exercise write: it reads every weighted set in the history.
-  `replayPrs` takes `countWarmups` so tests can call it without loading `Settings`.
-- 2026-10-16 (1.0.141, #182, #183): a `TopBarAction` can carry a `menu` (a dropdown under the icon), and `FitTopBar`
-  moves icons that would crowd the title into the ⋮ menu (`iconsThatFit`). Changing a design sample changes its golden:
-  delete the old `app/src/test/screenshots/<name>_*.png`, let CI record the new ones, and commit them from the run's
-  `screenshots-N` artifact. On this PC, shell heredocs can drop backslashes: edit `strings.xml` apostrophes (`\'`)
-  with the Edit tool, not a script.
-- 2026-10-16: `area: photos` label created (for #195); tracker `area` is an array of the label suffixes. Write issue bodies with the Write tool to a temp file and pass `--body-file`: long Git Bash heredocs with apostrophes failed to parse.
-- 2026-10-16 (1.0.142, #184): Health Connect values are body values with source `health_connect`, one per day, replaced by `Store.writeHealthDays`. Anything that sums a day's values must go through `Sources.dayValues(day, hcPrimary)`; anything that edits/replaces "the user's" values must leave `health_connect` rows out (`Intake.ownRecordsOn`, `ImportDao.firstRecordOn`). New HC types: add a `HealthConnect.Kind`, its manifest `READ_*` permission and a `PortableSettings.hc*` flag.
+  `rememberChartData { }`. Analysis maths lives in `data/Analysis.kt` (pure Kotlin); screens only format.
+- `FitChart` takes `range` (a shaded band with two dashed lines) next to `goal`. Mixed-unit series go on one graph as a
+  share of each series' own best, with the real figures in the picked point's note. Full-screen graphs zoom values via
+  `ChartViewport.yFrom` / `yTo`; bar charts pass `valueZoom = false`.
+- A graph rule carries its key mode (`MoveRule`, `measurementRule`): `bestPoint` and `FitChart` both read
+  `keyModeOf(better)`; never probe `better(1.0, 0.0)` directly for a key decision (a 0.5 target gives null).
+  `FitChart`'s `better` still accepts any lambda at 13 call sites: #370's last criterion, in Build 26j.
 
-- **A new `Db.VERSION` no longer needs a second CI run for its schema (1.0.147).** `app/build.gradle.kts` makes the
-  debug asset merges depend on `kspDebugKotlin`, so `MigrationTestHelper` finds the freshly exported `<N>.json`.
-  Still commit that JSON from `ci-logs` after the release, so later migrations are checked against it.
-- **Remembering imported external records:** an import rule per record id (`HealthSessions.RULE`) keeps a deleted or
-  edited import from coming back, without hooking every delete path.
-- (1.0.148) On the owner's PC the Bash tool's heredocs can drop backslashes, so a script that writes `\'` or `\t` into Kotlin or `strings.xml` silently loses the escape. Write such text with the Edit or Write tool, then grep `strings.xml` for an apostrophe without a backslash before pushing (unescaped apostrophes failed CI in 1.0.145).
-- (1.0.149) **Writing to Health Connect without duplicates:** give each record a client record id (`HealthWrite.Out.prefix` + row id or date), read back the app's own records by `dataOriginFilter`, and compare (`HealthWrite.plan`): write a changed record at the old `clientRecordVersion` + 1, or Health Connect keeps the old one. Every read path must skip records whose data origin is FlexNotes, or written values come back as Health Connect's.
-- (1.0.153) A new `Db.VERSION` made debug and release KSP race on the new `<N>.json` ("Empty schema file" in `kspReleaseKotlin`). `app/build.gradle.kts` now runs `kspReleaseKotlin` after `kspDebugKotlin`. New tables need no `CREATE` in `Db.upgrade`: the `reconcile` rebuild creates every table Room knows.
-- (1.0.156, #203) Reminders that must survive the app being closed: keep only the next alarm set (a chain) and re-arm from `Store.refresh`; a `BroadcastReceiver` with `goAsync()` opens the data itself (`MedReminders.ensureLoaded`) because `Store` may not be loaded. Boot/time receivers must be exported but only system broadcasts reach them.
-- (1.0.162, #211, #212) A new unit family (glucose, temperature) goes into `VitalUnits` and is folded into `MeasureUnits.sameKind` / `convert` / `choices` / `convertible`, so Health Connect writes, hand entries, display overrides and ranges all convert through one path. Anything stored on `measurement` in a unit (goal, `ref_low`, `ref_high`) must be converted in `MeasureUnits.shown(def)` and back to the stored unit on save. Python edit scripts are safer written with the Write tool and run with `python -I file.py` than passed through a Bash heredoc (a heredoc with many quotes failed to parse here).
-- (1.0.165, #233, #234) A dose's day amount is `DueDose.amount` (taper then dose change); `DueDose.planned` is the tapered amount before a change, so "changed from" text uses `planned`, never `dose.amount`. A `@Query` INSERT in a DAO can return the new row's id (`MedDao.addAsNeeded`, `addTaken`): use that for Undo instead of looking the row up afterwards.
-- (2026-10-24 triage) Tracker `tags` on update replaces the list: pass the item's existing `epic`/`accessibility` tags back (an empty `tags: []` wiped #157's). Bash `sed -i` with `\r\n` in the replacement wrote real line breaks into a Python script; edit such scripts with the Edit tool.
-- (1.0.169, #235) Extra per-block fields go in the existing `routine.blocks` text (the deload field becomes `deload,weightPct,setChange`, old lines read back unchanged), so no `Db.VERSION` bump. Changes to a logged workout day's planned sets belong in `blockAdjusted` (rounds to the exercise's step like set entry), called by both `logWorkoutDay` and `ReviewWorkoutSheet` so the review shows exactly what's logged.
-- (1.0.172, #240, #241) A Session set is a normal `workout_set` row plus four nullable columns (v30). Its length is typed in minutes (`SessionFields`, `minutesToSeconds`), not the m:ss clock, and its list line comes from `sessionMarks`, so `setMarks` takes `session = true`. The Room DAO `addSet`/`updateSet` take the four new values with no defaults, so a new caller must pass them. `30.json` can only come from a CI build (it carries Room's hash): commit it from `ci-logs` after the release. On this PC, long Python heredocs with apostrophes can break the Bash tool: write the script with the Write tool and run it.
-- (1.0.172, #242, #243) `FitChart` already takes `range` (shaded band with two dashed lines) next to `goal`, so reference lines need no new chart. Mixed-unit series go on one graph as a share of each series' own best, with the real figures in the picked point's note. Local `fun save(confirmed: Boolean = false)` in `SetEntry` gates a once-only confirm; edits that leave the duration unchanged skip it.
-- (1.0.178, #246) A Rounds set is Session-shaped (`data/Rounds.kt`): rounds in `reps`, rest in `restSeconds`, total in `durationSec`, hard time in `liveSec`; use `ExerciseTypes.isTimedSession` for anything that reads a session's length. `restSeconds` on a set is "rest after the set" for every other type, so `restFor`, `Routines.resolve` and the day-wide rest sheet special-case Rounds; `Workouts.updateSet` only writes it with `writeRest = true`.
-- (1.0.178) The Bash tool can drop a backslash from a heredoc (`\'` in strings.xml, `\s` in a Kotlin Regex): after editing, grep for the escape, and fix with `chr(92)` in Python or the Edit tool.
-- (2026-10-27 triage) Date helpers in `data/Models.kt` `Dates`: `day` ("Mon 27 Oct", the human-first standard), `long` (weekday + year), `medium` ("27 Oct 2026", no weekday: wrong for user-facing dates). #266 design: v32, exercise.count_names + count_a/count_b on workout_set and routine_day_set.
-- 2026-10-27: #266 slice 2 (1.0.181): count graphs are `Total <name>` labels appended by `graphLabels(type, timeBased, countNames)` (TrainingScreen.kt); callers with an exercise pass `countNames`. CSV counts are four columns at the end of `workoutColumns`. `Dates.medium` has no weekday; use `Dates.day` for plan dates. Still without weekday: ReadinessTab.kt:146/259, Trend.kt:156 (#254).
-- 2026-10-27 (1.0.184, #259, #261): files here are CRLF on disk, so a Python `str.replace` of a multi-line block needs `\r\n` handled (read with newline="" and normalise). A script matching `R.string.x` / `@string/x` against strings.xml found only one unused string; every drawable, xml, raw and font is referenced. Unused-resources lint is a warning-only `lint {}` block plus a non-blocking `lintDebug` CI step.
-- 2026-10-27 (1.0.184, #260): an unused-Kotlin sweep = tokenise app/src without comments and list declarations whose name occurs once (found 19, all removed). Strip only whole-line `/* */` and `//`, not every `/*`: a string like "*/*" otherwise eats code. Removing a function can orphan a private val, a DAO method or a string: re-count those names afterwards. Python run from the Bash tool reads /tmp as Windows paths: pass scripts with `cygpath -m`.
-- 2026-10-28: `gh issue view --json` takes `state`, not `status` (unknown-field error).
-- 2026-10-29 (1.0.192, #305): `SetEntryScreen` keeps the `rememberSaveable` declarations; the Track tab (`TrackTab`) gets them as `MutableState` objects in `TrackDraft` (declare `val xState = rememberSaveable {..}` then `var x by xState`). Save decisions live in `data/SetEntryRules.kt`. Splitting a big composable out with a Python script (cut line ranges, `\r\n` aware) beat retyping it.
-- 2026-10-29 (triage for 1.0.193): a tracker item imported without `githubIssue`/`area` must have both set by `tracker_update` (`fields`); a new `tracker_import` item starts as `to-do`, map it to `triaged` after triage. #306 trap: a CI-only "missing golden fails" gate cannot pass until the new `materialDefaults` goldens are committed from the `screenshots-N` artifact, so stage it (record, commit, then enable).
-- 2026-10-29 (1.0.193, #306 stage A): every Material control outside `ui/design/` goes through `ui/design/FitControls.kt` (`Fit*`); `RawMaterialControlsTest` greps the sources and fails on a raw call (add `FilterChip` / `TextButton` to its `RAW` list when moved). In sample composables a control needs `semantics(mergeDescendants = true) { contentDescription }` and a chip a `stateDescription`, or `AccessibilityTest` flags it. A new sample needs its goldens committed from the PR run before `main`, because `build.yml` sets `SCREENSHOT_STRICT=true`.
-- (2026-10-29, 1.0.197, #323 slice 1) Whole-screen tests: `ui/WholeScreenTest.kt` (shared base class `WholeScreenChecks`, subclasses set the window width via `@Config(qualifiers)`), `ui/ScreenFixture.kt` (seeded `Snapshot`, fixed on Tue 27 Oct 2026), rules once in `ui/LayoutChecks.kt`. Main-source seams: `Dates.clockSource` / `todayDate()` / `nowDateTime()` (use these, never `LocalDate.now()`, for anything displayed) and `Settings.showWith(prefs)`. A running rest timer isn't deterministic: draw it paused. Sheets, menus and drawers are separate windows: the harness groups nodes by their semantics root, and text in a closed drawer is laid out beside the window (skipped by `onScreen`).
-- (2026-11-05 triage for 1.0.200, #330) The "which way is good" rule is scattered, not central: `MeasurementGoals.isImprovement` (data/Models.kt:420) is used directly by `changeColour` (ui/MeasurementGoals.kt:44), `BodyScreen.kt:517` (graph `better` lambda) and `PhotoViewerScreen.kt:387`; `deltaColour` (Theme.kt:71) still colours BodyScreen `StatsBlock` (:634, :644) and `TrendReadout` (Charts.kt:487, shared by every graph, so exercise pace trends are wrong too). `TrendLine.at(fromX/toX)` gives the fitted ends for a `better(from, to)` call. `ChartKey` (Charts.kt:282) always draws an up arrow for "better". Settings rows on the main list (`mainRows`, SettingsScreen.kt:332) search themselves; only page rows need a `CATALOGUE` entry. Tracker items for triaged issues already exist with priority set; update status/area only (tags are replaced on update).
-- (2026-11-05, 1.0.200 #330 orders) The Bash tool broke a long heredoc holding apostrophes; write work orders with the Write tool. The coder swapped two parameters and inverted INCREASE/DECREASE when the order only described the rule in words: give the exact function body, and the test as a full file. It writes `assertTrue { x }` (lambda, does not compile) and passes a `Boolean?` to `assertTrue`: say to use `assertEquals(true, x)`. Reading `Settings.portable.collectAsState()` inside one composable (`plainWhenNoGoal()`) keeps a setting change on screen at once without threading it through callers. Never edit tracked repo files while a coder run is going: the wrapper reverts them.
-- (2026-11-06, 1.0.200 #330) The coder leaves out the import for an annotation or class it uses (`Application`, `RunWith`) and calls `@Composable` functions outside a composition in tests: quote the whole test file in the order and say one `openScreen` per test. A new `internal` type must not appear in a public function's signature (`FitChart` took an internal enum: compile error); review every new parameter type. The audit gate's draft-PR build is green only if both main and test sources compile, so read the tests' imports like main code.
-- (2026-11-06, 1.0.200 gate fixes) Orders that make the coder read a big file (Charts.kt 900 lines, strings.xml 3,900) overflow its context and are cancelled after the 60-minute limit. 34 orders of one quoted find-and-replace each (or one whole small test file) finished in under 30 seconds apiece. Generate them with a Python script that takes (id, file, find, replace) so the exact text is typed once; order test appends by anchoring on the end of the previous test; keep a `// END OF TESTS` marker line for multi-order test files.
-- 2026-11-08: #367 (workout type sections on WorkoutsScreen) triaged: needs a Routine category column (Db bump) + kinds list in PortableSettings; pair with #357 (same screen, 26k). Not marked ready: L-size.
-- 2026-11-12: #370 orders (1.0.202, 31 orders) add `MoveRule` (Charts.kt) + `measurementRule` (MeasurementGoals.kt): a graph rule carries its key mode; `changeColour(def, plainNoGoal, from, to)` takes the setting, read once per pager page/pane; `compareRows` requires it. Add CODEMAP lines for MoveRule/measurementRule after the build. Orders that touch many call sites run signature-then-call, so the code only compiles again after each pair.
-- 2026-11-12: gate fix for #370: `bestPoint` and `FitChart` both read `keyModeOf(better)` (MoveRule's mode, else probe); never probe `better(1.0, 0.0)` directly for a key decision, a 0.5 target gives null. FitChart's `better` still accepts any lambda (13 call sites), so #370's 'no caller can pass one without the other' stays open (Refs #370).
-- 2026-11-13 (26f sizing): `FitSheet` (`ui/design/Sheets.kt:78`, ~95 mentions) uses `skipPartiallyExpanded = true`; #334 (`dirty`) and #331 (`expandable`) both edit it, so run them one after the other, never as parallel orders. `MeasurementEntrySheet` has 5 call sites (DayScreen x2, BodyScreen x2, BodyMeasurementScreen, TdeeScreen) and is the Medications sheet too. `LogReminders.nextFor` looks 8 days ahead and `dueAt` matches weekday+time only: both need rewriting for #332 patterns. `Db.VERSION` is 32; #357 needs no migration, #367 does.
-- 2026-11-13 (#331): M3 `ModalBottomSheet` offers a half-expanded stop only when its content is taller than half the screen, and then the bottom buttons sit off screen; so `FitSheet` keeps `skipPartiallyExpanded = true` and models "full screen" as its own saved `full` state. Don't sneak a new `Row` into `FitSheet` for every sheet (goldens): branch on `expandable`. A heredoc with backticks and apostrophes in the Bash tool once failed; write order files with the Write tool. Test helpers: `FunctionTest.tap` takes the first match, so a chip name that also appears as a row behind the sheet needs the sheet drawn alone.
+## Tests and goldens
+
+- In whole-screen tests a running rest timer isn't deterministic: draw it paused. Sheets, menus and drawers are
+  separate windows, grouped by their semantics root.
+- Changing a design sample changes its golden. New or changed goldens are recorded on the check branch's pull-request
+  run and committed from its `screenshots-pr-<n>` artifact **before** `main`, because the release build sets
+  `SCREENSHOT_STRICT=true`.
+- In sample composables a control needs `semantics(mergeDescendants = true) { contentDescription }` and a chip a
+  `stateDescription`, or `AccessibilityTest` flags it.
+- `FunctionTest.tap` takes the first match, so a chip name that also appears as a row behind a sheet needs the sheet
+  drawn alone. Plain JUnit tests that call a helper taking `Resources` need Robolectric.
+
+## Open work worth knowing
+
+- #367 (Workouts screen in sections by kind) needs a `routine` category column (a migration) and a kinds list in
+  `PortableSettings`; pair it with #357 (same screen, Build 26k). #357 needs no migration.
+- #332: `LogReminders.nextFor` looks 8 days ahead and `dueAt` matches weekday and time only; both need rewriting for
+  reminder patterns. `MeasurementEntrySheet` has 5 call sites and is the Medications sheet too.
+- The launcher icon and branding art are the owner's, unedited (`branding/`): never redraw them.
