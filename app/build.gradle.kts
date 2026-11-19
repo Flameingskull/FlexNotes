@@ -133,7 +133,7 @@ dependencies {
     implementation("androidx.health.connect:connect-client:1.1.0")
     // connect-client brings Guava at runtime only, which swaps CameraX's ListenableFuture for Guava's empty stand-in
     // on the compile classpath. Guava itself on the compile classpath puts the class back; R8 drops what isn't used.
-    implementation("com.google.guava:guava:33.7.2-android")
+    implementation("com.google.guava:guava:33.8.0-android")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
     // Background automatic backups (#34). Local only: WorkManager needs no internet permission.
     implementation("androidx.work:work-runtime-ktx:2.12.0")
@@ -146,14 +146,14 @@ dependencies {
 
     // Unit tests (#40): database migrations on the JVM, no emulator.
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.robolectric:robolectric:4.17")
+    testImplementation("org.robolectric:robolectric:4.18")
     testImplementation("androidx.test:core:1.7.0")
     testImplementation("androidx.room:room-testing:2.8.5")
     // Screenshot tests (#95): Compose rendered by Robolectric's native graphics and compared by Roborazzi.
     // ui-test-manifest only adds the empty test activity to debug builds; the release APK never contains it.
     testImplementation(composeBom)
     testImplementation("androidx.compose.ui:ui-test-junit4")
-    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.77.0")
+    testImplementation("io.github.takahirom.roborazzi:roborazzi:1.79.0")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
