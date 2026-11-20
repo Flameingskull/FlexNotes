@@ -48,6 +48,20 @@ personal data, secrets or `FIL.n` keys.
 - After an exit 2 (a file outside the order changed), read the order's patch before re-running: the coder's own
   change may already be there.
 
+## Scope (1.0.205)
+
+- Name what an order must not touch: an order whose find is in one function rewrote two others (332-3), so the
+  next order's find was gone and the coder improvised.
+- End a find block on a line that differs in kind from the run it sits in: a removal ending inside a run of imports
+  removed the rest of the run too (332-46-fix1). Or list in "Done when" the lines after it that must remain.
+- A renaming order says which other uses later orders replace, or the coder renames them all and later finds miss.
+- An append says the lines above its marker stay unchanged; an append at the end of a test file may replace the last
+  test instead of adding after it (332-gate12): name that test in "Don't".
+- In a test order, name every line of the test body in "Done when": the coder drops lines (332-70).
+- A test written with full names (`android.app.Notification`) gets shortened: say "keep the full names" or give the
+  import in the same order (332-gate18).
+- Status "blocked" when the find isn't there: otherwise the coder edits something nearby instead.
+
 ## Running
 
 - 2026-11-12: nothing in the repository may change while an order runs. The wrapper puts back any other file that

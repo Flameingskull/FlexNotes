@@ -830,7 +830,8 @@ class MedBootReceiver : BroadcastReceiver() {
                 var stage = 0
                 val finished = try {
                     withTimeoutOrNull(MedReminders.workTimeoutMs) {
-                        // The logging reminders (#219) are set again with them, and need no data.
+                        // The logging reminders (#219) are set again with them: their alarm first, then any shown late
+                        // after the phone was off, which may open the data (#332).
                         stage = 1
                         try {
                             LogReminders.arm(context)

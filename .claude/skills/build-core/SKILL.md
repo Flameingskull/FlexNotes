@@ -95,7 +95,9 @@ so nothing is lost to a usage limit, a crash or a re-read, and no job depends on
 **`resume`.** Every build command takes `resume` as its argument: read the newest `state.md`, run step 1's checks only
 (clean tree apart from what `state.md` says is in progress, coder preflight), and continue at "Next step". **After a
 pause of more than an hour, resume in a fresh session:** the owner types `/clear`, then `/<build> resume`. An hour is
-how long the main session's cache lasts; past it, every further call re-pays the whole conversation.
+how long the main session's cache lasts; past it, every further call re-pays the whole conversation. **After a usage
+limit** cut the build off, the owner types `/continue` instead (`.claude/skills/continue/SKILL.md`): it also puts the
+coder back on the GPU and redoes any job the limit cut off before carrying on.
 
 ## Jobs: an agent does one job, then ends
 

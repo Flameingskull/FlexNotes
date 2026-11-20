@@ -170,6 +170,7 @@ already states were removed.
 
 - #367 (Workouts screen in sections by kind) needs a `routine` category column (a migration) and a kinds list in
   `PortableSettings`; pair it with #357 (same screen, Build 26k). #357 needs no migration.
-- #332: `LogReminders.nextFor` looks 8 days ahead and `dueAt` matches weekday and time only; both need rewriting for
-  reminder patterns. `MeasurementEntrySheet` has 5 call sites and is the Medications sheet too.
+- #332 (1.0.205): the engine shipped (`LogPattern`, `ringsOn`, `upcoming`, `owed`, `armedFor`, picked measures); its
+  schedule sheet was held back (one correction left it without five imports). `MeasurementEntrySheet` has 5 call
+  sites and is the Medications sheet too.
 - The launcher icon and branding art are the owner's, unedited (`branding/`): never redraw them.

@@ -186,7 +186,16 @@ try {
             $report = Get-Report (Join-Path $orderDir "$orderName.result.md")
             $status = if ($report -match '(?m)^Status:\s*(.+)$') { $Matches[1].Trim() } else { '' }
             $checklist = if ($report -match '(?s)Checklist:(.*?)(?:\r?\nProblems:|\z)') { $Matches[1] } else { '' }
-            $refused = @($checklist -split "`n" | Where-Object { $_ -match '^\s*-?\s*\[ \]' -or $_ -match '(?i)(:\s*no\b|^\W*no\b|\bno[,.]?\s*$|\(no\b)' })
+            # A line refuses when its box is unticked or its answer is "no". The answer is what follows the line's last
+            # colon, with any (...) aside removed first, so "has no X left: yes (no such functions found)" is a yes.
+            # A line with no colon refuses only when it starts or ends with "no".
+            $refused = @($checklist -split "`n" | Where-Object {
+                $line = $_ -replace '\([^)]*\)', ''
+                if ($line -match '^\s*-?\s*\[ \]') { $true }
+                elseif ($line -match '^\s*-?\s*\[[xX]\]') { $false }   # a ticked box is a yes, whatever its words say
+                elseif ($line -match ':\s*([^:]*)$') { $Matches[1].Trim() -match '(?i)^no\b' }
+                else { $line -match '(?i)(^\W*no\b|\bno[,.]?\s*$)' }
+            })
             $why = switch ($code) {
                 0 { $null }
                 1 { 'exit 1: the coder failed or timed out' }

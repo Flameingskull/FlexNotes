@@ -259,6 +259,10 @@ The field mapping, the six parity steps, the traps, and how `backlog.py` and the
   (the gate's read-only auditors and the tracker Clerk are the exceptions) and ships one item or one complete slice of
   an issue (`Refs #N` until every acceptance criterion is met), capped at about 6 files and 400 lines, with two CI
   attempts.
+- **`/continue`** (`.claude/skills/continue/SKILL.md`, owner 2026-11-18) picks a build back up after a usage limit
+  stopped it and it couldn't carry on when the limit reset: it puts the coder back on the GPU (the model server often
+  updates itself meanwhile), redoes any job the limit cut off, checks GitHub for edits, then continues as that build's
+  `resume`.
 
 All three follow one set of steps, `.claude/skills/build-core/SKILL.md`: preflight, triage against the roadmap, the
 owner's choice, design and work orders, the coder's queue, review, the audit gate, release notes and commit, a compile

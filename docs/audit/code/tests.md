@@ -9,7 +9,8 @@
 > Audited 2026-10-31 against 1.0.198 (working tree on 830f7e1, nothing committed). Files read in full: 9 of 15 in scope; the rest of the area was not read.
 > Build gate 1.0.204: 9 functions checked in this ledger (#334 unsaved sheets, #331 body value sheet; working tree over 8a66dc5, plus the LayoutChecks.isTextField correction). CI on draft PR #380 (as reported to the auditor, before that correction): compiled, 800 of 804 unit tests passed, the 4 failures all in BodyEntrySheetLayoutTest. 35 functions across body, photos, calendar-shell, settings-data, build-release and tests.
 > Build gate 1.0.204 (second code-auditor, the #334 call sites): SheetGuardTest read in full; one row added below, the file's other rows are the ones above. CI on draft PR #380 passed all of SheetGuardTest.
-> Results: 1 Verified, 43 Read OK, 0 Defect, 7 Risk, 5 Improve, 3 Not checked.
+> Build gate 1.0.205: 2 test files read in full, 4 rows (#332 logging reminder schedules; working tree over 1310900, before CI ran them).
+> Results: 1 Verified, 46 Read OK, 0 Defect, 7 Risk, 5 Improve, 4 Not checked.
 > `Verified` names a test that would fail if this broke. CI run 41336801625 ran this code: every reminder, alarm and rest test passed.
 
 ## Files
@@ -48,6 +49,8 @@
 | app/src/test/java/com/fitlens/companion/ui/BodyEntryAddAnotherTest.kt | Yes |
 | app/src/test/java/com/fitlens/companion/ui/BodyEntrySheetLayoutTest.kt | Yes |
 | app/src/test/java/com/fitlens/companion/ui/LayoutChecks.kt | Yes |
+| app/src/test/java/com/fitlens/companion/data/LogRemindersTest.kt | Yes |
+| app/src/test/java/com/fitlens/companion/data/LogReminderScheduleTest.kt | Yes |
 
 ## Checks
 
@@ -124,3 +127,12 @@ Written by the main session from the code-auditor's report. Read in full: GraphR
 | Function, class or concern | Check | Where | Result | Evidence | Issue |
 | --- | --- | --- | --- | --- | --- |
 | tapOutside picks any node described as close | Tests | SheetGuardTest.kt:68-73 | Improve | This build. It clicks the first node whose description contains `close` in any case, so a sheet with a Close icon would be clicked instead of the scrim, and a click landing on the sheet passes every keeps-text test. SetCommentSheet has no untouched counterpart to rule that out. Also, the tap cases see only FitSheet's onDismissRequest guard: with the confirmValueChange guard gone they still pass, since onDismiss never runs while the sheet slides away, so the drag test in the row above should assert the Save button is still displayed, not only that the closed marker is absent. Fix: match the exact scrim label (`hasContentDescription("Close sheet")` and hasClickAction()), and add `theSetCommentClosesOnATapOutsideWhenNothingWasTyped`. Size S | #334 |
+
+## Build gate 1.0.205, #332 test files
+
+| Function, class or concern | Check | Where | Result | Evidence | Issue |
+| --- | --- | --- | --- | --- | --- |
+| LogRemindersTest additions | Tests | LogRemindersTest.kt:83-253 | Read OK | Pure functions with exact dates worked out by hand (22 Nov 2026 to 17 Jan 2027 every 2 weeks, 28 Feb and 29 Feb 2028, the London change on 28 Mar 2027), the stored text pinned character by character, 1.0.197 text read back. theDatesShownAreTheOnesThatRing compares upcoming with next, both built on nextFor, so it proves agreement with dueAt, not the dates; the other tests pin those | #332 |
+| LogReminderScheduleTest | Tests | LogReminderScheduleTest.kt | Read OK | Real receivers, Room and alarms; every negative check waits first (until on the next alarm, then settle). Tests that fire twice reset the armed part with setLogReminders, so none relies on the ring de-duplication; the gaps (two kinds missed, a late alarm after a catch-up, a failed write) are settings-data findings F1 and F8 | #332 |
+| Existing logging reminder tests with the new armed part | Tests | ReminderHarnessTest.kt:48-147; MedReminderNotificationsTest.kt:1100, :1345-1385; ExactAlarmPermissionTest.kt:60 | Read OK | Traced: setLogReminders writes no armed part, so none of them owes a catch-up or skips a ring, and their asserted alarms and texts are unchanged. aBootWhoseMedicationStepOverrunsRetriesOnlyThatChain stays green only because nothing is owed (its loadOverride hangs, and a catch-up would wait on it: F6) | #332 |
+| The new and changed tests compile and pass | Build | LogRemindersTest.kt, LogReminderScheduleTest.kt | Not checked | No SDK here. Constructors and members used were checked by reading (Snapshot, BodyPart, MRecord, MeasurementDef, ExactAlarms.epochMillis, LongHistoryFixture.clockAt, ReminderHarness); CI decides | #332 |
