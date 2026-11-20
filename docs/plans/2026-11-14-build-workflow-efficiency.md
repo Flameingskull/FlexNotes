@@ -1,6 +1,6 @@
 # Build workflow: same workflows, far fewer Claude tokens
 
-> **Status (2026-11-14): In progress.** Owner-approved 2026-11-14. GitHub issue #388; tracker plan item of the same
+> **Status (2026-11-20): In progress.** Owner-approved 2026-11-14. GitHub issue #388; tracker plan item of the same
 > title. Committed locally; it rides with the next build's push (D4).
 > Done (steps 1–5 of "Order of work"): the seven scripts in `.claude/scripts/`, each checked as "Verification" says;
 > `build-core` with `/new-build`, `/safe-build` and `/slice-build` as step tables over it; the `local-coder` split
@@ -9,8 +9,10 @@
 > `docs/plans/archive/`; `docs/process/tracker.md` and `plans.md`; agent notes pruned, with `coder-orders.md`.
 > Short of target: `CLAUDE.md` is 27KB, not about 20KB (what's left is rules and owner decisions, which stay);
 > `feature-manager` notes are 175 lines, not about 150.
-> Left (step 6): the live test on a `/slice-build`, then a `/safe-build`; the automatic hand-off to a new session (D3)
-> tested there; `build-usage.py` compared with the table below; the owner's plugin step (D, last bullet).
+> Live test, `/safe-build` 1.0.205 (2026-11-15 to 11-20, awaiting CI): it ran on the new workflow through five usage
+> limits; the owner added `/continue` for those. Fixed on the way: `run-orders.ps1`'s checklist check. Seen: the coder
+> often omits its REPORT block (the queue stops on a correct order), and agents' file writes in the gate are refused.
+> Left (step 6): a `/slice-build` live test; `build-usage.py` compared with the table below; the owner's plugin step.
 > Next: the owner runs `/slice-build`. #388 closes when both test builds have run on the new workflow.
 
 ## Context

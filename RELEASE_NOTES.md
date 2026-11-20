@@ -1,26 +1,20 @@
-# FlexNotes 1.0.204
+# FlexNotes 1.0.205
 
 ## Overview
 
-This update stops sheets from losing what you typed. A drag down or a tap outside by accident no longer closes a sheet that holds unsaved text. The body value sheet can also go full screen, and it gains **Save and add another**, so you can enter several measurements in one go.
+This update makes your logging reminders more dependable. If your phone was off when a weigh-in, measurements, photo or workout reminder was due, it now arrives when the phone starts again, so a reminder isn't lost to a flat battery or a restart. It also lays the groundwork for reminder schedules beyond weekdays, which arrive in a later update.
 
-## What's new
+## Improved
 
-- **Full-screen body value entry:** the sheet you log a body value or a medication dose on can go full screen. Tap the arrow beside its title, or drag up on its handle, title or buttons. Drag down, or tap the arrow again, to return to half height.
-- **Save and add another:** when you log a new body value or medication dose, **Save and add another** saves it and keeps the sheet open with the value cleared, ready for the next one. The measurement, date and time stay as they were. Editing an existing value still shows Delete there.
-- **Open body value entry full screen:** a new setting (off by default) opens the body value sheet full screen every time. Find it in Settings, or search "full screen".
-
-## Fixed
-
-- **Typed text is no longer lost by accident:** about 30 sheets where you type something now stay open on a drag down, a tap outside or Back while what you typed isn't saved. This covers comments, measurements, body fat, goals, reference ranges, calories, readiness, medication amounts, supply, symptoms, schedules, the medication report, workouts, rest times, training blocks, categories and typed settings. Use **Cancel** or **Save** to close them. A sheet you haven't changed still closes with a tap outside, as before.
-- **New measurement names count as typed:** a new measurement or medication name typed on the body value sheet is kept like any other typed value.
-- **Body fat estimates don't lock the sheet:** when the body fat sheet fills in an estimate from your tape measurements, you can still close it with a tap outside if you haven't changed anything.
+- **Missed reminders come when the phone is back:** if the phone was off when logging reminders were due, each one missed that day now arrives when the phone starts again, as long as it's under 12 hours late. If two were missed, say a weigh-in at 07:30 and photos at 08:00, both arrive. A reminder from before midnight never arrives the next day as if it were today's.
+- **Each reminder arrives once:** when a reminder is caught up after the phone was off, its alarm can't bring it a second time.
+- **The next reminder is always set:** when the phone starts up, the next reminder is set first, even if your data is slow to open.
+- **Clearer wording in Settings › Reminders:** the note now says plainly when a reminder stays quiet: when that day already has a weight, a progress photo or a logged workout.
 
 ## Known limitations
 
-- Turning the phone while some sheets are open can still clear what you typed in them (the workout comment, workout time, Create workout, calories, the body fat calculator, the photo comment and a few settings) (#381).
+- Reminder schedules for photos and body measurements, such as every 2 weeks, every few days or a day of the month, aren't in this update. They can't be set from Photos, the Body tracker or Settings yet (#392). Reminders still repeat on the weekdays you choose.
+- Turning the phone while some sheets are open can still clear what you typed in them, such as the workout comment, workout time and Create workout (#381).
 - Sheets where you only tick or choose things, such as Copy workout and Share workout, still close on a tap outside (#384).
-- Back with unsaved text is guarded, but not yet proved by an automated test on a real device (#385).
-- Dragging the body value sheet's handle up, and Back while it's full screen, aren't yet proved by an automated test (#387). The arrow beside the title always works.
 - Saving the medication Supply sheet without changing the amount can still restart the supply count (#382).
-- Reminder schedules for photos and body measurements (#332) aren't in this update.
+- The rest timer sheet's length and Restart from the day log can still use the wrong length (#338, #339).
