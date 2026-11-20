@@ -128,6 +128,7 @@ class LogReminderScheduleTest {
         assertEquals(listOf(h.app.getString(R.string.lr_measure_named, "Waist")), texts())
         // None picked: nothing to count, so even a day with values logged gets its reminder, in general words.
         h.app.getSystemService(android.app.NotificationManager::class.java).cancelAll()
+        h.waitUntil("the first alarm's next one noted") { LogReminderSet.decode(Settings.current().logReminders).armedFor == "2026-11-06 08:00" }
         Dates.clockSource = f.clockAt("07:59")
         h.setLogReminders(LogReminderSet().with(LogReminder(LogKind.MEASUREMENTS, true, "08:00", setOf(5))))
         Dates.clockSource = f.clockAt("08:00")
@@ -147,6 +148,7 @@ class LogReminderScheduleTest {
         h.settle()
         assertTrue(logTitles().isEmpty())
         // With "Stay quiet if already logged that day" off, it reminds anyway, in its general words.
+        h.waitUntil("the first alarm's next one noted") { LogReminderSet.decode(Settings.current().logReminders).armedFor == "2026-11-06 08:00" }
         Dates.clockSource = f.clockAt("07:59")
         h.setLogReminders(LogReminderSet().with(measure.copy(quiet = false)))
         Dates.clockSource = f.clockAt("08:00")
@@ -187,6 +189,7 @@ class LogReminderScheduleTest {
         assertEquals(str(R.string.lr_measure_text), lockScreen?.getCharSequence(Notification.EXTRA_TEXT)?.toString())
         // A photos reminder names nothing private, so it has no separate lock-screen version.
         h.app.getSystemService(NotificationManager::class.java).cancelAll()
+        h.waitUntil("the first alarm's next one noted") { LogReminderSet.decode(Settings.current().logReminders).armedFor == "2026-11-06 08:00" }
         Dates.clockSource = f.clockAt("07:59")
         h.setLogReminders(LogReminderSet().with(LogReminder(LogKind.PHOTOS, true, "08:00", setOf(5))))
         Dates.clockSource = f.clockAt("08:00")
