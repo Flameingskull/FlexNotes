@@ -147,6 +147,8 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
     var deleteDialog by state.saved("deleteDialog", false)
     // Export as image files (#195): what to export, then the folder; the ids wait here while the folder is picked.
     var exportSheet by state.saved("exportSheet", false)
+    // The progress photo reminder's schedule sheet (#332).
+    var reminderSheet by state.saved("reminderSheet", false)
     val exportIds = state.savedIds("exportIds")
     val ctx = LocalContext.current
     val pickExportFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
@@ -213,6 +215,7 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
                     }
                     if (snap.photos.isNotEmpty()) add(MenuAction(stringResource(R.string.ph_redate_menu)) { redatePhotos(res) })
                     if (snap.datedPhotos.isNotEmpty()) add(MenuAction(stringResource(R.string.ph_export_menu)) { exportSheet = true })
+                    add(MenuAction(stringResource(R.string.lr_photos)) { reminderSheet = true })
                     add(MenuAction(stringResource(R.string.ph_media_settings)) { nav.push(Screen.SettingsPage(SettingsSection.Media)) })
                 }
             )
@@ -411,6 +414,7 @@ fun PhotosScreen(snap: Snapshot, nav: Nav) {
         }
     }
     if (exportSheet) ExportPhotosSheet(snap.datedPhotos, onDismiss = { exportSheet = false }) { photos -> export(photos.map { it.id }) }
+    if (reminderSheet) ReminderScheduleSheet(com.fitlens.companion.data.LogKind.PHOTOS) { reminderSheet = false }
     PhotoExportProgressSheet()
     if (deleteDialog) ConfirmSheet(
         title = pluralStringResource(R.plurals.ph_delete_n, selected.size, selected.size),

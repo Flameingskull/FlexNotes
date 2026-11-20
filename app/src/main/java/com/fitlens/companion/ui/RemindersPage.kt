@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -54,15 +55,10 @@ internal fun RemindersPage() {
     val device by Settings.device.collectAsState()
     val prefs by Settings.portable.collectAsState()
     val notify = rememberNotificationAccess()
-    var exact by remember { mutableStateOf(ExactAlarms.canExact(ctx)) }
-    LifecycleResumeEffect(Unit) {
-        exact = ExactAlarms.canExact(ctx)
-        onPauseOrDispose { }
-    }
     val set = LogReminderSet.decode(device.logReminders)
     val why = stringResource(R.string.lr_notify_why)
-    var timeFor by remember { mutableStateOf<LogKind?>(null) }
-    var daysFor by remember { mutableStateOf<LogKind?>(null) }
+    // The reminder whose schedule sheet is open (#332), by its key, kept when the phone is turned.
+    var schedFor by rememberSaveable { mutableStateOf<String?>(null) }
 
     fun save(r: LogReminder) {
         Settings.updateDevice { it.copy(logReminders = LogReminderSet.decode(it.logReminders).with(r).encode()) }
@@ -76,82 +72,20 @@ internal fun RemindersPage() {
             if (on) notify.ask(why)
         }
         SettingsActionRow(
-            stringResource(R.string.lr_time),
-            value = Dates.time(ctx, r.time),
-            enabled = r.on,
-            disabledReason = stringResource(R.string.lr_needs_on),
-            sheetOpen = timeFor == r.kind
-        ) { timeFor = r.kind }
-        SettingsActionRow(
-            stringResource(R.string.lr_days),
-            value = daysText(ctx.resources, r.days, prefs.weekStart),
-            enabled = r.on,
-            disabledReason = stringResource(R.string.lr_needs_on),
-            warning = if (r.on && r.days.isEmpty()) stringResource(R.string.lr_no_days) else null,
-            sheetOpen = daysFor == r.kind
-        ) { daysFor = r.kind }
+            stringResource(R.string.lr_schedule),
+            value = scheduleText(ctx, r, prefs.weekStart),
+            warning = if (r.on && !r.schedulable) stringResource(R.string.lr_no_days) else null,
+            sheetOpen = schedFor == r.kind.key
+        ) { schedFor = r.kind.key }
     }
     val anyOn = set.all.any { it.on }
     NotificationsOffNote(notify, anyOn)
-    if (Build.VERSION.SDK_INT >= 31 && anyOn && !exact) {
-        SettingsActionRow(
-            stringResource(R.string.mr_exact),
-            stringResource(R.string.mr_exact_summary),
-            value = stringResource(R.string.mr_exact_not_allowed),
-            warning = stringResource(R.string.mr_exact_warning)
-        ) {
-            val intent = Intent(AndroidSettings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:" + ctx.packageName))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            try {
-                ctx.startActivity(intent)
-            } catch (e: ActivityNotFoundException) {
-                openAppSettings(ctx)
-            }
-        }
-    }
+    ExactAlarmNote(anyOn)
     SettingsNote(stringResource(R.string.lr_quiet_note))
     SettingsNote(stringResource(R.string.lr_local_note))
 
-    timeFor?.let { kind ->
-        val r = set.of(kind)
-        ClockDialog(
-            title = stringResource(switchTitle(kind)),
-            hour = r.localTime.hour, minute = r.localTime.minute,
-            onDismiss = { timeFor = null }
-        ) { picked ->
-            // ASCII digits whatever the language, so the stored `HH:mm` always reads back.
-            save(r.copy(time = String.format(Locale.ROOT, "%02d:%02d", picked.hour, picked.minute)))
-            timeFor = null
-        }
-    }
-    daysFor?.let { kind ->
-        val r = set.of(kind)
-        var days by remember(kind) { mutableStateOf(r.days) }
-        FitSheet(
-            title = stringResource(R.string.lr_days_title, stringResource(switchTitle(kind))),
-            onDismiss = { daysFor = null },
-            confirmLabel = stringResource(R.string.wk_set),
-            confirmEnabled = days.isNotEmpty(),
-            onConfirm = {
-                save(r.copy(days = days))
-                daysFor = null
-            }
-        ) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                MedSchedules.weekOrder(prefs.weekStart).forEach { d ->
-                    FitFilterChip(
-                        selected = d in days,
-                        onClick = { days = if (d in days) days - d else days + d },
-                        label = { Text(MedSchedules.weekdayShort(d)) }
-                    )
-                }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(Spacing.xs)) {
-                FitTextButton(onClick = { days = (1..7).toSet() }) { Text(stringResource(R.string.lr_every_day)) }
-                FitTextButton(onClick = { days = (1..5).toSet() }) { Text(stringResource(R.string.lr_weekdays)) }
-            }
-        }
-    }
+    schedFor?.let { kind -> ReminderScheduleSheet(kind) { schedFor = null } }
+}
 }
 
 private fun groupTitle(kind: LogKind): Int = when (kind) {
@@ -168,7 +102,7 @@ internal fun switchTitle(kind: LogKind): Int = when (kind) {
     LogKind.WORKOUT -> R.string.lr_workout
 }
 
-private fun switchSummary(kind: LogKind): Int = when (kind) {
+internal fun switchSummary(kind: LogKind): Int = when (kind) {
     LogKind.WEIGH_IN -> R.string.lr_weigh_summary
     LogKind.MEASUREMENTS -> R.string.lr_measure_summary
     LogKind.PHOTOS -> R.string.lr_photos_summary
@@ -187,5 +121,5 @@ internal fun daysText(res: Resources, days: Set<Int>, weekStart: Int): String = 
 /** The search entries' value for [kind]: "07:30 · Every day", or Off. */
 internal fun reminderValue(ctx: Context, res: Resources, set: LogReminderSet, kind: LogKind, weekStart: Int): String {
     val r = set.of(kind)
-    return if (!r.on) res.getString(R.string.settings_value_off) else "${Dates.time(ctx, r.time)} · ${daysText(res, r.days, weekStart)}"
+    return if (!r.on) res.getString(R.string.settings_value_off) else scheduleText(ctx, r, weekStart)
 }
