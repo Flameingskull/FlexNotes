@@ -1,0 +1,118 @@
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2090: Warning: The resource R.string.lr_schedule appears to be unused [UnusedResources]
+    <string name="lr_schedule">Schedule</string>
+            ~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2091: Warning: The resource R.string.lr_sched_on appears to be unused [UnusedResources]
+    <string name="lr_sched_on">Remind me</string>
+            ~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2092: Warning: The resource R.string.lr_save appears to be unused [UnusedResources]
+    <string name="lr_save">Save reminder</string>
+            ~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2093: Warning: The resource R.string.lr_repeat appears to be unused [UnusedResources]
+    <string name="lr_repeat">Repeats</string>
+            ~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2094: Warning: The resource R.string.lr_pat_weekdays appears to be unused [UnusedResources]
+    <string name="lr_pat_weekdays">On set days</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2095: Warning: The resource R.string.lr_pat_days appears to be unused [UnusedResources]
+    <string name="lr_pat_days">Every few days</string>
+            ~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2096: Warning: The resource R.string.lr_pat_weeks appears to be unused [UnusedResources]
+    <string name="lr_pat_weeks">Every few weeks</string>
+            ~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2097: Warning: The resource R.string.lr_pat_month appears to be unused [UnusedResources]
+    <string name="lr_pat_month">Monthly</string>
+            ~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2098: Warning: The resource R.string.lr_every_days_label appears to be unused [UnusedResources]
+    <string name="lr_every_days_label">Every how many days</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2099: Warning: The resource R.string.lr_every_weeks_label appears to be unused [UnusedResources]
+    <string name="lr_every_weeks_label">Every how many weeks</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2100: Warning: The resource R.string.lr_month_day_label appears to be unused [UnusedResources]
+    <string name="lr_month_day_label">Day of the month</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2101: Warning: The resource R.string.lr_month_short_note appears to be unused [UnusedResources]
+    <string name="lr_month_short_note">In a shorter month it comes on the month\'s last day.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2102: Warning: The resource R.string.lr_start appears to be unused [UnusedResources]
+    <string name="lr_start">Starting</string>
+            ~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2103: Warning: The resource R.string.lr_quiet appears to be unused [UnusedResources]
+    <string name="lr_quiet">Stay quiet if already logged that day</string>
+            ~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2104: Warning: The resource R.string.lr_quiet_weigh appears to be unused [UnusedResources]
+    <string name="lr_quiet_weigh">Not on a day that already has a weight</string>
+            ~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2105: Warning: The resource R.string.lr_quiet_measure appears to be unused [UnusedResources]
+    <string name="lr_quiet_measure">Not on a day when you\'ve logged every measurement picked above</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2106: Warning: The resource R.string.lr_quiet_photos appears to be unused [UnusedResources]
+    <string name="lr_quiet_photos">Not on a day that already has a progress photo</string>
+            ~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2107: Warning: The resource R.string.lr_quiet_workout appears to be unused [UnusedResources]
+    <string name="lr_quiet_workout">Not on a day that already has a logged workout</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2108: Warning: The resource R.string.lr_measures_label appears to be unused [UnusedResources]
+    <string name="lr_measures_label">Measurements</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2109: Warning: The resource R.string.lr_measures_picked appears to be unused [UnusedResources]
+    <string name="lr_measures_picked">Reminds you to log: %1$s</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2110: Warning: The resource R.string.lr_measures_none appears to be unused [UnusedResources]
+    <string name="lr_measures_none">None picked: it reminds you to take your measurements on each day it\'s due.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2111: Warning: The resource R.string.lr_measures_no_choices appears to be unused [UnusedResources]
+    <string name="lr_measures_no_choices">No body measurements to pick yet: add one on the Body tracker.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2112: Warning: The resource R.string.lr_quiet_measure_none appears to be unused [UnusedResources]
+    <string name="lr_quiet_measure_none">Pick the measurements above first: only they count.</string>
+            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2113: Warning: The resource R.string.lr_next appears to be unused [UnusedResources]
+    <string name="lr_next">Next: %1$s</string>
+            ~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2114: Warning: The resource R.string.lr_next_none appears to be unused [UnusedResources]
+    <string name="lr_next_none">No date in the coming year fits this schedule.</string>
+            ~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2115: Warning: The resource R.string.lr_sum_month appears to be unused [UnusedResources]
+    <string name="lr_sum_month">Monthly, day %1$d</string>
+            ~~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2116: Warning: The resource R.plurals.lr_sum_days appears to be unused [UnusedResources]
+    <plurals name="lr_sum_days">
+             ~~~~~~~~~~~~~~~~~~
+/home/runner/work/FlexNotes/FlexNotes/app/src/main/res/values/strings.xml:2120: Warning: The resource R.plurals.lr_sum_weeks appears to be unused [UnusedResources]
+    <plurals name="lr_sum_weeks">
+             ~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UnusedResources":
+   Unused resources make applications larger and slow down builds.
+
+
+   The unused resource check can ignore tests. If you want to include
+   resources that are only referenced from tests, consider packaging them in a
+   test source set instead.
+
+   You can include test sources in the unused resource check by setting the
+   system property lint.unused-resources.include-tests=true, and to exclude
+   them (usually for performance reasons), use
+   lint.unused-resources.exclude-tests=true.
+
+   Available options:
+
+   **skip-libraries** (default is true):
+   Whether the unused resource check should skip reporting unused resources in libraries.
+
+   Many libraries will declare resources that are part of the library surface; other modules depending on the library will also reference the resources. To avoid reporting all these resources as unused (in the context of a library), the unused resource check normally skips reporting unused resources in libraries. Instead, run the unused resource check on the consuming app module (along with `checkDependencies=true`).
+
+   However, there are cases where you want to check that all the resources declared in a library are used; in that case, you can disable the skip option.
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="UnusedResources">
+           <option name="skip-libraries" value="true" />
+       </issue>
+   </lint>
+   ```
+
+0 errors, 28 warnings
