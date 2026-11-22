@@ -128,6 +128,8 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     var reporting by rememberSaveable { mutableStateOf(false) }
     var ratingSymptoms by rememberSaveable { mutableStateOf(false) }
     var emergencyCard by rememberSaveable { mutableStateOf(false) }
+    // The logging reminder whose schedule sheet is open (#332), by its key.
+    var reminderFor by rememberSaveable { mutableStateOf<String?>(null) }
     // Medications has five tabs (#227): Today, Schedules, Medications, History, Graph. It opens on Today when a dose is
     // due today (so a reminder's tap lands there), otherwise on the medication list.
     val listPage = if (medications) MED_LIST_PAGE else 0
@@ -167,7 +169,11 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
                     MenuAction(stringResource(R.string.ec_title)) { emergencyCard = true },
                     MenuAction(stringResource(R.string.settings_page_meds)) { nav.push(Screen.SettingsPage(SettingsSection.Medications)) }
                 )
-                else -> listOf(MenuAction(stringResource(R.string.tdee_title)) { nav.push(Screen.Tdee) })
+                else -> listOf(
+                    MenuAction(stringResource(R.string.tdee_title)) { nav.push(Screen.Tdee) },
+                    MenuAction(stringResource(R.string.lr_weigh)) { reminderFor = com.fitlens.companion.data.LogKind.WEIGH_IN.key },
+                    MenuAction(stringResource(R.string.lr_measure)) { reminderFor = com.fitlens.companion.data.LogKind.MEASUREMENTS.key }
+                )
             },
             trailing = {
                 if (!editing && measurements.size > 1 && pager.currentPage == listPage) ReorderToggle(reordering) { reordering = it }
@@ -256,6 +262,7 @@ internal fun BodyTracker(snap: Snapshot, nav: Nav, startEditing: Boolean, medica
     // Back leaves edit mode first.
     androidx.activity.compose.BackHandler(enabled = editing) { editing = false }
     if (adding) MeasurementEntrySheet(snap, Dates.today()) { adding = false }
+    reminderFor?.let { com.fitlens.companion.data.LogKind.of(it) }?.let { kind -> ReminderScheduleSheet(kind, snap) { reminderFor = null } }
     if (reporting) MedicationReportSheet(snap, onDismiss = { reporting = false })
     if (emergencyCard) EmergencyCardSheet(snap, onDismiss = { emergencyCard = false })
     if (ratingSymptoms) SymptomSheet(snap, Dates.today()) { ratingSymptoms = false }

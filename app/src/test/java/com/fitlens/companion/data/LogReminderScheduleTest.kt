@@ -239,5 +239,21 @@ class LogReminderScheduleTest {
         h.settle()
         assertTrue(logTitles().isEmpty())
     }
+    @Test
+    fun aSecondTryStillNotesTheNextAlarmAfterOneFailedSave() {
+        h.setLogReminders(LogReminderSet().with(LogReminder(LogKind.PHOTOS, true, "08:00", setOf(5))))
+        // The next save fails once, as a passing storage hiccup would; the one after it works.
+        Settings.deviceWriteFaultsLeft = 1
+        Dates.clockSource = f.clockAt("08:00")
+        h.fire(h.logAlarm(key)) { h.alarms().any { it.receiver == "LogAlarmReceiver" && it.key == "2026-11-06 08:00" } }
+        h.settle()
+        assertEquals(listOf(str(R.string.lr_photos_title)), logTitles())
+        // The failure was used up, so the first save did fail.
+        assertEquals(0, Settings.deviceWriteFaultsLeft)
+        // Read the settings back from the phone's storage, as after a restart: the second try saved next Friday's time.
+        Settings.init(h.app)
+        runBlocking { Settings.awaitLoaded() }
+        assertEquals("2026-11-06 08:00", LogReminderSet.decode(Settings.current().logReminders).armedFor)
+    }
     // END OF TESTS
 }

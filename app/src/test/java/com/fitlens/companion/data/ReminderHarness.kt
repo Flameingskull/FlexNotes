@@ -260,6 +260,7 @@ class ReminderHarness private constructor(val app: Application) {
         MedReminders.resetForTests()
         LogReminders.resetForTests()
         Settings.deviceWriteFault = null
+        Settings.deviceWriteFaultsLeft = 0
         Dates.clockSource = LiveClock
         runCatching { Store.db.close() }
         app.deleteDatabase(Db.NAME)

@@ -2075,7 +2075,7 @@
     <string name="lr_every_day">Every day</string>
     <string name="lr_weekdays">Weekdays</string>
     <string name="lr_weekends">Weekends</string>
-    <string name="lr_quiet_note">A reminder stays quiet when that day already has a weight, a progress photo or a logged workout. Medication reminders are under Settings › Medications.</string>
+    <string name="lr_quiet_note">Each reminder can stay quiet on a day that already has what it\'s for: you choose in its schedule. Medication reminders are under Settings › Medications.</string>
     <string name="lr_local_note">Reminders are set on this phone. Nothing leaves it.</string>
     <string name="lr_weigh_title">Time to weigh in</string>
     <string name="lr_weigh_text">Log today\'s weight while it\'s fresh.</string>
