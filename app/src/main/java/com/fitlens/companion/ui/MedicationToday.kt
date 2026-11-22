@@ -337,6 +337,8 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
         InjectionSites.suggest(snap.medicationView.records, due.dose.medication)
     }
     var site by rememberSaveable(taken?.id) { mutableStateOf(if (taken != null) InjectionSite.of(taken.site) else suggested) }
+    // A site picked before Taken keeps the sheet open on a tap outside, a drag or Back (#384). Once taken, a pick saves at once.
+    val unsaved = taken == null && injected && site != suggested
     if (changing) {
         DoseChangeSheet(snap, due, onDismiss)
         return
@@ -345,6 +347,7 @@ internal fun DueDoseSheet(snap: Snapshot, due: DueDose, onDismiss: () -> Unit, e
         title = doseLine(due),
         onDismiss = onDismiss,
         dismissLabel = stringResource(R.string.cancel),
+        dirty = unsaved,
         confirmLabel = stringResource(if (taken != null) R.string.md_untake else R.string.md_take),
         onConfirm = {
             if (taken != null) AppScope.scope.launch { MedSchedules.untake(due) } else takeDose(res, due, if (injected) site else null)

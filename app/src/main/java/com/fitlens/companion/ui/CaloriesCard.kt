@@ -18,6 +18,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import com.fitlens.companion.ui.design.rememberDirty
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -216,7 +219,21 @@ internal fun CaloriesSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: ()
     // The fields edit what the user logged; while Health Connect's totals count for the day (#186) they're shown apart.
     val origin = rememberIntakeOrigin(snap, date, prefs.hcIntake)
     val own = remember(snap.bodyKey, date) { Intake.ownTotals(snap, date) }
-    val typed = remember(date) {
+    // What's typed survives the phone turning (#381): kept as a marker, then each kind's name and its text.
+    val typed = rememberSaveable(
+        date,
+        saver = listSaver<SnapshotStateMap<Intake.Kind, String>, String>(
+            save = { map -> listOf("typed") + map.entries.flatMap { listOf(it.key.name, it.value) } },
+            restore = { list ->
+                mutableStateMapOf<Intake.Kind, String>().apply {
+                    for (i in 1 until list.size - 1 step 2) {
+                        val kind = Intake.Kind.entries.firstOrNull { it.name == list[i] }
+                        if (kind != null) put(kind, list[i + 1])
+                    }
+                }
+            }
+        )
+    ) {
         mutableStateMapOf<Intake.Kind, String>().apply { (if (origin != null) own else totals).forEach { (k, v) -> put(k, fmtNum(v, 1)) } }
     }
     val valid = Intake.Kind.entries.all { k -> typed[k].isNullOrBlank() || intakeValue(typed[k].orEmpty()) != null }

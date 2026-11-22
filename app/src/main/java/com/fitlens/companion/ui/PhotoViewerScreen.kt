@@ -232,7 +232,7 @@ fun PhotoViewerScreen(snap: Snapshot, nav: Nav, ids: List<Long>, index: Int) {
     }
     if (editNote) {
         val saved = current.note?.trim().orEmpty()
-        var text by remember(current.id) { mutableStateOf(saved) }
+        var text by rememberSaveable(current.id) { mutableStateOf(saved) }
         val unsaved = rememberDirty(text.trim())
         FitSheet(
             title = stringResource(R.string.pv_comment_title),

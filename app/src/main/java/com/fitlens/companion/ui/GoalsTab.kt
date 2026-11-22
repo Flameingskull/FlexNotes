@@ -27,6 +27,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.contentDescription
@@ -94,7 +96,7 @@ fun GoalsTab(
     val res = LocalContext.current.resources
     val goals = snap.goalsByExercise[exId].orEmpty()
     val sets = snap.statSetsByExercise[exId].orEmpty()
-    var editing by remember { mutableStateOf<ExerciseGoal?>(null) }
+    var editing by rememberSaveable(stateSaver = GoalSaver) { mutableStateOf<ExerciseGoal?>(null) }
     var deleting by remember { mutableStateOf<ExerciseGoal?>(null) }
 
     fun newGoal() = ExerciseGoal(0, exId, if (timeBased) GoalKinds.LONGEST_SET else GoalKinds.MAX_WEIGHT, 0.0, 0)
@@ -182,14 +184,23 @@ internal fun goalText(res: Resources, snap: Snapshot, g: ExerciseGoal, p: GoalPr
     return res.getString(R.string.an_label_value, goalKindText(res, g.kind), target) to status
 }
 
+/**
+ * Keeps the goal an open goal editor shows across a phone turn (#381): its five fields, or nothing when no editor is
+ * open. Used by [GoalsTab] and Analysis → Goals.
+ */
+internal val GoalSaver = listSaver<ExerciseGoal?, Any>(
+    save = { g -> if (g == null) emptyList() else listOf(g.id, g.exerciseId, g.kind, g.target, g.sortOrder) },
+    restore = { l -> if (l.isEmpty()) null else ExerciseGoal(l[0] as Long, l[1] as Long, l[2] as Int, l[3] as Double, l[4] as Int) }
+)
+
 /** The goal editor (#25): its kind and target. Also opened from Analysis → Goals (#90). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun GoalEditor(snap: Snapshot, goal: ExerciseGoal, timeBased: Boolean, onDismiss: () -> Unit) {
     val res = LocalContext.current.resources
     val kinds = if (timeBased) GoalKinds.timed else GoalKinds.strength
-    var kind by remember { mutableIntStateOf(goal.kind) }
-    var text by remember {
+    var kind by rememberSaveable { mutableIntStateOf(goal.kind) }
+    var text by rememberSaveable {
         mutableStateOf(if (goal.target > 0) fmtNum(goalShown(snap, goal.kind, goal.target, goal.exerciseId), 2) else "")
     }
     val unsaved = rememberDirty(kind, text.trim())

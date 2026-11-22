@@ -190,8 +190,8 @@ fun OneRepMaxSheet(snap: Snapshot, start: SetRow?, onDismiss: () -> Unit) {
     // The exercise's own step, then the global one when the units agree, as on the Track tab.
     val globalStepKg = Settings.currentPortable().weightIncrementKg?.takeIf { snap.weightUnitOf(exId) == snap.weightUnit }
     val step = (ex?.weightStepKg ?: globalStepKg)?.let { snap.weight(it, exId) } ?: 2.5
-    var weight by remember { mutableStateOf(start?.weightKg?.takeIf { it > 0 }?.let { fmtNum(snap.weight(it, exId), 2) } ?: "") }
-    var reps by remember { mutableStateOf(start?.reps?.takeIf { it > 0 }?.toString() ?: "5") }
+    var weight by rememberSaveable { mutableStateOf(start?.weightKg?.takeIf { it > 0 }?.let { fmtNum(snap.weight(it, exId), 2) } ?: "") }
+    var reps by rememberSaveable { mutableStateOf(start?.reps?.takeIf { it > 0 }?.toString() ?: "5") }
     val kg = snap.toKg(weight.trim().replace(',', '.').toDoubleOrNull() ?: 0.0, exId)
     val r = reps.trim().toIntOrNull() ?: 0
     val oneRm = Records.oneRepMax(kg, r)
@@ -274,7 +274,7 @@ private fun RepMaxLine(reps: Int, weight: String, unit: String, percent: Double)
 fun EstimatedOneRmSettingsSheet(onDismiss: () -> Unit) {
     val formula = Records.chosen()
     val current = Settings.currentPortable().e1rmMaxReps
-    var reps by remember { mutableStateOf(if (current > 0) current.toString() else "") }
+    var reps by rememberSaveable { mutableStateOf(if (current > 0) current.toString() else "") }
     val typed = reps.trim().toIntOrNull()
     val valid = reps.isBlank() || (typed != null && typed in 1..formula.maxReps)
     fun save(value: Int) {

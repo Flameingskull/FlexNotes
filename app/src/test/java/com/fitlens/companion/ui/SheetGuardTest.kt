@@ -21,6 +21,11 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import com.fitlens.companion.ui.design.GlassOutlinedButton
 import com.fitlens.companion.R
+import com.fitlens.companion.data.Dates
+import com.fitlens.companion.data.InjectionSite
+import com.fitlens.companion.data.InjectionSites
+import com.fitlens.companion.data.MedSchedules
+import com.fitlens.companion.data.siteName
 import com.fitlens.companion.ui.design.FitSheet
 import com.fitlens.companion.ui.design.rememberDirty
 import com.fitlens.companion.ui.design.sheetMayClose
@@ -237,4 +242,88 @@ class SheetGuardTest : FunctionTest() {
         assertShows(GUARD_TITLE)
         assertNotShows(GUARD_CLOSED)
     }
+
+    @Test
+    fun copyWorkoutKeepsAnUntickedExerciseOnATapOutside() {
+        openScreen(LongHistoryFixture.snapshot()) { snap ->
+            SiteHost { close -> CopyOrMoveWorkoutSheet(snap, LongHistoryFixture.END, move = false, onDismiss = close) }
+        }
+        tap(LongHistoryFixture.BENCH)
+        tapOutside()
+        assertShows(app.getString(R.string.wk_copy_title))
+        assertNotShows(GUARD_CLOSED)
+    }
+
+    @Test
+    fun copyWorkoutClosesOnATapOutsideWhenNothingChanged() {
+        openScreen(LongHistoryFixture.snapshot()) { snap ->
+            SiteHost { close -> CopyOrMoveWorkoutSheet(snap, LongHistoryFixture.END, move = false, onDismiss = close) }
+        }
+        assertShows(app.getString(R.string.wk_copy_title))
+        tapOutside()
+        assertShows(GUARD_CLOSED)
+    }
+
+    @Test
+    fun copyPreviousWorkoutKeepsAPickedWorkoutOnATapOutside() {
+        val fixture = LongHistoryFixture.snapshot()
+        val previous = fixture.setsByDate.keys.filter { it < LongHistoryFixture.END }.max()
+        openScreen(fixture) { snap ->
+            SiteHost { close -> CopyPreviousWorkoutSheet(snap, LongHistoryFixture.END, close) }
+        }
+        tap(Dates.day(previous))
+        assertShows(app.getString(R.string.wk_what_to_copy))
+        tapOutside()
+        assertShows(app.getString(R.string.wk_what_to_copy))
+        assertNotShows(GUARD_CLOSED)
+    }
+
+    @Test
+    fun shareWorkoutKeepsAnUntickedExerciseOnATapOutside() {
+        openScreen(LongHistoryFixture.snapshot()) { snap ->
+            SiteHost { close -> ShareWorkoutSheet(snap, LongHistoryFixture.END, close) }
+        }
+        tap(LongHistoryFixture.BENCH)
+        tapOutside()
+        assertShows(app.getString(R.string.wk_share_title))
+        assertNotShows(GUARD_CLOSED)
+    }
+
+    @Test
+    fun shareWorkoutKeepsAChangedOptionOnATapOutside() {
+        openScreen(LongHistoryFixture.snapshot()) { snap ->
+            SiteHost { close -> ShareWorkoutSheet(snap, LongHistoryFixture.END, close) }
+        }
+        tap(app.getString(R.string.wk_options))
+        tap(app.getString(R.string.wk_image))
+        tap(app.getString(R.string.ex_done))
+        tapOutside()
+        assertShows(app.getString(R.string.wk_share_title))
+        assertNotShows(GUARD_CLOSED)
+    }
+
+    @Test
+    fun aDueDoseKeepsAPickedSiteOnATapOutside() {
+        val med = LongHistoryFixture.snapshot().medicationView
+        val due = MedSchedules.dueOn(med.medPlan, LongHistoryFixture.END).first { it.dose.medication == LongHistoryFixture.SEMAGLUTIDE }
+        val suggested = InjectionSites.suggest(med.records, LongHistoryFixture.SEMAGLUTIDE)
+        val other = InjectionSite.entries.first { it != suggested }
+        openScreen(med) { snap -> SiteHost { close -> DueDoseSheet(snap, due, close) } }
+        tap(siteName(app.resources, other), substring = true)
+        tapOutside()
+        assertShows(app.getString(R.string.md_change_amount))
+        assertNotShows(GUARD_CLOSED)
+    }
+
+    @Test
+    fun aDueDoseClosesOnATapOutsideWhenTheSuggestedSiteIsKept() {
+        val med = LongHistoryFixture.snapshot().medicationView
+        val due = MedSchedules.dueOn(med.medPlan, LongHistoryFixture.END).first { it.dose.medication == LongHistoryFixture.SEMAGLUTIDE }
+        openScreen(med) { snap -> SiteHost { close -> DueDoseSheet(snap, due, close) } }
+        assertShows(app.getString(R.string.md_change_amount))
+        tapOutside()
+        assertShows(GUARD_CLOSED)
+    }
+
+    // END OF TESTS
 }

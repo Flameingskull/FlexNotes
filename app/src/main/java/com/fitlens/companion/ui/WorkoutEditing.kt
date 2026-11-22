@@ -27,6 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -184,7 +185,7 @@ private fun ChecklistHeading(title: String, state: ToggleableState, bold: Boolea
 @Composable
 fun WorkoutCommentSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
     val existing = remember(snap.notesKey, date) { snap.workoutComments[date]?.joinToString("\n\n").orEmpty() }
-    var text by remember(date) { mutableStateOf(existing) }
+    var text by rememberSaveable(date) { mutableStateOf(existing) }
     val unsaved = rememberDirty(text.trim())
     val res = LocalContext.current.resources
 
@@ -292,10 +293,10 @@ private fun deleteWithUndo(res: Resources, date: String, sets: List<SetRow>, com
  */
 @Composable
 fun CopyOrMoveWorkoutSheet(snap: Snapshot, date: String, move: Boolean, onDismiss: () -> Unit) {
-    var target by remember { mutableStateOf<String?>(null) }
-    var picking by remember { mutableStateOf(false) }
+    var target by rememberSaveable { mutableStateOf<String?>(null) }
+    var picking by rememberSaveable { mutableStateOf(false) }
     val exercises = remember(snap.setsKey, date) { snap.setsByDate[date].orEmpty().map { it.exerciseId }.distinct() }
-    var checked by remember(date) { mutableStateOf(exercises.toSet()) }
+    var checked by rememberSaveable(date) { mutableStateOf(exercises.toSet()) }
     val ids = snap.setsByDate[date].orEmpty().filter { move || it.exerciseId in checked }.map { it.id }
     val chosen = target
     val res = LocalContext.current.resources
@@ -362,17 +363,17 @@ fun CopyOrMoveWorkoutSheet(snap: Snapshot, date: String, move: Boolean, onDismis
  */
 @Composable
 fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
-    var source by remember { mutableStateOf<String?>(null) }
+    var source by rememberSaveable { mutableStateOf<String?>(null) }
     // Earlier workouts first, newest of them at the top, then any later ones; older days are reached by date (#281).
     val days = remember(snap.setsKey, date) {
         val others = snap.setsByDate.keys.filter { it != date }
         (others.filter { it < date }.sortedDescending() + others.filter { it > date }.sorted()).take(60)
     }
-    var pickingDate by remember { mutableStateOf(false) }
+    var pickingDate by rememberSaveable { mutableStateOf(false) }
     val sourceExercises = remember(source, snap.setsKey) {
         source?.let { d -> snap.setsByDate[d].orEmpty().map { it.exerciseId }.distinct() }.orEmpty()
     }
-    var checked by remember(source) { mutableStateOf(sourceExercises.toSet()) }
+    var checked by rememberSaveable(source) { mutableStateOf(sourceExercises.toSet()) }
     val from = source
     val ids = from?.let { d -> snap.setsByDate[d].orEmpty().filter { it.exerciseId in checked }.map { it.id } }.orEmpty()
     val res = LocalContext.current.resources
