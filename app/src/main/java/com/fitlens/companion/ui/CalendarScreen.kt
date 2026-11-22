@@ -98,9 +98,9 @@ fun CalendarScreen(snap: Snapshot, nav: Nav) {
     val device by Settings.device.collectAsState()
     val filter = remember(device.calendarFilter) { CalendarFilter.decode(device.calendarFilter) }
     val matches = rememberDerived("calendarFilter", snap.trainingKey, filter) { filter.days(snap) }.orEmpty()
-    var filtering by remember { mutableStateOf(false) }
-    var overview by remember { mutableStateOf<Long?>(null) }
-    var sharing by remember { mutableStateOf(false) }
+    var filtering by rememberSaveable { mutableStateOf(false) }
+    var overview by rememberSaveable { mutableStateOf<Long?>(null) }
+    var sharing by rememberSaveable { mutableStateOf(false) }
     // The doses taken (#282): left out while the medication lock hides them, so a dot never gives them away.
     // The user chooses (#294) what the calendar shows of them while Medications is locked: nothing, only how many, or all.
     val locked = medicationsHidden()

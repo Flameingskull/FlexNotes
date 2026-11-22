@@ -137,6 +137,7 @@ ui/HealthConnectPage.kt
 ui/ImportActions.kt
 ui/NotificationAccess.kt
 ui/ProfilePage.kt
+ui/ReminderScheduleSheet.kt
 ui/RemindersPage.kt
 ui/SettingsScreen.kt
 ui/SetupScreen.kt

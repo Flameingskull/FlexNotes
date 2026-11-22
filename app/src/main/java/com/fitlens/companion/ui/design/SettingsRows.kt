@@ -38,6 +38,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -340,7 +341,7 @@ fun SettingsNumberRow(
     onChange: (Int) -> Unit
 ) {
     val shown = format(value)
-    var typing by remember { mutableStateOf(false) }
+    var typing by rememberSaveable { mutableStateOf(false) }
     Row(
         Modifier
             .fillMaxWidth()
@@ -383,7 +384,7 @@ fun SettingsNumberRow(
 /** Typing a [SettingsNumberRow]'s value: a number field that only saves a whole number within [range]. */
 @Composable
 private fun NumberEntrySheet(title: String, value: Int, range: IntRange, onDismiss: () -> Unit, onSave: (Int) -> Unit) {
-    var text by remember { mutableStateOf(value.toString()) }
+    var text by rememberSaveable { mutableStateOf(value.toString()) }
     val unsaved = rememberDirty(text.trim())
     val typed = text.trim().toIntOrNull()
     val valid = typed != null && typed in range

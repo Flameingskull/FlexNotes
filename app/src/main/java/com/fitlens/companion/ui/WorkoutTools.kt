@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -116,9 +117,9 @@ fun rememberElapsed(start: String): Long {
 fun WorkoutTimeSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
     val times = snap.workoutTimes[date].orEmpty()
     val first = times.firstOrNull()
-    var start by remember { mutableStateOf(first?.start?.takeIf { it.isNotBlank() }) }
-    var end by remember { mutableStateOf(first?.end?.takeIf { it.isNotBlank() }) }
-    var picking by remember { mutableStateOf<Boolean?>(null) } // true: start, false: end
+    var start by rememberSaveable { mutableStateOf(first?.start?.takeIf { it.isNotBlank() }) }
+    var end by rememberSaveable { mutableStateOf(first?.end?.takeIf { it.isNotBlank() }) }
+    var picking by rememberSaveable { mutableStateOf<Boolean?>(null) } // true: start, false: end
     val unsaved = rememberDirty(start, end)
     val isToday = date == Dates.today()
     val s = start
@@ -245,15 +246,15 @@ fun ShareWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
     val sets = snap.setsByDate[date].orEmpty()
     val exercises = remember(sets) { sets.groupBy { it.exerciseId }.entries.sortedBy { e -> e.value.minOf { it.position } }.map { it.key } }
     // Set-level selection (#11): ticking an exercise ticks all of its sets.
-    var ticked by remember(date) { mutableStateOf(sets.map { it.id }.toSet()) }
-    var asImage by remember { mutableStateOf(false) }
-    var withDate by remember { mutableStateOf(true) }
-    var withDuration by remember { mutableStateOf(true) }
-    var withComment by remember { mutableStateOf(true) }
-    var withPrs by remember { mutableStateOf(true) }
+    var ticked by rememberSaveable(date) { mutableStateOf(sets.map { it.id }.toSet()) }
+    var asImage by rememberSaveable { mutableStateOf(false) }
+    var withDate by rememberSaveable { mutableStateOf(true) }
+    var withDuration by rememberSaveable { mutableStateOf(true) }
+    var withComment by rememberSaveable { mutableStateOf(true) }
+    var withPrs by rememberSaveable { mutableStateOf(true) }
     // The day's progress photos; none goes on the image unless one is picked (#11).
     val photos = snap.photosByDate[date].orEmpty()
-    var photoIdx by remember(date) { mutableIntStateOf(-1) }
+    var photoIdx by rememberSaveable(date) { mutableIntStateOf(-1) }
 
     fun setsOf(exId: Long) = sets.filter { it.exerciseId == exId }
     val chosen = exercises.filter { exId -> setsOf(exId).any { it.id in ticked } }
@@ -305,9 +306,12 @@ fun ShareWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit) {
     // FitNotes's Share Workout (#148): the set checklist, then Cancel, Options and Share. FlexNotes's extras (text or
     // image, what to include, a progress photo) live behind Options.
     var options by remember { mutableStateOf(false) }
+    // Changed ticks or options keep the sheet open on a tap outside, a drag or Back (#384).
+    val unsaved = rememberDirty(ticked.sorted(), asImage, withDate, withDuration, withComment, withPrs, photoIdx)
     FitSheet(
         title = stringResource(R.string.wk_share_title),
         onDismiss = onDismiss,
+        dirty = unsaved,
         confirmLabel = stringResource(R.string.wk_share),
         confirmEnabled = ticked.isNotEmpty(),
         secondaryLabel = stringResource(R.string.wk_options),

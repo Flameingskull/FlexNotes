@@ -341,7 +341,7 @@ private fun mainRows(snap: Snapshot, nav: Nav): List<MainRow> {
     val askNotify = rememberNotificationAccess()
     var confirmRecalc by remember { mutableStateOf(false) }
     var whatsNew by remember { mutableStateOf(false) }
-    var e1rmLimit by remember { mutableStateOf(false) }
+    var e1rmLimit by rememberSaveable { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
     fun open(section: SettingsSection) = nav.push(Screen.SettingsPage(section))
     fun browse(url: String) = openInBrowser(ctx, url)

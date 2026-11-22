@@ -9,7 +9,7 @@
 > `docs/plans/archive/`; `docs/process/tracker.md` and `plans.md`; agent notes pruned, with `coder-orders.md`.
 > Short of target: `CLAUDE.md` is 27KB, not about 20KB (what's left is rules and owner decisions, which stay);
 > `feature-manager` notes are 175 lines, not about 150.
-> Live test, `/safe-build` 1.0.205 (2026-11-15 to 11-20, awaiting CI): it ran on the new workflow through five usage
+> Live test, `/safe-build` 1.0.205 (2026-11-15 to 11-20, released green): it ran on the new workflow through five usage
 > limits; the owner added `/continue` for those. Fixed on the way: `run-orders.ps1`'s checklist check. Seen: the coder
 > often omits its REPORT block (the queue stops on a correct order), and agents' file writes in the gate are refused.
 > Left (step 6): a `/slice-build` live test; `build-usage.py` compared with the table below; the owner's plugin step.

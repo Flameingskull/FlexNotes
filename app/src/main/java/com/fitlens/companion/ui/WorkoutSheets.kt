@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -380,14 +381,14 @@ private fun ReviewWorkoutSheet(
 fun SaveAsWorkoutSheet(snap: Snapshot, nav: Nav, date: String, onDismiss: () -> Unit) {
     val weekday = weekdayOf(date)
     val res = LocalContext.current.resources
-    var ticked by remember(date) { mutableStateOf(snap.setsByDate[date].orEmpty().map { it.id }.toSet()) }
+    var ticked by rememberSaveable(date) { mutableStateOf(snap.setsByDate[date].orEmpty().map { it.id }.toSet()) }
     val exercises = remember(snap.trainingKey, date, ticked) { Routines.fromDate(snap, date, Routines.FILL_PLANNED, ticked) }
-    var fill by remember { mutableStateOf(Routines.FILL_PLANNED) }
+    var fill by rememberSaveable { mutableStateOf(Routines.FILL_PLANNED) }
     // 0 saves a new workout; otherwise the workout the day joins, as a new day (dayId 0) or in place of a day.
-    var routineId by remember { mutableStateOf(0L) }
-    var dayId by remember { mutableStateOf(0L) }
-    var name by remember { mutableStateOf(res.getString(R.string.wk_default_name, weekday)) }
-    var dayName by remember { mutableStateOf(weekday) }
+    var routineId by rememberSaveable { mutableStateOf(0L) }
+    var dayId by rememberSaveable { mutableStateOf(0L) }
+    var name by rememberSaveable { mutableStateOf(res.getString(R.string.wk_default_name, weekday)) }
+    var dayName by rememberSaveable { mutableStateOf(weekday) }
     val unsaved = rememberDirty(ticked.sorted(), fill, routineId, dayId, name.trim(), dayName.trim())
     val target = snap.routinesById[routineId]
 

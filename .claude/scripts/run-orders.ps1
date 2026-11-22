@@ -189,7 +189,14 @@ try {
             # A line refuses when its box is unticked or its answer is "no". The answer is what follows the line's last
             # colon, with any (...) aside removed first, so "has no X left: yes (no such functions found)" is a yes.
             # A line with no colon refuses only when it starts or ends with "no".
-            $refused = @($checklist -split "`n" | Where-Object {
+            # A wrapped item's continuation lines join the item first, so a ticked box's second line ("...: no line
+            # contains X") isn't judged on its own (1.0.206, 381-26-fix1).
+            $items = @()
+            foreach ($raw in ($checklist -split "`n")) {
+                if ($raw -match '^\s*(-|\*|\[|\d+\.)' -or $items.Count -eq 0) { $items += $raw }
+                elseif ($raw.Trim()) { $items[-1] = $items[-1].TrimEnd() + ' ' + $raw.Trim() }
+            }
+            $refused = @($items | Where-Object {
                 $line = $_ -replace '\([^)]*\)', ''
                 if ($line -match '^\s*-?\s*\[ \]') { $true }
                 elseif ($line -match '^\s*-?\s*\[[xX]\]') { $false }   # a ticked box is a yes, whatever its words say

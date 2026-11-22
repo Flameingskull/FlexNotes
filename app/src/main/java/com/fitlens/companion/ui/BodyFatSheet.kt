@@ -15,6 +15,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.snapshots.SnapshotStateMap
 import android.content.res.Resources
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -45,7 +48,19 @@ fun BodyFatCalculatorSheet(snap: Snapshot, date: String, onDismiss: () -> Unit, 
     val prefs by Settings.portable.collectAsState()
     val res = LocalContext.current.resources
     val sex = BodyFat.Sex.of(prefs.profileSex)
-    val typed = remember { mutableStateMapOf<BodyFat.Input, String>() }
+    val typed = rememberSaveable(
+        saver = listSaver<SnapshotStateMap<BodyFat.Input, String>, String>(
+            save = { map -> listOf("typed") + map.entries.flatMap { listOf(it.key.name, it.value) } },
+            restore = { list ->
+                mutableStateMapOf<BodyFat.Input, String>().apply {
+                    for (i in 1 until list.size - 1 step 2) {
+                        val input = BodyFat.Input.entries.firstOrNull { it.name == list[i] }
+                        if (input != null) put(input, list[i + 1])
+                    }
+                }
+            }
+        )
+    ) { mutableStateMapOf<BodyFat.Input, String>() }
     val day = Dates.epochDay(date)
     // The profile's height (#172) stands in when no Height measurement is logged.
     val profileHeight = prefs.profileHeightCm

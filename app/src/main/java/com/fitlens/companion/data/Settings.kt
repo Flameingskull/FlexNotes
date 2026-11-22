@@ -457,7 +457,14 @@ object Settings {
     /** Tests only: a failure thrown by the next phone-settings writes, to prove a failed write does not end the reminders. */
     @Volatile internal var deviceWriteFault: Throwable? = null
 
+    /** Tests only: how many of the next phone-settings writes fail, one each, before writes work again (#393). */
+    @Volatile internal var deviceWriteFaultsLeft: Int = 0
+
     private suspend fun saveDevice() = writeLock.withLock {
+        if (deviceWriteFaultsLeft > 0) {
+            deviceWriteFaultsLeft--
+            throw java.io.IOException("one-shot test fault")
+        }
         deviceWriteFault?.let { throw it }
         val values = _device.value.toMap()
         store.edit { p ->

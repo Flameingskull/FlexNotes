@@ -14,6 +14,7 @@ import com.fitlens.companion.R
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
@@ -101,16 +102,16 @@ data class CalendarFilter(
  */
 @Composable
 fun CalendarFilterSheet(snap: Snapshot, initial: CalendarFilter, onApply: (CalendarFilter) -> Unit, onDismiss: () -> Unit) {
-    var exerciseId by remember { mutableStateOf(initial.exerciseId) }
-    var categoryId by remember { mutableStateOf(initial.categoryId) }
+    var exerciseId by rememberSaveable { mutableStateOf(initial.exerciseId) }
+    var categoryId by rememberSaveable { mutableStateOf(initial.categoryId) }
     fun weightText(kg: Double?) = kg?.let { fmtNum(snap.weight(it), 2) } ?: ""
-    var minW by remember { mutableStateOf(weightText(initial.minWeightKg)) }
-    var maxW by remember { mutableStateOf(weightText(initial.maxWeightKg)) }
-    var minR by remember { mutableStateOf(initial.minReps?.toString() ?: "") }
-    var maxR by remember { mutableStateOf(initial.maxReps?.toString() ?: "") }
-    var minD by remember { mutableStateOf(initial.minDistance?.let { fmtNum(it, 2) } ?: "") }
-    var minT by remember { mutableStateOf(initial.minDurationSec?.let { fmtNum(it / 60.0, 2) } ?: "") }
-    var picking by remember { mutableStateOf<String?>(null) }
+    var minW by rememberSaveable { mutableStateOf(weightText(initial.minWeightKg)) }
+    var maxW by rememberSaveable { mutableStateOf(weightText(initial.maxWeightKg)) }
+    var minR by rememberSaveable { mutableStateOf(initial.minReps?.toString() ?: "") }
+    var maxR by rememberSaveable { mutableStateOf(initial.maxReps?.toString() ?: "") }
+    var minD by rememberSaveable { mutableStateOf(initial.minDistance?.let { fmtNum(it, 2) } ?: "") }
+    var minT by rememberSaveable { mutableStateOf(initial.minDurationSec?.let { fmtNum(it / 60.0, 2) } ?: "") }
+    var picking by rememberSaveable { mutableStateOf<String?>(null) }
 
     fun num(t: String) = t.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it >= 0 }
     fun built() = CalendarFilter(
