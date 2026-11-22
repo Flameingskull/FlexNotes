@@ -297,6 +297,8 @@ fun CopyOrMoveWorkoutSheet(snap: Snapshot, date: String, move: Boolean, onDismis
     var picking by rememberSaveable { mutableStateOf(false) }
     val exercises = remember(snap.setsKey, date) { snap.setsByDate[date].orEmpty().map { it.exerciseId }.distinct() }
     var checked by rememberSaveable(date) { mutableStateOf(exercises.toSet()) }
+    // A picked day or an unticked exercise keeps the sheet open on a tap outside, a drag or Back (#384).
+    val unsaved = rememberDirty(target, checked.sorted())
     val ids = snap.setsByDate[date].orEmpty().filter { move || it.exerciseId in checked }.map { it.id }
     val chosen = target
     val res = LocalContext.current.resources
@@ -304,6 +306,7 @@ fun CopyOrMoveWorkoutSheet(snap: Snapshot, date: String, move: Boolean, onDismis
     FitSheet(
         title = stringResource(if (move) R.string.wk_move_title else R.string.wk_copy_title),
         onDismiss = onDismiss,
+        dirty = unsaved,
         confirmLabel = when {
             move -> stringResource(R.string.wk_move_title)
             else -> pluralStringResource(R.plurals.wk_copy_sets, ids.size, ids.size)
@@ -374,6 +377,8 @@ fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit
         source?.let { d -> snap.setsByDate[d].orEmpty().map { it.exerciseId }.distinct() }.orEmpty()
     }
     var checked by rememberSaveable(source) { mutableStateOf(sourceExercises.toSet()) }
+    // A picked workout or an unticked exercise keeps the sheet open on a tap outside, a drag or Back (#384).
+    val unsaved = rememberDirty(source, checked.sorted())
     val from = source
     val ids = from?.let { d -> snap.setsByDate[d].orEmpty().filter { it.exerciseId in checked }.map { it.id } }.orEmpty()
     val res = LocalContext.current.resources
@@ -381,6 +386,7 @@ fun CopyPreviousWorkoutSheet(snap: Snapshot, date: String, onDismiss: () -> Unit
     FitSheet(
         title = stringResource(if (from == null) R.string.wk_copy_previous_title else R.string.wk_what_to_copy),
         onDismiss = onDismiss,
+        dirty = unsaved,
         confirmLabel = if (from == null) null else pluralStringResource(R.plurals.wk_copy_sets, ids.size, ids.size),
         confirmEnabled = ids.isNotEmpty(),
         onConfirm = if (from == null) null else ({
