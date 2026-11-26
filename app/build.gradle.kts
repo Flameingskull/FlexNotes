@@ -105,7 +105,7 @@ tasks.configureEach {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.11.01")
     implementation(composeBom)
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.activity:activity-compose:1.13.0")
@@ -122,10 +122,10 @@ dependencies {
     implementation("androidx.exifinterface:exifinterface:1.4.2")
     implementation("io.coil-kt:coil-compose:2.7.0")
     // FlexNotes's own camera for progress photos (#183). Keep every CameraX artifact on the same version.
-    implementation("androidx.camera:camera-core:1.4.2")
-    implementation("androidx.camera:camera-camera2:1.4.2")
-    implementation("androidx.camera:camera-lifecycle:1.4.2")
-    implementation("androidx.camera:camera-view:1.4.2")
+    implementation("androidx.camera:camera-core:1.7.0")
+    implementation("androidx.camera:camera-camera2:1.7.0")
+    implementation("androidx.camera:camera-lifecycle:1.7.0")
+    implementation("androidx.camera:camera-view:1.7.0")
     // The camera's body outline (#230): ML Kit selfie segmentation with its model bundled in the APK, so it works
     // offline. The manifest removes the internet permission its logging asks for.
     implementation("com.google.mlkit:segmentation-selfie:16.0.0-beta6")
